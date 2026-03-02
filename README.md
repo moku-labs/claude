@@ -43,10 +43,20 @@ Provides commands, skills, and validation agents for building Moku-based framewo
 
 ## Installation
 
-Add as a Claude Code plugin:
+### From GitHub
+
+Add the marketplace and install the plugin:
 
 ```bash
-claude --plugin-dir ~/Projects/moku/claude
+/plugin marketplace add moku-labs/claude
+/plugin install moku@moku-labs-claude
+```
+
+### Local development
+
+```bash
+/plugin marketplace add ~/Projects/moku/claude
+/plugin install moku@local
 ```
 
 ## Requirements
