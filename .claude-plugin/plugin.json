@@ -1,0 +1,18 @@
+{
+  "name": "moku",
+  "version": "0.1.0",
+  "description": "Development toolkit for Moku Core — scaffolding, framework planning, plugin building, and specification enforcement for the micro-kernel plugin framework",
+  "author": {
+    "name": "Oleksadr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "micro-kernel",
+    "plugin-framework",
+    "typescript",
+    "scaffolding"
+  ]
+}
