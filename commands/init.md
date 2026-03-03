@@ -28,8 +28,8 @@ Run `git init` to initialize a git repository. This is needed for lefthook (git 
 
 Run `bun init` to create the base project.
 
-**Note:** `bun init` generates its own `tsconfig.json`, `.gitignore`, `index.ts`, and `README.md`. Handle these as follows:
-- `tsconfig.json`, `.gitignore` — Will be overwritten with Moku-specific versions below. Read each generated file before overwriting it (the Write tool requires reading a file before it can overwrite it).
+**Note:** `bun init` generates its own `package.json`, `tsconfig.json`, `.gitignore`, `index.ts`, `README.md`, and `CLAUDE.md`. Handle these as follows:
+- `package.json`, `tsconfig.json`, `.gitignore`, `CLAUDE.md` — Will be overwritten with Moku-specific versions below. Read each generated file before overwriting it (the Write tool requires reading a file before it can overwrite it).
 - `index.ts` — Delete it. Moku projects use `src/index.ts` instead.
 - `README.md` — Delete it. The user will create their own.
 

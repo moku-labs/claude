@@ -35,7 +35,7 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
     "eslint-plugin-jsdoc": "62.6.0",
     "eslint-plugin-sonarjs": "4.0.0",
     "eslint-plugin-unicorn": "63.0.0",
-    "globals": "17.3.0",
+    "globals": "17.4.0",
     "jiti": "2.6.1",
     "lefthook": "2.1.1",
     "publint": "0.3.17",
@@ -159,16 +159,19 @@ export default [
   {
     files: ["src/**/*.ts"],
     rules: {
-      "jsdoc/require-jsdoc": ["error", {
-        require: {
-          ArrowFunctionExpression: true,
-          ClassDeclaration: true,
-          FunctionDeclaration: true,
-          FunctionExpression: true,
-          MethodDefinition: true
-        },
-        contexts: ["TSInterfaceDeclaration", "TSTypeAliasDeclaration"]
-      }],
+      "jsdoc/require-jsdoc": [
+        "error",
+        {
+          require: {
+            ArrowFunctionExpression: true,
+            ClassDeclaration: true,
+            FunctionDeclaration: true,
+            FunctionExpression: true,
+            MethodDefinition: true
+          },
+          contexts: ["TSInterfaceDeclaration", "TSTypeAliasDeclaration"]
+        }
+      ],
       "jsdoc/require-description": "error",
       "jsdoc/require-param": "error",
       "jsdoc/require-param-description": "error",
