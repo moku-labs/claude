@@ -20,10 +20,10 @@ Run `bun init` to create the base project. Then configure:
    - `"type": "module"`
    - `"engines": { "node": ">=22.0.0", "bun": ">=1.3.8" }`
    - Add `@moku-labs/core` as a dependency
-   - Add all devDependencies with exact versions from the moku-core skill's `references/tooling-config.md`
+   - Add all devDependencies with exact versions from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
    - Add scripts: `build`, `validate`, `lint`, `lint:fix`, `format`, `test`, `test:unit`, `test:integration`, `test:coverage`
 
-2. **biome.json** — Copy exact configuration from `references/tooling-config.md`
+2. **biome.json** — Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
 
 3. **eslint.config.ts** — Copy exact flat config with biome, unicorn, sonarjs, jsdoc plugins. biome-config MUST be last.
 
@@ -101,8 +101,8 @@ Tell the user what was created and provide next steps:
 
 ## Important
 
-- Use the **moku-core** skill for architecture reference
-- Read `references/tooling-config.md` for exact config contents — do NOT guess versions
+- Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` for exact config contents — do NOT guess versions
+- Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/architecture.md` for architecture reference
 - Use `bun` as the package manager, never npm or yarn
 - Ensure all configs work correctly together before reporting success
 - Check for latest stable versions of dependencies and use them if newer than the reference
