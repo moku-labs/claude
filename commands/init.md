@@ -27,17 +27,21 @@ Run `bun init` to create the base project. Then configure:
 
 3. **eslint.config.ts** — Copy exact flat config with biome, unicorn, sonarjs, jsdoc plugins. biome-config MUST be last. **Note:** Use `sonarjs.configs!.recommended` (non-null assertion) — sonarjs types mark configs as possibly undefined but it exists at runtime.
 
-4. **tsconfig.json** — Copy exact strict config. Add `tsconfig.build.json` for declaration emit.
+4. **declarations.d.ts** — Ambient module declarations for untyped JS packages. Required because `strict: true` enables `noImplicitAny`, which errors on imports from packages without `.d.ts` files (like `eslint-config-biome`). Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-5. **vitest.config.ts** — Unit + integration test projects with 90% coverage thresholds.
+5. **tsconfig.json** — Copy exact strict config. The `include` array must contain `"declarations.d.ts"` and `"*.config.ts"` alongside `"src"` and `"tests"` so ambient declarations are visible when type-checking config files. Add `tsconfig.build.json` for declaration emit.
 
-6. **lefthook.yml** — Pre-commit hooks: build, biome format, eslint check, test.
+6. **vitest.config.ts** — Unit + integration test projects with 90% coverage thresholds.
 
-7. **.editorconfig** — UTF-8, LF, 2-space indent.
+7. **lefthook.yml** — Pre-commit hooks: build, biome format, eslint check, test.
 
-8. **bunfig.toml** — `exact = true`
+8. **.editorconfig** — UTF-8, LF, 2-space indent.
 
-9. **.bun-version** — `1.3.8`
+9. **bunfig.toml** — `exact = true`
+
+10. **.bun-version** — `1.3.8`
+
+11. **.claude/settings.local.json** — Safe default permissions for Claude Code agents. Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`. This pre-approves common development operations (bun scripts, tsc, biome, eslint, git read operations) so agents don't require per-command approval for safe actions.
 
 ### Step 3: Create Directory Structure
 

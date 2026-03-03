@@ -194,6 +194,16 @@ export default [
 ];
 ```
 
+## declarations.d.ts
+
+Ambient module declarations for untyped JS packages. Required because `strict: true` enables `noImplicitAny`, which errors on imports from packages without type definitions.
+
+```typescript
+declare module "eslint-config-biome";
+```
+
+**Why:** `eslint-config-biome` is a JS-only package — no `.d.ts` files, no `types` field in its `package.json`. The ambient declaration tells TypeScript the module exists and treats its default export as `any`.
+
 ## tsconfig.json
 
 ```json
@@ -213,7 +223,7 @@ export default [
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
   },
-  "include": ["src", "tests"]
+  "include": ["src", "tests", "declarations.d.ts", "*.config.ts"]
 }
 ```
 
@@ -286,6 +296,50 @@ exact = true
 ```
 1.3.8
 ```
+
+## .claude/settings.local.json
+
+Safe default permissions for Claude Code agents working in a Moku project. These cover all common development operations without requiring per-command approval.
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(bun install)",
+      "Bash(bun run:*)",
+      "Bash(bun test:*)",
+      "Bash(bunx tsc:*)",
+      "Bash(bunx biome:*)",
+      "Bash(bunx eslint:*)",
+      "Bash(bunx vitest:*)",
+      "Bash(bunx lefthook:*)",
+      "Bash(bunx publint:*)",
+      "Bash(bunx attw:*)",
+      "Bash(git status:*)",
+      "Bash(git log:*)",
+      "Bash(git diff:*)",
+      "Bash(git branch:*)",
+      "Bash(git show:*)",
+      "Bash(git remote:*)",
+      "Bash(ls:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(mkdir:*)",
+      "Bash(cat:*)"
+    ]
+  }
+}
+```
+
+**What's included:**
+- **Bun:** install, run scripts, test, all bunx tool invocations (tsc, biome, eslint, vitest, lefthook, publint, attw)
+- **Git (read-only):** status, log, diff, branch, show, remote
+- **File system (read-only):** ls, tree, wc, cat, mkdir
+
+**What's NOT included (requires explicit approval):**
+- `git add`, `git commit`, `git push` — destructive/shared operations
+- `rm`, `mv` — destructive file operations
+- `bun add`, `bun remove` — dependency changes
 
 ## Key Conventions
 
