@@ -227,6 +227,43 @@ declare module "eslint-config-biome";
 }
 ```
 
+## tsconfig.build.json
+
+Extends the main tsconfig for build output with declaration emit. Used by tsdown.
+
+```json
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "declaration": true,
+    "isolatedDeclarations": true,
+    "emitDeclarationOnly": true,
+    "outDir": "dist"
+  }
+}
+```
+
+## tsdown.config.ts
+
+Build configuration for tsdown. Produces ESM + CJS with declaration files.
+
+```typescript
+import { defineConfig } from "tsdown";
+
+export default defineConfig({
+  entry: {
+    index: "src/index.ts"
+  },
+  format: ["esm", "cjs"],
+  dts: true,
+  clean: true,
+  sourcemap: false,
+  publint: true,
+  tsconfig: "tsconfig.build.json"
+});
+```
+
 ## vitest.config.ts
 
 ```typescript
@@ -295,6 +332,100 @@ exact = true
 
 ```
 1.3.8
+```
+
+## .gitignore
+
+```
+# dependencies
+node_modules
+
+# output
+out
+dist
+*.tgz
+
+# code coverage
+coverage
+*.lcov
+
+# logs
+logs
+_.log
+report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# caches
+.eslintcache
+.cache
+*.tsbuildinfo
+
+# IntelliJ based IDEs
+.idea
+
+# Finder (MacOS) folder config
+.DS_Store
+
+# Claude Code
+.claude
+
+# Planning artifacts
+.planning
+```
+
+## CLAUDE.md
+
+Generate a project-specific CLAUDE.md based on the framework name and structure. Template:
+
+```markdown
+# [Framework Name]
+
+[One-line description] built on @moku-labs/core.
+
+## Package Manager
+
+Use `bun` exclusively — never npm, yarn, or pnpm.
+
+## Scripts
+
+- `bun run build` — Build with tsdown
+- `bun run lint` — Biome check + ESLint
+- `bun run lint:fix` — Auto-fix lint issues
+- `bun run format` — Format with Biome
+- `bun run test` — Run all tests (vitest)
+- `bun run test:unit` — Unit tests only
+- `bun run test:integration` — Integration tests only
+- `bun run test:coverage` — Tests with coverage
+
+## Code Style
+
+- **Formatter:** Biome (2-space indent, double quotes, semicolons, no trailing commas)
+- **Linter:** ESLint 9 flat config + Biome (biome-config-biome must be LAST)
+- **TypeScript:** Strict mode with `exactOptionalPropertyTypes` and `noUncheckedIndexAccess`
+- **Imports:** Use `import type` enforced via `@typescript-eslint/consistent-type-imports`
+- **JSDoc:** Required on all source exports with descriptions, params, returns, and examples
+
+## Architecture
+
+Three-layer Moku model:
+1. `src/config.ts` — `createCoreConfig` (Layer 1: config + events)
+2. `src/index.ts` — `createCore` (Layer 2: framework + plugins)
+3. Consumer apps use `createApp` (Layer 3)
+
+Plugins go in `src/plugins/`.
+
+## Testing
+
+- Vitest with unit + integration projects
+- Unit tests: `tests/unit/**/*.test.ts`
+- Integration tests: `tests/integration/**/*.test.ts`
+- 90% coverage threshold
 ```
 
 ## .claude/settings.local.json

@@ -8,18 +8,30 @@ Initialize a new Moku development environment at the path specified by `$1` (or 
 
 ## Setup Process
 
-### Step 1: Create Project Directory
+### Step 1: Determine Project Type
+
+Ask the user (if not clear from context) what type of project they are creating:
+
+- **Framework** (Layer 2) — Creates plugins, exports `createApp`/`createPlugin`. Depends on `@moku-labs/core`.
+- **Consumer App** (Layer 3) — Imports from a framework package, uses `createApp`. Depends on the framework package (e.g., `@moku-labs/web`), NOT `@moku-labs/core` directly.
+- **Tools/Library** — Standard TypeScript project with Moku tooling. No Moku dependencies unless needed.
+
+Default to **Framework** if the user doesn't specify.
+
+### Step 2: Create Project Directory and Git Repo
 
 If `$1` is provided, create the directory and cd into it. If it already exists, verify it's empty or confirm with the user before proceeding.
 
-### Step 2: Initialize Project
+Run `git init` to initialize a git repository. This is needed for lefthook (git hooks) and standard development workflow.
 
-Run `bun init` to create the base project. Then configure:
+### Step 3: Initialize Project
+
+Run `bun init` to create the base project. Then configure all tooling files (these are **identical across all project types**):
 
 1. **package.json** — Set up with:
    - `"type": "module"`
    - `"engines": { "node": ">=22.0.0", "bun": ">=1.3.8" }`
-   - Add `@moku-labs/core` as a dependency
+   - Dependencies vary by project type (see Step 5)
    - Add all devDependencies with exact versions from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
    - Add scripts: `build`, `validate`, `lint`, `lint:fix`, `format`, `test`, `test:unit`, `test:integration`, `test:coverage`
 
@@ -29,37 +41,47 @@ Run `bun init` to create the base project. Then configure:
 
 4. **declarations.d.ts** — Ambient module declarations for untyped JS packages. Required because `strict: true` enables `noImplicitAny`, which errors on imports from packages without `.d.ts` files (like `eslint-config-biome`). Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-5. **tsconfig.json** — Copy exact strict config. The `include` array must contain `"declarations.d.ts"` and `"*.config.ts"` alongside `"src"` and `"tests"` so ambient declarations are visible when type-checking config files. Add `tsconfig.build.json` for declaration emit.
+5. **tsconfig.json** — Copy exact strict config. The `include` array must contain `"declarations.d.ts"` and `"*.config.ts"` alongside `"src"` and `"tests"` so ambient declarations are visible when type-checking config files.
 
-6. **vitest.config.ts** — Unit + integration test projects with 90% coverage thresholds.
+6. **tsconfig.build.json** — Extends tsconfig.json for build output with declaration emit. Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-7. **lefthook.yml** — Pre-commit hooks: build, biome format, eslint check, test.
+7. **tsdown.config.ts** — Build configuration producing ESM + CJS with declaration files. Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-8. **.editorconfig** — UTF-8, LF, 2-space indent.
+8. **vitest.config.ts** — Unit + integration test projects with 90% coverage thresholds.
 
-9. **bunfig.toml** — `exact = true`
+9. **lefthook.yml** — Pre-commit hooks: build, biome format, eslint check, test.
 
-10. **.bun-version** — `1.3.8`
+10. **.editorconfig** — UTF-8, LF, 2-space indent.
 
-11. **.claude/settings.local.json** — Safe default permissions for Claude Code agents. Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`. This pre-approves common development operations (bun scripts, tsc, biome, eslint, git read operations) so agents don't require per-command approval for safe actions.
+11. **bunfig.toml** — `exact = true`
 
-### Step 3: Create Directory Structure
+12. **.bun-version** — `1.3.8`
 
-Create the 3-layer directory structure:
+13. **.gitignore** — Standard ignores for node_modules, dist, coverage, .env files, caches, .claude, .planning. Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
+
+14. **.claude/settings.local.json** — Safe default permissions for Claude Code agents. Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
+
+15. **CLAUDE.md** — Project-specific instructions for Claude Code. Generate from the template in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`, replacing the framework name and description with the actual project values. Adjust the Architecture section to match the project type.
+
+### Step 4: Create Directory Structure and Template Files
+
+Structure and templates vary by project type:
+
+#### Framework (Layer 2)
 
 ```
 src/
-  config.ts          # Step 1: createCoreConfig<Config, Events>
-  index.ts           # Step 2: createCore + exports createApp, createPlugin
+  config.ts          # createCoreConfig<Config, Events>
+  index.ts           # createCore + exports createApp, createPlugin
   plugins/           # Framework plugins directory
 tests/
-  unit/              # Unit tests
-  integration/       # Integration tests
+  unit/
+  integration/
 ```
 
-### Step 4: Create Template Files
+**Dependencies:** `@moku-labs/core`
 
-**src/config.ts** — Template with:
+**src/config.ts:**
 ```typescript
 import { createCoreConfig } from "@moku-labs/core";
 
@@ -76,9 +98,7 @@ export const coreConfig = createCoreConfig<Config, Events>("my-framework", {
 export const { createPlugin, createCore } = coreConfig;
 ```
 
-**IMPORTANT:** Keep type names as `Config` and `Events` — do NOT use domain-specific names like `MyFrameworkConfig` or `AppEvents`. These generic names are the convention across all Moku projects.
-
-**src/index.ts** — Template with:
+**src/index.ts:**
 ```typescript
 import { coreConfig, createCore } from "./config";
 
@@ -88,6 +108,45 @@ const framework = createCore(coreConfig, {
 
 export const { createApp, createPlugin } = framework;
 ```
+
+**IMPORTANT:** Keep type names as `Config` and `Events` — do NOT use domain-specific names like `MyFrameworkConfig` or `AppEvents`. These generic names are the convention across all Moku projects.
+
+#### Consumer App (Layer 3)
+
+```
+src/
+  index.ts           # createApp entry point
+tests/
+  unit/
+  integration/
+```
+
+**Dependencies:** The framework package (e.g., `@moku-labs/web`) — ask the user which framework to use. The consumer NEVER depends on `@moku-labs/core` directly.
+
+**src/index.ts:**
+```typescript
+import { createApp } from "<framework-package>";
+
+const app = createApp({
+  // Plugin config overrides go here
+});
+```
+
+No `src/config.ts`, no `src/plugins/` — consumer apps don't define plugins or core config.
+
+#### Tools/Library
+
+```
+src/
+  index.ts           # Library entry point
+tests/
+  unit/
+  integration/
+```
+
+**Dependencies:** None by default — add as needed based on the project's purpose.
+
+**src/index.ts:** Empty placeholder — the user will define exports.
 
 ### Step 5: Install Dependencies
 
@@ -103,20 +162,31 @@ After setup, run through this checklist to verify everything works. Fix any issu
 4. **ESLint** — `bun run lint` passes with zero warnings and zero errors
 5. **Tests** — `bun run test` runs successfully (empty test suite is OK at this stage)
 6. **Build** — `bun run build` compiles without errors
-7. **Config template** — `src/config.ts` imports `createCoreConfig` from `@moku-labs/core` and exports `{ createPlugin, createCore }`
-8. **Index template** — `src/index.ts` imports from `./config` and exports `{ createApp, createPlugin }`
-9. **Directory structure** — `src/plugins/` directory exists
-10. **Git hooks** — `lefthook install` ran successfully (if git repo)
+7. **Template files** — Source files exist and match the project type:
+   - **Framework:** `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists
+   - **Consumer:** `src/index.ts` imports `createApp` from the framework package
+   - **Tools:** `src/index.ts` exists
+8. **Git repo** — `git init` ran successfully
+9. **Git hooks** — `lefthook install` ran successfully
 
 If any check fails, fix the issue and re-run the failing check before proceeding.
 
 ### Step 7: Report
 
-Tell the user what was created, show the verification checklist results, and provide next steps:
+Tell the user what was created, show the verification checklist results, and provide next steps based on project type:
+
+**Framework:**
 - Edit `src/config.ts` to define Config and Events types
 - Create plugins in `src/plugins/`
 - Use `/moku:plan_framework` to plan a complete framework
 - Use `/moku:build_plugin` to create individual plugins
+
+**Consumer App:**
+- Use `/moku:plan_app` to plan the application
+- Use `/moku:build_app` to build from a plan
+
+**Tools/Library:**
+- Start adding source files to `src/`
 
 ## Important
 
@@ -125,3 +195,4 @@ Tell the user what was created, show the verification checklist results, and pro
 - Use `bun` as the package manager, never npm or yarn
 - Keep type names generic: `Config`, `Events` — never domain-specific names
 - Run the full verification checklist before reporting success
+- Tooling config (items 1-15) is identical across ALL project types — only template files and dependencies differ
