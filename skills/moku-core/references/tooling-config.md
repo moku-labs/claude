@@ -7,6 +7,22 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
 ```json
 {
   "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.mts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
+  "files": ["dist", "LICENSE", "README.md"],
   "engines": { "node": ">=22.0.0", "bun": ">=1.3.8" },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.2",
@@ -48,8 +64,7 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
 {
   "$schema": "https://biomejs.dev/schemas/2.4.2/schema.json",
   "files": {
-    "includes": ["src/**", "tests/**", "*.config.ts"],
-    "ignores": ["**/dist", "**/coverage", "**/*.md", "bun.lock"]
+    "includes": ["src/**", "tests/**", "*.config.ts"]
   },
   "formatter": {
     "enabled": true,
@@ -125,7 +140,8 @@ export default [
   // 3. Unicorn recommended
   eslintPluginUnicorn.configs.recommended,
 
-  // 4. SonarJS recommended (non-null assertion needed — sonarjs types mark configs as possibly undefined)
+  // 4. SonarJS recommended
+  // biome-ignore lint/style/noNonNullAssertion: sonarjs types mark configs as possibly undefined but it exists at runtime
   sonarjs.configs!.recommended,
 
   // 5. JSDoc TypeScript preset
@@ -218,7 +234,7 @@ declare module "eslint-config-biome";
     "noEmit": true,
     "strict": true,
     "exactOptionalPropertyTypes": true,
-    "noUncheckedIndexAccess": true,
+    "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
@@ -237,12 +253,13 @@ Extends the main tsconfig for build output with declaration emit. Used by tsdown
   "compilerOptions": {
     "noEmit": false,
     "declaration": true,
-    "isolatedDeclarations": true,
     "emitDeclarationOnly": true,
     "outDir": "dist"
   }
 }
 ```
+
+**Note:** `isolatedDeclarations` is intentionally omitted. It requires explicit type annotations on all exports, which conflicts with Moku's destructured export pattern (`export const { createApp } = framework`). Regular `declaration: true` infers types from the full project.
 
 ## tsdown.config.ts
 
@@ -259,7 +276,6 @@ export default defineConfig({
   dts: true,
   clean: true,
   sourcemap: false,
-  publint: true,
   tsconfig: "tsconfig.build.json"
 });
 ```
@@ -407,7 +423,7 @@ Use `bun` exclusively — never npm, yarn, or pnpm.
 
 - **Formatter:** Biome (2-space indent, double quotes, semicolons, no trailing commas)
 - **Linter:** ESLint 9 flat config + Biome (biome-config-biome must be LAST)
-- **TypeScript:** Strict mode with `exactOptionalPropertyTypes` and `noUncheckedIndexAccess`
+- **TypeScript:** Strict mode with `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`
 - **Imports:** Use `import type` enforced via `@typescript-eslint/consistent-type-imports`
 - **JSDoc:** Required on all source exports with descriptions, params, returns, and examples
 
@@ -426,6 +442,10 @@ Plugins go in `src/plugins/`.
 - Unit tests: `tests/unit/**/*.test.ts`
 - Integration tests: `tests/integration/**/*.test.ts`
 - 90% coverage threshold
+
+## Specification
+
+For questions about how things should be implemented, refer to the [Moku Core specification](https://github.com/moku-labs/core/tree/main/specification).
 ```
 
 ## .claude/settings.local.json
@@ -477,7 +497,7 @@ Safe default permissions for Claude Code agents working in a Moku project. These
 - **Package manager:** bun (not npm/yarn)
 - **Formatter:** Biome (2-space, double quotes, semicolons, no trailing commas)
 - **Linter:** ESLint 9 flat config + Biome (biome-config-biome must be LAST in ESLint array)
-- **TypeScript:** Strict mode with `exactOptionalPropertyTypes` and `noUncheckedIndexAccess`
+- **TypeScript:** Strict mode with `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`
 - **Testing:** Vitest with unit + integration projects, 90% coverage threshold
 - **Git hooks:** Lefthook pre-commit (build, format, lint, test)
 - **Import style:** `import type` enforced via `@typescript-eslint/consistent-type-imports`

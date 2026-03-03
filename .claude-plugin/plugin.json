@@ -1,6 +1,6 @@
 {
   "name": "moku",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Development toolkit for Moku Core — scaffolding, framework planning, plugin building, and specification enforcement for the micro-kernel plugin framework",
   "author": {
     "name": "Oleksadr Kucherenko",

@@ -31,13 +31,14 @@ Run `bun init` to create the base project. Then configure all tooling files (the
 1. **package.json** — Set up with:
    - `"type": "module"`
    - `"engines": { "node": ">=22.0.0", "bun": ">=1.3.8" }`
+   - `main`, `module`, `types`, `exports`, `files` fields for publishable packages (copy from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`). Consumer apps can omit these if not publishing.
    - Dependencies vary by project type (see Step 5)
    - Add all devDependencies with exact versions from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
    - Add scripts: `build`, `validate`, `lint`, `lint:fix`, `format`, `test`, `test:unit`, `test:integration`, `test:coverage`
 
 2. **biome.json** — Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
 
-3. **eslint.config.ts** — Copy exact flat config with biome, unicorn, sonarjs, jsdoc plugins. biome-config MUST be last. **Note:** Use `sonarjs.configs!.recommended` (non-null assertion) — sonarjs types mark configs as possibly undefined but it exists at runtime.
+3. **eslint.config.ts** — Copy exact flat config with biome, unicorn, sonarjs, jsdoc plugins. biome-config MUST be last. **Note:** The `sonarjs.configs!.recommended` line needs a `// biome-ignore lint/style/noNonNullAssertion:` comment — the non-null assertion is required because sonarjs types mark configs as possibly undefined, but biome's linter flags `!.` without the ignore comment.
 
 4. **declarations.d.ts** — Ambient module declarations for untyped JS packages. Required because `strict: true` enables `noImplicitAny`, which errors on imports from packages without `.d.ts` files (like `eslint-config-biome`). Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
@@ -65,7 +66,17 @@ Run `bun init` to create the base project. Then configure all tooling files (the
 
 ### Step 4: Create Directory Structure and Template Files
 
-Structure and templates vary by project type:
+Structure and templates vary by project type. **All project types** must include a placeholder test file at `tests/unit/setup.test.ts` to prevent vitest from exiting with code 1 on an empty test suite:
+
+```typescript
+import { describe, expect, it } from "vitest";
+
+describe("setup", () => {
+  it("should be configured correctly", () => {
+    expect(true).toBe(true);
+  });
+});
+```
 
 #### Framework (Layer 2)
 
@@ -76,6 +87,7 @@ src/
   plugins/           # Framework plugins directory
 tests/
   unit/
+    setup.test.ts    # Placeholder test
   integration/
 ```
 
@@ -118,6 +130,7 @@ src/
   index.ts           # createApp entry point
 tests/
   unit/
+    setup.test.ts    # Placeholder test
   integration/
 ```
 
@@ -141,6 +154,7 @@ src/
   index.ts           # Library entry point
 tests/
   unit/
+    setup.test.ts    # Placeholder test
   integration/
 ```
 
@@ -160,7 +174,7 @@ After setup, run through this checklist to verify everything works. Fix any issu
 2. **TypeScript** — `bunx tsc --noEmit` passes with zero errors
 3. **Biome** — `bun run format` runs without errors (formatting works)
 4. **ESLint** — `bun run lint` passes with zero warnings and zero errors
-5. **Tests** — `bun run test` runs successfully (empty test suite is OK at this stage)
+5. **Tests** — `bun run test` runs successfully (placeholder test must pass — vitest exits code 1 on empty suites)
 6. **Build** — `bun run build` compiles without errors
 7. **Template files** — Source files exist and match the project type:
    - **Framework:** `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists
