@@ -25,7 +25,7 @@ Run `bun init` to create the base project. Then configure:
 
 2. **biome.json** — Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
 
-3. **eslint.config.ts** — Copy exact flat config with biome, unicorn, sonarjs, jsdoc plugins. biome-config MUST be last.
+3. **eslint.config.ts** — Copy exact flat config with biome, unicorn, sonarjs, jsdoc plugins. biome-config MUST be last. **Note:** Use `sonarjs.configs!.recommended` (non-null assertion) — sonarjs types mark configs as possibly undefined but it exists at runtime.
 
 4. **tsconfig.json** — Copy exact strict config. Add `tsconfig.build.json` for declaration emit.
 

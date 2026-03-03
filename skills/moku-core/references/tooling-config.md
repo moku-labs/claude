@@ -125,8 +125,8 @@ export default [
   // 3. Unicorn recommended
   eslintPluginUnicorn.configs.recommended,
 
-  // 4. SonarJS recommended
-  sonarjs.configs.recommended,
+  // 4. SonarJS recommended (non-null assertion needed — sonarjs types mark configs as possibly undefined)
+  sonarjs.configs!.recommended,
 
   // 5. JSDoc TypeScript preset
   jsdocPlugin.configs["flat/recommended-typescript-error"],
