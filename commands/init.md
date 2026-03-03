@@ -45,8 +45,8 @@ Create the 3-layer directory structure:
 
 ```
 src/
-  config.ts          # Step 1: createCoreConfig (template with TODOs)
-  index.ts           # Step 2: createCore (template with TODOs)
+  config.ts          # Step 1: createCoreConfig<Config, Events>
+  index.ts           # Step 2: createCore + exports createApp, createPlugin
   plugins/           # Framework plugins directory
 tests/
   unit/              # Unit tests
@@ -57,24 +57,26 @@ tests/
 
 **src/config.ts** — Template with:
 ```typescript
-import { createCoreConfig } from '@moku-labs/core';
+import { createCoreConfig } from "@moku-labs/core";
 
-// TODO: Define your framework's config shape
+// biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined config
 type Config = {};
 
-// TODO: Define your framework's global events
+// biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined events
 type Events = {};
 
-export const coreConfig = createCoreConfig<Config, Events>('my-framework', {
+export const coreConfig = createCoreConfig<Config, Events>("my-framework", {
   config: {},
 });
 
 export const { createPlugin, createCore } = coreConfig;
 ```
 
+**IMPORTANT:** Keep type names as `Config` and `Events` — do NOT use domain-specific names like `MyFrameworkConfig` or `AppEvents`. These generic names are the convention across all Moku projects.
+
 **src/index.ts** — Template with:
 ```typescript
-import { createCore, coreConfig } from './config';
+import { coreConfig, createCore } from "./config";
 
 const framework = createCore(coreConfig, {
   plugins: [],
@@ -87,13 +89,26 @@ export const { createApp, createPlugin } = framework;
 
 Run `bun install` and verify no errors.
 
-### Step 6: Verify Setup
+### Step 6: Verification Checklist
 
-Run `bun run lint` and `bun run test` to verify everything works. Fix any issues.
+After setup, run through this checklist to verify everything works. Fix any issues before reporting success.
+
+1. **Dependencies** — `bun install` completed without errors
+2. **TypeScript** — `bunx tsc --noEmit` passes with zero errors
+3. **Biome** — `bun run format` runs without errors (formatting works)
+4. **ESLint** — `bun run lint` passes with zero warnings and zero errors
+5. **Tests** — `bun run test` runs successfully (empty test suite is OK at this stage)
+6. **Build** — `bun run build` compiles without errors
+7. **Config template** — `src/config.ts` imports `createCoreConfig` from `@moku-labs/core` and exports `{ createPlugin, createCore }`
+8. **Index template** — `src/index.ts` imports from `./config` and exports `{ createApp, createPlugin }`
+9. **Directory structure** — `src/plugins/` directory exists
+10. **Git hooks** — `lefthook install` ran successfully (if git repo)
+
+If any check fails, fix the issue and re-run the failing check before proceeding.
 
 ### Step 7: Report
 
-Tell the user what was created and provide next steps:
+Tell the user what was created, show the verification checklist results, and provide next steps:
 - Edit `src/config.ts` to define Config and Events types
 - Create plugins in `src/plugins/`
 - Use `/moku:plan_framework` to plan a complete framework
@@ -104,5 +119,5 @@ Tell the user what was created and provide next steps:
 - Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` for exact config contents — do NOT guess versions
 - Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/architecture.md` for architecture reference
 - Use `bun` as the package manager, never npm or yarn
-- Ensure all configs work correctly together before reporting success
-- Check for latest stable versions of dependencies and use them if newer than the reference
+- Keep type names generic: `Config`, `Events` — never domain-specific names
+- Run the full verification checklist before reporting success
