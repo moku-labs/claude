@@ -28,7 +28,12 @@ Run `git init` to initialize a git repository. This is needed for lefthook (git 
 
 Run `bun init` to create the base project.
 
-**Note:** `bun init` generates its own `tsconfig.json`, `.gitignore`, `index.ts`, and `README.md`. These will be overwritten with Moku-specific versions in the steps below. Read each generated file before overwriting it (the Write tool requires reading a file before it can overwrite it).
+**Note:** `bun init` generates its own `tsconfig.json`, `.gitignore`, `index.ts`, and `README.md`. Handle these as follows:
+- `tsconfig.json`, `.gitignore` — Will be overwritten with Moku-specific versions below. Read each generated file before overwriting it (the Write tool requires reading a file before it can overwrite it).
+- `index.ts` — Delete it. Moku projects use `src/index.ts` instead.
+- `README.md` — Delete it. The user will create their own.
+
+After running `bun init`, delete the root `index.ts` and `README.md` before proceeding.
 
 Then configure all tooling files (these are **identical across all project types**):
 
@@ -129,7 +134,7 @@ type Config = {};
 type Events = {};
 
 export const coreConfig = createCoreConfig<Config, Events>("my-framework", {
-  config: {},
+  config: {}
 });
 
 export const { createPlugin, createCore } = coreConfig;
@@ -140,7 +145,7 @@ export const { createPlugin, createCore } = coreConfig;
 import { coreConfig, createCore } from "./config";
 
 const framework = createCore(coreConfig, {
-  plugins: [],
+  plugins: []
 });
 
 export const { createApp, createPlugin } = framework;
@@ -190,6 +195,10 @@ tests/
 ### Step 5: Install Dependencies
 
 Run `bun install` and verify no errors.
+
+### Step 5b: Format All Files
+
+Run `bun run format` to normalize all generated files to Biome's output. This prevents formatting drift between the templates and Biome's actual formatting rules (e.g., trailing comma removal). This must happen before the verification checklist.
 
 ### Step 6: Verification Checklist
 
