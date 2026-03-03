@@ -99,6 +99,18 @@ Check that EVERY file has complete JSDoc:
 - No direct exposure of `ctx.state` through API
 - State mutations only through plugin's own API/lifecycle methods
 
+### 9. No Explicit Generics on createPlugin
+- The `createPlugin(` call in index.ts must NOT have type parameters
+- Check: `createPlugin<` should never appear in plugin code
+- Types must be inferred from the spec object fields (config, createState, api, events)
+- VIOLATION if explicit generics are found — immediate flag
+
+### 10. Lifecycle Necessity Check
+- If `onStart` is present, verify there is an actual resource being started (server, connection, listener, mount)
+- If `onStop` is present, verify there is an actual resource being torn down
+- WARNING if `onStart`/`onStop` exist but only contain logging, config reads, or trivial operations
+- CLI plugins, build tools, and utility plugins should NOT have start/stop unless managing persistent processes
+
 ## Process
 
 1. Find the plugin's root directory

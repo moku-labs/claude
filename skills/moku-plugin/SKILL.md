@@ -18,6 +18,26 @@ Enforce strict compliance with Moku plugin structure specification. Follow all p
 
 **A plugin file is a wiring harness, not business logic.** The `index.ts` connects domain code to the system. It is NOT where you write business logic. Domain logic lives in separate files (`api.ts`, `state.ts`, `handlers.ts`).
 
+## CRITICAL: No Explicit Generics on createPlugin
+
+Every `createPlugin` call MUST rely on type inference from the spec object. Never pass type parameters explicitly.
+
+```typescript
+// WRONG — Explicit generics bypass inference:
+createPlugin<"auth", AuthConfig, AuthState, AuthApi>("auth", { ... })
+
+// CORRECT — Types inferred from the spec:
+createPlugin("auth", {
+  config: { sessionDuration: 3600 },
+  createState: () => ({ sessions: new Map() }),
+  api: (ctx) => ({
+    login: (userId: string) => { /* ... */ },
+  }),
+})
+```
+
+This applies to ALL tiers (Nano through VeryComplex). If a Standard+ plugin extracts types to `types.ts`, the types are used in domain files (api.ts, state.ts), NOT as generics on createPlugin.
+
 ## Complexity Tiers
 
 Choose the simplest tier that fits. Promote when the file outgrows its tier. Never force a complex structure on a simple plugin.
@@ -90,6 +110,21 @@ export const routerPlugin = createPlugin('router', {
 ```
 
 **Notice:** ~30 lines. Imports everything. Connects to lifecycle hooks and API slots. No domain logic.
+
+## Lifecycle: start() and stop() Are Optional
+
+`onStart` and `onStop` are NOT required. Include them ONLY when there is a concrete reason:
+
+| Domain | onStart needed? | onStop needed? | Reason |
+|--------|----------------|----------------|--------|
+| Web server | Yes | Yes | Open/close listening socket |
+| Database | Yes | Yes | Open/close connection pool |
+| SPA client | Maybe | Rarely | Mount islands / unmount for HMR |
+| CLI tool | No | No | Runs synchronously, no server |
+| Build tool | No | No | Runs during init, no persistent process |
+| Utility/Config | No | No | Pure functions, no resources |
+
+**Rule:** If your plugin has no connections to open, no listeners to start, and no resources to manage, omit onStart and onStop entirely.
 
 ## JSDoc Requirements
 

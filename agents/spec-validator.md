@@ -85,6 +85,14 @@ You are a Moku Core specification validator. Your job is to ensure all code foll
 - No new abstractions (services, providers, managers) — use `createPlugin`
 - No `as any` to bypass type system
 - No string-based `require` — instance-only
+- No explicit generics on `createPlugin` — types must be inferred from spec
+- No unnecessary `onStart`/`onStop` — only include when managing actual resources (servers, connections, listeners). CLI tools, build tools, and utility plugins should NOT have start/stop.
+
+### 9. No Explicit Generics on createPlugin
+- `createPlugin` calls must NEVER have type parameters: `createPlugin<...>(...)`
+- All types must be inferred from the spec object
+- Check every `createPlugin(` call — if angle brackets appear before the opening parenthesis, it is a VIOLATION
+- This is the #1 anti-pattern. Flag immediately.
 
 ## Process
 

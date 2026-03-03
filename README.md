@@ -11,7 +11,7 @@ Provides commands, skills, and validation agents for building Moku-based framewo
 | Command | Description |
 |---------|-------------|
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
-| `/moku:plan_framework [description]` | Create a comprehensive framework specification |
+| `/moku:plan_framework [description]` | 3-stage gated workflow: analyze requirements, create skeleton structure, write plugin specifications |
 | `/moku:build_framework [spec-path]` | Build a framework from a specification plan |
 | `/moku:build_plugin [name-or-ref]` | Create a plugin with full spec compliance |
 | `/moku:plan_app [description]` | Create a Layer 3 consumer app specification |

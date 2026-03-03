@@ -74,6 +74,26 @@ events: (register) => ({
 
 No explicit generics on `createPlugin`. Event types inferred from `register<T>()` calls.
 
+## CRITICAL Anti-Pattern: No Explicit Generics on createPlugin
+
+This is the #1 violation to watch for. All types MUST be inferred from the spec object:
+
+```typescript
+// ANTI-PATTERN — NEVER ALLOW THIS:
+createPlugin<"bundler", BundlerConfig, BundlerState, { bundle(): Promise<void> }>("bundler", { ... })
+
+// CORRECT — All types inferred from spec object:
+createPlugin("bundler", {
+  config: { /* types inferred from value */ },
+  createState: () => ({ /* types inferred from return */ }),
+  api: (ctx) => ({ /* types inferred from return */ }),
+})
+```
+
+**Why:** The 3-step factory chain captures Config and Events in closures. `createPlugin` infers C, S, A, and PluginEvents from the spec. Explicit generics bypass this inference, creating fragile code that breaks when types change.
+
+**Where to check:** Every `createPlugin(` call. If it has angle brackets before the parenthesis, it is wrong.
+
 ## Context Tiers
 
 | Method | Context | Available |
@@ -81,6 +101,12 @@ No explicit generics on `createPlugin`. Event types inferred from `register<T>()
 | `createState` | MinimalContext | `global`, `config` |
 | `hooks`, `api`, `onInit`, `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has` |
 | `onStop` | TeardownContext | `global` only |
+
+**Important:** `onStart` and `onStop` are OPTIONAL. They are only needed when:
+- **onStart:** Opening server connections, starting listeners, mounting UI, or other runtime initialization that cannot happen during synchronous init
+- **onStop:** Closing connections, flushing buffers, unmounting, or other teardown
+
+Most plugins (CLI tools, build tools, utility plugins, config-only plugins) do NOT need start/stop. Only include them when there is an actual resource to manage.
 
 ## Error Message Format
 

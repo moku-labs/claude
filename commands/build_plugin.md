@@ -7,7 +7,7 @@ argument-hint: [plugin-name-or-spec-ref]
 Create a specific Moku plugin. The argument (`$ARGUMENTS`) can be:
 
 - A plugin name and description (e.g., "auth - handles user authentication")
-- A reference to a plan spec (e.g., "plugin #3 from .planning/framework-spec.md")
+- A reference to a plan spec (e.g., "plugin #3 from specifications/")
 - A plugin hierarchy description (e.g., "auth + session + permissions plugins")
 
 ## Process
@@ -36,6 +36,11 @@ Using the **moku-plugin** skill, assess:
 - Are there sub-domains?
 
 Select: Nano / Micro / Standard / Complex / VeryComplex
+
+Also determine lifecycle needs:
+- Does the plugin need `onStart`? (Only if opening connections, starting servers/listeners, mounting UI)
+- Does the plugin need `onStop`? (Only if closing connections, flushing buffers, unmounting)
+- If neither is needed, omit both entirely — do NOT add empty lifecycle methods
 
 ### Step 3: Create Directory Structure
 
@@ -98,6 +103,7 @@ Write the plugin wiring file (~30 lines):
 - JSDoc header with tier, description, events, `@see README.md`
 - Import all domain files
 - `createPlugin(name, spec)` with all fields wired
+- **CRITICAL:** The `createPlugin(name, spec)` call must NOT have explicit type parameters. All types are inferred from the spec fields. If you find yourself wanting to write `createPlugin<...>`, the types should instead be defined in `types.ts` and used in domain files.
 
 ### Step 6: Write Tests
 
@@ -149,3 +155,5 @@ If the plugin is Complex or VeryComplex:
 - index.ts must be wiring only (~30 lines)
 - Never leak state through API
 - Use `import type` for type-only imports
+- NEVER use explicit generics on `createPlugin` — types inferred from spec
+- NEVER include `onStart`/`onStop` without a concrete resource to manage

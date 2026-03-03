@@ -1,10 +1,14 @@
 ---
 description: Build a framework from a plan specification
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
-argument-hint: [spec-path]
+argument-hint: [spec-path-or-directory]
 ---
 
-Build a complete Moku framework from a specification plan. The plan path (`$1`) defaults to `.planning/framework-spec.md` if not provided.
+Build a complete Moku framework from a specification plan. The path (`$1`) can be:
+- A directory of numbered spec files (e.g., `specifications/`) — reads `01-*.md`, `02-*.md`, etc. in order
+- A single spec file (e.g., `.planning/framework-spec.md`)
+
+Defaults to `specifications/` if not provided.
 
 ## Process
 
@@ -27,6 +31,8 @@ Follow the implementation order from the spec. For each plugin:
 4. **Write api.ts** — API factory (for Standard+)
 5. **Write handlers.ts** — Event handlers (if hooks exist, Standard+)
 6. **Write index.ts** — Plugin wiring (~30 lines, imports from domain files)
+   - **Verify no explicit generics** — The `createPlugin(` call must NOT have type parameters. All types inferred from spec.
+   - **Verify lifecycle necessity** — Only include `onStart`/`onStop` if the plugin spec explicitly states a resource that needs starting/stopping. Omit for CLI, build, utility, and config plugins.
 7. **Write README.md** — Plugin documentation
 8. **Write unit tests** — For each domain file
 9. **Write integration test** — For the full plugin wiring
@@ -43,6 +49,7 @@ After all plugins are built:
 
 - Run `bun run lint` — fix any Biome or ESLint issues
 - Run `bun run test` — fix any test failures
+- Grep for `createPlugin<` across all source files — if found, fix immediately (remove generics, let inference work)
 - Use the **moku-plugin-spec-validator** agent on each plugin
 - Use the **moku-jsdoc-validator** agent on all source files
 - Use the **moku-spec-validator** agent on the framework structure
@@ -74,3 +81,5 @@ If the framework has more than 5 plugins:
 - All tests must pass
 - Biome and ESLint must pass with zero warnings
 - Follow the exact complexity tier specified in the plan
+- NO explicit generics on `createPlugin` — all types inferred from spec
+- NO unnecessary `onStart`/`onStop` — only when managing actual resources (servers, connections, listeners)
