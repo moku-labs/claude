@@ -26,7 +26,11 @@ Run `git init` to initialize a git repository. This is needed for lefthook (git 
 
 ### Step 3: Initialize Project
 
-Run `bun init` to create the base project. Then configure all tooling files (these are **identical across all project types**):
+Run `bun init` to create the base project.
+
+**Note:** `bun init` generates its own `tsconfig.json`, `.gitignore`, `index.ts`, and `README.md`. These will be overwritten with Moku-specific versions in the steps below. Read each generated file before overwriting it (the Write tool requires reading a file before it can overwrite it).
+
+Then configure all tooling files (these are **identical across all project types**):
 
 1. **package.json** — Set up with:
    - `"type": "module"`
@@ -62,7 +66,12 @@ Run `bun init` to create the base project. Then configure all tooling files (the
 
 14. **.claude/settings.local.json** — Safe default permissions for Claude Code agents. Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-15. **CLAUDE.md** — Project-specific instructions for Claude Code. Generate from the template in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`, replacing the framework name and description with the actual project values. Adjust the Architecture section to match the project type.
+15. **CLAUDE.md** — Project-specific instructions for Claude Code. Generate from the template in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`, replacing the framework name and description with the actual project values. Adjust these sections to match the project type:
+    - **Architecture:** Framework shows 3-layer model; Consumer shows `createApp` usage; Tools/Library omit this section.
+    - **Moku Development Toolkit:** Adapt commands and workflows per project type:
+      - **Framework:** Include all commands (`plan_framework`, `build_framework`, `build_plugin`), all skills, all agents, framework workflow.
+      - **Consumer App:** Include `plan_app`, `build_app`, `build_plugin` (for custom plugins). Omit `plan_framework`/`build_framework`. Include `moku-core` and `moku-plugin` skills. Include all agents. Show consumer workflow.
+      - **Tools/Library:** Omit the entire Moku Development Toolkit section — these projects don't use Moku commands.
 
 ### Step 4: Create Directory Structure and Template Files
 
@@ -97,9 +106,25 @@ tests/
 ```typescript
 import { createCoreConfig } from "@moku-labs/core";
 
+/**
+ * Global configuration shape for the framework.
+ *
+ * @example
+ * ```ts
+ * type Config = { port: number; host: string };
+ * ```
+ */
 // biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined config
 type Config = {};
 
+/**
+ * Event contract for the framework.
+ *
+ * @example
+ * ```ts
+ * type Events = { "app:ready": { timestamp: number } };
+ * ```
+ */
 // biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined events
 type Events = {};
 

@@ -443,6 +443,57 @@ Plugins go in `src/plugins/`.
 - Integration tests: `tests/integration/**/*.test.ts`
 - 90% coverage threshold
 
+## Moku Development Toolkit
+
+This project uses the **moku** Claude Code plugin for development workflows. Below are the available commands, skills, and agents.
+
+### Commands (slash commands)
+
+**Planning:**
+- `/moku:plan_framework` — 3-stage gated workflow to design a framework: analyze requirements, create skeleton structure, write plugin specifications. Output goes to `specifications/` directory.
+- `/moku:plan_app` — Design a Layer 3 consumer application. Analyzes requirements, researches available plugins, performs gap analysis, outputs `.planning/app-spec.md`.
+
+**Building:**
+- `/moku:build_framework` — Build all plugins and framework files from specifications in `specifications/` directory. Resumes if partially built.
+- `/moku:build_plugin [name-or-spec]` — Create a single plugin from a description or spec reference. Handles tier detection, file structure, tests, and validation.
+- `/moku:build_app` — Build a consumer app from `.planning/app-spec.md`. Creates entry point, custom plugins, and validates everything.
+
+**Setup:**
+- `/moku:init` — Initialize a new Moku project with full tooling (used to create this project).
+
+### Skills (automatic context)
+
+Skills are loaded automatically when relevant topics come up. You can also reference them explicitly:
+
+- **moku-core** — Architecture rules, factory chain, lifecycle, event system, context tiers. Use when working with `createCoreConfig`, `createCore`, `createApp`, or discussing the three-layer model.
+- **moku-plugin** — Plugin structure specification, complexity tiers (Nano → VeryComplex), file organization, wiring harness pattern. Use when creating or reviewing plugin code.
+- **moku-web** — Web patterns: Preact components, CSS architecture (@scope, @layer, tokens), island pattern. Use when building web-facing UI.
+
+### Agents (validation)
+
+Agents run autonomously to validate code. They are called automatically by build commands, but can also be triggered manually:
+
+- **moku-spec-validator** — Validates Moku Core specification compliance: three-layer separation, factory chain, config system, lifecycle, events, error formats.
+- **moku-plugin-spec-validator** — Validates plugin structure: correct tier, file organization, JSDoc coverage, test existence, no anti-patterns (no explicit generics on `createPlugin`, no unnecessary `onStart`/`onStop`).
+- **moku-jsdoc-validator** — Validates JSDoc completeness: all exports have descriptions, `@param`, `@returns`, and `@example` tags.
+
+### Typical Workflows
+
+**New framework from scratch:**
+1. `/moku:plan_framework` — design plugins and structure (3 approval gates)
+2. `/moku:build_framework` — implement everything from specs
+3. Validators run automatically after each plugin
+
+**Add a single plugin:**
+1. `/moku:build_plugin auth` — describe what you need, it handles the rest
+
+**New consumer app:**
+1. `/moku:plan_app` — design the app composition
+2. `/moku:build_app` — implement from the plan
+
+**Manual validation:**
+- Ask Claude to "run the spec validator" or "validate JSDoc" on specific files
+
 ## Specification
 
 For questions about how things should be implemented, refer to the [Moku Core specification](https://github.com/moku-labs/core/tree/main/specification).
