@@ -46,6 +46,8 @@ All resolved configs are `Object.freeze`'d. Global config and per-plugin configs
 | start | `onStart` | Forward | `await app.start()` | PluginContext |
 | stop | `onStop` | **REVERSE** | `await app.stop()` | TeardownContext |
 
+`start()` / `stop()` are optional. They are mainly for apps with a distinct runtime phase (servers, workers, long-lived resources). Many apps may only need `createApp()` plus direct API calls.
+
 ### The init Phase (during createApp)
 
 Internal sub-steps (one phase, internal mechanics):
@@ -72,6 +74,8 @@ After init: `createApp` returns the App object.
 
 **Sequential execution:** Plugins run one at a time, awaited. No parallelism.
 
+**Important:** lifecycle completion is not the same thing as hook completion. Because `emit()` is fire-and-forget, async hook work triggered during `onInit` / `onStart` may still be running after `createApp()` or `app.start()` returns.
+
 ### Error Handling
 
 - If `onInit` throws → `createApp` throws
@@ -79,7 +83,17 @@ After init: `createApp` returns the App object.
 - If `onStop` throws → `app.stop()` rejects. Propagates immediately.
 - No catch-and-silence. No retry logic. Consumer decides.
 
-### State Guards
+### Non-Transactional Lifecycle
 
-- `start()` callable once. Second call throws: `"App already started."`
-- `stop()` requires `start()` first. Otherwise: `"App not started."`
+- The lifecycle is not transactional.
+- The kernel does not attempt rollback, compensation, or teardown-after-failed-start.
+- Detached async work outside the awaited lifecycle chain is outside the contract.
+- `stop()` is not a guaranteed recovery mechanism after failed `start()`.
+
+### Supported Lifecycle Usage
+
+Primary contract:
+
+`createApp()` → optional `await app.start()` → optional `await app.stop()`
+
+Repeated calls, concurrent calls, and recovery attempts after lifecycle failure are outside the primary guarantee.

@@ -102,6 +102,6 @@ export const contactFormPlugin = createPlugin('contactForm', {
 2. **Never put > 50 lines of logic in plugin index.ts.** Domain code in separate files.
 3. **Never create new abstractions** (services, providers, managers). Use `createPlugin`.
 4. **Plugin index.ts is a CONNECTION POINT.** Imports + wiring only.
-5. **Always `await createApp()`.** It returns a Promise.
+5. **`createApp()` is synchronous.** Do not `await` it; use `start()` only if the app has a distinct runtime phase.
 6. **Use `ctx.require(pluginInstance)` for dependencies.** Not strings.
 7. **Use `ctx.has('name')` for optional deps.** Boolean check, never throws.

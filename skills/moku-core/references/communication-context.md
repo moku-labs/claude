@@ -23,6 +23,8 @@ ctx.emit('unknown:event', { anything: true });                         // COMPIL
 
 **Hook error resilience:** `emit` is fire-and-forget. If a hook throws, error goes to `onError` handlers (framework + consumer). One failing hook does not prevent other hooks from running.
 
+**No barrier semantics:** lifecycle completion does not imply completion of async hook work triggered by `emit()`. `createApp()` and `app.start()` may finish before those hook promises settle.
+
 ## Hooks
 
 ```typescript

@@ -45,7 +45,7 @@ plugins/*.ts <--imports-- createPlugin     index.ts <--imports-- plugins + creat
 ## Design Philosophy
 
 ### Brutal Simplicity
-No classes. No decorators. No DI containers. No service locators. Every function is a pure factory. Input → output. No side effects until `app.start()`.
+No classes. No decorators. No DI containers. No service locators. `createCoreConfig`, `createCore`, and `createPlugin` are pure factories. `createApp()` performs synchronous init. `app.start()` / `app.stop()` are optional runtime lifecycle methods.
 
 ### Functional Style
 - No class hierarchies. Plugins are plain objects with optional function fields.

@@ -26,9 +26,9 @@ Plugin registration order, sequential, each awaited.
 ### Immutability
 After `createApp`: `app`, global config, and per-plugin configs are all `Object.freeze`'d. Only `ctx.state` is mutable.
 
-### Lifecycle Guards
-- `start()` once only. Second call throws.
-- `stop()` requires `start()` first.
+### Supported Lifecycle Usage
+- Primary contract: `createApp()` → optional `start()` → optional `stop()`.
+- Repeated calls, concurrent calls, and recovery attempts after lifecycle failure are outside the primary guarantee.
 
 ### require() Contract
 Instance-only. Returns typed API or throws with context-specific error messages.
