@@ -8,29 +8,44 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
 - `framework` — build framework from `specifications/` directory
 - `framework specifications/` — explicit spec path
+- `framework config` — build only config.ts + index.ts (skip plugins)
+- `framework plugins` — build only plugins (skip config if exists)
 - `app` — build consumer app from `.planning/app-spec.md`
 - `app .planning/app-spec.md` — explicit plan path
 - `plugin auth` — build plugin "auth" from description or matching spec
 - `plugin #3` — build plugin #3 from `specifications/03-*.md`
+- `plugin #3-#5` — build plugins #3 through #5
+- `plugin #3,#5,#7` — build specific plugins by number
 - `plugin specifications/03-auth.md` — build from explicit spec file
+- `resume` — continue from `.planning/STATE.md`
 
 ---
 
 ## Step 0: Detect Target
 
 Parse `$ARGUMENTS`:
-1. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
-2. If no explicit target keyword, auto-detect:
+1. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
+2. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
+3. If no explicit target keyword, auto-detect:
    a. `specifications/*.md` files exist → **framework**
    b. `.planning/app-spec.md` exists → **app**
    c. Both exist → ask the user which to build
    d. Argument matches a plugin name, `#N` pattern, or spec file path → **plugin**
-3. If no specs found and no recognizable argument → tell the user: "No specifications found. Run `/moku:plan` first to create a plan."
+4. If no specs found and no recognizable argument → tell the user: "No specifications found. Run `/moku:plan` first to create a plan."
 
 For **plugin** targets, resolve the argument:
 - `#N` → find `specifications/0N-*.md` (e.g., `#3` → `specifications/03-*.md`)
+- `#N-#M` → find all specs from N to M (e.g., `#3-#5` → specs 03, 04, 05)
+- `#N,#M,#P` → find specific specs (e.g., `#3,#5,#7`)
 - A name like `auth` → search `specifications/*-auth.md` or build from description
 - A file path → use directly
+
+### State Check
+
+Before starting, check if `.planning/STATE.md` exists:
+- If it does, read it to understand what has already been built
+- Skip plugins/waves that are already marked as complete
+- Report: "Detected existing state. Resuming from [position]. Already built: [list]."
 
 ---
 
@@ -45,9 +60,74 @@ Read the specification from the provided path (defaults to `specifications/`). I
 
 If the plan is incomplete, ask the user to run `/moku:plan framework` first.
 
-### Step 2: Implement in Order
+### Step 2: Wave Analysis
 
-Follow the implementation order from the spec. For each plugin:
+Analyze all plugin specifications and group into dependency-aware waves:
+
+```
+1. Read all specifications/0N-*.md files
+2. Parse dependency graph from each spec's Dependencies section
+3. Group into waves:
+   Wave 1: Plugins with NO dependencies (can build in parallel)
+   Wave 2: Plugins depending ONLY on Wave 1 plugins (can build in parallel)
+   Wave 3: Plugins depending on Wave 1-2 plugins (can build in parallel)
+   ... etc.
+4. If specs include Wave assignments from /moku:plan, use those
+5. Otherwise, compute waves from dependency graph
+```
+
+Present the wave plan to the user:
+```
+Wave 1 (parallel): env [Nano], logger [Micro], configValidator [Nano]
+Wave 2 (parallel): router [Standard] (→ env), content [Standard] (→ logger)
+Wave 3 (sequential): renderer [Complex] (→ router, content)
+```
+
+### Step 3: Build by Waves
+
+For each wave, build all plugins in the wave. Within a wave, **spawn parallel sub-agents** for independent plugins using the Agent tool.
+
+#### Per-Plugin Executor (Sub-Agent)
+
+Each plugin in a wave is built by a dedicated sub-agent. The sub-agent receives minimal context for fresh, focused execution:
+
+**Agent prompt structure:**
+```
+You are building a Moku plugin. Follow the moku-plugin skill strictly.
+
+## Specification
+[Full contents of specifications/0N-name.md]
+
+## Framework Config
+[Contents of src/config.ts — for import paths and type references]
+
+## Dependency Plugin Interfaces
+[For each dependency: contents of src/plugins/dep-name/index.ts]
+
+## Build Rules
+- Follow complexity tier [tier] file structure exactly
+- No explicit generics on createPlugin — all types inferred
+- Full JSDoc on all exports with @param, @returns, @example
+- Write unit tests for each domain file + integration test
+- Use import type for type-only imports
+- Only include onStart/onStop if spec justifies resource management
+
+## Files to Create
+[List from tier: index.ts, types.ts, state.ts, api.ts, handlers.ts, README.md, tests]
+
+## Verification Criteria
+[Contents of the ## Verification section from the spec]
+```
+
+**Parallel execution within waves:**
+- Wave 1 plugins have no dependencies on each other — spawn all agents simultaneously
+- Wave 2 plugins may share Wave 1 dependencies but not each other — spawn all simultaneously
+- For waves with < 4 plugins: all parallel
+- For waves with 4+ plugins: batch into groups of 3 parallel agents
+
+#### Plugin Implementation Order (per sub-agent)
+
+Each sub-agent builds its plugin following this order:
 
 1. **Create the plugin directory** following the specified complexity tier
 2. **Write types.ts** — Config, State, API, Events types (for Standard+)
@@ -55,46 +135,97 @@ Follow the implementation order from the spec. For each plugin:
 4. **Write api.ts** — API factory (for Standard+)
 5. **Write handlers.ts** — Event handlers (if hooks exist, Standard+)
 6. **Write index.ts** — Plugin wiring (~30 lines, imports from domain files)
-   - **Verify no explicit generics** — The `createPlugin(` call must NOT have type parameters. All types inferred from spec.
-   - **Verify lifecycle necessity** — Only include `onStart`/`onStop` if the plugin spec explicitly states a resource that needs starting/stopping. Omit for CLI, build, utility, and config plugins.
+   - **Verify no explicit generics** — The `createPlugin(` call must NOT have type parameters.
+   - **Verify lifecycle necessity** — Only include `onStart`/`onStop` if the spec explicitly states a resource.
 7. **Write README.md** — Plugin documentation
 8. **Write unit tests** — For each domain file
 9. **Write integration test** — For the full plugin wiring
 
-### Step 3: Create Framework Files
+### Step 4: Post-Wave Verification
 
-After all plugins are built:
+After each wave's sub-agents complete, run verification:
+
+1. Spawn the **moku-verifier** agent on all plugins in the wave
+   - Level 1: All tier files exist
+   - Level 2: Files contain real implementations (not stubs)
+   - Level 3: Plugins wired correctly, lint passes, tests pass
+2. If ALL plugins pass → update STATE.md → proceed to next wave
+3. If ANY plugin fails → enter Gap Closure (Step 4a)
+
+#### Step 4a: Gap Closure
+
+When verification finds issues:
+
+1. Collect all verification failures into a gap list
+2. For each gap, spawn a targeted fix agent with:
+   - The specific file(s) that failed
+   - The verification criteria that failed
+   - The relevant plugin specification
+   - Instructions to fix ONLY the identified issues (no refactoring)
+3. After fixes, re-run the **moku-verifier** agent on affected plugins
+4. **Circuit breaker:** Maximum 2 gap closure rounds per wave. If issues persist after 2 rounds, report to user:
+   > "Some verification issues remain after 2 fix attempts. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
+
+### Step 5: Create Framework Files
+
+After all plugin waves are complete:
 
 1. **src/config.ts** — `createCoreConfig` with Config and Events types from spec
 2. **src/index.ts** — `createCore` with all default plugins, exports `{ createApp, createPlugin }`
 3. Update **package.json** with all required dependencies
 
-### Step 4: Validate
+### Step 6: Post-Build Validation Pipeline
 
-- Run `bun run lint` — fix any Biome or ESLint issues
-- Run `bun run test` — fix any test failures
-- Grep for `createPlugin<` across all source files — if found, fix immediately (remove generics, let inference work)
-- Use the **moku-plugin-spec-validator** agent on each plugin
-- Use the **moku-jsdoc-validator** agent on all source files
-- Use the **moku-spec-validator** agent on the framework structure
+Run the full validation suite across the completed framework:
 
-### Step 5: Report
+**Parallel Group A (structure + docs):**
+- **moku-spec-validator** agent — specification compliance per plugin
+- **moku-jsdoc-validator** agent — documentation quality per plugin
+- **moku-plugin-spec-validator** agent — structure compliance per plugin
+
+**Parallel Group B (quality + types):**
+- **moku-test-validator** agent — test quality per plugin
+- **moku-type-validator** agent — TypeScript type correctness (once, whole project)
+
+**Sequential (after A + B complete):**
+- **moku-architecture-validator** agent — cross-plugin architecture (once, whole framework)
+
+If any validator reports BLOCKER issues, enter gap closure. If only WARNINGs, include them in the report.
+
+### Step 7: Report and State Update
 
 Summarize what was built:
-- Number of plugins created
+- Number of plugins created, grouped by wave
 - Files created per plugin
-- Test coverage
-- Any issues found and fixed
+- Validation results (pass/warn/fail per validator)
+- Any issues found and fixed during gap closure
+- Any remaining WARNINGs for the user to review
 
-### Large Framework Handling
+Update `.planning/STATE.md`:
+```markdown
+## Phase: build/complete
+## Completed
+- [x] Wave 1: [plugins] — verified
+- [x] Wave 2: [plugins] — verified
+- [x] Framework files created
+- [x] Post-build validation passed
 
-If the framework has more than 5 plugins:
+## Validation Summary
+- Spec compliance: PASS
+- JSDoc coverage: PASS
+- Plugin structure: PASS
+- Test quality: PASS (2 WARNINGs)
+- Type correctness: PASS
+- Architecture: PASS
+```
 
-1. Build plugins in batches of 3-5
-2. After each batch, run validation
-3. If context is getting large, tell the user:
-   > "I've completed plugins #1-#5. To continue with the remaining plugins, please clear the context and run `/moku:build framework` again. I'll detect the already-built plugins and continue from where I left off."
-4. When resuming, check which plugins already exist and skip them
+### Context Budget Management
+
+After each wave, assess context usage:
+1. If 3+ waves have been completed in this session, the context is getting heavy
+2. Write STATE.md with current progress and suggest:
+   > "Context is getting heavy. I've completed Waves 1-[N] ([list of plugins]). Run `/moku:build resume` to continue with fresh context from Wave [N+1]."
+3. On `resume`, read STATE.md, skip completed waves, continue from next wave
 
 ### Quality Requirements
 
@@ -136,6 +267,8 @@ If the plan includes custom consumer-side plugins, build each one following the 
 
 Each plugin must follow `specification/15-PLUGIN-STRUCTURE`. Full JSDoc, unit tests, integration tests.
 
+For multiple custom plugins, use wave analysis (same as framework build) to identify parallel opportunities.
+
 ### Step 4: Create Entry Point
 
 Write `src/main.ts` (or the specified entry file):
@@ -165,29 +298,28 @@ await app.start();
 
 ### Step 5: Validate
 
-- Run `bun run lint` — fix any issues
-- Run `bun run test` — fix any test failures
-- Use **moku-spec-validator** agent on all source files
-- Use **moku-plugin-spec-validator** agent on custom plugins
-- Use **moku-jsdoc-validator** agent on all source files
+Run the post-build validation pipeline:
+
+**Parallel Group A:**
+- **moku-spec-validator** agent on all source files
+- **moku-plugin-spec-validator** agent on custom plugins
+- **moku-jsdoc-validator** agent on all source files
+
+**Parallel Group B:**
+- **moku-test-validator** agent on custom plugin tests
+- **moku-type-validator** agent (once, whole project)
+
+If BLOCKER issues found, enter gap closure. WARNINGs included in report.
 
 ### Step 6: Report
 
 Summarize what was built:
 - Custom plugins created
 - Entry point structure
-- Test results
+- Validation results
 - Any issues found and fixed
 
-### Large Application Handling
-
-If the application has many custom plugins:
-
-1. Build plugins in order of dependencies
-2. After each batch of 3-5 plugins, validate
-3. If context is getting large, tell the user:
-   > "I've completed [N] custom plugins and the base setup. To continue, please clear the context and run `/moku:build app` again."
-4. When resuming, detect existing files and continue
+Update `.planning/STATE.md` with build results.
 
 ### App Quality Requirements
 
@@ -217,6 +349,11 @@ If referencing a spec (file path or `#N`):
 - Read the spec file and find the plugin definition
 - Extract all details: config, state, API, events, dependencies
 
+If referencing multiple specs (`#N-#M` or `#N,#M,#P`):
+- Read all referenced specs
+- Determine build order based on dependencies
+- Use wave analysis for parallel opportunities
+
 If describing a new plugin:
 - Ask clarifying questions about the plugin's purpose
 - Determine the complexity tier
@@ -225,7 +362,7 @@ If describing a new plugin:
 If building a hierarchy (e.g., "auth + session + permissions"):
 - Identify all plugins in the hierarchy
 - Determine implementation order based on dependencies
-- Build each plugin sequentially
+- Build each plugin sequentially or in parallel waves
 
 ### Step 2: Determine Complexity Tier
 
@@ -350,10 +487,18 @@ Document:
 
 ### Step 8: Validate
 
-- Use **moku-plugin-spec-validator** agent to validate structure
-- Use **moku-jsdoc-validator** agent to validate documentation
-- Run `bun run lint` to check formatting and linting
-- Run `bun run test` to verify tests pass
+Run the validation pipeline:
+
+**Parallel:**
+- **moku-verifier** agent — 3-level artifact check (exists, substantive, wired)
+- **moku-plugin-spec-validator** agent — structure compliance
+- **moku-jsdoc-validator** agent — documentation quality
+
+**After parallel completes:**
+- **moku-test-validator** agent — test quality
+- **moku-type-validator** agent — type correctness
+
+If BLOCKER issues found, enter gap closure (max 2 rounds).
 
 ### Large Plugin Handling
 

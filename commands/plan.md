@@ -12,7 +12,7 @@ Create a specification plan for a Moku project. The input (`$ARGUMENTS`) can be:
 - `"A static site generator"` — auto-detect target from working directory
 - A path to existing code to migrate to Moku Core
 
-This command runs as a **2-stage gated workflow**. Each stage ends with a user checkpoint — the user must explicitly approve before proceeding to the next stage.
+This command runs as a **2-stage gated workflow** with optional discussion, optional research, and plan validation. Each stage ends with a user checkpoint — the user must explicitly approve before proceeding to the next stage.
 
 ## CRITICAL RULE: No Explicit Generics on createPlugin
 
@@ -44,6 +44,82 @@ Parse `$ARGUMENTS`:
    c. Argument looks like a plugin name or spec reference → **plugin**
 3. If still unclear — ask the user: "What are you planning? A framework, consumer app, or plugin?"
 
+### Resume from State
+
+Before starting fresh, check if `.planning/STATE.md` exists:
+- If it does, read it to understand the current project position
+- Present the state to the user: "I found an existing plan state. Resume from [phase] or start fresh?"
+- If resuming, skip to the appropriate stage
+
+---
+
+## Step 0.5: Optional Discussion Phase
+
+**This phase triggers when requirements are unclear.** If the user provides a clear, detailed description or an existing codebase to analyze, skip directly to Stage 1.
+
+**When to trigger:**
+- The description is vague (< 20 words, no specific domain details)
+- The user asks a question rather than stating what to build
+- The target domain is complex or has many possible interpretations
+
+**Discussion process:**
+1. Ask about the target domain and use case
+2. Ask about tech preferences (runtime environment, deployment target)
+3. Ask about scale expectations (how many plugins, team size)
+4. Ask about non-functional requirements (performance targets, bundle size limits, browser support)
+5. Ask about existing constraints (must integrate with X, can't use Y)
+
+**Record decisions:**
+Write the captured decisions to `.planning/decisions.md`:
+
+```markdown
+# Planning Decisions
+
+## Target
+- Type: [framework/app/plugin]
+- Domain: [description]
+
+## Tech Preferences
+- Runtime: [Bun/Node/Both]
+- Deployment: [description]
+
+## Scale
+- Expected plugins: [number range]
+- Team: [solo/small/large]
+
+## Non-Functional Requirements
+- [requirement 1]
+- [requirement 2]
+
+## Constraints
+- [constraint 1]
+- [constraint 2]
+
+## Open Questions
+- [anything still unclear]
+```
+
+Present a summary and get approval before proceeding.
+
+---
+
+## Step 0.6: Optional Research Phase
+
+**This phase triggers when planning a new domain** that would benefit from ecosystem investigation. Skip for well-understood domains, simple plugins, or when the user provides detailed specs.
+
+**When to trigger:**
+- Planning a framework in a domain the user hasn't specified libraries for
+- The domain has multiple competing approaches (e.g., SSG, CMS, auth)
+- Complex TypeScript patterns are likely needed
+
+**Research process:**
+1. Spawn the **moku-researcher** agent with the domain description and any decisions from Step 0.5
+2. The agent investigates npm packages, TypeScript patterns, reference implementations, and pitfalls
+3. Output is saved to `.planning/research.md`
+4. Review the research results and incorporate relevant findings into Stage 1 analysis
+
+The research output is available for the user to review but does NOT require a separate approval gate — it flows directly into Stage 1.
+
 ---
 
 ## Stage 1: Analysis + Structure
@@ -51,9 +127,10 @@ Parse `$ARGUMENTS`:
 ### Framework Target
 
 #### If given a description:
-- Ask clarifying questions about the domain
+- Ask clarifying questions about the domain (use decisions from Step 0.5 if available)
 - Identify the target use case (web app, CLI, game, build tool, etc.)
 - Determine what plugins are needed
+- If research was performed (Step 0.6), incorporate ecosystem findings into plugin identification
 
 #### If given existing code:
 - Read and analyze the codebase thoroughly
@@ -197,9 +274,19 @@ Present the plugin design: tier, config shape, state shape, API methods, events,
 
 ---
 
+### Plan Validation Gate (all targets)
+
+**Before presenting to the user**, run the **moku-plan-checker** agent to validate:
+- Requirement coverage (every decision maps to a plugin or config)
+- Dependency graph correctness (acyclic, order-satisfiable)
+- Plugin identification completeness
+- Event naming conventions
+
+If the plan-checker finds BLOCKER issues, fix them before presenting to the user. WARNINGs are included in the presentation for transparency.
+
 ### User Gate (all targets)
 
-Present the analysis. Ask the user to validate and approve before proceeding to Stage 2.
+Present the analysis along with the plan-checker validation results. Ask the user to validate and approve before proceeding to Stage 2.
 
 **Wait for explicit user approval before proceeding.**
 
@@ -228,6 +315,17 @@ Using the **moku-plugin** skill for plugin file patterns and the **moku-core** s
 
 4. **Create README.md** for each plugin — with plugin name and tier only (content filled during build)
 
+#### Skeleton Verification Checklist
+
+After creating all skeleton files, run through this checklist to verify the skeleton compiles and lints cleanly. Fix any issues before proceeding to specifications.
+
+1. **TypeScript** — `bunx tsc --noEmit` passes with zero errors (skeleton types must be valid)
+2. **Biome** — `bun run format` runs without errors (normalize formatting)
+3. **ESLint** — `bun run lint` passes with zero warnings and zero errors
+4. **Build** — `bun run build` compiles without errors (if build script exists)
+
+If any check fails, fix the skeleton files and re-run. The skeleton must be a valid, compilable project before specifications are written — this ensures the build command starts from a clean foundation.
+
 #### Create Plugin Specifications
 
 For each plugin, create a detailed development specification. Save each spec as a separate file in the project's `specifications/` directory:
@@ -244,6 +342,7 @@ Each specification file must contain:
 ## Overview
 - **Tier:** [Nano/Micro/Standard/Complex/VeryComplex]
 - **Implementation Order:** #N
+- **Wave:** [wave number for parallel execution grouping]
 - **Description:** [Detailed description of purpose and behavior]
 
 ## Config
@@ -280,25 +379,43 @@ Each specification file must contain:
 ## Testing Strategy
 - **Unit tests:** [What to test for each domain file]
 - **Integration tests:** [Full plugin wiring tests]
+- **Type-level tests:** [What to verify with expectTypeOf and @ts-expect-error]
 
 ## Code Example
 [Complete createPlugin call showing exact spec object — NO explicit generics]
+
+## Verification
+- [ ] Plugin directory exists with correct tier structure
+- [ ] Config shape matches spec (field names, types, defaults)
+- [ ] API methods exist and match signatures
+- [ ] Events declared match spec exactly
+- [ ] Dependencies reference correct plugin instances
+- [ ] Unit tests cover all API methods and edge cases
+- [ ] Integration test exercises full lifecycle (createApp → start → API → stop)
+- [ ] Type-level tests verify emit, require, and app surface types
+- [ ] `bun run lint` passes with zero warnings
+- [ ] `bun run test` passes
+- [ ] No explicit generics on createPlugin
+- [ ] import type used for type-only imports
 ```
 
 #### Validation Loop
 
 After all specs are created:
-1. Run the **moku-plugin-spec-validator** agent on each plugin
-2. Run the **moku-spec-validator** agent to validate cross-plugin concerns (dependency graph, event flow, naming)
-3. Resolve any issues found
-4. Re-run until both validators report zero violations
+1. Run the **moku-plan-checker** agent to validate cross-spec concerns (dependency graph, event flow, requirement coverage, section completeness)
+2. Run the **moku-plugin-spec-validator** agent on each plugin
+3. Run the **moku-spec-validator** agent to validate Moku specification compliance
+4. Resolve any BLOCKER issues found
+5. Re-run until all validators report zero BLOCKER violations
 
 #### Final Output
 
 Present:
 - Summary of all specifications created
+- Plan-checker validation report (with any remaining WARNINGs)
 - Dependency graph (visual or textual)
 - Communication map (events flowing between plugins)
+- Wave grouping for parallel build execution
 - Implementation order with rationale
 - Example of the final consumer API
 
@@ -331,7 +448,7 @@ Save to `.planning/app-spec.md` (or user-specified path):
 
 ## Custom Plugins
 ### Plugin: [name]
-[Full plugin spec: tier, config, state, API, events, deps, tests]
+[Full plugin spec: tier, config, state, API, events, deps, tests, verification]
 
 ## Missing Plugins (Require Framework Extension)
 [Plugins that need to be added to the framework, if any]
@@ -356,27 +473,66 @@ Save to `.planning/app-spec.md` (or user-specified path):
 
 #### Validate
 
-Use the **moku-spec-validator** agent to verify:
-- Plugin ordering satisfies all `depends` constraints
-- No imports from `@moku-labs/core`
-- Config types match framework expectations
-- Custom plugins follow spec
+1. Run the **moku-plan-checker** agent on the application plan
+2. Use the **moku-spec-validator** agent to verify:
+   - Plugin ordering satisfies all `depends` constraints
+   - No imports from `@moku-labs/core`
+   - Config types match framework expectations
+   - Custom plugins follow spec
 
 ---
 
 ### Plugin Target
 
-Write a plugin specification file to `specifications/` (if within a framework project) or `.planning/` (if standalone). Use the same plugin spec template as the framework specs above.
+Write a plugin specification file to `specifications/` (if within a framework project) or `.planning/` (if standalone). Use the same plugin spec template as the framework specs above — including the Verification section.
 
-Include: overview, config, state, API, events, dependencies, hooks, lifecycle, communication, package dependencies, testing strategy, and code example.
+Include: overview, config, state, API, events, dependencies, hooks, lifecycle, communication, package dependencies, testing strategy, code example, and verification criteria.
 
-Run the **moku-plugin-spec-validator** agent to validate the spec.
+1. Run the **moku-plan-checker** agent to validate the spec
+2. Run the **moku-plugin-spec-validator** agent to validate the spec
 
 ---
 
+### State Update (all targets)
+
+After Stage 2 is complete, write/update `.planning/STATE.md`:
+
+```markdown
+# Project State
+
+## Phase: plan/complete
+## Target: [framework/app/plugin]
+## Last Updated: [ISO timestamp]
+
+## Decisions
+[Summary from .planning/decisions.md, or inline if no discuss phase]
+
+## Completed
+- [x] Target detection
+- [x] Discussion (if performed)
+- [x] Research (if performed)
+- [x] Stage 1: Analysis + Structure — approved
+- [x] Stage 2: Specifications + Skeleton — approved
+
+## Plugins
+| # | Wave | Name | Tier | Dependencies | Spec File | Status |
+|---|------|------|------|-------------|-----------|--------|
+| 1 | 1 | env | Nano | none | specifications/01-env.md | specified |
+| 2 | 1 | logger | Micro | none | specifications/02-logger.md | specified |
+| 3 | 2 | router | Standard | env | specifications/03-router.md | specified |
+
+## Wave Grouping
+- Wave 1: env, logger (no dependencies — parallel build)
+- Wave 2: router (depends on Wave 1)
+- Wave 3: renderer (depends on Wave 1-2)
+
+## Next Action
+Run `/moku:build framework` to begin implementation
+```
+
 ### User Gate (all targets)
 
-Present the completed specifications. Final approval from user.
+Present the completed specifications and state update. Final approval from user.
 
 **Wait for explicit user approval.**
 
@@ -386,6 +542,7 @@ Present the completed specifications. Final approval from user.
 
 - Follow `specification/15-PLUGIN-STRUCTURE` complexity tiers strictly
 - Every plugin must have an implementation order number
+- Every plugin must have a wave assignment for parallel build grouping
 - Plugin #1 should be implementable WITHOUT depending on other plugins
 - Each subsequent plugin should only depend on already-numbered plugins
 - Include ALL package.json dependencies for every plugin
@@ -399,4 +556,7 @@ Present the completed specifications. Final approval from user.
 - Custom plugins must follow the same structure specs as framework plugins
 - Full JSDoc on all custom code
 - Include testing strategy for all custom plugins
+- Include verification criteria for all plugins
 - The spec must be complete enough to implement without further questions
+- Run plan-checker agent BEFORE every user gate — users see validated plans only
+- Update `.planning/STATE.md` at end of planning for cross-session continuity

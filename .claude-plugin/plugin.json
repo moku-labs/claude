@@ -1,7 +1,7 @@
 {
   "name": "moku",
-  "version": "0.2.0",
-  "description": "Development toolkit for Moku Core — scaffolding, framework planning, plugin building, and specification enforcement for the micro-kernel plugin framework",
+  "version": "0.3.0",
+  "description": "Development toolkit for Moku Core — scaffolding, framework planning, plugin building, and specification enforcement for the micro-kernel plugin framework. Features wave-based parallel execution, 9-agent validation pipeline, and cross-session state tracking.",
   "author": {
     "name": "Oleksadr Kucherenko",
     "email": "moku-labs@users.noreply.github.com"
@@ -13,6 +13,8 @@
     "micro-kernel",
     "plugin-framework",
     "typescript",
-    "scaffolding"
+    "scaffolding",
+    "validation",
+    "wave-execution"
   ]
 }
