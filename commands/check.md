@@ -1,7 +1,7 @@
 ---
 description: Run diagnostics on the Moku plugin installation and project state
-allowed-tools: Read, Bash, Glob, Grep
-argument-hint: [verbose]
+allowed-tools: Read, Bash, Glob, Grep, Agent
+argument-hint: [verbose|self-test]
 disable-model-invocation: true
 ---
 
@@ -80,3 +80,12 @@ Issues:
 ```
 
 If `$ARGUMENTS` contains "verbose", show full details for each check. Otherwise show the summary only.
+
+If `$ARGUMENTS` contains "self-test", skip project checks and instead validate the Moku Claude plugin itself:
+1. Verify all 9 agent files exist in `${CLAUDE_PLUGIN_ROOT}/agents/` and have valid YAML frontmatter (name, description, model, tools)
+2. Verify all 3 skill directories exist with SKILL.md files in `${CLAUDE_PLUGIN_ROOT}/skills/`
+3. Verify `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` parses as valid JSON
+4. Verify all referenced hook scripts exist and are executable
+5. Verify all reference files mentioned in skills/commands exist
+6. Verify `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` parses correctly
+7. Report PASS/FAIL for each check

@@ -4,7 +4,10 @@ description: >
   Validates plan completeness: requirement coverage, dependency graph, event flow,
   spec sections. Use before user gates in /moku:plan or after spec modifications.
 model: sonnet
-color: yellow
+maxTurns: 30
+skills:
+  - moku-core
+  - moku-plugin
 tools: ["Read", "Grep", "Glob"]
 ---
 

@@ -7,7 +7,7 @@ INPUT="$1"
 
 # Extract file_path from the JSON input (jq preferred, grep/sed fallback)
 if command -v jq &>/dev/null; then
-  FILE_PATH=$(echo "$INPUT" | jq -r '.file_path // empty' 2>/dev/null)
+  FILE_PATH=$(jq -r '.file_path // empty' <<< "$INPUT" 2>/dev/null)
 else
   FILE_PATH=$(echo "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
 fi
@@ -16,8 +16,8 @@ if [ -z "$FILE_PATH" ]; then
   exit 0
 fi
 
-# Check if the path contains .planning/
-if echo "$FILE_PATH" | grep -q '\.planning/'; then
+# Check if the path targets .planning/ anchored to project root (prevents path traversal)
+if [[ "$FILE_PATH" == ".planning/"* ]] || [[ "$FILE_PATH" == "$PWD/.planning/"* ]]; then
   echo '{"decision":"approve","reason":"Auto-approved: .planning/ directory write for state tracking"}'
   exit 0
 fi

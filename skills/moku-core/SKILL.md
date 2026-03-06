@@ -1,12 +1,10 @@
 ---
 name: moku-core
 description: >
-  This skill should be used when the user works with Moku Core architecture,
-  asks about "three-layer model", "createCoreConfig", "createCore", "createApp",
-  "createPlugin", "factory chain", "moku specification", "moku architecture",
-  "plugin lifecycle", "event system", "context tiers", "moku kernel",
-  or needs guidance on building frameworks, plugins, or consumer apps
-  following Moku Core specifications.
+  Moku Core micro-kernel architecture guide. Triggers on: "moku architecture",
+  "moku specification", "createCoreConfig", "createCore", "createApp",
+  "moku factory chain", "three-layer model", "moku kernel", "moku lifecycle",
+  "moku event system", "moku context tiers", or building moku frameworks/plugins.
 ---
 
 # Moku Core Architecture

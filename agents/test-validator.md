@@ -4,7 +4,10 @@ description: >
   Validates test quality beyond file existence: mock context correctness, assertion
   quality, edge cases, type-level tests, integration lifecycle. Use after plugin build.
 model: sonnet
-color: green
+maxTurns: 30
+skills:
+  - moku-core
+  - moku-plugin
 tools: ["Read", "Grep", "Glob"]
 ---
 

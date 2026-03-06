@@ -4,7 +4,10 @@ description: >
   Validates Moku Core specification compliance: 3-layer separation, factory chain,
   config, lifecycle, events, state. Use proactively after code changes.
 model: sonnet
-color: yellow
+maxTurns: 30
+skills:
+  - moku-core
+  - moku-plugin
 tools: ["Read", "Grep", "Glob"]
 ---
 

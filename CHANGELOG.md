@@ -2,6 +2,32 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.5.0 (2026-03-07)
+
+### Fixed
+- **CRITICAL**: `settings.json` was using unsupported schema — emptied (agent key is for activating agents, not config)
+- **CRITICAL**: PostToolUse format hook fired on ALL projects — added Moku project guard (biome.json + src/config.ts or .planning)
+- **CRITICAL**: Path traversal weakness in approve-planning-writes.sh — anchored to project root
+- Removed unsupported `color` field from all 9 agent frontmatter files
+
+### Added
+- `skills` field on all agents (agents don't inherit parent skills — now preloaded)
+- `maxTurns` on all agents (circuit breaker: 30 for validators, 40 for researcher)
+- `memory: user` on researcher agent for cross-session domain knowledge
+- `.lsp.json` for TypeScript language server integration
+- First-run welcome message in SessionStart hook for new users
+- `Agent` tool added to `/moku:check` for running validation agents
+- `self-test` mode for `/moku:check` — validates the plugin's own integrity
+- `--dry-run` mode for `/moku:build` — previews files without creating them
+- STATE.md backup protocol (`.bak` before overwrite, git checkpoint SHA)
+- STATE.md validation (required headers check on read)
+- Dynamic config injection via `!` backtick in build/plan commands (reads `.claude/moku.local.md`)
+- Configurable `maxParallelAgents` and `gapClosureMaxRounds` (previously hardcoded)
+
+### Improved
+- Skill trigger descriptions tightened with "moku" prefix to avoid false triggers on generic terms
+- PostToolUse hook now reports format errors instead of swallowing them
+
 ## 0.4.0 (2026-03-06)
 
 ### Fixed
@@ -15,7 +41,6 @@ All notable changes to the Moku Claude Code Plugin will be documented in this fi
 - PostToolUse hook for auto-formatting after Write/Edit
 - PreCompact hook to preserve planning state during context compaction
 - SessionStart hook to detect Moku project type and planning state
-- `settings.json` with configurable defaults (parallel agent limit, model overrides)
 - `/moku:check` diagnostic command for plugin self-validation
 - CHANGELOG.md for version tracking
 - Dynamic context injection in skills for live state awareness
@@ -27,12 +52,12 @@ All notable changes to the Moku Claude Code Plugin will be documented in this fi
 - Replaced `specification/15-PLUGIN-STRUCTURE` references with actual skill references
 - Auto-git-commit before each build wave for rollback safety
 
-## 0.3.1 (2026-02-XX)
+## 0.3.1 (2026-02-28)
 
 ### Added
 - marketplace.json for plugin distribution
 
-## 0.3.0 (2026-02-XX)
+## 0.3.0 (2026-02-25)
 
 ### Added
 - 9-agent validation pipeline (spec, jsdoc, plugin-spec, plan-checker, verifier, test, type, architecture, researcher)

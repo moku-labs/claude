@@ -4,7 +4,9 @@ description: >
   Validates JSDoc documentation quality and completeness on all exports.
   Use proactively after writing or modifying source code in Moku projects.
 model: sonnet
-color: cyan
+maxTurns: 30
+skills:
+  - moku-core
 tools: ["Read", "Grep", "Glob"]
 ---
 

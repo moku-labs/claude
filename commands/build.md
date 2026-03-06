@@ -1,9 +1,14 @@
 ---
 description: Build a framework, consumer app, or plugin from a specification
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
-argument-hint: [framework|app|plugin] [spec-path-or-name]
+argument-hint: [framework|app|plugin] [spec-path-or-name] [--dry-run]
 disable-model-invocation: true
 ---
+
+## Project Configuration
+!`if [ -f .claude/moku.local.md ]; then head -20 .claude/moku.local.md; fi`
+
+Use configuration values above if present (maxParallelAgents, gapClosureMaxRounds, etc.). Otherwise use defaults: maxParallelAgents=3, gapClosureMaxRounds=2.
 
 Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
@@ -25,14 +30,15 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 ## Step 0: Detect Target
 
 Parse `$ARGUMENTS`:
-1. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
-2. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
-3. If no explicit target keyword, auto-detect:
+1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files. Present the plan and exit.
+2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
+3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
+4. If no explicit target keyword, auto-detect:
    a. `specifications/*.md` files exist → **framework**
    b. `.planning/app-spec.md` exists → **app**
    c. Both exist → ask the user which to build
    d. Argument matches a plugin name, `#N` pattern, or spec file path → **plugin**
-4. If no specs found and no recognizable argument → tell the user: "No specifications found. Run `/moku:plan` first to create a plan."
+5. If no specs found and no recognizable argument → tell the user: "No specifications found. Run `/moku:plan` first to create a plan."
 
 For **plugin** targets, resolve the argument:
 - `#N` → find `specifications/0N-*.md` (e.g., `#3` → `specifications/03-*.md`)
@@ -45,8 +51,17 @@ For **plugin** targets, resolve the argument:
 
 Before starting, check if `.planning/STATE.md` exists:
 - If it does, read it to understand what has already been built
+- Validate it contains required headers: `## Phase:`, `## Target:`, `## Next Action:`
+- If headers are missing or malformed, warn the user and offer to regenerate from spec files
 - Skip plugins/waves that are already marked as complete
 - Report: "Detected existing state. Resuming from [position]. Already built: [list]."
+
+### State Write Protocol
+
+When updating `.planning/STATE.md`:
+1. Back up current state: copy to `.planning/STATE.md.bak` before overwriting
+2. If in a git repo, record the current commit SHA in the state file as `## Git Checkpoint: <sha>`
+3. This enables rollback if a wave introduces regressions
 
 ---
 

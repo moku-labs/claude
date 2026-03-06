@@ -13,7 +13,7 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
 | `/moku:plan [target] [description]` | Gated workflow: optional discussion, optional research, analysis, specifications. Validates plans before user review. |
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`. |
-| `/moku:check [verbose]` | Run diagnostics on project state, tooling, plugin health, and build status. |
+| `/moku:check [verbose\|self-test]` | Run diagnostics on project state, tooling, plugin health, build status, or validate the plugin itself. |
 
 ### Build Targets
 
@@ -25,15 +25,16 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 /moku:build plugins #3-#5          # Build range of plugins
 /moku:build plugins #3,#5,#7       # Build specific plugins
 /moku:build resume                 # Continue from STATE.md
+/moku:build framework --dry-run    # Preview what would be built
 ```
 
 ## Skills
 
 | Skill | Triggers On |
 |-------|-------------|
-| **moku-core** | "moku architecture", "three-layer", "createCoreConfig", "factory chain", "moku specification" |
-| **moku-plugin** | "plugin structure", "plugin tier", "complexity tier", "plugin organization", "wiring harness" |
-| **moku-web** | "web app", "TSX", "CSS", "preact", "component", "layout", "island", "frontend" |
+| **moku-core** | "moku architecture", "moku specification", "createCoreConfig", "moku factory chain", "moku kernel" |
+| **moku-plugin** | "moku plugin structure", "moku plugin tier", "createPlugin structure", "moku wiring harness" |
+| **moku-web** | "moku web", "moku component", "moku CSS architecture", "moku island pattern", "moku design tokens" |
 
 Skills include dynamic context injection to auto-detect project state and planning phase.
 
@@ -79,24 +80,20 @@ Sequential (cross-plugin):        architecture-validator
 
 ## Configuration
 
-### settings.json
-
-Default plugin settings (can be overridden per-project via `.claude/moku.local.md`):
-
-```json
-{
-  "agent": {
-    "maxParallelAgents": 3,
-    "gapClosureMaxRounds": 2,
-    "validatorModel": "sonnet",
-    "researcherModel": "sonnet"
-  }
-}
-```
-
 ### Per-Project Settings
 
-Create `.claude/moku.local.md` with YAML frontmatter for project-specific overrides. See `skills/moku-core/references/plugin-settings.md` for supported fields.
+Create `.claude/moku.local.md` with YAML frontmatter for project-specific overrides:
+
+```markdown
+---
+maxParallelAgents: 3
+gapClosureMaxRounds: 2
+---
+
+Project-specific notes and context here.
+```
+
+See `skills/moku-core/references/plugin-settings.md` for supported fields. Commands inject these values dynamically via `!` backtick syntax.
 
 ## State Tracking
 

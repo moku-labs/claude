@@ -4,7 +4,10 @@ description: >
   Investigates npm ecosystem, TypeScript patterns, and reference implementations
   before planning or building a new plugin domain. The only agent with web access.
 model: sonnet
-color: purple
+maxTurns: 40
+memory: user
+skills:
+  - moku-core
 tools: ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
 ---
 

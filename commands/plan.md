@@ -5,6 +5,11 @@ argument-hint: [framework|app|plugin] [description-or-path]
 disable-model-invocation: true
 ---
 
+## Project Configuration
+!`if [ -f .claude/moku.local.md ]; then head -20 .claude/moku.local.md; fi`
+
+Use configuration values above if present (maxParallelAgents, gapClosureMaxRounds, etc.). Otherwise use defaults: maxParallelAgents=3, gapClosureMaxRounds=2.
+
 Create a specification plan for a Moku project. The input (`$ARGUMENTS`) can be:
 
 - `framework "A static site generator"` — explicit framework target with description
@@ -49,11 +54,13 @@ Every stage reads `.planning/STATE.md` at the start and writes it at the end. Th
 3. Load context: target type, decisions, plugin table, wave grouping
 
 **On stage exit (before user gate):**
-1. Update `.planning/STATE.md` with:
+1. Back up current state: copy `.planning/STATE.md` to `.planning/STATE.md.bak` before overwriting
+2. Update `.planning/STATE.md` with:
    - Current phase status
    - What was completed in this stage
    - Artifacts created (spec files, skeleton files)
    - Next expected action
+3. Validate the written file contains required headers: `## Phase:`, `## Target:`, `## Next Action:`
 
 ---
 

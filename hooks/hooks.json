@@ -18,7 +18,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f package.json ] && grep -q '\"format\"' package.json 2>/dev/null; then bun run format 2>/dev/null; fi",
+            "command": "if [ -f biome.json ] && [ -f package.json ] && grep -q '\"format\"' package.json 2>/dev/null && ([ -f src/config.ts ] || [ -d .planning ]); then bun run format 2>&1 || echo 'Format failed with exit code '$?; fi",
             "timeout": 15
           }
         ]

@@ -74,7 +74,7 @@ You are building a Moku plugin. Follow the moku-plugin skill strictly.
 - Wave 1 plugins have no dependencies on each other — spawn all agents simultaneously
 - Wave 2 plugins may share Wave 1 dependencies but not each other — spawn all simultaneously
 - For waves with < 4 plugins: all parallel
-- For waves with 4+ plugins: batch into groups of 3 parallel agents
+- For waves with 4+ plugins: batch into groups of `maxParallelAgents` (default: 3) parallel agents
 
 ### Plugin Implementation Order (per sub-agent)
 
@@ -135,7 +135,7 @@ When verification finds issues:
    - The relevant plugin specification
    - Instructions to fix ONLY the identified issues (no refactoring)
 3. After fixes, re-run the **moku-verifier** agent on affected plugins
-4. **Circuit breaker:** Maximum 2 gap closure rounds per wave. If issues persist after 2 rounds, report to user:
+4. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist, report to user:
    > "Some verification issues remain after 2 fix attempts. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
 
 ## Step 5: Final Framework Verification

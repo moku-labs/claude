@@ -1,12 +1,10 @@
 ---
 name: moku-plugin
 description: >
-  This skill should be used when the user works with Moku plugin structure,
-  asks about "plugin structure", "plugin file", "plugin tier", "complexity tier",
-  "plugin organization", "nano plugin", "micro plugin", "standard plugin",
-  "complex plugin", "plugin patterns", "wiring harness", "plugin index.ts",
-  "plugin file layout", "plugin directory", or needs guidance on organizing
-  plugin code following Moku specification 15.
+  Moku plugin structure and complexity tiers. Triggers on: "moku plugin structure",
+  "moku plugin tier", "moku nano/micro/standard/complex plugin", "moku wiring harness",
+  "moku plugin file layout", "moku plugin organization", "createPlugin structure",
+  or organizing plugin code in a Moku framework project.
 ---
 
 # Moku Plugin Structure

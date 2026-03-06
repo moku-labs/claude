@@ -4,7 +4,10 @@ description: >
   Performs 3-level artifact verification: file existence, substantive content
   (not stubs), proper wiring (lint + test pass). Use after each build wave.
 model: sonnet
-color: red
+maxTurns: 30
+skills:
+  - moku-core
+  - moku-plugin
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 

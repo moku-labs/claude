@@ -2,6 +2,16 @@
 # Detect Moku project type and state on session start.
 # Outputs context hints for Claude to understand the current project.
 
+# First-run detection — welcome new users
+if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; then
+  if grep -q 'moku' package.json 2>/dev/null; then
+    echo "Welcome to Moku! Get started with:"
+    echo "  /moku:init   — scaffold a new framework project"
+    echo "  /moku:plan   — plan plugins from specifications"
+    echo "  /moku:check  — run project diagnostics"
+  fi
+fi
+
 # Check for Moku project markers
 if [ -f src/config.ts ] && grep -q 'createCoreConfig' src/config.ts 2>/dev/null; then
   echo "Moku Framework project detected (Layer 2)."

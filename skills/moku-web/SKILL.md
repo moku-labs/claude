@@ -1,11 +1,10 @@
 ---
 name: moku-web
 description: >
-  This skill should be used when the user creates a web app, works with TSX,
-  CSS, Preact components, layouts, islands, frontend components, web components,
-  asks about "component organization", "CSS architecture", "layout structure",
-  "island pattern", "data attributes", "CSS scope", "CSS layers",
-  "design tokens", or builds any web-facing application using the Moku ecosystem.
+  Moku web patterns: Preact + Vite + island architecture. Triggers on:
+  "moku web", "moku component", "moku CSS architecture", "moku island pattern",
+  "moku data attributes", "moku @scope", "moku @layer", "moku design tokens",
+  "moku layout structure", or building web apps in a Moku project.
 ---
 
 # Moku Web Patterns

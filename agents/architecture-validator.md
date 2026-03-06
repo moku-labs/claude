@@ -4,7 +4,10 @@ description: >
   Validates cross-plugin architecture: dependency graph, event flow, API consistency,
   and performance. Use after full framework build or when adding/modifying plugins.
 model: sonnet
-color: blue
+maxTurns: 30
+skills:
+  - moku-core
+  - moku-plugin
 tools: ["Read", "Grep", "Glob"]
 ---
 
