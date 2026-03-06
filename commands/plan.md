@@ -1,5 +1,5 @@
 ---
-description: Plan a framework, consumer app, or plugin (2-stage gated workflow)
+description: Plan a framework, consumer app, or plugin (3-stage gated workflow)
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: [framework|app|plugin] [description-or-path]
 ---
@@ -12,7 +12,7 @@ Create a specification plan for a Moku project. The input (`$ARGUMENTS`) can be:
 - `"A static site generator"` — auto-detect target from working directory
 - A path to existing code to migrate to Moku Core
 
-This command runs as a **2-stage gated workflow** with optional discussion, optional research, and plan validation. Each stage ends with a user checkpoint — the user must explicitly approve before proceeding to the next stage.
+This command runs as a **3-stage gated workflow** with optional discussion, optional research, and plan validation. Each stage ends with a user checkpoint — the user must explicitly approve before proceeding to the next stage.
 
 ## CRITICAL RULE: No Explicit Generics on createPlugin
 
@@ -50,6 +50,25 @@ Before starting fresh, check if `.planning/STATE.md` exists:
 - If it does, read it to understand the current project position
 - Present the state to the user: "I found an existing plan state. Resume from [phase] or start fresh?"
 - If resuming, skip to the appropriate stage
+
+### State Persistence Protocol
+
+Every stage reads `.planning/STATE.md` at the start and writes it at the end. This enables:
+- Resuming from any stage in a fresh context window
+- Running a single stage without re-running previous ones
+- Tracking exactly what has been completed and approved
+
+**On stage entry:**
+1. Read `.planning/STATE.md`
+2. Verify the previous stage is marked as approved
+3. Load context: target type, decisions, plugin table, wave grouping
+
+**On stage exit (before user gate):**
+1. Update `.planning/STATE.md` with:
+   - Current phase status
+   - What was completed in this stage
+   - Artifacts created (spec files, skeleton files)
+   - Next expected action
 
 ---
 
@@ -123,6 +142,8 @@ The research output is available for the user to review but does NOT require a s
 ---
 
 ## Stage 1: Analysis + Structure
+
+**On entry**: Read `.planning/STATE.md` if it exists. Load any decisions from Step 0.5 and research from Step 0.6.
 
 ### Framework Target
 
@@ -284,6 +305,14 @@ Present the plugin design: tier, config shape, state shape, API methods, events,
 
 If the plan-checker finds BLOCKER issues, fix them before presenting to the user. WARNINGs are included in the presentation for transparency.
 
+### State Update (all targets)
+
+**On exit**: Write/update `.planning/STATE.md` with:
+- Phase: `stage1/pending-approval`
+- Target type, plugin table, dependency graph, wave grouping
+- Decisions from Step 0.5 (if any)
+- Research summary from Step 0.6 (if any)
+
 ### User Gate (all targets)
 
 Present the analysis along with the plan-checker validation results. Ask the user to validate and approve before proceeding to Stage 2.
@@ -292,39 +321,11 @@ Present the analysis along with the plan-checker validation results. Ask the use
 
 ---
 
-## Stage 2: Specifications + Skeleton
+## Stage 2: Specifications
+
+**On entry**: Read `.planning/STATE.md`, confirm Stage 1 is approved. Load plugin table, wave grouping, and dependency graph.
 
 ### Framework Target
-
-#### Create the Skeleton
-
-Using the **moku-plugin** skill for plugin file patterns and the **moku-core** skill for config.ts and index.ts:
-
-1. **Create `src/config.ts`** — with Config and Events types as empty/placeholder, `createCoreConfig` call, exports of `{ createPlugin, createCore }`
-2. **Create `src/index.ts`** — with `createCore` call importing all plugins, exports `createApp` and `createPlugin`, re-exports all plugins
-3. **Create each plugin directory** following the approved tier:
-   - Create ALL files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
-   - Files should contain ONLY:
-     - Correct imports and exports
-     - Empty type definitions (placeholder shapes)
-     - Empty function signatures (correct parameter names and return types, but NO implementation)
-     - JSDoc headers with tier, description, events, `@see README.md`
-   - NO actual business logic, NO implementation code
-   - `createPlugin` call uses inference — NO explicit generics
-   - `onStart`/`onStop` included ONLY for plugins that were approved to need them in Stage 1
-
-4. **Create README.md** for each plugin — with plugin name and tier only (content filled during build)
-
-#### Skeleton Verification Checklist
-
-After creating all skeleton files, run through this checklist to verify the skeleton compiles and lints cleanly. Fix any issues before proceeding to specifications.
-
-1. **TypeScript** — `bunx tsc --noEmit` passes with zero errors (skeleton types must be valid)
-2. **Biome** — `bun run format` runs without errors (normalize formatting)
-3. **ESLint** — `bun run lint` passes with zero warnings and zero errors
-4. **Build** — `bun run build` compiles without errors (if build script exists)
-
-If any check fails, fix the skeleton files and re-run. The skeleton must be a valid, compilable project before specifications are written — this ensures the build command starts from a clean foundation.
 
 #### Create Plugin Specifications
 
@@ -495,12 +496,91 @@ Include: overview, config, state, API, events, dependencies, hooks, lifecycle, c
 
 ### State Update (all targets)
 
-After Stage 2 is complete, write/update `.planning/STATE.md`:
+**On exit**: Update `.planning/STATE.md` — mark Stage 2 as complete, list all spec files created.
+
+### User Gate (all targets)
+
+Present the completed specifications and validation results. Ask for explicit approval before proceeding to Stage 3.
+
+**Wait for explicit user approval before proceeding.**
+
+---
+
+## Stage 3: Skeleton + Verification
+
+**On entry**: Read `.planning/STATE.md`, confirm Stage 2 is approved. Load spec file paths and plugin table from state.
+
+### Framework Target
+
+#### Create the Skeleton
+
+Using the **moku-plugin** skill for plugin file patterns and the **moku-core** skill for config.ts and index.ts:
+
+1. **Create `src/config.ts`** — with Config and Events types as empty/placeholder, `createCoreConfig` call, exports of `{ createPlugin, createCore }`
+2. **Create `src/index.ts`** — with `createCore` call importing all plugins, exports `createApp` and `createPlugin`, re-exports all plugins
+3. **Create each plugin directory** following the approved tier:
+   - Create ALL files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
+   - Files should contain ONLY:
+     - Correct imports and exports
+     - Empty type definitions (placeholder shapes)
+     - Empty function signatures (correct parameter names and return types, but NO implementation)
+     - JSDoc headers with tier, description, events, `@see README.md`
+   - NO actual business logic, NO implementation code
+   - `createPlugin` call uses inference — NO explicit generics
+   - `onStart`/`onStop` included ONLY for plugins that were approved to need them in Stage 1
+
+4. **Create README.md** for each plugin — with plugin name and tier only (content filled during build)
+
+---
+
+### App Target
+
+Create skeleton files per the approved specification:
+- `main.ts` with `createApp` call structure
+- Custom plugin directories following approved tier patterns
+- Configuration files as specified
+
+---
+
+### Plugin Target
+
+Create skeleton files per the approved specification:
+- Plugin directory following the approved tier pattern
+- All files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
+- Empty type definitions, function signatures, JSDoc headers
+- No implementation code
+
+---
+
+### Skeleton Verification & Cleanup (all targets)
+
+After creating all skeleton files, run a comprehensive check-and-fix loop in the target workspace. Fix ALL issues found — including pre-existing ones — until every check passes with zero errors and zero warnings.
+
+1. **Format** — `bun run format` (Biome auto-formats all files)
+2. **Lint** — `bun run lint` → if errors, run `bun run lint:fix` then re-check. Manually fix anything lint:fix cannot resolve.
+3. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. Fix all type errors in skeleton files.
+4. **Build** — `bun run build` compiles without errors (if build script exists)
+
+**Loop until clean**: If any check still fails after fixes, re-run the full sequence. The skeleton must reach zero errors and zero warnings across ALL checks before proceeding.
+
+### State Update (all targets)
+
+**On exit**: Update `.planning/STATE.md` — mark Stage 3 as complete, record verification results (pass/fail for each check). Set `Next Action` to `Run /moku:build #1` pointing to the first plugin by implementation order.
+
+### User Gate (all targets)
+
+Present the completed skeleton, verification results, and final state. Final approval from user.
+
+**Wait for explicit user approval.**
+
+---
+
+## `.planning/STATE.md` Template
 
 ```markdown
 # Project State
 
-## Phase: plan/complete
+## Phase: [stage1/approved | stage2/approved | stage3/approved | plan/complete]
 ## Target: [framework/app/plugin]
 ## Last Updated: [ISO timestamp]
 
@@ -509,32 +589,36 @@ After Stage 2 is complete, write/update `.planning/STATE.md`:
 
 ## Completed
 - [x] Target detection
-- [x] Discussion (if performed)
-- [x] Research (if performed)
-- [x] Stage 1: Analysis + Structure — approved
-- [x] Stage 2: Specifications + Skeleton — approved
+- [ ] Discussion (if performed)
+- [ ] Research (if performed)
+- [ ] Stage 1: Analysis + Structure — [pending | approved]
+- [ ] Stage 2: Specifications — [pending | approved]
+- [ ] Stage 3: Skeleton + Verification — [pending | approved]
 
 ## Plugins
-| # | Wave | Name | Tier | Dependencies | Spec File | Status |
-|---|------|------|------|-------------|-----------|--------|
-| 1 | 1 | env | Nano | none | specifications/01-env.md | specified |
-| 2 | 1 | logger | Micro | none | specifications/02-logger.md | specified |
-| 3 | 2 | router | Standard | env | specifications/03-router.md | specified |
+| # | Wave | Name | Tier | Dependencies | Spec File | Build Status |
+|---|------|------|------|-------------|-----------|--------------|
+| 1 | 1 | env | Nano | none | specifications/01-env.md | not started |
+| 2 | 1 | logger | Micro | none | specifications/02-logger.md | not started |
+| 3 | 2 | router | Standard | env | specifications/03-router.md | not started |
 
 ## Wave Grouping
 - Wave 1: env, logger (no dependencies — parallel build)
 - Wave 2: router (depends on Wave 1)
 - Wave 3: renderer (depends on Wave 1-2)
 
+## Artifacts
+- Spec files: [list after Stage 2]
+- Skeleton files: [list after Stage 3]
+
+## Verification Results
+[Populated after Stage 3 — format/lint/tsc/build pass status]
+
 ## Next Action
-Run `/moku:build framework` to begin implementation
+Run `/moku:build #1` to build the first plugin (env)
 ```
 
-### User Gate (all targets)
-
-Present the completed specifications and state update. Final approval from user.
-
-**Wait for explicit user approval.**
+After each plugin is built by `/moku:build`, update its `Build Status` to `done` and `Next Action` to the next plugin number. After all plugins are built: `Next Action → All plugins built. Run final integration tests.`
 
 ---
 
@@ -559,4 +643,5 @@ Present the completed specifications and state update. Final approval from user.
 - Include verification criteria for all plugins
 - The spec must be complete enough to implement without further questions
 - Run plan-checker agent BEFORE every user gate — users see validated plans only
-- Update `.planning/STATE.md` at end of planning for cross-session continuity
+- Read `.planning/STATE.md` at the start of every stage, write it at the end — enable cross-session continuity
+- After all stages complete, `Next Action` must point to `/moku:build #1` (first plugin by implementation order)

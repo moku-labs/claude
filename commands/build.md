@@ -141,18 +141,39 @@ Each sub-agent builds its plugin following this order:
 8. **Write unit tests** — For each domain file
 9. **Write integration test** — For the full plugin wiring
 
-### Step 4: Post-Wave Verification
+### Step 4: Post-Wave Verification + Integration
 
-After each wave's sub-agents complete, run verification:
+After each wave's sub-agents complete, run verification and integrate into the framework:
+
+#### Step 4a: Plugin Verification
 
 1. Spawn the **moku-verifier** agent on all plugins in the wave
    - Level 1: All tier files exist
    - Level 2: Files contain real implementations (not stubs)
    - Level 3: Plugins wired correctly, lint passes, tests pass
-2. If ALL plugins pass → update STATE.md → proceed to next wave
-3. If ANY plugin fails → enter Gap Closure (Step 4a)
+2. If ALL plugins pass → proceed to Step 4b
+3. If ANY plugin fails → enter Gap Closure (Step 4c)
 
-#### Step 4a: Gap Closure
+#### Step 4b: Update Framework Files + Integration Checks
+
+After the wave's plugins pass verification, update the framework files to include them:
+
+1. **Update `src/config.ts`** — Add the wave's plugin Config and Events types to the framework Config/Events unions
+2. **Update `src/index.ts`** — Import the wave's plugins, add to `createCore` default plugins list, add to re-exports
+3. **Update `package.json`** — Add any new dependencies from this wave's plugin specs
+
+Then run integration checks in the target workspace:
+
+1. **Format** — `bun run format` (Biome auto-formats all files)
+2. **Lint** — `bun run lint` → if errors, run `bun run lint:fix` then re-check. Manually fix anything lint:fix cannot resolve.
+3. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. Fix all type errors.
+4. **Build** — `bun run build` compiles without errors (if build script exists)
+
+**Loop until clean**: If any check still fails after fixes, re-run the full sequence. All checks must pass with zero errors and zero warnings before proceeding to the next wave.
+
+Update STATE.md with wave completion + integration check results, then proceed to next wave.
+
+#### Step 4c: Gap Closure
 
 When verification finds issues:
 
@@ -166,13 +187,20 @@ When verification finds issues:
 4. **Circuit breaker:** Maximum 2 gap closure rounds per wave. If issues persist after 2 rounds, report to user:
    > "Some verification issues remain after 2 fix attempts. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
 
-### Step 5: Create Framework Files
+### Step 5: Final Framework Verification
 
-After all plugin waves are complete:
+After all plugin waves are complete, framework files should already be up-to-date from Step 4b. Run a final verification:
 
-1. **src/config.ts** — `createCoreConfig` with Config and Events types from spec
-2. **src/index.ts** — `createCore` with all default plugins, exports `{ createApp, createPlugin }`
-3. Update **package.json** with all required dependencies
+1. Verify `src/config.ts` includes ALL plugin types from every wave
+2. Verify `src/index.ts` imports and exports ALL plugins
+3. Verify `package.json` has ALL dependencies
+4. Run the full check suite one final time:
+   - `bun run format`
+   - `bun run lint` (fix any issues)
+   - `bunx tsc --noEmit`
+   - `bun run build`
+
+Fix any remaining issues until all checks pass with zero errors and zero warnings.
 
 ### Step 6: Post-Build Validation Pipeline
 
@@ -205,9 +233,9 @@ Update `.planning/STATE.md`:
 ```markdown
 ## Phase: build/complete
 ## Completed
-- [x] Wave 1: [plugins] — verified
-- [x] Wave 2: [plugins] — verified
-- [x] Framework files created
+- [x] Wave 1: [plugins] — verified — integration checks passed
+- [x] Wave 2: [plugins] — verified — integration checks passed
+- [x] Final framework verification passed
 - [x] Post-build validation passed
 
 ## Validation Summary
