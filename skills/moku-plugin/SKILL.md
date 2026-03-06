@@ -58,6 +58,7 @@ Choose the simplest tier that fits. Promote when the file outgrows its tier. Nev
 | Multiple domain concerns with shared types | Standard with domain files |
 | Sub-domains with internal structure | Complex with subdirectories |
 | Multiple coordinating modules, each with own state/API | Very Complex with module directories |
+| Multiple plugins sharing a domain name, events, or coordinated state | Merge into one Very Complex plugin |
 
 ## Standard Plugin Structure (Most Common)
 
@@ -77,6 +78,28 @@ plugins/
       integration/
         router.test.ts
 ```
+
+## Very Complex Plugin Structure
+
+When multiple plugins share a domain (e.g. `spaHead`, `spaProgress`, `spaRouter`, `components` all relate to SPA), merge into one plugin with sub-module directories.
+
+```
+plugins/spa/
+  index.ts           # ~40 lines. Wiring harness. THE plugin.
+  types.ts           # Shared config, state, events, context type.
+  head/api.ts
+  progress/state.ts, progress/api.ts
+  components/types.ts, components/state.ts, components/api.ts
+  router/types.ts, router/state.ts, router/api.ts
+```
+
+Key conventions:
+- **One `createPlugin` call** — sub-folders are plain TS modules, not plugins
+- **Nested config** — `config: { router: {...}, progress: {...} }` (shallow merge handles it)
+- **Namespaced API** — `api: ctx => ({ head: createHeadApi(), router: createRouterApi(ctx) })`
+- **Sub-module factories** — `createXxxApi(ctx: SpaCtx)` receives shared context type
+- **Composed state** — `createState: () => ({ router: createRouterState(), progress: createProgressState() })`
+- **Event ownership** — plugin declares all events; sub-modules emit via `ctx.emit`
 
 ## Plugin index.ts Pattern
 

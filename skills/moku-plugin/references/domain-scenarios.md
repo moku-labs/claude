@@ -69,17 +69,26 @@ export const httpPlugin = createPlugin('http', {
 Database: `plugins/db/` — `index.ts`, `types.ts`, `state.ts` (connection pool), `api.ts` (query, migrate, transaction)
 
 ## SPA Plugins
-Client routing, component lifecycle, store, hydration.
+Client routing, head management, progress bar, component lifecycle, store, hydration.
 
-**Tier: Standard (router) or Complex (store).**
+**Tier: Very Complex (multiple coordinating SPA concerns).**
+
+SPA features share a domain — navigation events, page transitions, component mounting — and should be one plugin with sub-modules, not scattered across separate plugins.
 
 ```
-plugins/spa-router/
-  index.ts, types.ts, state.ts, api.ts, handlers.ts
+plugins/spa/
+  index.ts           # Wiring harness. One createPlugin call.
+  types.ts           # SpaConfig, SpaState, SpaEvents, SpaCtx
+  head/api.ts        # updateHead
+  progress/state.ts, progress/api.ts  # start, done
+  components/types.ts, components/state.ts, components/api.ts  # createComponent, scanAndMount
+  router/types.ts, router/state.ts, router/api.ts  # createRouter, extractPageData
   __tests__/
 ```
 
-Handlers: popstate handler, link click handler. State: current route, history stack, guards.
+Consumer uses namespaced API: `app.spa.head.updateHead()`, `app.spa.router.createRouter()`, `app.spa.components.createComponent()`.
+
+If a project has separate `spaHead`, `spaProgress`, `spaRouter`, `components` plugins — they should be merged into one `spa` Very Complex plugin.
 
 ## SSG Plugins
 Static site generation, content loading, template rendering.

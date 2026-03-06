@@ -111,6 +111,26 @@ Check that EVERY file has complete JSDoc:
 - WARNING if `onStart`/`onStop` exist but only contain logging, config reads, or trivial operations
 - CLI plugins, build tools, and utility plugins should NOT have start/stop unless managing persistent processes
 
+### 11. Domain Merge Check (CRITICAL)
+Scan ALL plugins in the framework/project and flag groups that should be merged into a Very Complex plugin.
+
+**Detection signals — flag when 2+ plugins share ANY of these:**
+- Same domain prefix in name (e.g. `spaHead`, `spaProgress`, `spaRouter` → "spa")
+- Overlapping event namespaces (e.g. `nav:start`, `nav:end`, `component:mount` all relate to SPA navigation)
+- Coordinated state (one plugin's events drive another plugin's state changes)
+- Would naturally be configured together by consumers (e.g. SPA navigation settings)
+- Consumer must depend on multiple plugins from the same domain
+
+**How to check:**
+1. List all plugin names in the project (from framework index.ts plugin array)
+2. Group by domain prefix (strip common suffixes: Plugin, -plugin)
+3. For each group of 2+, check if they share events, state coordination, or config domain
+4. Flag groups that should merge with specific reasoning
+
+**Severity: VIOLATION** — not a warning. Same-domain plugins scattered across separate `createPlugin` calls is a structural problem that makes consumer configuration harder, splits related events, and prevents shared state.
+
+**Fix:** Merge into one Very Complex plugin with sub-module directories. One `createPlugin` call, namespaced API, composed state, shared events.
+
 ## Process
 
 1. Find the plugin's root directory
@@ -119,7 +139,8 @@ Check that EVERY file has complete JSDoc:
 4. Read each file and validate against the checklist
 5. Check for JSDoc completeness
 6. Verify test existence and coverage
-7. Report findings
+7. **Scan all sibling plugins for domain merge opportunities**
+8. Report findings
 
 ## Output Format
 
@@ -138,6 +159,12 @@ Reason: [why this tier]
 - [OK/MISSING] README.md
 - [OK/MISSING] __tests__/unit/
 - [OK/MISSING] __tests__/integration/
+
+### Domain Merge Check
+- [PASS/VIOLATION] [plugin group] — [reasoning]
+  - Merge candidates: [list of plugins]
+  - Shared signals: [events/state/config domain]
+  - Recommended structure: [Very Complex plugin name + sub-modules]
 
 ### Compliance Issues
 - VIOLATION: [description] — Fix: [how]

@@ -74,8 +74,8 @@ Then configure all tooling files (these are **identical across all project types
 15. **CLAUDE.md** — Project-specific instructions for Claude Code. Generate from the template in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`, replacing the framework name and description with the actual project values. Adjust these sections to match the project type:
     - **Architecture:** Framework shows 3-layer model; Consumer shows `createApp` usage; Tools/Library omit this section.
     - **Moku Development Toolkit:** Adapt commands and workflows per project type:
-      - **Framework:** Include all commands (`plan_framework`, `build_framework`, `build_plugin`), all skills, all agents, framework workflow.
-      - **Consumer App:** Include `plan_app`, `build_app`, `build_plugin` (for custom plugins). Omit `plan_framework`/`build_framework`. Include `moku-core` and `moku-plugin` skills. Include all agents. Show consumer workflow.
+      - **Framework:** Include `plan` and `build` commands, all skills, all agents, framework workflow.
+      - **Consumer App:** Include `plan` and `build` commands. Include `moku-core` and `moku-plugin` skills. Include all agents. Show consumer workflow.
       - **Tools/Library:** Omit the entire Moku Development Toolkit section — these projects don't use Moku commands.
 
 ### Step 4: Create Directory Structure and Template Files
@@ -226,12 +226,12 @@ Tell the user what was created, show the verification checklist results, and pro
 **Framework:**
 - Edit `src/config.ts` to define Config and Events types
 - Create plugins in `src/plugins/`
-- Use `/moku:plan_framework` to plan a complete framework
-- Use `/moku:build_plugin` to create individual plugins
+- Use `/moku:plan framework` to plan a complete framework
+- Use `/moku:build plugin` to create individual plugins
 
 **Consumer App:**
-- Use `/moku:plan_app` to plan the application
-- Use `/moku:build_app` to build from a plan
+- Use `/moku:plan app` to plan the application
+- Use `/moku:build app` to build from a plan
 
 **Tools/Library:**
 - Start adding source files to `src/`

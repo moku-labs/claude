@@ -453,13 +453,10 @@ This project uses the **moku** Claude Code plugin for development workflows. Bel
 ### Commands (slash commands)
 
 **Planning:**
-- `/moku:plan_framework` — 3-stage gated workflow to design a framework: analyze requirements, create skeleton structure, write plugin specifications. Output goes to `specifications/` directory.
-- `/moku:plan_app` — Design a Layer 3 consumer application. Analyzes requirements, researches available plugins, performs gap analysis, outputs `.planning/app-spec.md`.
+- `/moku:plan [framework|app|plugin] [description]` — 2-stage gated workflow to design a framework, consumer app, or plugin. Auto-detects target from project type. Output goes to `specifications/` (framework/plugin) or `.planning/app-spec.md` (app).
 
 **Building:**
-- `/moku:build_framework` — Build all plugins and framework files from specifications in `specifications/` directory. Resumes if partially built.
-- `/moku:build_plugin [name-or-spec]` — Create a single plugin from a description or spec reference. Handles tier detection, file structure, tests, and validation.
-- `/moku:build_app` — Build a consumer app from `.planning/app-spec.md`. Creates entry point, custom plugins, and validates everything.
+- `/moku:build [framework|app|plugin] [spec-or-name]` — Build from specifications. Auto-detects what to build based on existing spec files. Resumes if partially built. Supports `/moku:build plugin #3` for individual plugins.
 
 **Setup:**
 - `/moku:init` — Initialize a new Moku project with full tooling (used to create this project).
@@ -483,16 +480,16 @@ Agents run autonomously to validate code. They are called automatically by build
 ### Typical Workflows
 
 **New framework from scratch:**
-1. `/moku:plan_framework` — design plugins and structure (3 approval gates)
-2. `/moku:build_framework` — implement everything from specs
+1. `/moku:plan framework` — design plugins and structure (2 approval gates)
+2. `/moku:build framework` — implement everything from specs
 3. Validators run automatically after each plugin
 
 **Add a single plugin:**
-1. `/moku:build_plugin auth` — describe what you need, it handles the rest
+1. `/moku:build plugin auth` — describe what you need, it handles the rest
 
 **New consumer app:**
-1. `/moku:plan_app` — design the app composition
-2. `/moku:build_app` — implement from the plan
+1. `/moku:plan app` — design the app composition
+2. `/moku:build app` — implement from the plan
 
 **Manual validation:**
 - Ask Claude to "run the spec validator" or "validate JSDoc" on specific files

@@ -11,11 +11,8 @@ Provides commands, skills, and validation agents for building Moku-based framewo
 | Command | Description |
 |---------|-------------|
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
-| `/moku:plan_framework [description]` | 3-stage gated workflow: analyze requirements, create skeleton structure, write plugin specifications |
-| `/moku:build_framework [spec-path]` | Build a framework from a specification plan |
-| `/moku:build_plugin [name-or-ref]` | Create a plugin with full spec compliance |
-| `/moku:plan_app [description]` | Create a Layer 3 consumer app specification |
-| `/moku:build_app [plan-path]` | Build a consumer app from a specification plan |
+| `/moku:plan [target] [description]` | 2-stage gated workflow: analyze requirements, write specifications. Auto-detects framework/app/plugin. |
+| `/moku:build [target] [spec-or-name]` | Build from specifications. Auto-detects framework/app/plugin. Supports `/moku:build plugin #3`. |
 
 ## Skills
 
@@ -36,10 +33,10 @@ Provides commands, skills, and validation agents for building Moku-based framewo
 ## Typical Workflow
 
 1. `/moku:init my-framework` — Scaffold the project
-2. `/moku:plan_framework "A static site generator"` — Design the framework
-3. `/moku:build_framework` — Implement all plugins
-4. `/moku:plan_app "A personal blog"` — Plan the consumer app
-5. `/moku:build_app` — Build the consumer app
+2. `/moku:plan framework "A static site generator"` — Design the framework
+3. `/moku:build framework` — Implement all plugins
+4. `/moku:plan app "A personal blog"` — Plan the consumer app
+5. `/moku:build app` — Build the consumer app
 
 ## Installation
 

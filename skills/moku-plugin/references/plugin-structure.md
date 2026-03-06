@@ -118,36 +118,81 @@ Subdirectories group related implementation files. Each can have its own `types.
 
 ## Very Complex Tier (module directories)
 
-Multiple coordinating domain modules, each with own state, logic, and types. Rare — most plugins should split into separate plugins first.
+Multiple coordinating domain modules, each with own state, logic, and types. Use when several plugins share a domain, events, and coordinated state — merge them into one Very Complex plugin instead of keeping them separate.
 
 ```
-plugins/cms/
-  index.ts           # ~40 lines. Wiring harness.
-  types.ts           # Shared types across all modules.
-  content/
-    types.ts, state.ts, api.ts, validator.ts
-  media/
-    types.ts, state.ts, api.ts, processing.ts
-  versioning/
+plugins/spa/
+  index.ts           # ~40 lines. Wiring harness. THE plugin.
+  types.ts           # Shared SpaConfig, SpaState, SpaEvents, SpaCtx.
+  head/
+    api.ts
+  progress/
+    state.ts, api.ts
+  components/
     types.ts, state.ts, api.ts
-  publishing/
+  router/
     types.ts, state.ts, api.ts
-    targets/
-      static.ts, api-endpoint.ts, types.ts
   README.md
   __tests__/
     unit/
-      content-api.test.ts, media-api.test.ts, ...
+      components-api.test.ts, router-api.test.ts, ...
     integration/
-      cms.test.ts
+      spa.test.ts
 ```
 
 **Rules:**
+- **One `createPlugin` call** in `index.ts` — sub-folders are modules, NOT plugins
 - Each module follows standard-tier contract: `types.ts`, `state.ts`, `api.ts`
-- Root `index.ts` only wires — imports module APIs, composes namespaced public API
-- Public API uses namespaced objects: `app.cms.content.create()`, `app.cms.media.upload()`
+- Root `types.ts` declares shared config, state, events, and context type
+- Root `index.ts` only wires — imports module factories, composes namespaced public API
+- Public API uses namespaced objects: `app.spa.head.updateHead()`, `app.spa.router.createRouter()`
 - Modules do NOT import from each other. Cross-module coordination through root state or shared types.
 - One integration test at plugin root. Module-level unit tests flat in `__tests__/unit/`.
+
+**Key patterns:**
+
+Nested config convention — sub-module configs are just nested objects:
+```typescript
+config: {
+  router: { viewTransitions: false, progressBar: true },
+  progress: { enabled: true, color: "#0076ff", height: 2 },
+  components: { swapSelector: "main > section", componentAttribute: "data-component" },
+},
+```
+
+Sub-module context type — shared across all sub-module factories:
+```typescript
+// types.ts
+export type SpaCtx = PluginCtx<SpaConfig, SpaState, SpaEvents>;
+```
+
+Sub-module factory pattern — each module exports a `createXxxApi(ctx)` factory:
+```typescript
+// components/api.ts
+import type { SpaCtx } from "../types";
+export function createComponentsApi(ctx: SpaCtx) {
+  return {
+    createComponent: (name, hooks) => { /* ... */ },
+    scanAndMount: (root) => scanAndMount(root, ctx.state.components.registered),
+  };
+}
+```
+
+Composed state — root `createState` composes sub-module state factories:
+```typescript
+createState: () => ({
+  router: createSpaRouterState(),
+  progress: createProgressState(),
+  components: createComponentsState(),
+}),
+```
+
+Event ownership — the plugin declares ALL events; sub-modules emit via `ctx.emit`:
+```typescript
+events: (register) => register.map<SpaEvents>({ /* all sub-module events */ }),
+```
+
+**When to merge:** If multiple plugins share a domain name (e.g. `spaHead`, `spaProgress`, `spaRouter`, `components` all relate to SPA), coordinate via events, or would naturally be configured together — merge them into one Very Complex plugin.
 
 **When to split:** If modules have no shared state, events, or coordination — they should be separate plugins.
 
