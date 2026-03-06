@@ -2,6 +2,7 @@
 description: Initialize a Moku development environment with full tooling
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
 argument-hint: [project-path]
+disable-model-invocation: true
 ---
 
 Initialize a new Moku development environment at the path specified by `$1` (or current directory if not provided). The environment must be identical to the moku_core project's tooling setup.

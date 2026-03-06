@@ -7,10 +7,13 @@ description: >
   "complex plugin", "plugin patterns", "wiring harness", "plugin index.ts",
   "plugin file layout", "plugin directory", or needs guidance on organizing
   plugin code following Moku specification 15.
-version: 0.1.0
 ---
 
 # Moku Plugin Structure
+
+## Current Project State
+!`if [ -f .planning/STATE.md ]; then grep -A2 '## Phase:' .planning/STATE.md 2>/dev/null; fi`
+!`if [ -d src/plugins ]; then echo "Existing plugins:"; ls src/plugins/ 2>/dev/null; fi`
 
 Enforce strict compliance with Moku plugin structure specification. Follow all plugin structure rules. Require full JSDoc coverage on all source code. Be creative within the defined guidelines.
 

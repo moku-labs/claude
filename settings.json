@@ -1,0 +1,8 @@
+{
+  "agent": {
+    "maxParallelAgents": 3,
+    "gapClosureMaxRounds": 2,
+    "validatorModel": "sonnet",
+    "researcherModel": "sonnet"
+  }
+}

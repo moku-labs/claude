@@ -5,8 +5,12 @@
 
 INPUT="$1"
 
-# Extract file_path from the JSON input
-FILE_PATH=$(echo "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+# Extract file_path from the JSON input (jq preferred, grep/sed fallback)
+if command -v jq &>/dev/null; then
+  FILE_PATH=$(echo "$INPUT" | jq -r '.file_path // empty' 2>/dev/null)
+else
+  FILE_PATH=$(echo "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+fi
 
 if [ -z "$FILE_PATH" ]; then
   exit 0

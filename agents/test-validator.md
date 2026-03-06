@@ -1,34 +1,8 @@
 ---
 name: moku-test-validator
-description: |
-  Use this agent when tests have been written or modified to validate test quality, coverage, and correctness beyond mere file existence. Checks that tests actually test the right things with proper patterns.
-
-  <example>
-  Context: A plugin has been built with unit and integration tests.
-  user: "I've finished the router plugin with tests"
-  assistant: "I'll validate the test quality to ensure they actually cover the plugin behavior."
-  <commentary>
-  Test files exist but may contain weak assertions, missing edge cases, or incorrect mock patterns. Quality validation catches these issues.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Tests are passing but coverage seems thin.
-  user: "Tests pass but I'm not confident they're thorough"
-  assistant: "Let me analyze the test quality and identify coverage gaps."
-  <commentary>
-  Passing tests may miss critical behaviors. Test validation identifies gaps in edge cases, lifecycle testing, and type-level assertions.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Integration tests have been added for a complex plugin.
-  user: "I've added integration tests for the auth plugin"
-  assistant: "I'll validate the integration tests exercise the full plugin lifecycle."
-  <commentary>
-  Integration tests must use real createApp, exercise init/start/stop, and verify cross-plugin interactions.
-  </commentary>
-  </example>
+description: >
+  Validates test quality beyond file existence: mock context correctness, assertion
+  quality, edge cases, type-level tests, integration lifecycle. Use after plugin build.
 model: sonnet
 color: green
 tools: ["Read", "Grep", "Glob"]

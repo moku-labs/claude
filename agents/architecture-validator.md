@@ -1,34 +1,8 @@
 ---
 name: moku-architecture-validator
-description: |
-  Use this agent to validate cross-plugin architecture: dependency graph, event flow, API consistency, and performance characteristics across the entire framework.
-
-  <example>
-  Context: A full framework has been built with multiple plugins.
-  user: "The framework is complete with 8 plugins"
-  assistant: "I'll validate the cross-plugin architecture for dependency correctness, event flow, and API consistency."
-  <commentary>
-  Cross-plugin validation catches issues invisible at the individual plugin level: orphan events, inconsistent API naming, deep dependency chains, performance red flags.
-  </commentary>
-  </example>
-
-  <example>
-  Context: A new plugin has been added to an existing framework.
-  user: "I've added the analytics plugin to the framework"
-  assistant: "Let me validate the architecture to ensure the new plugin integrates correctly with existing plugins."
-  <commentary>
-  Adding a plugin changes the dependency graph, may introduce new events that need listeners, and should follow existing naming conventions.
-  </commentary>
-  </example>
-
-  <example>
-  Context: A framework refactoring has moved events between plugins.
-  user: "I've reorganized the event system across plugins"
-  assistant: "I'll validate the event flow is still complete and correctly wired."
-  <commentary>
-  Event reorganization can create orphan emits, dead hooks, or broken event contracts.
-  </commentary>
-  </example>
+description: >
+  Validates cross-plugin architecture: dependency graph, event flow, API consistency,
+  and performance. Use after full framework build or when adding/modifying plugins.
 model: sonnet
 color: blue
 tools: ["Read", "Grep", "Glob"]

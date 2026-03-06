@@ -7,12 +7,15 @@ description: >
   "plugin lifecycle", "event system", "context tiers", "moku kernel",
   or needs guidance on building frameworks, plugins, or consumer apps
   following Moku Core specifications.
-version: 0.1.0
 ---
 
 # Moku Core Architecture
 
-Enforce strict compliance with Moku Core specifications when generating, reviewing, or modifying code. Never skip Biome warnings. Never skip quality linter warnings. Require full JSDoc coverage on all source files.
+## Current Project State
+!`if [ -f .planning/STATE.md ]; then head -20 .planning/STATE.md; fi`
+!`if [ -f src/config.ts ]; then echo "Framework config: src/config.ts exists"; fi`
+
+Enforce strict compliance with Moku Core specifications when generating, reviewing, or modifying code. Never skip Biome warnings. Never skip quality linter warnings. Require full JSDoc coverage on all source files. Use extended thinking (ultrathink) for complex architecture decisions.
 
 ## Architecture: Three Layers, Three Steps
 

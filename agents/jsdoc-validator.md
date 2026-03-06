@@ -1,34 +1,8 @@
 ---
 name: moku-jsdoc-validator
-description: |
-  Use this agent when code has been written or modified to validate JSDoc documentation quality and completeness. This agent should be used proactively after writing source code, creating plugins, or modifying public APIs in Moku projects.
-
-  <example>
-  Context: The user has just written a new plugin with exported functions.
-  user: "I've finished the analytics plugin API"
-  assistant: "I'll validate the JSDoc documentation for completeness and quality."
-  <commentary>
-  New code needs JSDoc validation for all exports: functions, types, interfaces with descriptions, params, returns, and examples.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The user has modified several source files.
-  user: "I've updated the state management logic across three files"
-  assistant: "Let me check the JSDoc documentation is still accurate and complete."
-  <commentary>
-  Modified code may have outdated or incomplete JSDoc that needs updating.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The user wants to verify documentation quality before committing.
-  user: "Let me check the docs before I commit"
-  assistant: "I'll run the JSDoc validator to ensure all documentation meets the Moku standards."
-  <commentary>
-  Pre-commit validation catches missing or low-quality documentation.
-  </commentary>
-  </example>
+description: >
+  Validates JSDoc documentation quality and completeness on all exports.
+  Use proactively after writing or modifying source code in Moku projects.
 model: sonnet
 color: cyan
 tools: ["Read", "Grep", "Glob"]

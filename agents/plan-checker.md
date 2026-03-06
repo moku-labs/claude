@@ -1,34 +1,8 @@
 ---
 name: moku-plan-checker
-description: |
-  Use this agent when a Moku framework or plugin plan has been created to validate its completeness, dependency correctness, and requirement coverage before presenting to the user.
-
-  <example>
-  Context: The plan command has generated a plugin tree and specification structure.
-  user: "I've finished planning the framework"
-  assistant: "Let me validate the plan for completeness and correctness before you review it."
-  <commentary>
-  Plans need validation for requirement coverage, dependency graph correctness, event flow, and specification section completeness before the user sees them.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Stage 2 specifications have been written for all plugins.
-  user: "All specs are done"
-  assistant: "I'll validate the specifications for cross-plugin consistency and completeness."
-  <commentary>
-  Specifications need cross-validation: orphan events, missing dependencies, incomplete sections, implementation order correctness.
-  </commentary>
-  </example>
-
-  <example>
-  Context: A new plugin has been added to an existing framework plan.
-  user: "I've added the caching plugin to the plan"
-  assistant: "Let me validate the updated plan to ensure the new plugin integrates correctly."
-  <commentary>
-  Adding plugins changes the dependency graph, event flow, and implementation order. Re-validation catches integration issues.
-  </commentary>
-  </example>
+description: >
+  Validates plan completeness: requirement coverage, dependency graph, event flow,
+  spec sections. Use before user gates in /moku:plan or after spec modifications.
 model: sonnet
 color: yellow
 tools: ["Read", "Grep", "Glob"]

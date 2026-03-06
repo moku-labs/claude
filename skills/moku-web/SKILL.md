@@ -6,10 +6,12 @@ description: >
   asks about "component organization", "CSS architecture", "layout structure",
   "island pattern", "data attributes", "CSS scope", "CSS layers",
   "design tokens", or builds any web-facing application using the Moku ecosystem.
-version: 0.1.0
 ---
 
 # Moku Web Patterns
+
+## Current Project State
+!`if [ -f package.json ]; then grep -E '"(preact|vite)"' package.json 2>/dev/null; fi`
 
 Enforce the established web patterns from the Moku blog reference implementation. Keep structure clear, documented, and simple.
 

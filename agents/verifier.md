@@ -1,34 +1,8 @@
 ---
 name: moku-verifier
-description: |
-  Use this agent to perform 3-level artifact verification on built Moku plugins and frameworks. Checks that files exist, contain real implementations, and are properly wired into the project.
-
-  <example>
-  Context: A wave of plugins has just been built by sub-agents.
-  user: "Wave 1 plugins are done"
-  assistant: "I'll verify all Wave 1 plugins pass the 3-level artifact check."
-  <commentary>
-  Post-wave verification ensures plugins are not just files on disk but real, substantive, wired implementations.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The full framework build has completed.
-  user: "The framework build is done"
-  assistant: "Let me run the 3-level verifier to ensure everything is properly built and wired."
-  <commentary>
-  Final verification catches stubs, orphaned files, missing imports, test failures, and lint errors.
-  </commentary>
-  </example>
-
-  <example>
-  Context: A gap closure round has just fixed some issues.
-  user: "I've fixed the issues from the last verification"
-  assistant: "Let me re-verify to confirm all fixes are correct."
-  <commentary>
-  Re-verification focuses on previously failed items while doing regression checks on passed items.
-  </commentary>
-  </example>
+description: >
+  Performs 3-level artifact verification: file existence, substantive content
+  (not stubs), proper wiring (lint + test pass). Use after each build wave.
 model: sonnet
 color: red
 tools: ["Read", "Grep", "Glob", "Bash"]

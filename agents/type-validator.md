@@ -1,34 +1,8 @@
 ---
 name: moku-type-validator
-description: |
-  Use this agent when code has been written or modified to validate TypeScript type correctness, inference chain integrity, and strict mode compliance.
-
-  <example>
-  Context: A plugin has been built with full type definitions.
-  user: "I've finished the auth plugin implementation"
-  assistant: "I'll validate the TypeScript types for correctness and inference chain integrity."
-  <commentary>
-  New plugin code needs type validation: tsc --noEmit, no as any, import type compliance, inference chain working end-to-end.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The framework config.ts and index.ts have been created.
-  user: "Framework setup is complete"
-  assistant: "Let me validate the type system — factory chain, phantom types, and app surface type."
-  <commentary>
-  Framework types need validation for correct createCoreConfig → createCore → createApp chain and proper BuildPluginApis inference.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Complex type utilities have been modified.
-  user: "I've updated the event type system"
-  assistant: "I'll run type validation to ensure the inference chain still works."
-  <commentary>
-  Type utility changes can break downstream inference. Full tsc --noEmit plus inference chain verification catches regressions.
-  </commentary>
-  </example>
+description: >
+  Validates TypeScript type correctness: tsc --noEmit, type assertion audit,
+  inference chain, import type compliance, strict mode. Use after plugin build.
 model: sonnet
 color: magenta
 tools: ["Read", "Grep", "Glob", "Bash"]

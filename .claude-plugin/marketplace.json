@@ -1,16 +1,16 @@
 {
   "name": "moku",
   "owner": {
-    "name": "Oleksadr Kucherenko"
+    "name": "Oleksandr Kucherenko"
   },
   "plugins": [
     {
       "name": "moku",
-      "version": "0.3.1",
+      "version": "0.4.0",
       "source": "./",
       "description": "Development toolkit for Moku Core — scaffolding, framework planning, plugin building, and specification enforcement for the micro-kernel plugin framework",
       "author": {
-        "name": "Oleksadr Kucherenko"
+        "name": "Oleksandr Kucherenko"
       },
       "category": "development"
     }

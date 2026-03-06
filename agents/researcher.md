@@ -1,34 +1,8 @@
 ---
 name: moku-researcher
-description: |
-  Use this agent to investigate npm ecosystem, TypeScript patterns, and reference implementations before planning or building a new plugin domain.
-
-  <example>
-  Context: Planning a static site generator framework.
-  user: "I want to plan a static site generator framework"
-  assistant: "Let me research the ecosystem first — existing SSG packages, TypeScript patterns, and common pitfalls."
-  <commentary>
-  Pre-implementation research prevents reinventing solutions that exist as npm packages and identifies design patterns worth adopting.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Designing a CMS plugin domain.
-  user: "I need a content management plugin"
-  assistant: "I'll research existing CMS approaches and TypeScript content modeling patterns."
-  <commentary>
-  Domain research identifies common API designs, edge cases, and dependencies before committing to a plugin architecture.
-  </commentary>
-  </example>
-
-  <example>
-  Context: Evaluating a TypeScript type pattern for complex event merging.
-  user: "I need to merge event types from multiple plugins"
-  assistant: "Let me research TypeScript patterns for union-to-intersection and mapped type merging."
-  <commentary>
-  Complex type problems benefit from researching community patterns and reference implementations before writing custom solutions.
-  </commentary>
-  </example>
+description: >
+  Investigates npm ecosystem, TypeScript patterns, and reference implementations
+  before planning or building a new plugin domain. The only agent with web access.
 model: sonnet
 color: purple
 tools: ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]

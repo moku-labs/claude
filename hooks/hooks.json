@@ -11,6 +11,42 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f package.json ] && grep -q '\"format\"' package.json 2>/dev/null; then bun run format 2>/dev/null; fi",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .planning/STATE.md ]; then echo '## Moku Planning State (re-injected before compaction)'; cat .planning/STATE.md; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/detect-moku-project.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

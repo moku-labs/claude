@@ -1,34 +1,8 @@
 ---
 name: moku-spec-validator
-description: |
-  Use this agent when code is being written or modified in a Moku Core-based project to validate specification compliance. This agent should be used proactively after code changes involving Moku patterns, plugin creation, framework setup, or consumer app configuration.
-
-  <example>
-  Context: The user has just created a new framework config.ts with createCoreConfig.
-  user: "I've set up my framework config"
-  assistant: "Let me validate your framework setup against the Moku specification."
-  <commentary>
-  New framework setup needs validation for correct 3-step factory chain, proper Config/Events types, and createCoreConfig usage.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The user has modified a plugin to add new functionality.
-  user: "I've added a caching layer to the router plugin"
-  assistant: "I'll validate the changes against the Moku specification to ensure compliance."
-  <commentary>
-  Plugin modifications should be checked for spec violations: state leaking, deep config nesting, bypassing typed emit, incorrect context usage.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The user has set up a consumer app with createApp.
-  user: "Here's my main.ts with createApp"
-  assistant: "Let me check your consumer setup follows the Moku specification."
-  <commentary>
-  Consumer code needs validation: not importing from @moku-labs/core, using structured options correctly, proper plugin ordering.
-  </commentary>
-  </example>
+description: >
+  Validates Moku Core specification compliance: 3-layer separation, factory chain,
+  config, lifecycle, events, state. Use proactively after code changes.
 model: sonnet
 color: yellow
 tools: ["Read", "Grep", "Glob"]

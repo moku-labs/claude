@@ -1,34 +1,8 @@
 ---
 name: moku-plugin-spec-validator
-description: |
-  Use this agent when a Moku plugin has been created or modified to validate its structure, completeness, and specification compliance. This agent should be used proactively after plugin creation, modification, or when reviewing plugin code.
-
-  <example>
-  Context: The user has just created a new plugin with createPlugin.
-  user: "I've created the auth plugin"
-  assistant: "I'll validate the auth plugin's structure and compliance with the Moku plugin specification."
-  <commentary>
-  New plugins need validation for correct tier, file organization, JSDoc coverage, test existence, and spec compliance.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The user has refactored a plugin by extracting domain logic.
-  user: "I've split the router plugin into separate files"
-  assistant: "Let me validate the refactored plugin structure matches the correct complexity tier."
-  <commentary>
-  Refactored plugins need tier verification, proper wiring in index.ts, and test coverage for extracted files.
-  </commentary>
-  </example>
-
-  <example>
-  Context: The user is building a plugin from a framework specification.
-  user: "I'm implementing plugin #3 from the framework spec"
-  assistant: "I'll validate the implementation against both the plugin spec and your framework specification."
-  <commentary>
-  Plugins built from specs need cross-validation against both the Moku plugin spec and the framework plan.
-  </commentary>
-  </example>
+description: >
+  Validates plugin structure, tier compliance, file organization, and domain merge
+  detection. Use proactively after plugin creation, modification, or refactoring.
 model: sonnet
 color: yellow
 tools: ["Read", "Grep", "Glob"]
