@@ -123,3 +123,8 @@ export const ShareButtons = createComponent('share', {
 - `references/component-patterns.md` — Preact components, islands, naming conventions
 - `references/css-architecture.md` — Tokens, @scope, @layer, responsive design
 - `references/layout-structure.md` — SiteLayout, pages, routing, entry point
+
+## Related Skills
+
+- **moku-core** — Architecture fundamentals, factory chain, lifecycle, config resolution
+- **moku-plugin** — Plugin structure, complexity tiers, wiring harness pattern for web plugins

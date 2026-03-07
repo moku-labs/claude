@@ -171,3 +171,8 @@ For detailed specifications:
 - `references/plugin-structure.md` — Full complexity tier details with examples
 - `references/plugin-patterns.md` — Connection point pattern, file structure, LLM prompt
 - `references/domain-scenarios.md` — Domain-specific layouts (utility, CLI, build, web, SPA)
+
+## Related Skills
+
+- **moku-core** — Architecture fundamentals, factory chain, lifecycle, event system, type system
+- **moku-web** — Web-specific plugin patterns, island architecture, CSS encapsulation

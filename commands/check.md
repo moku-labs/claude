@@ -1,7 +1,7 @@
 ---
 description: Run diagnostics on the Moku plugin installation and project state
 allowed-tools: Read, Bash, Glob, Grep, Agent
-argument-hint: [verbose|self-test|graph]
+argument-hint: [verbose|self-test|graph|status|plugin <name>]
 disable-model-invocation: true
 ---
 
@@ -154,4 +154,43 @@ If `$ARGUMENTS` contains "self-test", skip project checks and instead validate t
 4. Verify all referenced hook scripts exist and are executable
 5. Verify all reference files mentioned in skills/commands exist
 6. Verify `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` parses correctly
-7. Report PASS/FAIL for each check
+7. Verify version in `plugin.json` matches version in `marketplace.json` (prevents version drift regression)
+8. Report PASS/FAIL for each check
+
+If `$ARGUMENTS` contains "status", show a compact overview of all plugins and their current state (Framework projects only):
+
+1. List all plugins in `src/plugins/` with:
+   - Plugin name
+   - Assessed complexity tier (based on file count and structure)
+   - File count
+   - Whether `__tests__/` exists
+   - Whether `README.md` exists
+   - Build status from `.planning/STATE.md` (if it exists)
+2. Show total plugin count and tier distribution
+3. Show planning state summary (if active)
+
+Example output:
+```
+Moku Plugin Status
+==================
+| Plugin   | Tier     | Files | Tests | README | Build   |
+|----------|----------|-------|-------|--------|---------|
+| env      | Nano     | 3     | Yes   | Yes    | done    |
+| logger   | Micro    | 3     | Yes   | Yes    | done    |
+| router   | Standard | 8     | Yes   | Yes    | done    |
+| renderer | Complex  | 12    | Yes   | Yes    | pending |
+
+Total: 4 plugins (1 Nano, 1 Micro, 1 Standard, 1 Complex)
+Plan: stage2/approved — Next: /moku:build #4
+```
+
+If `$ARGUMENTS` contains "plugin" followed by a plugin name, run targeted validation on that single plugin:
+
+1. Verify the plugin directory exists in `src/plugins/<name>/`
+2. Assess its complexity tier from file structure
+3. Spawn 3 validators in parallel:
+   - **moku-plugin-spec-validator** — tier compliance, file organization, index.ts quality
+   - **moku-type-validator** — tsc --noEmit, import type compliance, no `as any`
+   - **moku-jsdoc-validator** — JSDoc completeness on all exports
+4. Report results with PASS/WARN/FAIL for each validator
+5. If any BLOCKER issues found, list them with fix suggestions

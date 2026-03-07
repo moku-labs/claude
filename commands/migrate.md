@@ -1,7 +1,7 @@
 ---
 description: Migrate, upgrade, or restructure a Moku project
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
-argument-hint: [upgrade|restructure|from-existing] [path-or-version]
+argument-hint: [upgrade|restructure|from-existing|resume] [path-or-version]
 disable-model-invocation: true
 ---
 
@@ -14,16 +14,18 @@ Migrate, upgrade, or restructure a Moku project. The input (`$ARGUMENTS`) determ
 - `upgrade 2.0.0` — Upgrade to a specific version
 - `restructure` — Re-assess plugin complexity tiers and reorganize
 - `from-existing [path]` — Migrate an existing non-Moku project to Moku Core
+- `resume` — Resume a migration from `.planning/STATE.md`
 
 ---
 
 ## Step 0: Detect Migration Type
 
 Parse `$ARGUMENTS`:
-1. If the first word is `upgrade` — core version upgrade flow
-2. If the first word is `restructure` — plugin tier reassessment flow
-3. If the first word is `from-existing` — existing project migration flow
-4. If no argument — auto-detect:
+1. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate migration step.
+2. If the first word is `upgrade` — core version upgrade flow
+3. If the first word is `restructure` — plugin tier reassessment flow
+4. If the first word is `from-existing` — existing project migration flow
+5. If no argument — auto-detect:
    a. Check if `@moku-labs/core` has a newer version available → suggest `upgrade`
    b. Check if any plugins have outgrown their tier → suggest `restructure`
    c. Otherwise ask the user what they want to do

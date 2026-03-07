@@ -15,11 +15,20 @@ elif command -v python3 &>/dev/null; then
   AGENT_NAME=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('agent_name',''))" <<< "$TOOL_INPUT" 2>/dev/null)
   STOP_REASON=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('stop_reason',''))" <<< "$TOOL_INPUT" 2>/dev/null)
 else
-  AGENT_NAME=$(echo "$TOOL_INPUT" | grep -o '"agent_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"agent_name"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
-  STOP_REASON=$(echo "$TOOL_INPUT" | grep -o '"stop_reason"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"stop_reason"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+  AGENT_NAME=$(printf '%s' "$TOOL_INPUT" | grep -o '"agent_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"agent_name"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+  STOP_REASON=$(printf '%s' "$TOOL_INPUT" | grep -o '"stop_reason"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"stop_reason"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
+fi
+
+# Diagnostic: if parsing failed, log raw payload once for field name discovery
+if [ -z "$AGENT_NAME" ] && [ -z "$STOP_REASON" ] && [ -n "$TOOL_INPUT" ]; then
+  if [ ! -f .planning/hook-debug.log ] || ! grep -q 'SubagentStop' .planning/hook-debug.log 2>/dev/null; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] SubagentStop raw payload: $TOOL_INPUT" >> .planning/hook-debug.log
+  fi
+  exit 0
 fi
 
 # Only track moku agents
+[ -z "$AGENT_NAME" ] && exit 0
 case "$AGENT_NAME" in
   moku-*) ;;
   *) exit 0 ;;

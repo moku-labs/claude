@@ -178,3 +178,8 @@ For detailed specifications, consult:
 - `references/type-system.md` — Type helpers, BuildPluginApis, type flow
 - `references/invariants.md` — Guarantees, error format, anti-patterns
 - `references/tooling-config.md` — Exact Biome, ESLint, TypeScript, Lefthook, Vitest configs
+
+## Related Skills
+
+- **moku-plugin** — Plugin structure, complexity tiers, file organization, wiring harness pattern
+- **moku-web** — Preact + Vite web patterns, island architecture, CSS architecture with @scope/@layer
