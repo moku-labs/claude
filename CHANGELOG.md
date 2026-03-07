@@ -2,6 +2,35 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.8.0 (2026-03-07)
+
+### Added
+- **Negative examples** ("Common Mistakes — DON'T Do These") in all 3 skills: moku-core, moku-plugin, moku-web
+- **Prompt-based hook** (`type: "prompt"`) for reasoning-based validation of plugin index.ts writes — checks wiring harness pattern, explicit generics, unnecessary lifecycle methods
+- **Progressive disclosure** in all 3 skills — advanced references load conditionally based on project complexity (plugin count, sub-modules, CSS file count, islands)
+- **Cross-skill examples** in all 3 skills — concrete code showing how moku-core + moku-plugin + moku-web work together
+- **Environment validation** on SessionStart — checks Bun >= 1.3.8, Node >= 22, tsc availability; warns early if missing
+- **Version compatibility** on SessionStart — displays `@moku-labs/core` version from package.json
+
+## 0.7.1 (2026-03-07)
+
+### Fixed
+- **CRITICAL**: SubagentStop hook parsed wrong field names (`agent_name`/`stop_reason` → `agent_type` per official schema)
+- `user-prompt-context.sh` false-positive on non-Moku projects — Tools detection now requires `@moku-labs` in package.json
+- `detect-moku-project.sh` welcome message too broad — changed `'moku'` match to `'@moku-labs'` to avoid substring false positives
+- Notification hook removed speculative diagnostic logging — field names (`title`/`message`/`notification_type`) confirmed correct
+
+### Added
+- `notification_type` extraction in Notification hook (uses type as fallback label when title is absent)
+- SessionEnd hook for cleanup on session termination
+- UserPromptSubmit hook documented in README hooks table
+- Expanded anti-pattern checks: `as any` in plugin files, `as unknown` assertions
+- `.gitignore` for plugin root
+
+### Changed
+- PostToolUse format hook extracted from inline command to `hooks/format-on-save.sh`
+- SubagentStop hook matcher changed from `*` to `moku-*` for precision
+
 ## 0.7.0 (2026-03-07)
 
 ### Added

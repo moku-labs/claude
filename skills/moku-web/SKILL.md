@@ -114,6 +114,36 @@ export const ShareButtons = createComponent('share', {
 });
 ```
 
+## Common Mistakes — DON'T Do These
+
+```tsx
+// DON'T: Use className — all styling via data-* attributes
+<div className="card active">           // WRONG
+<div data-component="card" data-active> // CORRECT
+
+// DON'T: Use React hooks — Preact components are pure, state in islands
+function Counter() {
+  const [count, setCount] = useState(0);  // WRONG — no hooks in SSG
+  return <span>{count}</span>;
+}
+
+// DON'T: Use classes in CSS selectors
+.card { padding: 1rem; }                 // WRONG
+@scope ([data-component="card"]) {
+  :scope { padding: 1rem; }              // CORRECT — scoped via data attr
+}
+
+// DON'T: Hardcode colors — use semantic tokens
+article { background: #1c1917; }              // WRONG — hardcoded hex
+article { background: var(--surface-card); }  // CORRECT — semantic token
+
+// DON'T: Write unscoped CSS — component styles must use @scope
+article { padding: 1rem; }              // WRONG — global pollution
+@scope ([data-component="card"]) {
+  article { padding: 1rem; }            // CORRECT — scoped
+}
+```
+
 ## Bundle Targets
 - JS: < 8KB gzipped
 - CSS: < 10KB gzipped
@@ -124,7 +154,47 @@ export const ShareButtons = createComponent('share', {
 - `references/css-architecture.md` — Tokens, @scope, @layer, responsive design
 - `references/layout-structure.md` — SiteLayout, pages, routing, entry point
 
+## Advanced References (load when needed)
+
+For projects with complex CSS architecture or many islands:
+!`if [ -d src/styles ] && [ "$(find src/styles -name '*.css' 2>/dev/null | wc -l | tr -d ' ')" -gt 5 ]; then echo "Multiple CSS files detected — consult references/css-architecture.md for token system and @layer ordering details."; fi`
+!`if find src/components -name '*Island.ts' 2>/dev/null | wc -l | tr -d ' ' | grep -qv '^0$'; then echo "Islands in use — consult references/component-patterns.md for island lifecycle hooks (onCreate/onDestroy/onNavEnd)."; fi`
+
 ## Related Skills
 
 - **moku-core** — Architecture fundamentals, factory chain, lifecycle, config resolution
 - **moku-plugin** — Plugin structure, complexity tiers, wiring harness pattern for web plugins
+
+### Cross-Skill Example: Blog Component with Plugin Integration
+
+```typescript
+// moku-core: Events typed in config.ts
+type Events = { 'page:render': { path: string; html: string } };
+
+// moku-plugin: Standard tier plugin emits events
+export const rendererPlugin = createPlugin('renderer', {
+  api: (ctx) => ({
+    render: (path: string, html: string) => {
+      void ctx.emit('page:render', { path, html });
+    },
+  }),
+});
+
+// moku-web: Preact component (pure, no hooks)
+export function ArticleCard({ title, summary }: Props) {
+  return (
+    <article data-component="article-card">
+      <h2 data-title>{title}</h2>
+      <p>{summary}</p>
+    </article>
+  );
+}
+// Colocated CSS: ArticleCard.css
+// @scope ([data-component="article-card"]) { ... }
+
+// moku-web: Island for client interactivity
+// ArticleCardIsland.ts — vanilla TS, event-driven
+export const ArticleCard = createComponent('article-card', {
+  onCreate(el) { el.querySelector('h2')?.addEventListener('click', expand); },
+});
+```

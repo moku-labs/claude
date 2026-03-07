@@ -13,6 +13,11 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-plugin-antipatterns.sh \"$TOOL_INPUT\"",
             "timeout": 5
+          },
+          {
+            "type": "prompt",
+            "prompt": "If this write targets a Moku plugin file (*/plugins/*/index.ts), verify: 1) index.ts is under ~30 lines of wiring (imports + createPlugin call), no business logic inline. 2) No explicit generics on createPlugin/createCorePlugin. 3) onStart/onStop only present if managing a resource (server, connection, listener). If the file is NOT a plugin index.ts, approve immediately. Return 'approve' if valid or 'deny' with reason.",
+            "timeout": 15
           }
         ]
       }
@@ -23,7 +28,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f biome.json ] && [ -f package.json ] && [ -d node_modules ] && grep -q '\"format\"' package.json 2>/dev/null && (grep -q 'createCoreConfig\\|@moku-labs' src/config.ts 2>/dev/null || [ -d .planning ]); then bun run format 2>&1 || echo 'Format failed with exit code '$?; fi",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/format-on-save.sh",
             "timeout": 15
           }
         ]
@@ -79,11 +84,23 @@
     ],
     "SubagentStop": [
       {
-        "matcher": "*",
+        "matcher": "moku-.*",
         "hooks": [
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-stop.sh \"$TOOL_INPUT\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-end.sh",
             "timeout": 5
           }
         ]

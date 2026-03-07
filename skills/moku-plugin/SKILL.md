@@ -135,6 +135,39 @@ export const routerPlugin = createPlugin('router', {
 
 **Notice:** ~30 lines. Imports everything. Connects to lifecycle hooks and API slots. No domain logic.
 
+## Common Mistakes — DON'T Do These
+
+```typescript
+// DON'T: Put business logic in index.ts — it's a wiring harness
+export const authPlugin = createPlugin('auth', {
+  api: (ctx) => ({
+    login: async (user: string, pass: string) => {
+      const hash = await bcrypt.hash(pass, 10);    // WRONG — domain logic
+      const session = jwt.sign({ user }, secret);   // belongs in api.ts
+      ctx.state.sessions.set(user, session);
+      return session;
+    },
+  }),
+})
+// CORRECT: Extract to api.ts, import the factory
+import { createAuthApi } from './api';
+export const authPlugin = createPlugin('auth', { api: createAuthApi })
+
+// DON'T: Force Standard tier on a simple plugin
+// A 15-line config-only plugin doesn't need types.ts, state.ts, api.ts
+// Use Nano/Micro tier — promote only when complexity demands it
+
+// DON'T: Add onStart/onStop to plugins that don't manage resources
+export const utilPlugin = createPlugin('util', {
+  api: (ctx) => ({ format: (s: string) => s.trim() }),
+  onStart: async () => {},   // WRONG — no resource to open
+  onStop: async () => {},    // WRONG — no resource to close
+})
+
+// DON'T: Create multiple plugins for one domain concern
+// spa-head, spa-router, spa-progress → merge into one "spa" plugin
+```
+
 ## Lifecycle: start() and stop() Are Optional
 
 `onStart` and `onStop` are NOT required. Include them ONLY when there is a concrete reason:
@@ -172,7 +205,40 @@ For detailed specifications:
 - `references/plugin-patterns.md` — Connection point pattern, file structure, LLM prompt
 - `references/domain-scenarios.md` — Domain-specific layouts (utility, CLI, build, web, SPA)
 
+## Advanced References (load when needed)
+
+For complex/very-complex plugins with sub-modules:
+!`if [ -d src/plugins ] && find src/plugins -mindepth 2 -maxdepth 2 -type d 2>/dev/null | grep -q .; then echo "Sub-module directories detected — consult references/domain-scenarios.md for Very Complex tier patterns."; fi`
+
 ## Related Skills
 
 - **moku-core** — Architecture fundamentals, factory chain, lifecycle, event system, type system
 - **moku-web** — Web-specific plugin patterns, island architecture, CSS encapsulation
+
+### Cross-Skill Example: SPA Plugin with Web Components
+
+```typescript
+// moku-plugin: Very Complex tier — SPA plugin with web sub-modules
+// plugins/spa/index.ts (~40 lines wiring harness)
+import { createPlugin } from '../../config';
+import { createRouterApi } from './router/api';
+import { createHeadApi } from './head/api';
+
+export const spaPlugin = createPlugin('spa', {
+  config: { router: { basePath: '/' }, head: { titleSuffix: '' } },
+  createState: () => ({ router: { currentPath: '/' }, head: { title: '' } }),
+  api: (ctx) => ({
+    router: createRouterApi(ctx),    // sub-module factory
+    head: createHeadApi(ctx),        // sub-module factory
+  }),
+});
+
+// moku-web: Island mounts on data-component, uses SPA plugin API
+// components/NavIsland.ts
+export const Nav = createComponent('nav', {
+  onNavEnd({ doc }) { /* update active link from new doc */ },
+});
+
+// moku-core: Events declared in config.ts, emitted by sub-modules
+// ctx.emit('router:navigate', { from, to }) — typed from framework events
+```

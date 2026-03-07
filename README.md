@@ -76,12 +76,14 @@ Sequential (cross-plugin):        architecture-validator
 
 | Hook | Event | Purpose |
 |------|-------|---------|
-| **PreToolUse[Write\|Edit]** | PreToolUse | Auto-approves writes to `.planning/` directory; blocks `createPlugin<` anti-pattern |
+| **PreToolUse[Write\|Edit]** | PreToolUse | Auto-approves writes to `.planning/` directory; blocks `createPlugin<` anti-pattern; prompt-based validation of plugin index.ts architecture |
 | **PostToolUse[Write\|Edit]** | PostToolUse | Auto-runs `bun run format` after file edits (if format script exists) |
 | **PreCompact** | PreCompact | Re-injects `.planning/STATE.md`, `decisions.md`, `research.md` before context compaction |
-| **SessionStart** | SessionStart | Detects Moku project type, planning state, and existing specifications |
+| **SessionStart** | SessionStart | Detects Moku project type, planning state, specifications; validates environment (Bun/Node/tsc versions); reports @moku-labs/core version |
 | **Notification** | Notification | Logs build progress notifications to `.planning/notifications.log` for long operations |
-| **SubagentStop** | SubagentStop | Auto-logs agent completions to `.planning/agent-log.md` with timestamp and result |
+| **UserPromptSubmit** | UserPromptSubmit | Injects compact Moku project context (type, plugins, planning state) before every prompt |
+| **SubagentStop** | SubagentStop | Auto-logs moku agent completions to `.planning/agent-log.md` with timestamp |
+| **SessionEnd** | SessionEnd | Cleans up debug logs and records session end timestamp |
 
 ## Configuration
 

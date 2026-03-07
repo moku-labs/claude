@@ -7,29 +7,19 @@
 
 TOOL_INPUT="$1"
 
-# Extract agent name and stop reason from input
+# Extract agent_type (the agent name) from input
+# Official fields: agent_id, agent_type, agent_transcript_path, last_assistant_message, stop_hook_active
 if command -v jq &>/dev/null; then
-  AGENT_NAME=$(jq -r '.agent_name // empty' <<< "$TOOL_INPUT" 2>/dev/null)
-  STOP_REASON=$(jq -r '.stop_reason // empty' <<< "$TOOL_INPUT" 2>/dev/null)
+  AGENT_TYPE=$(jq -r '.agent_type // empty' <<< "$TOOL_INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
-  AGENT_NAME=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('agent_name',''))" <<< "$TOOL_INPUT" 2>/dev/null)
-  STOP_REASON=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('stop_reason',''))" <<< "$TOOL_INPUT" 2>/dev/null)
+  AGENT_TYPE=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('agent_type',''))" <<< "$TOOL_INPUT" 2>/dev/null)
 else
-  AGENT_NAME=$(printf '%s' "$TOOL_INPUT" | grep -o '"agent_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"agent_name"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
-  STOP_REASON=$(printf '%s' "$TOOL_INPUT" | grep -o '"stop_reason"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"stop_reason"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
-fi
-
-# Diagnostic: if parsing failed, log raw payload once for field name discovery
-if [ -z "$AGENT_NAME" ] && [ -z "$STOP_REASON" ] && [ -n "$TOOL_INPUT" ]; then
-  if [ ! -f .planning/hook-debug.log ] || ! grep -q 'SubagentStop' .planning/hook-debug.log 2>/dev/null; then
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] SubagentStop raw payload: $TOOL_INPUT" >> .planning/hook-debug.log
-  fi
-  exit 0
+  AGENT_TYPE=$(printf '%s' "$TOOL_INPUT" | grep -o '"agent_type"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"agent_type"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
 fi
 
 # Only track moku agents
-[ -z "$AGENT_NAME" ] && exit 0
-case "$AGENT_NAME" in
+[ -z "$AGENT_TYPE" ] && exit 0
+case "$AGENT_TYPE" in
   moku-*) ;;
   *) exit 0 ;;
 esac
@@ -38,14 +28,14 @@ TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
 # Append agent completion to state log
 if [ -f .planning/agent-log.md ]; then
-  echo "| $TIMESTAMP | $AGENT_NAME | $STOP_REASON |" >> .planning/agent-log.md
+  echo "| $TIMESTAMP | $AGENT_TYPE | completed |" >> .planning/agent-log.md
 else
   {
     echo "# Agent Completion Log"
     echo ""
     echo "| Timestamp | Agent | Result |"
     echo "|-----------|-------|--------|"
-    echo "| $TIMESTAMP | $AGENT_NAME | $STOP_REASON |"
+    echo "| $TIMESTAMP | $AGENT_TYPE | completed |"
   } > .planning/agent-log.md
 fi
 

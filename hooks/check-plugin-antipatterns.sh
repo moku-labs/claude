@@ -34,5 +34,17 @@ if printf '%s\n' "$CONTENT" | grep -q 'createPlugin<'; then
   exit 0
 fi
 
+# Check 2: Unsafe type assertions in plugin source files
+if printf '%s\n' "$CONTENT" | grep -q 'as any'; then
+  echo '{"decision":"block","reason":"BLOCKED: \"as any\" detected in plugin source. Use proper typing or \"as unknown as TargetType\" if a cast is truly necessary. Moku plugins rely on type inference — \"as any\" defeats the type system."}'
+  exit 0
+fi
+
+# Check 3: Explicit generics on createCorePlugin (same anti-pattern as createPlugin)
+if printf '%s\n' "$CONTENT" | grep -q 'createCorePlugin<'; then
+  echo '{"decision":"block","reason":"BLOCKED: Explicit generics on createCorePlugin detected. Same rule as createPlugin — all types must be inferred from the spec object. Remove the generic parameters."}'
+  exit 0
+fi
+
 # No issues found — don't interfere
 exit 0

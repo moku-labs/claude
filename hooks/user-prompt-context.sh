@@ -5,7 +5,7 @@
 # Quick exit if not a Moku project
 [ -f src/config.ts ] && grep -q 'createCoreConfig\|@moku-labs' src/config.ts 2>/dev/null && PROJECT_TYPE="Framework" || {
   [ -f package.json ] && grep -q 'createApp' src/index.ts 2>/dev/null && PROJECT_TYPE="Consumer" || {
-    [ -f biome.json ] && [ -f vitest.config.ts ] && PROJECT_TYPE="Tools" || exit 0
+    [ -f biome.json ] && [ -f vitest.config.ts ] && [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null && PROJECT_TYPE="Tools" || exit 0
   }
 }
 

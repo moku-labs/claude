@@ -140,6 +140,34 @@ createPlugin("bundler", {
 
 **Where to check:** Every `createPlugin(` call. If it has angle brackets before the parenthesis, it is wrong.
 
+## Common Mistakes — DON'T Do These
+
+```typescript
+// DON'T: Deep merge config — Moku uses shallow merge ONLY
+config: { theme: { ...defaults.theme, ...overrides.theme } }  // WRONG
+config: { ...defaults, ...overrides }                          // CORRECT
+
+// DON'T: Consumer imports from @moku-labs/core
+import { createCoreConfig } from '@moku-labs/core';  // WRONG in consumer
+import { createApp } from 'my-framework';             // CORRECT
+
+// DON'T: Return state directly from API — leaks mutable internals
+api: (ctx) => ({
+  getState: () => ctx.state,                   // WRONG — exposes mutable object
+  getSessions: () => [...ctx.state.sessions],  // CORRECT — return copy/closure
+})
+
+// DON'T: Use emit for request/response — events are notifications
+ctx.emit('auth:getUser', { id });       // WRONG — events don't return values
+ctx.require(authPlugin).getUser(id);    // CORRECT — use require() for queries
+
+// DON'T: Make a core plugin that needs events or depends
+createCorePlugin("router", {
+  depends: [authPlugin],               // WRONG — core plugins are self-contained
+  events: (r) => ({ ... }),            // WRONG — core plugins can't have events
+})
+```
+
 ## Context Tiers
 
 | Method | Context | Available |
@@ -179,7 +207,35 @@ For detailed specifications, consult:
 - `references/invariants.md` — Guarantees, error format, anti-patterns
 - `references/tooling-config.md` — Exact Biome, ESLint, TypeScript, Lefthook, Vitest configs
 
+## Advanced References (load when needed)
+
+For complex projects with 5+ plugins or core plugin design:
+!`if [ -d src/plugins ] && [ "$(find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')" -gt 4 ]; then echo "Large project detected — consult references/type-system.md for advanced type helpers and references/build-framework.md for framework assembly patterns."; fi`
+!`if grep -rq 'createCorePlugin' src/ 2>/dev/null; then echo "Core plugins in use — consult references/plugin-settings.md for 4-level config cascade details."; fi`
+
 ## Related Skills
 
 - **moku-plugin** — Plugin structure, complexity tiers, file organization, wiring harness pattern
 - **moku-web** — Preact + Vite web patterns, island architecture, CSS architecture with @scope/@layer
+
+### Cross-Skill Example: Router Plugin with Web Integration
+
+```typescript
+// 1. moku-core: Define events in config.ts
+type Events = { 'router:navigate': { from: string; to: string } };
+const { createPlugin, createCore } = createCoreConfig<Config, Events>('app', { config: defaults });
+
+// 2. moku-plugin: Standard tier plugin in plugins/router/index.ts (~30 lines)
+import { createRouterApi } from './api';       // domain logic extracted
+export const routerPlugin = createPlugin('router', {
+  config: { basePath: '/' },
+  createState: () => ({ currentPath: '/' }),
+  api: createRouterApi,                        // wiring harness pattern
+});
+
+// 3. moku-web: Island handles client-side navigation
+// components/NavigationIsland.ts — vanilla TS, no framework
+export const Navigation = createComponent('nav', {
+  onCreate(el) { el.querySelectorAll('a').forEach(a => a.addEventListener('click', handleNav)); },
+});
+```
