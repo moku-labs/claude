@@ -3,7 +3,8 @@ name: moku-verifier
 description: >
   Performs 3-level artifact verification: file existence, substantive content
   (not stubs), proper wiring (lint + test pass). Use after each build wave.
-model: sonnet
+model: haiku
+color: cyan
 maxTurns: 30
 skills:
   - moku-core

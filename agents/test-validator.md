@@ -4,6 +4,7 @@ description: >
   Validates test quality beyond file existence: mock context correctness, assertion
   quality, edge cases, type-level tests, integration lifecycle. Use after plugin build.
 model: sonnet
+color: yellow
 maxTurns: 30
 skills:
   - moku-core
@@ -40,7 +41,7 @@ For unit tests that mock plugin context:
 
 For each test:
 - Must contain at least one meaningful assertion (`expect(...).toBe/toEqual/toHaveBeenCalled/...`)
-- No empty assertions: `expect(true).toBe(true)`, `expect(1).toBe(1)`
+- No empty assertions: `expect(true).toBe(true)`, `expect(1).toBe(1)` — **exception**: `tests/unit/setup.test.ts` scaffold placeholder (created by `/moku:init` to prevent vitest empty-suite failure) should be ignored
 - No assertion-free tests (test bodies with no `expect` or `expectTypeOf`)
 - Assertions must check actual behavior, not just "doesn't throw"
 

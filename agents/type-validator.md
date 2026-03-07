@@ -4,6 +4,7 @@ description: >
   Validates TypeScript type correctness: tsc --noEmit, type assertion audit,
   inference chain, import type compliance, strict mode. Use after plugin build.
 model: sonnet
+color: yellow
 maxTurns: 30
 skills:
   - moku-core

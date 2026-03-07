@@ -8,6 +8,11 @@
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh \"$TOOL_INPUT\"",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-plugin-antipatterns.sh \"$TOOL_INPUT\"",
+            "timeout": 5
           }
         ]
       }
@@ -18,7 +23,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f biome.json ] && [ -f package.json ] && grep -q '\"format\"' package.json 2>/dev/null && ([ -f src/config.ts ] || [ -d .planning ]); then bun run format 2>&1 || echo 'Format failed with exit code '$?; fi",
+            "command": "if [ -f biome.json ] && [ -f package.json ] && [ -d node_modules ] && grep -q '\"format\"' package.json 2>/dev/null && ([ -f src/config.ts ] || [ -d .planning ]); then bun run format 2>&1 || echo 'Format failed with exit code '$?; fi",
             "timeout": 15
           }
         ]
@@ -30,8 +35,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f .planning/STATE.md ]; then echo '## Moku Planning State (re-injected before compaction)'; cat .planning/STATE.md; fi",
-            "timeout": 5
+            "command": "if [ -f .planning/STATE.md ]; then echo '## Moku Planning State (re-injected before compaction)'; cat .planning/STATE.md; fi; if [ -f .planning/decisions.md ]; then echo ''; echo '## Moku Decisions (re-injected before compaction)'; cat .planning/decisions.md; fi; if [ -f .planning/research.md ]; then echo ''; echo '## Moku Research (re-injected before compaction)'; cat .planning/research.md; fi",
+            "timeout": 10
           }
         ]
       }
@@ -43,6 +48,30 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/detect-moku-project.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f .planning/STATE.md ]; then TITLE=$(echo \"$TOOL_INPUT\" | grep -o '\"title\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"title\"[[:space:]]*:[[:space:]]*\"//' | sed 's/\"$//'); MSG=$(echo \"$TOOL_INPUT\" | grep -o '\"message\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"message\"[[:space:]]*:[[:space:]]*\"//' | sed 's/\"$//'); echo \"$(date '+%H:%M:%S') [$TITLE] $MSG\" >> .planning/notifications.log; fi",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-stop.sh \"$TOOL_INPUT\"",
             "timeout": 5
           }
         ]

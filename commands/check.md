@@ -1,7 +1,7 @@
 ---
 description: Run diagnostics on the Moku plugin installation and project state
 allowed-tools: Read, Bash, Glob, Grep, Agent
-argument-hint: [verbose|self-test]
+argument-hint: [verbose|self-test|graph]
 disable-model-invocation: true
 ---
 
@@ -81,8 +81,74 @@ Issues:
 
 If `$ARGUMENTS` contains "verbose", show full details for each check. Otherwise show the summary only.
 
+If `$ARGUMENTS` contains "graph", generate mermaid diagrams for the project (Framework projects only):
+
+### Dependency Graph
+Build a mermaid flowchart from all plugin `depends: [...]` declarations:
+```mermaid
+graph TD
+  env["env (Nano)"]
+  logger["logger (Micro)"]
+  router["router (Standard)"]
+  renderer["renderer (Complex)"]
+  logger --> env
+  router --> logger
+  renderer --> router
+  renderer --> logger
+```
+- Each node shows plugin name and tier
+- Arrows flow from dependent → dependency
+- Color-code by tier: Nano=green, Micro=blue, Standard=orange, Complex=red, VeryComplex=purple
+
+### Event Flow Map
+Build a mermaid flowchart showing event declarations, emitters, and listeners:
+```mermaid
+graph LR
+  subgraph Emitters
+    router_emit["router"]
+    auth_emit["auth"]
+  end
+  subgraph Events
+    nav["router:navigated"]
+    login["auth:login"]
+    logout["auth:logout"]
+  end
+  subgraph Listeners
+    analytics_hook["analytics"]
+    logger_hook["logger"]
+  end
+  router_emit --> nav
+  auth_emit --> login
+  auth_emit --> logout
+  nav --> analytics_hook
+  nav --> logger_hook
+  login --> analytics_hook
+```
+- Left: plugins that emit, Center: event names, Right: plugins that hook
+- Orphan events (no listeners) shown in dashed style
+- Dead hooks (no emitter) shown in red
+
+### Wave Execution Plan
+If `.planning/STATE.md` has wave grouping, generate a Gantt-style diagram:
+```mermaid
+gantt
+  title Build Wave Execution
+  dateFormat X
+  axisFormat %s
+  section Wave 1
+    env     :0, 1
+    logger  :0, 1
+  section Wave 2
+    router  :1, 2
+    auth    :1, 2
+  section Wave 3
+    renderer :2, 3
+```
+
+Output all three diagrams with brief descriptions. If the project has no plugins yet, report "No plugins found — nothing to graph."
+
 If `$ARGUMENTS` contains "self-test", skip project checks and instead validate the Moku Claude plugin itself:
-1. Verify all 9 agent files exist in `${CLAUDE_PLUGIN_ROOT}/agents/` and have valid YAML frontmatter (name, description, model, tools)
+1. Verify all 10 agent files exist in `${CLAUDE_PLUGIN_ROOT}/agents/` and have valid YAML frontmatter (name, description, model, tools)
 2. Verify all 3 skill directories exist with SKILL.md files in `${CLAUDE_PLUGIN_ROOT}/skills/`
 3. Verify `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` parses as valid JSON
 4. Verify all referenced hook scripts exist and are executable

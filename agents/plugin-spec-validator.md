@@ -4,6 +4,7 @@ description: >
   Validates plugin structure, tier compliance, file organization, and domain merge
   detection. Use proactively after plugin creation, modification, or refactoring.
 model: sonnet
+color: blue
 maxTurns: 30
 skills:
   - moku-core

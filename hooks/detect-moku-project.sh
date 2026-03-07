@@ -23,6 +23,8 @@ if [ -f src/config.ts ] && grep -q 'createCoreConfig' src/config.ts 2>/dev/null;
   fi
 elif [ -f package.json ] && grep -q 'createApp' src/index.ts 2>/dev/null; then
   echo "Moku Consumer App detected (Layer 3)."
+elif [ -f package.json ] && [ -f biome.json ] && [ -f vitest.config.ts ]; then
+  echo "Moku Tools/Library project detected."
 fi
 
 # Check planning state

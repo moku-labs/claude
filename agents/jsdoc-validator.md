@@ -3,7 +3,8 @@ name: moku-jsdoc-validator
 description: >
   Validates JSDoc documentation quality and completeness on all exports.
   Use proactively after writing or modifying source code in Moku projects.
-model: sonnet
+model: haiku
+color: cyan
 maxTurns: 30
 skills:
   - moku-core

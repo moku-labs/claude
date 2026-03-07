@@ -4,7 +4,7 @@ Development toolkit for [Moku Core](https://github.com/moku-labs/core) — the m
 
 ## What This Plugin Does
 
-Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, and a 9-agent validation pipeline.
+Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, and a 10-agent validation pipeline.
 
 ## Commands
 
@@ -13,7 +13,9 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
 | `/moku:plan [target] [description]` | Gated workflow: optional discussion, optional research, analysis, specifications. Validates plans before user review. |
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`. |
-| `/moku:check [verbose\|self-test]` | Run diagnostics on project state, tooling, plugin health, build status, or validate the plugin itself. |
+| `/moku:add [name] [description]` | Quickly add a single plugin to an existing framework — scaffold, implement, wire, validate in one pass. |
+| `/moku:migrate [upgrade\|restructure\|from-existing]` | Upgrade @moku-labs/core, restructure plugin tiers, or migrate existing projects to Moku. |
+| `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
 
 ### Build Targets
 
@@ -32,13 +34,13 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 
 | Skill | Triggers On |
 |-------|-------------|
-| **moku-core** | "moku architecture", "moku specification", "createCoreConfig", "moku factory chain", "moku kernel" |
-| **moku-plugin** | "moku plugin structure", "moku plugin tier", "createPlugin structure", "moku wiring harness" |
-| **moku-web** | "moku web", "moku component", "moku CSS architecture", "moku island pattern", "moku design tokens" |
+| **moku-core** | "moku architecture", "moku specification", "createCoreConfig", "createCore", "createApp", "moku factory chain", "three-layer model", "moku kernel", "moku lifecycle", "moku event system", "moku context tiers" |
+| **moku-plugin** | "moku plugin structure", "moku plugin tier", "moku nano/micro/standard/complex plugin", "moku wiring harness", "moku plugin file layout", "moku plugin organization", "createPlugin structure" |
+| **moku-web** | "moku web", "moku component", "moku CSS architecture", "moku island pattern", "moku data attributes", "moku @scope", "moku @layer", "moku design tokens", "moku layout structure" |
 
 Skills include dynamic context injection to auto-detect project state and planning phase.
 
-## Agents (9 total)
+## Agents (10 total)
 
 ### Structural Validators
 
@@ -47,6 +49,7 @@ Skills include dynamic context injection to auto-detect project state and planni
 | **moku-spec-validator** | Validates Moku specification compliance (3-layer, factory chain, config, lifecycle, events, state) |
 | **moku-plugin-spec-validator** | Validates plugin structure, tier, file organization, domain merge detection |
 | **moku-jsdoc-validator** | Validates JSDoc documentation quality, examples, completeness |
+| **moku-web-validator** | Validates web patterns: data-* attributes, @scope, @layer, islands, tokens |
 
 ### Quality Validators
 
@@ -73,10 +76,12 @@ Sequential (cross-plugin):        architecture-validator
 
 | Hook | Event | Purpose |
 |------|-------|---------|
-| **PreToolUse[Write\|Edit]** | PreToolUse | Auto-approves writes to `.planning/` directory for frictionless state tracking |
+| **PreToolUse[Write\|Edit]** | PreToolUse | Auto-approves writes to `.planning/` directory; blocks `createPlugin<` anti-pattern |
 | **PostToolUse[Write\|Edit]** | PostToolUse | Auto-runs `bun run format` after file edits (if format script exists) |
-| **PreCompact** | PreCompact | Re-injects `.planning/STATE.md` before context compaction to preserve cross-session state |
+| **PreCompact** | PreCompact | Re-injects `.planning/STATE.md`, `decisions.md`, `research.md` before context compaction |
 | **SessionStart** | SessionStart | Detects Moku project type, planning state, and existing specifications |
+| **Notification** | Notification | Logs build progress notifications to `.planning/notifications.log` for long operations |
+| **SubagentStop** | SubagentStop | Auto-logs agent completions to `.planning/agent-log.md` with timestamp and result |
 
 ## Configuration
 
@@ -109,9 +114,12 @@ The plugin maintains `.planning/STATE.md` for cross-session continuity:
 2. `/moku:plan framework "A static site generator"` — Design the framework
 3. `/moku:build framework` — Implement all plugins in parallel waves with verification
 4. `/moku:build resume` — Continue if context was heavy
-5. `/moku:check` — Verify project health
-6. `/moku:plan app "A personal blog"` — Plan the consumer app
-7. `/moku:build app` — Build the consumer app
+5. `/moku:add cache "LRU cache with TTL"` — Quick-add a plugin without re-planning
+6. `/moku:check` — Verify project health
+7. `/moku:check graph` — Visualize dependency graph and event flow as mermaid diagrams
+8. `/moku:migrate restructure` — Re-assess plugin tiers after growth
+9. `/moku:plan app "A personal blog"` — Plan the consumer app
+10. `/moku:build app` — Build the consumer app
 
 ## Installation
 

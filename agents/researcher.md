@@ -4,6 +4,7 @@ description: >
   Investigates npm ecosystem, TypeScript patterns, and reference implementations
   before planning or building a new plugin domain. The only agent with web access.
 model: sonnet
+color: green
 maxTurns: 40
 memory: user
 skills:
