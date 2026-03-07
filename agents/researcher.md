@@ -3,6 +3,8 @@ name: moku-researcher
 description: >
   Investigates npm ecosystem, TypeScript patterns, and reference implementations
   before planning or building a new plugin domain. The only agent with web access.
+  <example>Context: Planning a new plugin domain. user: "Research what npm packages exist for caching" assistant: launches moku-researcher</example>
+  <example>Context: Pre-implementation research. user: "What TypeScript patterns do similar plugin systems use?" assistant: launches moku-researcher</example>
 model: sonnet
 color: green
 maxTurns: 40

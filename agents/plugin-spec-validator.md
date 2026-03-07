@@ -3,6 +3,8 @@ name: moku-plugin-spec-validator
 description: >
   Validates plugin structure, tier compliance, file organization, and domain merge
   detection. Use proactively after plugin creation, modification, or refactoring.
+  <example>Context: User created a new plugin. user: "Check if my plugin structure is correct" assistant: launches moku-plugin-spec-validator</example>
+  <example>Context: Plugin refactoring. user: "Is this plugin the right complexity tier?" assistant: launches moku-plugin-spec-validator</example>
 model: sonnet
 color: blue
 maxTurns: 30

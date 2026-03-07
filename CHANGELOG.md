@@ -2,13 +2,32 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.6.0 (2026-03-07)
+
+### Fixed
+- **CRITICAL**: Hook script jq fallback truncated JSON content at first escaped quote — added python3 as intermediate fallback (jq -> python3 -> grep/sed)
+- **CRITICAL**: Corrected v0.5.0 changelog entry about `color` field — it IS supported, agents correctly retain it
+- PreCompact hook re-injected unbounded file content — now bounded to ~150 lines via extracted script
+- `/moku:add` skipped 5 of 6 validation agents — now runs plugin-spec, type, and jsdoc validators after verifier
+
+### Added
+- Per-plugin build status tracking within waves (`built`, `agent-incomplete`, `agent-failed`, `verified`, `needs-manual`)
+- `maxTurns` scaling by plugin complexity tier (Nano: 20, Micro: 30, Standard: 40, Complex: 50, VeryComplex: 60)
+- `<example>` blocks on all 10 agent descriptions for improved auto-triggering accuracy
+- `hooks/precompact-state.sh` — extracted bounded PreCompact hook
+- `hooks/log-notification.sh` — extracted Notification hook with 3-tier JSON parsing
+
+### Improved
+- All hook scripts use 3-tier JSON parsing: jq -> python3 -> grep/sed
+- Notification and PreCompact hooks extracted from inline commands to standalone scripts
+
 ## 0.5.0 (2026-03-07)
 
 ### Fixed
 - **CRITICAL**: `settings.json` was using unsupported schema — emptied (agent key is for activating agents, not config)
 - **CRITICAL**: PostToolUse format hook fired on ALL projects — added Moku project guard (biome.json + src/config.ts or .planning)
 - **CRITICAL**: Path traversal weakness in approve-planning-writes.sh — anchored to project root
-- Removed unsupported `color` field from all 9 agent frontmatter files
+- Verified `color` field is supported — retained in all 10 agent frontmatter files
 
 ### Added
 - `skills` field on all agents (agents don't inherit parent skills — now preloaded)

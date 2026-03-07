@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f .planning/STATE.md ]; then echo '## Moku Planning State (re-injected before compaction)'; cat .planning/STATE.md; fi; if [ -f .planning/decisions.md ]; then echo ''; echo '## Moku Decisions (re-injected before compaction)'; cat .planning/decisions.md; fi; if [ -f .planning/research.md ]; then echo ''; echo '## Moku Research (re-injected before compaction)'; cat .planning/research.md; fi",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/precompact-state.sh",
             "timeout": 10
           }
         ]
@@ -59,7 +59,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "if [ -f .planning/STATE.md ]; then TITLE=$(echo \"$TOOL_INPUT\" | grep -o '\"title\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"title\"[[:space:]]*:[[:space:]]*\"//' | sed 's/\"$//'); MSG=$(echo \"$TOOL_INPUT\" | grep -o '\"message\"[[:space:]]*:[[:space:]]*\"[^\"]*\"' | head -1 | sed 's/.*\"message\"[[:space:]]*:[[:space:]]*\"//' | sed 's/\"$//'); echo \"$(date '+%H:%M:%S') [$TITLE] $MSG\" >> .planning/notifications.log; fi",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/log-notification.sh \"$TOOL_INPUT\"",
             "timeout": 5
           }
         ]

@@ -3,6 +3,8 @@ name: moku-architecture-validator
 description: >
   Validates cross-plugin architecture: dependency graph, event flow, API consistency,
   and performance. Use after full framework build or when adding/modifying plugins.
+  <example>Context: Framework build complete. user: "Review the overall plugin architecture" assistant: launches moku-architecture-validator</example>
+  <example>Context: New plugin added. user: "Check if the event flow is consistent across plugins" assistant: launches moku-architecture-validator</example>
 model: opus
 color: magenta
 memory: user

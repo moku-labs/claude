@@ -70,6 +70,20 @@ You are building a Moku plugin. Follow the moku-plugin skill strictly.
 [Contents of the ## Verification section from the spec]
 ```
 
+### Agent Turn Limits
+
+Set appropriate turn limits based on plugin complexity tier when spawning builder sub-agents:
+
+| Tier | maxTurns | Rationale |
+|------|----------|-----------|
+| Nano | 20 | 1-2 files, minimal logic |
+| Micro | 30 | 2-4 files, simple logic |
+| Standard | 40 | 5-8 files, domain separation |
+| Complex | 50 | 8-12 files, sub-modules |
+| VeryComplex | 60 | 12+ files, multiple sub-domains |
+
+If the agent approaches its turn limit with incomplete files, it should prioritize: index.ts > types.ts > api.ts > state.ts > handlers.ts > tests > README.md (core wiring first, docs last).
+
 **Parallel execution within waves:**
 - Wave 1 plugins have no dependencies on each other — spawn all agents simultaneously
 - Wave 2 plugins may share Wave 1 dependencies but not each other — spawn all simultaneously
@@ -92,18 +106,35 @@ Each sub-agent builds its plugin following this order:
 8. **Write unit tests** — For each domain file
 9. **Write integration test** — For the full plugin wiring
 
+### Per-Plugin Tracking
+
+After each wave's sub-agents return, check each agent's result and update STATE.md per-plugin:
+
+1. **Agent completed successfully** (all files created, no errors) → mark plugin as `built` in STATE.md
+2. **Agent hit maxTurns or returned incomplete** (some files missing) → mark plugin as `agent-incomplete` in STATE.md
+3. **Agent returned with errors** (crashed, context exhausted) → mark plugin as `agent-failed` in STATE.md
+
+For `agent-incomplete` or `agent-failed` plugins:
+- Do NOT route through gap closure (gap closure is for verification failures, not build failures)
+- Re-spawn the builder agent with the same prompt + note about what was already created on disk
+- If re-spawn also fails, mark as `needs-manual` and continue with other plugins in the wave
+- `needs-manual` plugins are excluded from verification and reported to the user at the end
+
 ## Step 4: Post-Wave Verification + Integration
 
-After each wave's sub-agents complete, run verification and integrate into the framework:
+After per-plugin tracking is complete, run verification on successfully built plugins:
 
 ### Step 4a: Plugin Verification
 
-1. Spawn the **moku-verifier** agent on all plugins in the wave
+Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`, and `needs-manual` plugins.
+
+1. Spawn the **moku-verifier** agent on all `built` plugins in the wave
    - Level 1: All tier files exist
    - Level 2: Files contain real implementations (not stubs)
    - Level 3: Plugins wired correctly, lint passes, tests pass
-2. If ALL plugins pass -> proceed to Step 4b
-3. If ANY plugin fails -> enter Gap Closure (Step 4c)
+2. Update status: `built` → `verified` (pass) or `built` → `verify-failed` (fail)
+3. If ALL verified plugins pass → proceed to Step 4b
+4. If ANY plugin is `verify-failed` → enter Gap Closure (Step 4c)
 
 ### Step 4b: Update Framework Files + Integration Checks
 
@@ -126,7 +157,7 @@ Update STATE.md with wave completion + integration check results, then proceed t
 
 ### Step 4c: Gap Closure
 
-When verification finds issues:
+When verification finds issues (plugins with status `verify-failed`):
 
 1. Collect all verification failures into a gap list
 2. For each gap, spawn a targeted fix agent with:
@@ -135,7 +166,8 @@ When verification finds issues:
    - The relevant plugin specification
    - Instructions to fix ONLY the identified issues (no refactoring)
 3. After fixes, re-run the **moku-verifier** agent on affected plugins
-4. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist, report to user:
+4. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
+5. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist, mark remaining plugins as `needs-manual` and report to user:
    > "Some verification issues remain after 2 fix attempts. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
 
 ## Step 5: Final Framework Verification

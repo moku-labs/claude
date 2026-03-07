@@ -116,6 +116,19 @@ Then spawn the **moku-verifier** agent on the new plugin to confirm Level 1 (exi
 
 ---
 
+## Step 6b: Validation Pipeline (lightweight)
+
+After the verifier confirms the plugin is wired correctly, run targeted validators:
+
+1. **moku-plugin-spec-validator** — verify tier assessment, file organization, index.ts quality, JSDoc coverage
+2. **moku-type-validator** — verify tsc --noEmit passes, no `as any`, import type compliance
+3. **moku-jsdoc-validator** — verify all exports have JSDoc with @param, @returns, @example
+
+Spawn all 3 in parallel. If any reports BLOCKER issues, fix and re-validate (max 1 round).
+WARNINGs are included in the Step 7 report but don't block completion.
+
+---
+
 ## Step 7: Report
 
 Show the user:

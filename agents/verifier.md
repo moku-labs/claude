@@ -3,6 +3,8 @@ name: moku-verifier
 description: >
   Performs 3-level artifact verification: file existence, substantive content
   (not stubs), proper wiring (lint + test pass). Use after each build wave.
+  <example>Context: Build wave completed. user: "Verify the plugins from wave 2" assistant: launches moku-verifier</example>
+  <example>Context: Post-build check. user: "Are the built plugins real implementations or stubs?" assistant: launches moku-verifier</example>
 model: haiku
 color: cyan
 maxTurns: 30

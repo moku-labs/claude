@@ -3,6 +3,8 @@ name: moku-jsdoc-validator
 description: >
   Validates JSDoc documentation quality and completeness on all exports.
   Use proactively after writing or modifying source code in Moku projects.
+  <example>Context: User finished writing plugin code. user: "Check my JSDoc coverage" assistant: launches moku-jsdoc-validator</example>
+  <example>Context: Pre-build review. user: "Are all exports documented?" assistant: launches moku-jsdoc-validator</example>
 model: haiku
 color: cyan
 maxTurns: 30

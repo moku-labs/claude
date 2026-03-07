@@ -3,6 +3,8 @@ name: moku-plan-checker
 description: >
   Validates plan completeness: requirement coverage, dependency graph, event flow,
   spec sections. Use before user gates in /moku:plan or after spec modifications.
+  <example>Context: Planning stage completed. user: "Is my plan complete before I approve?" assistant: launches moku-plan-checker</example>
+  <example>Context: Specs modified. user: "Check if the dependency graph has cycles" assistant: launches moku-plan-checker</example>
 model: sonnet
 color: yellow
 memory: user

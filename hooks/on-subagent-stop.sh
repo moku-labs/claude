@@ -11,6 +11,9 @@ TOOL_INPUT="$1"
 if command -v jq &>/dev/null; then
   AGENT_NAME=$(jq -r '.agent_name // empty' <<< "$TOOL_INPUT" 2>/dev/null)
   STOP_REASON=$(jq -r '.stop_reason // empty' <<< "$TOOL_INPUT" 2>/dev/null)
+elif command -v python3 &>/dev/null; then
+  AGENT_NAME=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('agent_name',''))" <<< "$TOOL_INPUT" 2>/dev/null)
+  STOP_REASON=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('stop_reason',''))" <<< "$TOOL_INPUT" 2>/dev/null)
 else
   AGENT_NAME=$(echo "$TOOL_INPUT" | grep -o '"agent_name"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"agent_name"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
   STOP_REASON=$(echo "$TOOL_INPUT" | grep -o '"stop_reason"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"stop_reason"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')

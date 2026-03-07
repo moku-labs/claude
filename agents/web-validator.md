@@ -4,6 +4,8 @@ description: >
   Validates Moku web patterns: data-* attributes (no CSS classes), @scope encapsulation,
   @layer ordering, island architecture, token system, bundle targets. Use after building
   or modifying web components in a Moku web project.
+  <example>Context: Web component created. user: "Check if my component follows Moku web patterns" assistant: launches moku-web-validator</example>
+  <example>Context: CSS review. user: "Validate @scope and @layer usage in my styles" assistant: launches moku-web-validator</example>
 model: sonnet
 color: blue
 maxTurns: 30

@@ -3,6 +3,8 @@ name: moku-type-validator
 description: >
   Validates TypeScript type correctness: tsc --noEmit, type assertion audit,
   inference chain, import type compliance, strict mode. Use after plugin build.
+  <example>Context: Plugin code written. user: "Check for type safety issues in my plugins" assistant: launches moku-type-validator</example>
+  <example>Context: Type errors suspected. user: "Audit type assertions and inference chains" assistant: launches moku-type-validator</example>
 model: sonnet
 color: yellow
 maxTurns: 30

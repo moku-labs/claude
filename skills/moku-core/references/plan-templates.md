@@ -148,6 +148,8 @@ Each specification file must contain:
 | 2 | 1 | logger | Micro | none | specifications/02-logger.md | not started |
 | 3 | 2 | router | Standard | env | specifications/03-router.md | not started |
 
+Build Status values: `not started` | `building` | `built` | `agent-incomplete` | `agent-failed` | `verified` | `verify-failed` | `needs-manual` | `done`
+
 ## Wave Grouping
 - Wave 1: env, logger (no dependencies — parallel build)
 - Wave 2: router (depends on Wave 1)

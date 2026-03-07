@@ -3,6 +3,8 @@ name: moku-spec-validator
 description: >
   Validates Moku Core specification compliance: 3-layer separation, factory chain,
   config, lifecycle, events, state. Use proactively after code changes.
+  <example>Context: User just modified plugin code. user: "Check if my plugin follows the Moku spec" assistant: launches moku-spec-validator</example>
+  <example>Context: Code review of framework changes. user: "Validate the factory chain in config.ts" assistant: launches moku-spec-validator</example>
 model: sonnet
 color: blue
 maxTurns: 30

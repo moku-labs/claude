@@ -3,6 +3,8 @@ name: moku-test-validator
 description: >
   Validates test quality beyond file existence: mock context correctness, assertion
   quality, edge cases, type-level tests, integration lifecycle. Use after plugin build.
+  <example>Context: Tests written for new plugin. user: "Are my tests actually testing the right things?" assistant: launches moku-test-validator</example>
+  <example>Context: Post-build review. user: "Check test quality for the router plugin" assistant: launches moku-test-validator</example>
 model: sonnet
 color: yellow
 maxTurns: 30
