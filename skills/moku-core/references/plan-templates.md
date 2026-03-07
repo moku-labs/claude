@@ -257,3 +257,70 @@ After each plugin is built by `/moku:build`, update its `Build Status` to `done`
 ## Open Questions
 - [anything still unclear]
 ```
+
+---
+
+## Migration decisions.md Template
+
+Used by `/migrate` when saving analysis context. The `## Migration Type` header signals to `/plan` that migration context is present and the discussion phase should be skipped.
+
+```markdown
+# Migration Decisions
+
+## Target
+- Type: framework
+- Domain: [description of what the framework does]
+
+## Migration Type
+- Flow: [upgrade|restructure|from-existing]
+- Source Version: [current version, for upgrade]
+- Target Version: [target version, for upgrade]
+- Source Path: [path to existing project, for from-existing]
+
+## Source Analysis
+
+### For upgrade — Plugin Inventory:
+| Plugin | Tier | Lines | Affected By |
+|--------|------|-------|-------------|
+| [name] | [tier] | [N] | [breaking change IDs] |
+
+### For restructure — Tier Audit:
+| Plugin | Current Tier | Recommended | Action | Rationale |
+|--------|-------------|-------------|--------|-----------|
+| [name] | [current] | [recommended] | [None/Promote/Demote/Merge] | [why] |
+
+### For from-existing — Domain Mapping:
+| Existing Module | Proposed Plugin | Tier | Source Files | LOC | Notes |
+|----------------|----------------|------|-------------|-----|-------|
+| [src/auth/] | auth | Standard | 5 files | 340 | Has JWT + sessions |
+
+## Breaking Changes
+[For upgrade: numbered list of breaking changes with affected file counts]
+[For restructure: tier promotions, demotions, and domain merges with rationale]
+[For from-existing: patterns that don't map cleanly to Moku concepts]
+
+## New Features
+[For upgrade: new APIs and capabilities to adopt in the new project]
+[For restructure/from-existing: omit or leave empty]
+
+## Domain Merges
+[For restructure: merge candidate groups with target name, tier, sub-module structure]
+[For upgrade/from-existing: omit or leave empty]
+
+## Target Structure
+[Proposed Moku project tree with plugin names and tiers]
+
+## Event Mappings
+[For restructure/from-existing: existing event patterns → Moku events]
+[For upgrade: event system changes from breaking changes, if any]
+
+## Config Mappings
+[For restructure/from-existing: existing config sources → Moku config fields]
+[For upgrade: config shape changes from breaking changes, if any]
+
+## Dependencies to Install
+[npm packages for the new project]
+
+## Open Questions
+- [anything needing user input during planning]
+```

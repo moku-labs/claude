@@ -2,6 +2,18 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.8.1 (2026-03-07)
+
+### Changed
+- **Migrate command rewrite** — simplified from 300-line self-contained workflow to ~100-line preparation-only command. Migrate now analyzes only (never modifies code), saves context to `.planning/decisions.md` + `.planning/research.md`, and hands off to `/moku:plan framework`. Principle: migrate prepares, plan plans, build builds.
+- Removed `resume` argument from migrate (plan has its own resume mechanism)
+- Removed `Edit` from migrate's allowed-tools (no files are modified)
+
+### Added
+- `skills/moku-core/references/migrate-flows.md` — detailed per-type analysis instructions (upgrade, restructure, from-existing) loaded on-demand by migrate command
+- Migration decisions.md template in plan-templates.md with `## Migration Type` header for flow detection
+- Migration context detection in plan.md Step 0.5 (skips discussion phase) and Stage 1 (uses analysis as pre-answered requirements)
+
 ## 0.8.0 (2026-03-07)
 
 ### Added

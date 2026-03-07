@@ -14,7 +14,7 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 | `/moku:plan [target] [description]` | Gated workflow: optional discussion, optional research, analysis, specifications. Validates plans before user review. |
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`. |
 | `/moku:add [name] [description]` | Quickly add a single plugin to an existing framework — scaffold, implement, wire, validate in one pass. |
-| `/moku:migrate [upgrade\|restructure\|from-existing]` | Upgrade @moku-labs/core, restructure plugin tiers, or migrate existing projects to Moku. |
+| `/moku:migrate [upgrade\|restructure\|from-existing]` | Analyze existing projects and prepare migration context for `/moku:plan`. |
 | `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
 
 ### Build Targets
