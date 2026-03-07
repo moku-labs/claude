@@ -2,6 +2,28 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.7.0 (2026-03-07)
+
+### Added
+- **Core plugins knowledge** across all skills, references, and agents — planner recommends core vs regular, builders know `createCorePlugin`, validators check core plugin compliance
+- Core Plugin Identification section in plan-stages with decision table (events/hooks/depends → regular, self-contained infrastructure → core)
+- Core Plugin Specification Template in plan-templates (simplified: no events/dependencies/hooks sections)
+- Core Plugin Compliance check (#10) in spec-validator
+- Core Plugin Analysis check (#8) in architecture-validator (promotion candidates, validation, event flow exclusion)
+- Core Plugin Plan Validation check (#9) in plan-checker (infrastructure misclassification, name collisions, Wave 0)
+- Wave 0 for core plugins in build-framework, plan-checker mermaid diagrams, and STATE.md template
+- `CorePluginContext` tier in communication-context (`{ config, state }` only)
+- Core plugin types section in type-system (`CorePluginInstance`, `CoreApisFromTuple`, `CoreApis = {}` identity)
+- `createCorePlugin` API reference in core-api with full signature and examples
+- Core plugin invariants in invariants.md (self-containment, reserved names, lifecycle ordering)
+- Core plugin config 4-level cascade in config-lifecycle
+
+### Changed
+- `createCoreConfig` signature updated to include `CorePlugins` generic, `plugins?`, `pluginConfigs?` options
+- Plugin tree diagram uses `[Core]` tags instead of tier names for core plugins
+- Mermaid diagrams across validators include core plugin subgraph with `classDef core fill:#e8f5e9`
+- Architecture validator process expanded from 9 to 12 steps (core plugin classification, promotion analysis)
+
 ## 0.6.0 (2026-03-07)
 
 ### Fixed

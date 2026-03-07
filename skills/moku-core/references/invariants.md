@@ -3,10 +3,10 @@
 ## Invariants (Always True — Breaking Any Is a Bug)
 
 ### Reserved Names
-`start`, `stop`, `emit`, `require`, `has`, `config`, `__proto__`, `constructor`, `prototype` — plugin names using these throw TypeError.
+`start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`, `__proto__`, `constructor`, `prototype` — plugin names using these throw TypeError. Core plugins have the same reserved names.
 
 ### Name Uniqueness
-Duplicate plugin names throw during init. No silent overwrite. No merge. No "last wins."
+Duplicate plugin names throw during init. No silent overwrite. No merge. No "last wins." Core plugin names are cross-checked against regular plugin names — no collisions allowed.
 
 ### Dependency Validation
 If `depends: [loggerPlugin]` is declared:
@@ -18,7 +18,7 @@ If `depends: [loggerPlugin]` is declared:
 TypeScript rejects `createApp` without required configs. Compile-time only.
 
 ### Lifecycle Order
-Forward for init/start. Reverse for stop. Always array order. No auto-reordering.
+Forward for init/start. Reverse for stop. Always array order. No auto-reordering. Core plugins init/start BEFORE regular plugins. Regular plugins stop BEFORE core plugins.
 
 ### Hook Execution Order
 Plugin registration order, sequential, each awaited.
@@ -37,7 +37,10 @@ Instance-only. Returns typed API or throws with context-specific error messages.
 Consumer cannot remove framework defaults. Final list: `[...frameworkDefaults, ...consumerExtras]`.
 
 ### Phase-Appropriate Context
-`createState` → only `{ global, config }`. `onStop` → only `{ global }`.
+`createState` → only `{ global, config }`. `onStop` → only `{ global }`. Core plugins → only `{ config, state }` (no global, emit, require, has).
+
+### Core Plugin Self-Containment
+Core plugins must NOT have `depends`, `events`, or `hooks` — throws TypeError if present. They are pure infrastructure with no inter-plugin communication.
 
 ### Sequential Execution
 All async lifecycle methods execute one plugin at a time. No parallelism.
@@ -97,4 +100,7 @@ Shallow merge replaces nested objects wholesale. Prefer flat config or document 
 Events are notifications. Use `ctx.require(plugin)` for request/response.
 
 ### Inventing new primitives
-No services, providers, managers. The primitives are: `createCoreConfig`, `createCore`, `createApp`, `createPlugin`. Need something else? Build a plugin.
+No services, providers, managers. The primitives are: `createCoreConfig`, `createCore`, `createApp`, `createPlugin`, `createCorePlugin`. Need something else? Build a plugin.
+
+### Making a regular plugin core when it needs events or depends
+If a plugin needs `events`, `hooks`, or `depends`, it MUST be a regular plugin — not core. Core plugins are for self-contained infrastructure only.

@@ -25,7 +25,7 @@ You are a Moku Core specification validator. Your job is to ensure all code foll
 - Each layer respects its boundaries
 
 ### 2. Factory Chain Compliance
-- Step 1 (config.ts): `createCoreConfig<Config, Events>(id, { config })` with exports of `{ createPlugin, createCore }`
+- Step 1 (config.ts): `createCoreConfig<Config, Events>(id, { config, plugins?, pluginConfigs? })` with exports of `{ createPlugin, createCore }`. If core plugins exist, they must be in the `plugins` option.
 - Step 2 (index.ts): `createCore(coreConfig, { plugins })` with exports of `{ createApp, createPlugin }`
 - Step 3 (consumer): `createApp({ plugins?, config?, pluginConfigs? })`
 - No shortcuts or alternative patterns
@@ -62,17 +62,26 @@ You are a Moku Core specification validator. Your job is to ensure all code foll
 ### 8. No Anti-Patterns
 - No business logic in plugin `index.ts` (must be ~30 lines wiring)
 - No god plugins (one plugin = one domain concern)
-- No new abstractions (services, providers, managers) — use `createPlugin`
+- No new abstractions (services, providers, managers) — use `createPlugin` or `createCorePlugin`
 - No `as any` to bypass type system
 - No string-based `require` — instance-only
 - No explicit generics on `createPlugin` — types must be inferred from spec
 - No unnecessary `onStart`/`onStop` — only include when managing actual resources (servers, connections, listeners). CLI tools, build tools, and utility plugins should NOT have start/stop.
 
-### 9. No Explicit Generics on createPlugin
+### 9. No Explicit Generics on createPlugin or createCorePlugin
 - `createPlugin` calls must NEVER have type parameters: `createPlugin<...>(...)`
+- `createCorePlugin` calls must NEVER have type parameters: `createCorePlugin<...>(...)`
 - All types must be inferred from the spec object
-- Check every `createPlugin(` call — if angle brackets appear before the opening parenthesis, it is a VIOLATION
+- Check every `createPlugin(` and `createCorePlugin(` call — if angle brackets appear before the opening parenthesis, it is a VIOLATION
 - This is the #1 anti-pattern. Flag immediately.
+
+### 10. Core Plugin Compliance
+- Core plugins must be created with `createCorePlugin`, NOT `createPlugin`
+- Core plugin spec must NOT contain `depends`, `events`, or `hooks` — these are forbidden (throws TypeError at runtime)
+- Core plugins must be registered via `createCoreConfig({ plugins: [...] })`, NOT in `createCore({ plugins: [...] })`
+- Core plugin names must not conflict with regular plugin names or reserved names (`start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`, `__proto__`, `constructor`, `prototype`)
+- Core plugin context is `{ config, state }` only — no `global`, `emit`, `require`, `has`. If core plugin code accesses these, it is a VIOLATION
+- Regular plugins that are self-contained infrastructure (logging, env, storage) with no events/hooks/depends should be flagged as WARNING — they may be better as core plugins
 
 ## Process
 

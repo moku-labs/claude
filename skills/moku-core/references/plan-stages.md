@@ -22,9 +22,27 @@ This file contains the detailed per-target instructions for Stages 1, 2, and 3 o
 - Identify shared state, events, and communication patterns
 - Map existing modules/classes/functions to potential plugins
 
-#### Plugin Identification
+#### Core Plugin Identification
 
-Using the **moku-core** and **moku-plugin** skills, for each identified plugin determine:
+Before identifying regular plugins, determine which plugins should be **core plugins**. Core plugins are self-contained infrastructure registered via `createCoreConfig({ plugins: [...] })`.
+
+**Use this decision table:**
+
+| Criterion | Core Plugin | Regular Plugin |
+|-----------|------------|----------------|
+| Needs events/hooks | No | Yes |
+| Needs depends on other plugins | No | Yes |
+| Needs emit | No | Yes |
+| Provides utility API used by many plugins | Yes | Maybe |
+| Self-contained infrastructure | Yes | No |
+
+**Common core plugin candidates:** logging, environment detection, storage abstraction, configuration validation, feature flags, i18n utilities.
+
+If a plugin is core, it uses `createCorePlugin(name, spec)` with NO depends/events/hooks. Its API is injected directly on every regular plugin's context (`ctx.<name>`).
+
+#### Regular Plugin Identification
+
+Using the **moku-core** and **moku-plugin** skills, for each identified regular plugin determine:
 
 1. **Name** — camelCase plugin name
 2. **Complexity Tier** — Nano/Micro/Standard/Complex/VeryComplex (use moku-plugin skill tier criteria)
@@ -46,12 +64,12 @@ Present a tree diagram showing the proposed structure with complexity tiers AND 
 
 ```
 src/
-  config.ts                          # Framework config (Config + Events types)
+  config.ts                          # Framework config (Config + Events + core plugins)
   index.ts                           # Framework entry (createCore + exports)
   plugins/
-    env/                             # [Nano] Environment detection
+    env/                             # [Core] Environment detection
       index.ts
-    logger/                          # [Micro] Structured logging
+    logger/                          # [Core] Structured logging
       index.ts
     router/                          # [Standard] Client-side routing
       index.ts, types.ts, state.ts, api.ts, handlers.ts
@@ -62,6 +80,8 @@ src/
       transforms/
         markdown.ts, html.ts, types.ts
 ```
+
+Core plugins are tagged `[Core]` and stored in the same `src/plugins/` folder. They use `createCorePlugin` instead of `createPlugin`.
 
 For each plugin, note:
 - Tier in brackets
@@ -198,7 +218,9 @@ For each plugin, create a detailed development specification. Save each spec as 
 - `specifications/02-[plugin-name].md`
 - etc. (numbered by implementation order)
 
-Each specification file must use the template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` (section: Plugin Specification Template).
+Each specification file must use the appropriate template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`:
+- **Core plugins** → Core Plugin Specification Template (simplified: no events/dependencies/hooks sections)
+- **Regular plugins** → Plugin Specification Template (full template)
 
 #### Validation Loop
 
@@ -272,7 +294,7 @@ Present the completed specifications and validation results. Ask for explicit ap
 
 Using the **moku-plugin** skill for plugin file patterns and the **moku-core** skill for config.ts and index.ts:
 
-1. **Create `src/config.ts`** — with Config and Events types as empty/placeholder, `createCoreConfig` call, exports of `{ createPlugin, createCore }`
+1. **Create `src/config.ts`** — with Config and Events types as empty/placeholder, `createCoreConfig` call with core plugins in `plugins` option if applicable, exports of `{ createPlugin, createCore }`
 2. **Create `src/index.ts`** — with `createCore` call importing all plugins, exports `createApp` and `createPlugin`, re-exports all plugins
 3. **Create each plugin directory** following the approved tier:
    - Create ALL files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
@@ -282,7 +304,8 @@ Using the **moku-plugin** skill for plugin file patterns and the **moku-core** s
      - Empty function signatures (correct parameter names and return types, but NO implementation)
      - JSDoc headers with tier, description, events, `@see README.md`
    - NO actual business logic, NO implementation code
-   - `createPlugin` call uses inference — NO explicit generics
+   - `createPlugin` (or `createCorePlugin` for core plugins) call uses inference — NO explicit generics
+   - Core plugin skeletons must NOT have `depends`, `events`, or `hooks`
    - `onStart`/`onStop` included ONLY for plugins that were approved to need them in Stage 1
 
 4. **Create README.md** for each plugin — with plugin name and tier only (content filled during build)

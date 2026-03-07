@@ -4,8 +4,9 @@
 
 Read the specification from the provided path (defaults to `specifications/`). If a directory, read `01-*.md`, `02-*.md`, etc. in order. Verify it contains:
 - Global Config and Events types
-- Plugin list with implementation order
+- Plugin list with implementation order (core plugins identified separately)
 - Plugin specifications with configs, states, APIs, events
+- Core plugin specifications (if any) with the simplified template
 
 If the plan is incomplete, ask the user to run `/moku:plan framework` first.
 
@@ -15,20 +16,23 @@ Analyze all plugin specifications and group into dependency-aware waves:
 
 ```
 1. Read all specifications/0N-*.md files
-2. Parse dependency graph from each spec's Dependencies section
-3. Group into waves:
+2. Separate core plugin specs from regular plugin specs
+3. Core plugins are always Wave 0 — built before all regular plugins, no inter-dependencies
+4. Parse dependency graph from each regular spec's Dependencies section
+5. Group regular plugins into waves:
    Wave 1: Plugins with NO dependencies (can build in parallel)
    Wave 2: Plugins depending ONLY on Wave 1 plugins (can build in parallel)
    Wave 3: Plugins depending on Wave 1-2 plugins (can build in parallel)
    ... etc.
-4. If specs include Wave assignments from /moku:plan, use those
-5. Otherwise, compute waves from dependency graph
+6. If specs include Wave assignments from /moku:plan, use those
+7. Otherwise, compute waves from dependency graph
 ```
 
 Present the wave plan to the user:
 ```
-Wave 1 (parallel): env [Nano], logger [Micro], configValidator [Nano]
-Wave 2 (parallel): router [Standard] (-> env), content [Standard] (-> logger)
+Wave 0 (core): log [Core], env [Core]
+Wave 1 (parallel): configValidator [Nano]
+Wave 2 (parallel): router [Standard] (-> env via core), content [Standard]
 Wave 3 (sequential): renderer [Complex] (-> router, content)
 ```
 
@@ -57,7 +61,8 @@ You are building a Moku plugin. Follow the moku-plugin skill strictly.
 
 ## Build Rules
 - Follow complexity tier [tier] file structure exactly
-- No explicit generics on createPlugin — all types inferred
+- No explicit generics on createPlugin or createCorePlugin — all types inferred
+- For core plugins: use createCorePlugin, NOT createPlugin. No depends/events/hooks.
 - Full JSDoc on all exports with @param, @returns, @example
 - Write unit tests for each domain file + integration test
 - Use import type for type-only imports
@@ -140,8 +145,8 @@ Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`
 
 After the wave's plugins pass verification, update the framework files to include them:
 
-1. **Update `src/config.ts`** — Add the wave's plugin Config and Events types to the framework Config/Events unions
-2. **Update `src/index.ts`** — Import the wave's plugins, add to `createCore` default plugins list, add to re-exports
+1. **Update `src/config.ts`** — Add the wave's plugin Config and Events types to the framework Config/Events unions. For core plugins (Wave 0): add them to the `createCoreConfig({ plugins: [...] })` call and `pluginConfigs` if config overrides needed.
+2. **Update `src/index.ts`** — Import the wave's plugins, add regular plugins to `createCore` default plugins list, add to re-exports. Core plugins are already registered in config.ts.
 3. **Update `package.json`** — Add any new dependencies from this wave's plugin specs
 
 Then run integration checks in the target workspace:

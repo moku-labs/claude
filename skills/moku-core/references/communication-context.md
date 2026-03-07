@@ -43,6 +43,12 @@ hooks: (ctx: PluginContext) => ({
 
 ## Context Tiers
 
+### CorePluginContext (core plugin api, onInit, onStart, onStop)
+```typescript
+{ readonly config: Readonly<C>; state: S }
+```
+Self-contained. No global, emit, require, has. Core plugins cannot communicate with other plugins — they are pure infrastructure.
+
 ### MinimalContext (createState)
 ```typescript
 { global: Readonly<Config>; config: Readonly<C> }
@@ -58,8 +64,10 @@ State not yet created. Other plugins may not exist. Only configuration available
   emit: EmitFunction<E>;      // Strictly typed event dispatch
   require: RequireFunction;   // Get plugin API or throw
   has: (name: string) => boolean;  // Check plugin exists
+  // + core plugin APIs: ctx.<coreName>.<method>() — fully typed
 }
 ```
+Core plugin APIs (e.g., `ctx.log`, `ctx.env`) are available on PluginContext when core plugins are registered.
 
 ### TeardownContext (onStop)
 ```typescript

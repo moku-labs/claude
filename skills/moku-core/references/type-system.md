@@ -56,20 +56,69 @@ pluginConfigs?: {
 
 Excludes plugins with no config or non-literal names. All included get optional `Partial<C>`.
 
+## Core Plugin Types
+
+```typescript
+interface CorePluginInstance<N, C, S, A> {
+  readonly name: N;
+  readonly spec: CorePluginSpec<any, any, any>;
+  readonly _corePlugin: true;  // brand to distinguish from PluginInstance
+  readonly _phantom: { config: C; state: S; api: A };
+}
+
+type AnyCorePluginInstance = CorePluginInstance<string, any, any, any>;
+```
+
+### Extraction Types
+```typescript
+type ExtractCoreName<P>   // Get name literal from CorePluginInstance
+type ExtractCoreApi<P>    // Get API type from CorePluginInstance
+type ExtractCoreConfig<P> // Get config type from CorePluginInstance
+```
+
+### Aggregate Types — CoreApis Map
+```typescript
+// Maps core plugin union to { readonly [Name]: Api }
+type BuildCorePluginApis<P extends AnyCorePluginInstance> = {
+  readonly [K in P as <filtering>]: ExtractCoreApi<K>;
+};
+
+// Convenience: extract union from tuple, build map
+type CoreApisFromTuple<T extends readonly AnyCorePluginInstance[]> =
+  BuildCorePluginApis<T[number]>;
+```
+
+Result: `{ readonly log: LogApi; readonly env: EnvApi }`
+
+### CoreApis Threading
+
+`CoreApis = {}` is threaded through all context and spec types as a default generic parameter. `{}` is the identity element for intersection (`T & {} = T`), making this fully backward-compatible.
+
+Core APIs are injected on PluginContext via intersection:
+```typescript
+type PluginContext<Config, Events, C, S, CoreApis = {}> =
+  { global, config, state, emit, require, has } & { readonly [K in keyof CoreApis]: CoreApis[K] };
+```
+
 ## Full Type Flow
 
 ```
-createCoreConfig<Config, Events>(id, { config })
-  ↓ Captures Config + Events in closure
+createCorePlugin(name, spec)
+  ↓ Creates CorePluginInstance<N, C, S, A> with phantom types
+createCoreConfig<Config, Events>(id, { config, plugins: [corePlugin1, ...] })
+  ↓ Captures Config + Events + CorePlugins in closure
+  ↓ CoreApisFromTuple<CorePlugins> computed and threaded to createPlugin + createCore
 createPlugin(name, spec)
   ↓ Infers N, C, S, A, PluginEvents from spec
+  ↓ PluginContext includes core APIs (ctx.log, ctx.env — typed)
 createCore(coreConfig, { plugins })
   ↓ Captures plugin union type
 createApp({ plugins?, config?, pluginConfigs? })
   ↓ AllPlugins = framework + consumer plugins
-App<Config, Events, AllPlugins>
-  ↓ BuildPluginApis maps plugin names → APIs
+App<Config, Events, AllPlugins, CoreApis>
+  ↓ BuildPluginApis + core APIs mounted on app
 app.router.navigate('/about')  // fully typed, zero casts
+app.log.info('hello')          // core API, fully typed
 ```
 
 ## EmitFn and PluginCtx

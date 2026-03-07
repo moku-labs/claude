@@ -39,7 +39,7 @@ For all plugins in the plan:
 
 ### 3. Specification Section Completeness
 
-For each plugin specification file, verify ALL required sections exist:
+**For regular plugin specification files**, verify ALL required sections exist:
 - Overview (tier, implementation order, description)
 - Config (with complete defaults)
 - State (or explicit "None")
@@ -53,6 +53,19 @@ For each plugin specification file, verify ALL required sections exist:
 - Testing Strategy (unit + integration)
 - Code Example (createPlugin call — NO explicit generics)
 - Verification (checklist of pass criteria)
+
+**For core plugin specification files**, verify these sections (simplified template):
+- Overview (Type: Core Plugin, implementation order, description)
+- Config (or "None")
+- State (or "None")
+- API (methods injected on ctx.<name>)
+- Lifecycle (onInit, onStart, onStop)
+- Package Dependencies
+- Testing Strategy
+- Code Example (createCorePlugin call — NO explicit generics)
+- Verification
+
+Core plugin specs must NOT have Events, Dependencies, Hooks, or Communication sections. If present, flag as BLOCKER — core plugins are self-contained.
 
 Report missing sections as BLOCKER.
 
@@ -75,17 +88,21 @@ Across ALL plugin specifications:
 
 ### 6. Implementation Order Validation
 
-- Plugin #1 must have NO dependencies
-- Each subsequent plugin must only depend on plugins with lower order numbers
+- Core plugins must have order numbers before ALL regular plugins (Wave 0)
+- Core plugins have NO dependencies — they must not depend on each other or on regular plugins
+- Regular plugin #1 must have NO dependencies on other regular plugins
+- Each subsequent regular plugin must only depend on plugins with lower order numbers
 - Plugins with the same tier and no interdependencies can share an order group (for wave parallelism)
 
 ### 7. Code Example Validation
 
 For each specification's Code Example section:
-- Verify `createPlugin` call has NO explicit type parameters (no `createPlugin<...>`)
+- Regular plugins: Verify `createPlugin` call has NO explicit type parameters (no `createPlugin<...>`)
+- Core plugins: Verify `createCorePlugin` call has NO explicit type parameters (no `createCorePlugin<...>`)
+- Core plugins: Verify spec does NOT contain `depends`, `events`, or `hooks`
 - Verify `onStart`/`onStop` are present ONLY if the Lifecycle section justifies them with actual resource management
-- Verify `events` uses the register callback pattern: `events: (register) => ({...})`
-- Verify `hooks` uses the closure pattern: `hooks: (ctx) => ({...})`
+- Regular plugins only: Verify `events` uses the register callback pattern: `events: (register) => ({...})`
+- Regular plugins only: Verify `hooks` uses the closure pattern: `hooks: (ctx) => ({...})`
 
 ### 8. Config Consistency
 
@@ -93,26 +110,39 @@ For each specification's Code Example section:
 - Config defaults must be complete (no required fields without defaults)
 - No nested config objects deeper than 1 level (shallow merge only)
 
-### 9. Mermaid Diagram Generation
+### 9. Core Plugin Plan Validation
+
+- If infrastructure plugins exist in the plan (logging, env detection, storage abstraction, feature flags, i18n), they SHOULD be core plugins — flag as WARNING if they are regular plugins: "Plugin X appears to be self-contained infrastructure — consider making it a core plugin using createCorePlugin"
+- Core plugin specs must NOT have Events, Dependencies, or Hooks sections — flag as BLOCKER if present
+- Core plugins must be listed separately from regular plugins in the plan (Wave 0)
+- Verify no regular plugin has the same name as a core plugin — flag as BLOCKER
+- Core plugin names must not be reserved names (`start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`)
+
+### 10. Mermaid Diagram Generation
 
 After validation, generate and include these mermaid diagrams in the report:
 
 **Dependency Graph:**
 ```mermaid
 graph TD
-  env["#1 env (Nano)"]:::nano
-  logger["#2 logger (Micro)"]:::micro
+  subgraph Core Plugins
+    log["#1 log (Core)"]:::core
+    env["#2 env (Core)"]:::core
+  end
   router["#3 router (Standard)"]:::standard
-  logger --> env
-  router --> logger
+  auth["#4 auth (Standard)"]:::standard
+  auth --> router
+  classDef core fill:#e8f5e9
   classDef nano fill:#d4edda
   classDef micro fill:#cce5ff
   classDef standard fill:#fff3cd
   classDef complex fill:#f8d7da
 ```
+- Core plugins in a separate subgraph with `classDef core fill:#e8f5e9`
 - Node labels: order number + name + tier
 - Arrows from dependent to dependency
 - Color by tier
+- Core plugins have no dependency arrows
 
 **Event Flow:**
 ```mermaid
@@ -137,11 +167,13 @@ gantt
   title Build Wave Plan
   dateFormat X
   axisFormat %s
-  section Wave 1
+  section Wave 0 (Core)
+    log     :0, 1
     env     :0, 1
-    logger  :0, 1
-  section Wave 2
+  section Wave 1
     router  :1, 2
+  section Wave 2
+    auth    :2, 3
 ```
 
 These diagrams help the user visualize the plan structure before approving.
@@ -165,8 +197,13 @@ These diagrams help the user visualize the plan structure before approving.
 - COVERED: [requirement] → [plugin(s)]
 - GAP: [requirement] → no plugin covers this
 
+### Core Plugins
+- Core plugins: [count]
+- Compliance: [PASS / violations]
+- Infrastructure plugins misclassified as regular: [none / list]
+
 ### Dependency Graph
-- Plugins: [total count]
+- Regular plugins: [total count]
 - Max depth: [N]
 - Order valid: [yes/no]
 - Cycles: [none / list]

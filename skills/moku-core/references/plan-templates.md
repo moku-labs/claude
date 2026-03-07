@@ -73,6 +73,60 @@ Each specification file must contain:
 
 ---
 
+## Core Plugin Specification Template
+
+Core plugins use a simplified template — no events, dependencies, or hooks sections.
+
+```markdown
+# Core Plugin Specification: [name]
+
+## Overview
+- **Type:** Core Plugin
+- **Implementation Order:** #N (Wave 0 — before all regular plugins)
+- **Description:** [Detailed description of purpose and behavior]
+
+## Config
+[Complete config type with all fields, defaults, and descriptions. "None" if no config.]
+
+## State
+[State shape with descriptions of each field. "None" if no state.]
+
+## API
+[Every public method with full signature, description, and usage example.
+These methods are injected on every regular plugin's context as ctx.<name>.<method>().]
+
+## Lifecycle
+- **onInit:** [What happens during sync init. "Not used" if absent.]
+- **onStart:** [What happens during async start. "Not used" if absent.]
+- **onStop:** [What happens during async stop. "Not used" if absent.]
+
+## Package Dependencies
+[npm/bun packages needed with versions. "None" if no external deps.]
+
+## Testing Strategy
+- **Unit tests:** [What to test]
+- **Integration tests:** [Full core plugin wiring with createCoreConfig]
+- **Type-level tests:** [Verify ctx.<name> is typed on regular plugin context]
+
+## Code Example
+[Complete createCorePlugin call — NO explicit generics]
+
+## Verification
+- [ ] Plugin directory exists
+- [ ] Uses createCorePlugin (NOT createPlugin)
+- [ ] NO depends, events, or hooks in spec
+- [ ] Config shape matches spec
+- [ ] API methods exist and match signatures
+- [ ] Unit tests cover all API methods
+- [ ] Integration test: createCoreConfig with plugin, verify ctx.<name> works in regular plugin
+- [ ] `bun run lint` passes with zero warnings
+- [ ] `bun run test` passes
+- [ ] No explicit generics on createCorePlugin
+- [ ] import type used for type-only imports
+```
+
+---
+
 ## Application Specification Template
 
 ```markdown
@@ -141,19 +195,24 @@ Each specification file must contain:
 - [ ] Stage 2: Specifications — [pending | approved]
 - [ ] Stage 3: Skeleton + Verification — [pending | approved]
 
+## Core Plugins
+| # | Name | Description | Spec File | Build Status |
+|---|------|-------------|-----------|--------------|
+| 1 | log | Structured logging | specifications/01-log.md | not started |
+| 2 | env | Environment detection | specifications/02-env.md | not started |
+
 ## Plugins
 | # | Wave | Name | Tier | Dependencies | Spec File | Build Status |
 |---|------|------|------|-------------|-----------|--------------|
-| 1 | 1 | env | Nano | none | specifications/01-env.md | not started |
-| 2 | 1 | logger | Micro | none | specifications/02-logger.md | not started |
-| 3 | 2 | router | Standard | env | specifications/03-router.md | not started |
+| 3 | 1 | router | Standard | none | specifications/03-router.md | not started |
+| 4 | 2 | auth | Standard | router | specifications/04-auth.md | not started |
 
 Build Status values: `not started` | `building` | `built` | `agent-incomplete` | `agent-failed` | `verified` | `verify-failed` | `needs-manual` | `done`
 
 ## Wave Grouping
-- Wave 1: env, logger (no dependencies — parallel build)
-- Wave 2: router (depends on Wave 1)
-- Wave 3: renderer (depends on Wave 1-2)
+- Wave 0 (core): log, env — built first, no inter-dependencies
+- Wave 1: router (no regular plugin dependencies — parallel build)
+- Wave 2: auth (depends on Wave 1)
 
 ## Artifacts
 - Spec files: [list after Stage 2]

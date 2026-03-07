@@ -43,12 +43,55 @@ Step 3 — main.ts:    createApp({ plugins?, config?, pluginConfigs? })
 
 Each step captures types in closures. This solves the circular dependency problem between config and plugins.
 
+## Core Plugins
+
+Core plugins are self-contained infrastructure plugins (log, storage, env) whose APIs are injected directly onto every regular plugin's context. Created with `createCorePlugin(name, spec)` and registered via `createCoreConfig({ plugins: [...] })`.
+
+```typescript
+const logPlugin = createCorePlugin("log", {
+  config: { level: "info" },
+  createState: () => ({ entries: [] as string[] }),
+  api: ctx => ({
+    info: (msg: string) => { ctx.state.entries.push(msg); },
+  }),
+});
+
+const { createPlugin, createCore } = createCoreConfig<Config, Events>("app", {
+  config: defaults,
+  plugins: [logPlugin],           // core plugins registered here
+  pluginConfigs: { log: { level: "debug" } },  // core plugin config overrides
+});
+
+// Regular plugins access core APIs directly on context:
+createPlugin("router", {
+  api: ctx => ({
+    navigate: (path: string) => { ctx.log.info("nav: " + path); },  // typed!
+  }),
+});
+```
+
+**Core vs Regular — when to use core:**
+
+| Criterion | Core Plugin | Regular Plugin |
+|-----------|------------|----------------|
+| Needs events/hooks | No | Yes |
+| Needs depends on other plugins | No | Yes |
+| Needs emit | No | Yes |
+| Provides utility API used by many plugins | Yes | Maybe |
+| Self-contained infrastructure | Yes | No |
+
+**Core plugin constraints:**
+- NO `depends`, `events`, `hooks` — self-contained
+- Context: `{ config, state }` only — no `global`, `emit`, `require`, `has`
+- Lifecycle: init/start BEFORE regular plugins; stop AFTER regular plugins
+- Config: 4-level cascade — spec defaults → `createCoreConfig pluginConfigs` → `createCore pluginConfigs` → `createApp pluginConfigs`
+
 ## Kernel Responsibilities (6 things, nothing else)
 
 1. Collect plugins into ordered list
 2. Validate names (no duplicates, no reserved names) and dependencies
 3. Resolve config (shallow merge only — `{ ...defaults, ...overrides }`)
-4. Run 3 lifecycle phases in deterministic order (forward init/start, reverse stop)
+4. Run 3 lifecycle phases in deterministic order (core plugins first for init/start, regular first for stop)
 5. Dispatch events: `emit` (strictly typed, no escape hatch)
 6. Freeze everything when done (`Object.freeze` on app, configs)
 
@@ -61,6 +104,8 @@ Each step captures types in closures. This solves the circular dependency proble
 - **Strict emit, no escape hatch** — `emit` only accepts known event names with typed payloads.
 - **Instance-only require** — `ctx.require(plugin)` accepts PluginInstance references, not strings.
 - **createApp is synchronous** — Returns `App` directly, not a Promise. `onInit` is sync.
+- **Core plugin APIs injected flat** — `ctx.log`, `ctx.env` — no `require()` needed for core plugins.
+- **Core plugin 4-level config cascade** — spec defaults → createCoreConfig → createCore → createApp.
 
 ## Event Registration Standard
 
@@ -99,8 +144,9 @@ createPlugin("bundler", {
 
 | Method | Context | Available |
 |--------|---------|-----------|
+| Core plugin `api`, `onInit`, `onStart`, `onStop` | CorePluginContext | `config`, `state` |
 | `createState` | MinimalContext | `global`, `config` |
-| `hooks`, `api`, `onInit`, `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has` |
+| `hooks`, `api`, `onInit`, `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
 | `onStop` | TeardownContext | `global` only |
 
 **Important:** `onStart` and `onStop` are OPTIONAL. They are only needed when:

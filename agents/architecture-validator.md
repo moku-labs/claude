@@ -113,27 +113,49 @@ Review all plugin API methods across the framework:
 - Flag frameworks with > 15 plugins (may need domain grouping via VeryComplex)
 - Verify Nano plugins are < 30 lines, Micro < 80 lines
 
-### 8. Mermaid Diagram Generation
+### 8. Core Plugin Analysis
+
+**Identify candidates for core plugin promotion:**
+- Scan all regular plugins for ones that are self-contained (no `depends`, `events`, `hooks`)
+- If a self-contained plugin provides a utility API used by 3+ other plugins, flag it as a candidate for core plugin (WARNING: "Plugin X could be a core plugin — it is self-contained infrastructure used by N plugins")
+- Common candidates: logging, environment detection, storage abstraction, feature flags, i18n
+
+**Validate existing core plugins:**
+- Core plugins must use `createCorePlugin`, not `createPlugin`
+- Core plugin names must not collide with regular plugin names
+- Core plugins must NOT have `depends`, `events`, or `hooks`
+- Core plugins are registered in `createCoreConfig({ plugins: [...] })`, not in `createCore`
+- Core plugin lifecycle ordering: init/start before regular plugins, stop after regular plugins
+
+**Core plugins should NOT appear in event flow** — they have no events. If a core plugin is emitting or hooking events, it is a BLOCKER.
+
+### 9. Mermaid Diagram Generation
 
 After analysis, generate two mermaid diagrams and include them in the report:
 
 **Dependency Graph:**
 ```mermaid
 graph TD
-  env["env (Nano)"]:::nano
+  subgraph Core Plugins
+    log["log (Core)"]:::core
+    env["env (Core)"]:::core
+  end
   logger["logger (Micro)"]:::micro
   router["router (Standard)"]:::standard
   logger --> env
   router --> logger
+  classDef core fill:#e8f5e9
   classDef nano fill:#d4edda
   classDef micro fill:#cce5ff
   classDef standard fill:#fff3cd
   classDef complex fill:#f8d7da
   classDef vcomplex fill:#e2d5f1
 ```
+- Core plugins shown in a separate subgraph with `classDef core fill:#e8f5e9`
 - Node labels: plugin name + tier
 - Color by tier using classDef
 - Arrows from dependent to dependency
+- Core plugins have no dependency arrows (self-contained)
 
 **Event Flow:**
 ```mermaid
@@ -155,22 +177,30 @@ graph LR
 ## Process
 
 1. Find all plugins in the framework (`src/plugins/*/`)
-2. Read framework entry (`src/index.ts`) for plugin array and order
-3. Read each plugin's `index.ts` for depends, events, hooks, api
-4. Build dependency graph
-5. Catalog all events (declared, emitted, hooked)
-6. Analyze API naming patterns
-7. Check for performance red flags
-8. Generate mermaid diagrams
-9. Report findings
+2. Read framework config (`src/config.ts`) for core plugins in `createCoreConfig({ plugins: [...] })`
+3. Read framework entry (`src/index.ts`) for regular plugin array and order
+4. Classify each plugin as core or regular based on `createCorePlugin` vs `createPlugin`
+5. Read each plugin's `index.ts` for depends, events, hooks, api
+6. Build dependency graph (regular plugins only — core plugins have no deps)
+7. Catalog all events (declared, emitted, hooked — core plugins excluded)
+8. Analyze API naming patterns (both core and regular)
+9. Check for performance red flags
+10. Analyze core plugin candidates (regular plugins that could become core)
+11. Generate mermaid diagrams
+12. Report findings
 
 ## Output Format
 
 ```
 ## Architecture Validation Report
 
+### Core Plugins
+- Core plugins found: N
+- Core plugin compliance: [PASS / violations]
+- Promotion candidates: [none / list of regular plugins that could be core]
+
 ### Dependency Graph
-- Total plugins: N
+- Total regular plugins: N
 - Max depth: N
 - Cycles: [none / list]
 - Orphan plugins: [none / list]

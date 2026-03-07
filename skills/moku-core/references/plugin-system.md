@@ -111,6 +111,52 @@ export const seoPlugin = createPlugin('seo', {
 });
 ```
 
+## Core Plugins
+
+Core plugins are self-contained infrastructure plugins whose APIs are injected directly onto every regular plugin's context (`ctx.<name>`). Created with `createCorePlugin` (separate from `createPlugin`).
+
+### CorePluginSpec Shape
+
+```typescript
+{
+  config?: C,                                        // Default config values
+  createState?: (ctx: { config: Readonly<C> }) => S, // Mutable state factory
+  api?: (ctx: CorePluginContext<C, S>) => A,         // API injected on regular plugin context
+  onInit?: (ctx: CorePluginContext<C, S>) => void,   // After API is built
+  onStart?: (ctx: CorePluginContext<C, S>) => void | Promise<void>,  // Before regular plugins start
+  onStop?: (ctx: CorePluginContext<C, S>) => void | Promise<void>,   // After regular plugins stop
+  // NO depends, events, hooks — core plugins are self-contained
+}
+```
+
+`CorePluginContext` = `{ readonly config: Readonly<C>; state: S }` — no global, emit, require, has.
+
+### When to Use Core vs Regular
+
+- **Core:** Self-contained infrastructure (log, env, storage), provides utility API used by many plugins, needs NO events/hooks/depends
+- **Regular:** Domain-specific, needs events or hooks, depends on other plugins, uses emit
+
+### Core Plugin Example
+
+```typescript
+import { createCorePlugin } from '@moku-labs/core';
+
+export const logPlugin = createCorePlugin("log", {
+  config: { level: "info" as "info" | "debug" | "error" },
+  createState: () => ({ entries: [] as string[] }),
+  api: ctx => ({
+    info: (msg: string) => { ctx.state.entries.push(msg); console.log(msg); },
+    error: (msg: string) => { ctx.state.entries.push(msg); console.error(msg); },
+  }),
+});
+
+// Regular plugins access it as ctx.log.info("...") — fully typed
+```
+
+### Core Plugin Config
+
+4-level cascade (all shallow merge): spec defaults → `createCoreConfig pluginConfigs` → `createCore pluginConfigs` → `createApp pluginConfigs`
+
 ## Domain Context Utilities
 
 For Standard+ plugins extracting domain logic into separate files:

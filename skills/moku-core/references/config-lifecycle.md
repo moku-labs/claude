@@ -34,6 +34,19 @@ If `config` has `{ database: { host: 'localhost', port: 5432 } }` and consumer p
 
 All resolved configs are `Object.freeze`'d. Global config and per-plugin configs are frozen and read-only at runtime.
 
+### Core Plugin Config
+
+Core plugins have a **4-level config cascade** (all shallow merge):
+
+1. **Spec defaults** — `config` field on `CorePluginSpec`
+2. **createCoreConfig overrides** — `pluginConfigs` in `createCoreConfig({ pluginConfigs: { log: { level: "debug" } } })`
+3. **createCore overrides** — `pluginConfigs` in `createCore(coreConfig, { pluginConfigs: { log: { ... } } })`
+4. **createApp overrides** — `pluginConfigs` in `createApp({ pluginConfigs: { log: { ... } } })`
+
+Result: `{ ...specDefaults, ...coreConfigOverrides, ...coreOverrides, ...appOverrides }`
+
+Same rules apply: shallow merge only, frozen after resolution, complete defaults required on spec.
+
 ---
 
 ## Lifecycle
@@ -42,9 +55,12 @@ All resolved configs are `Object.freeze`'d. Global config and per-plugin configs
 
 | Phase | Method | Direction | When | Context |
 |-------|--------|-----------|------|---------|
+| init (core) | `onInit` | Forward | During `createApp()` — before regular | CorePluginContext |
 | init | `onInit` | Forward | During `createApp()` | PluginContext |
+| start (core) | `onStart` | Forward | `await app.start()` — before regular | CorePluginContext |
 | start | `onStart` | Forward | `await app.start()` | PluginContext |
-| stop | `onStop` | **REVERSE** | `await app.stop()` | TeardownContext |
+| stop | `onStop` | **REVERSE** | `await app.stop()` — before core | TeardownContext |
+| stop (core) | `onStop` | **REVERSE** | `await app.stop()` — after regular | CorePluginContext |
 
 `start()` / `stop()` are optional. They are mainly for apps with a distinct runtime phase (servers, workers, long-lived resources). Many apps may only need `createApp()` plus direct API calls.
 
@@ -52,17 +68,21 @@ All resolved configs are `Object.freeze`'d. Global config and per-plugin configs
 
 Internal sub-steps (one phase, internal mechanics):
 1. Merge plugin lists: `[...frameworkDefaults, ...consumerExtras]`
-2. Validate reserved names
-3. Validate no duplicate names
+2. Validate reserved names (core + regular)
+3. Validate no duplicate names (core + regular, cross-checked)
 4. Validate dependencies (exist + appear before dependent)
 5. Resolve global config (shallow merge, freeze)
-6. Resolve per-plugin config (3-level merge, freeze each)
-7. Create state (forward order, `createState({ global, config })`)
-8. Register hooks (forward order, `hooks(PluginContext)`)
-9. Build API (forward order, `api(PluginContext)`)
-10. Run `onInit` (forward order, synchronous)
-11. Call framework `onReady` (from `createCore`)
-12. Call consumer `onReady` (from `createApp`)
+6. **Resolve core plugin configs** (4-level merge, freeze each)
+7. **Create core plugin states** (context: `{ config }` only)
+8. **Build core plugin APIs** (context: `{ config, state }`)
+9. **Run core plugin `onInit`** (context: `{ config, state }`)
+10. Resolve per-plugin config (3-level merge, freeze each)
+11. Create state (forward order, `createState({ global, config })`)
+12. Register hooks (forward order, `hooks(PluginContext)` — context includes core APIs)
+13. Build API (forward order, `api(PluginContext)` — context includes core APIs)
+14. Run `onInit` (forward order, synchronous)
+15. Call framework `onReady` (from `createCore`)
+16. Call consumer `onReady` (from `createApp`)
 
 After init: `createApp` returns the App object.
 
