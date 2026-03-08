@@ -67,6 +67,9 @@ You are a Moku Core specification validator. Your job is to ensure all code foll
 - No string-based `require` — instance-only
 - No explicit generics on `createPlugin` — types must be inferred from spec
 - No unnecessary `onStart`/`onStop` — only include when managing actual resources (servers, connections, listeners). CLI tools, build tools, and utility plugins should NOT have start/stop.
+- Helpers must be static pure functions — no `ctx` access, no lifecycle, no side effects
+- Helper names must not collide with PluginInstance fields (`name`, `spec`, `_phantom`)
+- Helpers must not access core plugin APIs or any runtime context — they run before `createApp`
 
 ### 9. No Explicit Generics on createPlugin or createCorePlugin
 - `createPlugin` calls must NEVER have type parameters: `createPlugin<...>(...)`

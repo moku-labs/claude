@@ -35,6 +35,7 @@ For Standard+ plugins, verify:
 - `state.ts` exists if `createState` has > 20 lines of logic
 - `api.ts` exists if `api` has > 20 lines of logic
 - `handlers.ts` exists if hooks have > 20 lines of logic
+- `helpers.ts` exists if `helpers` has > 20 lines of logic or multiple helpers
 - `README.md` exists with plugin documentation
 - No barrel files beyond one level
 
@@ -67,6 +68,7 @@ Check that EVERY file has complete JSDoc:
 - `hooks` receives context via closure: `hooks: (ctx) => ({...})`
 - `api` receives context via closure: `api: (ctx) => ({...})`
 - Events use register callback pattern if present
+- `helpers` if present: plain object of functions, no `ctx` access, no lifecycle, names don't conflict with `name`/`spec`/`_phantom`
 
 ### 7. Import Compliance
 - Framework plugins import `createPlugin` from `../../config` (or similar relative)

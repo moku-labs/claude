@@ -105,3 +105,34 @@ export const contactFormPlugin = createPlugin('contactForm', {
 5. **`createApp()` is synchronous.** Do not `await` it; use `start()` only if the app has a distinct runtime phase.
 6. **Use `ctx.require(pluginInstance)` for dependencies.** Not strings.
 7. **Use `ctx.has('name')` for optional deps.** Boolean check, never throws.
+8. **Helpers are static pure functions.** No `ctx`, no lifecycle, no side effects. They produce typed values for `pluginConfigs`.
+
+## Helpers Pattern (Pre-createApp Factory Functions)
+
+When a plugin needs to provide typed builder/factory functions that consumers call before `createApp`:
+
+```typescript
+// Framework plugin:
+export const routerPlugin = createPlugin('router', {
+  config: { routes: [] as Route[] },
+  helpers: {
+    route: (path: string, component: string): Route => ({ path, component }),
+  },
+});
+
+// Consumer:
+const home = routerPlugin.route('/home', 'HomePage');  // typed, autocomplete
+const app = createApp({
+  pluginConfigs: { router: { routes: [home] } },
+});
+
+// Destructuring also works:
+const { route } = routerPlugin;  // types preserved
+```
+
+**Design constraints:**
+- Helpers have NO access to `ctx` — they run before the kernel
+- Each helper value must be a function
+- Helper names must not collide with `name`, `spec`, `_phantom`
+- Return type is `PluginInstance<...> & Helpers` — intersection widens away in constraints
+- For Standard+ plugins, extract helpers to `helpers.ts`

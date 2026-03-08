@@ -15,6 +15,7 @@ All fields optional. Types inferred from values.
   onStop?: (ctx: TeardownContext) => void | Promise<void>,  // REVERSE order during app.stop().
   hooks?: (ctx: PluginContext) => { [K in keyof MergedEvents]?: handler },
   events?: (register: RegisterFn) => { [K: string]: EventDescriptor<T> },
+  helpers?: { [key: string]: (...args: any[]) => any },  // Static factory functions, spread onto PluginInstance
 }
 ```
 
@@ -110,6 +111,36 @@ export const seoPlugin = createPlugin('seo', {
   }),
 });
 ```
+
+### With helpers (pre-createApp factory functions)
+```typescript
+type Route = { path: string; component: string };
+
+export const routerPlugin = createPlugin('router', {
+  config: { routes: [] as Route[] },
+  api: (ctx) => ({
+    navigate: (path: string) => { /* ... */ },
+  }),
+  helpers: {
+    route: (path: string, component: string): Route => ({ path, component }),
+  },
+});
+
+// Consumer usage — BEFORE createApp:
+const home = routerPlugin.route('/home', 'HomePage');  // fully typed
+const app = createApp({
+  pluginConfigs: { router: { routes: [home] } },
+});
+```
+
+**Helpers design rules:**
+- Static pure functions — no `ctx`, no lifecycle, no side effects
+- Spread onto `PluginInstance` via intersection return type: `PluginInstance<...> & Helpers`
+- Available on plugin instance BEFORE `createApp`
+- Results passed into `createApp` via `pluginConfigs`
+- Helper names must not conflict with PluginInstance fields (`name`, `spec`, `_phantom`)
+- When no helpers: `& Record<never, never>` is harmless identity
+- In `depends`/`plugins` arrays, the `& Helpers` intersection widens away naturally
 
 ## Core Plugins
 

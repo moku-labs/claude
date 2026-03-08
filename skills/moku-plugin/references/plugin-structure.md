@@ -78,6 +78,7 @@ plugins/router/
   state.ts           # createRouterState factory.
   api.ts             # createRouterApi factory.
   handlers.ts        # Event handler factories.
+  helpers.ts         # Helper/factory functions (if any).
   README.md
   __tests__/
     unit/

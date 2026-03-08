@@ -66,6 +66,13 @@ Review all plugin API methods across the framework:
 - Return type patterns should be consistent: getters return values, mutators return void
 - Error handling patterns should be consistent across plugins
 
+**Helpers API design:**
+- Helpers should follow factory/builder naming: `create*`, `define*`, `route`, `component` — not getters or action verbs
+- Helper return types should match the plugin's config shape (consumers pass results into `pluginConfigs`)
+- If multiple plugins have helpers, naming conventions should be consistent across the framework
+- Helpers must be static pure functions — if a helper appears to need `ctx`, it should be an API method instead
+- Flag helpers that return mutable state (WARNING — helpers should produce immutable config-like objects)
+
 ### 4. Plugin Naming Conventions
 
 - Plugin names should use camelCase (not kebab-case or PascalCase)

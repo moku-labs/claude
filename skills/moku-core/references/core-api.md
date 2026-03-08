@@ -159,7 +159,7 @@ function createApp(
 ## createPlugin
 
 ```typescript
-function createPlugin(name: string, spec: PluginSpec): PluginInstance;
+function createPlugin(name: string, spec: PluginSpec): PluginInstance & Helpers;
 ```
 
 **Zero generics.** All types inferred from the spec object:
@@ -167,8 +167,12 @@ function createPlugin(name: string, spec: PluginSpec): PluginInstance;
 - `S` from `createState` return
 - `A` from `api` return
 - `PluginEvents` from `events` register callback
+- `Helpers` from `helpers` object (defaults to `Record<never, never>` when absent)
+
+When `helpers` is present, its functions are spread onto the return value. Consumers call `plugin.route(...)` before `createApp`. The `& Helpers` intersection widens away in constraint positions (`AnyPluginInstance`, `depends`, `plugins` arrays).
 
 Reserved names (throw TypeError): `start`, `stop`, `emit`, `require`, `has`, `config`, `__proto__`, `constructor`, `prototype`
+Helper reserved names (throw TypeError): `name`, `spec`, `_phantom`
 
 ## The App Type
 
