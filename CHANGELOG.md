@@ -12,6 +12,15 @@ All notable changes to the Moku Claude Code Plugin will be documented in this fi
 - `migrate-flows.md` simplified to from-existing analysis only (upgrade and restructure sections removed)
 - Migration decisions.md template simplified to from-existing fields only (no conditional branches)
 
+## 0.8.2 (2026-03-08)
+
+### Added
+- **Helpers pattern** — static factory functions on plugins via `helpers` spec field. Helpers are pure functions spread onto `PluginInstance`, available before `createApp` for typed config construction.
+- `helpers` field in PluginSpec shape (`plugin-system.md`) with design rules (static, pure, no ctx, no conflicts with PluginInstance fields)
+- Helpers usage example in `plugin-system.md` (router plugin with `route()` helper)
+- Helpers pattern reference in `plugin-patterns.md`
+- Helpers validation in spec-validator, plugin-spec-validator, architecture-validator, and type-validator agents
+
 ## 0.8.1 (2026-03-07)
 
 ### Changed
