@@ -11,10 +11,9 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 | Command | Description |
 |---------|-------------|
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
-| `/moku:plan [target] [description]` | Gated workflow: optional discussion, optional research, analysis, specifications. Validates plans before user review. |
+| `/moku:plan [target] [description-or-path]` | Gated workflow: optional discussion, optional research, analysis, specifications. Supports migrating existing code via path argument. Validates plans before user review. |
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`. |
 | `/moku:add [name] [description]` | Quickly add a single plugin to an existing framework — scaffold, implement, wire, validate in one pass. |
-| `/moku:migrate [upgrade\|restructure\|from-existing]` | Analyze existing projects and prepare migration context for `/moku:plan`. |
 | `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
 
 ### Build Targets
@@ -119,7 +118,7 @@ The plugin maintains `.planning/STATE.md` for cross-session continuity:
 5. `/moku:add cache "LRU cache with TTL"` — Quick-add a plugin without re-planning
 6. `/moku:check` — Verify project health
 7. `/moku:check graph` — Visualize dependency graph and event flow as mermaid diagrams
-8. `/moku:migrate restructure` — Re-assess plugin tiers after growth
+8. `/moku:plan framework ~/Projects/my-existing-app` — Migrate existing code to Moku
 9. `/moku:plan app "A personal blog"` — Plan the consumer app
 10. `/moku:build app` — Build the consumer app
 

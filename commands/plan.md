@@ -1,7 +1,7 @@
 ---
 description: Plan a framework, consumer app, or plugin (3-stage gated workflow)
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
-argument-hint: [framework|app|plugin] [description-or-path]
+argument-hint: [framework|app|plugin] [description-or-path-to-existing-code]
 disable-model-invocation: true
 ---
 
@@ -28,11 +28,12 @@ This command runs as a **3-stage gated workflow** with optional discussion, opti
 
 Parse `$ARGUMENTS`:
 1. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the description or path.
-2. If no explicit target keyword, auto-detect from the working directory:
+2. If `$ARGUMENTS` contains `/`, or starts with `.` or `~` — treat it as a path to existing code for migration. Set target to `framework` and set `MIGRATE_PATH` to the resolved absolute path. Proceed to Step 0.3.
+3. If no explicit target keyword and no path detected, auto-detect from the working directory:
    a. `src/config.ts` exists AND contains `createCoreConfig` → **framework**
    b. `package.json` depends on a Moku framework package (not `@moku-labs/core` directly) → **app**
    c. Argument looks like a plugin name or spec reference → **plugin**
-3. If still unclear — ask the user: "What are you planning? A framework, consumer app, or plugin?"
+4. If still unclear — ask the user: "What are you planning? A framework, consumer app, or plugin?"
 
 ### Resume from State
 
@@ -64,9 +65,42 @@ Every stage reads `.planning/STATE.md` at the start and writes it at the end. Th
 
 ---
 
+## Step 0.3: Migrate Existing Code
+
+**This step only runs when Step 0 detected a path (MIGRATE_PATH is set).**
+
+### Prerequisites
+
+1. Verify `MIGRATE_PATH` exists and contains a `package.json`:
+   - If not: tell user "No package.json found at [path]. Provide a path to a Node/Bun project."
+2. Verify clean git working tree:
+   - Run `git status --porcelain` — if output is non-empty, warn: "You have uncommitted changes. Commit or stash before planning a migration."
+
+### Research
+
+Spawn **moku-researcher** agent with the tech stack, domain description, and key dependencies found at `MIGRATE_PATH`. The unfamiliar codebase needs ecosystem investigation. Research output is saved to `.planning/research.md`.
+
+### Analysis
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/migrate-flows.md` for the from-existing analysis instructions. Execute all 5 sub-steps against the code at `MIGRATE_PATH`:
+
+1. **Tech Stack Identification** — package.json, tsconfig, build tool, test framework, runtime
+2. **Architecture Analysis** — directory structure, domain boundaries, entry points, state patterns, communication patterns
+3. **Pattern Mapping** — map existing patterns to Moku concepts (singletons → plugins, EventEmitter → events, etc.)
+4. **Domain-to-Plugin Mapping** — for each domain, propose: plugin name, tier, config, state, API, events, dependencies, lifecycle
+5. **Gap Analysis** — identify what does not map cleanly (god modules, circular deps, side effects, global state)
+
+### Save Context
+
+Write analysis results to `.planning/decisions.md` using the Migration decisions.md Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. The file MUST include a `## Migration Type` header with `Flow: from-existing` so Step 0.5 detects it.
+
+Log to user: "Migration analysis complete. Saved to `.planning/decisions.md`. Proceeding to Stage 1."
+
+---
+
 ## Step 0.5: Optional Discussion Phase
 
-**Migration context check:** If `.planning/decisions.md` exists and contains a `## Migration Type` header, skip the discussion phase entirely — migration analysis has already captured all necessary context. Log: "Migration context detected ([flow type]). Skipping discussion — using analysis from `/moku:migrate`."
+**Migration context check:** If `.planning/decisions.md` exists and contains a `## Migration Type` header, skip the discussion phase entirely — migration analysis has already captured all necessary context. Log: "Migration context detected ([flow type]). Skipping discussion — using migration analysis from Step 0.3."
 
 **This phase triggers when requirements are unclear.** If the user provides a clear, detailed description or an existing codebase to analyze, skip directly to Stage 1.
 
@@ -91,6 +125,8 @@ Present a summary and get approval before proceeding.
 ## Step 0.6: Optional Research Phase
 
 **This phase triggers when planning a new domain** that would benefit from ecosystem investigation. Skip for well-understood domains, simple plugins, or when the user provides detailed specs.
+
+**Migration note:** If Step 0.3 already ran, research was performed during migration analysis. Skip this phase to avoid redundant investigation. If `.planning/research.md` already exists, do not overwrite it.
 
 **When to trigger:**
 - Planning a framework in a domain the user hasn't specified libraries for

@@ -2,6 +2,16 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.8.3 (2026-03-08)
+
+### Removed
+- `/moku:migrate` command — removed entirely. The `upgrade` and `restructure` flows are dropped; the `from-existing` flow is now built into `/moku:plan`.
+
+### Changed
+- `/moku:plan` now accepts a path to existing code as argument — auto-detects paths (contains `/`, starts with `.` or `~`) and runs from-existing migration analysis inline (new Step 0.3)
+- `migrate-flows.md` simplified to from-existing analysis only (upgrade and restructure sections removed)
+- Migration decisions.md template simplified to from-existing fields only (no conditional branches)
+
 ## 0.8.1 (2026-03-07)
 
 ### Changed
