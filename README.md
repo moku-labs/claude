@@ -11,10 +11,23 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 | Command | Description |
 |---------|-------------|
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
-| `/moku:plan [target] [description-or-path]` | Gated workflow: optional discussion, optional research, analysis, specifications. Supports migrating existing code via path argument. Validates plans before user review. |
+| `/moku:plan [verb] [type] [args]` | Plan a project: create, update, add plugin, or migrate. 3-stage gated workflow with validation. |
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`. |
-| `/moku:add [name] [description]` | Quickly add a single plugin to an existing framework — scaffold, implement, wire, validate in one pass. |
 | `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
+
+### Plan Targets
+
+```
+/moku:plan create framework "desc"      # New framework from description
+/moku:plan create app "desc"            # New consumer app
+/moku:plan add plugin auth "JWT auth"   # Quick-add plugin (plan+build+wire)
+/moku:plan update plugin router "add X" # Update existing plugin spec
+/moku:plan update app "add caching"     # Update consumer app composition
+/moku:plan migrate framework ~/path     # Migrate existing code
+/moku:plan resume                       # Continue from STATE.md
+```
+
+Type synonyms: `tool`/`engine`/`library` → framework, `application`/`service`/`server`/`game` → app. Backward-compatible: `moku:plan framework "desc"` still works (infers `create`).
 
 ### Build Targets
 
@@ -112,15 +125,16 @@ The plugin maintains `.planning/STATE.md` for cross-session continuity:
 ## Typical Workflow
 
 1. `/moku:init my-framework` — Scaffold the project
-2. `/moku:plan framework "A static site generator"` — Design the framework
+2. `/moku:plan create framework "A static site generator"` — Design the framework
 3. `/moku:build framework` — Implement all plugins in parallel waves with verification
 4. `/moku:build resume` — Continue if context was heavy
-5. `/moku:add cache "LRU cache with TTL"` — Quick-add a plugin without re-planning
-6. `/moku:check` — Verify project health
-7. `/moku:check graph` — Visualize dependency graph and event flow as mermaid diagrams
-8. `/moku:plan framework ~/Projects/my-existing-app` — Migrate existing code to Moku
-9. `/moku:plan app "A personal blog"` — Plan the consumer app
-10. `/moku:build app` — Build the consumer app
+5. `/moku:plan add plugin cache "LRU cache with TTL"` — Quick-add a plugin (plan + build + wire in one pass)
+6. `/moku:plan update plugin router "add nested routes"` — Update an existing plugin's spec
+7. `/moku:check` — Verify project health
+8. `/moku:check graph` — Visualize dependency graph and event flow as mermaid diagrams
+9. `/moku:plan migrate framework ~/Projects/my-existing-app` — Migrate existing code to Moku
+10. `/moku:plan create app "A personal blog"` — Plan the consumer app
+11. `/moku:build app` — Build the consumer app
 
 ## Installation
 

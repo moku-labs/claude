@@ -2,6 +2,23 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.9.0 (2026-03-09)
+
+### Changed
+- **Verb-first argument structure for `/moku:plan`** — command now uses `[create|update|add|migrate|resume] [type] [args]` pattern instead of `[framework|app|plugin] [description]`. Old syntax still works via backward-compatible fallback parsing.
+- Type synonyms: `tool`/`engine`/`library` normalize to `framework`; `app`/`application`/`service`/`server`/`game` normalize to `app`.
+
+### Added
+- `update` verb — update existing plugin specs or app composition via `/moku:plan update plugin {name} {changes}` or `/moku:plan update app {changes}`. Produces spec-only output (consistent with plan→build separation).
+- `add` verb — `/moku:plan add plugin {name} {description}` runs a quick single-pass flow (plan + build + wire + verify), absorbing the former `/moku:add` command.
+- `migrate` verb — explicit migration via `/moku:plan migrate [type] {path/link/github}`. Supports GitHub URLs (auto-clones). Replaces heuristic path detection.
+- Update Plugin Target and Update App Target sections in plan-stages.md (Stage 1 and Stage 2).
+- Update Plugin Specification and Update App Specification templates in plan-stages.md.
+- `## Verb:` field in STATE.md template for resume flow awareness.
+
+### Removed
+- `/moku:add` command — fully absorbed into `/moku:plan add plugin`. The quick single-pass workflow is preserved as Step 0.7 in plan.md.
+
 ## 0.8.3 (2026-03-08)
 
 ### Removed

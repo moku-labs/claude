@@ -460,7 +460,7 @@ This project uses the **moku** Claude Code plugin for development workflows. Bel
 ### Commands (slash commands)
 
 **Planning:**
-- `/moku:plan [framework|app|plugin] [description]` — 2-stage gated workflow to design a framework, consumer app, or plugin. Auto-detects target from project type. Output goes to `.planning/specs/` (framework/plugin) or `.planning/app-spec.md` (app).
+- `/moku:plan [create|update|add|migrate|resume] [type] [args]` — 3-stage gated workflow to plan a framework, consumer app, or plugin. Supports: `create` (new project), `update` (modify existing), `add plugin` (quick single-pass), `migrate` (from existing code). Type synonyms: tool/engine/library → framework, application/service/server/game → app. Output goes to `.planning/specs/` (framework/plugin) or `.planning/app-spec.md` (app).
 
 **Building:**
 - `/moku:build [framework|app|plugin] [spec-or-name]` — Build from specifications. Auto-detects what to build based on existing spec files. Resumes if partially built. Supports `/moku:build plugin #3` for individual plugins.
@@ -487,16 +487,24 @@ Agents run autonomously to validate code. They are called automatically by build
 ### Typical Workflows
 
 **New framework from scratch:**
-1. `/moku:plan framework` — design plugins and structure (2 approval gates)
+1. `/moku:plan create framework "A static site generator"` — design plugins and structure (3 approval gates)
 2. `/moku:build framework` — implement everything from specs
 3. Validators run automatically after each plugin
 
 **Add a single plugin:**
-1. `/moku:build plugin auth` — describe what you need, it handles the rest
+1. `/moku:plan add plugin auth "JWT-based authentication"` — plan, build, wire, and verify in one pass
+
+**Update an existing plugin:**
+1. `/moku:plan update plugin router "add nested route support"` — produces updated spec
+2. `/moku:build plugin router` — implement changes from updated spec
 
 **New consumer app:**
-1. `/moku:plan app` — design the app composition
+1. `/moku:plan create app "A personal blog"` — design the app composition
 2. `/moku:build app` — implement from the plan
+
+**Migrate existing code:**
+1. `/moku:plan migrate framework ~/Projects/legacy-app` — analyze and map to Moku
+2. `/moku:build framework` — implement the migration
 
 **Manual validation:**
 - Ask Claude to "run the spec validator" or "validate JSDoc" on specific files

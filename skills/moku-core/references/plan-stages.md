@@ -181,6 +181,33 @@ Present the plugin design: tier, config shape, state shape, API methods, events,
 
 ---
 
+### Update Plugin Target
+
+**This is used when VERB is `update` and TYPE is `plugin`.**
+
+Stage 1 is largely pre-answered for updates — the existing plugin provides the baseline. Focus on the delta:
+
+1. Load the existing plugin analysis from Step 0.4 (current tier, config, state, API, events, dependencies)
+2. Validate proposed changes against Moku constraints:
+   - If tier promotion is needed, verify new tier's file structure requirements
+   - If new dependencies are added, verify no cycles in the dependency graph
+   - If new events are added, verify naming conventions
+   - If breaking changes are proposed, identify affected consumers
+3. Present the update plan: what changes, what stays, migration path for breaking changes
+4. Run plan-checker before user gate
+
+### Update App Target
+
+**This is used when VERB is `update` and TYPE is `app`.**
+
+1. Load existing app analysis from Step 0.4 (current composition, config, custom plugins)
+2. Validate proposed changes: new plugins exist in framework, config overrides are valid types
+3. If custom plugins need adding, switch to the Plugin Target flow for those
+4. Present update plan: current composition vs proposed, config changes, new custom plugins
+5. Run plan-checker before user gate
+
+---
+
 ### Plan Validation Gate (all targets)
 
 **Before presenting to the user**, run the **moku-plan-checker** agent to validate:
@@ -272,6 +299,27 @@ Include: overview, config, state, API, events, dependencies, hooks, lifecycle, c
 
 1. Run the **moku-plan-checker** agent to validate the spec
 2. Run the **moku-plugin-spec-validator** agent to validate the spec
+
+---
+
+### Update Plugin Specification
+
+**This is used when VERB is `update`.** When updating an existing plugin, the spec file is an **update spec** rather than a full from-scratch spec. It must include:
+
+- `## Changes` section listing what is being modified (added methods, changed config, new events, etc.)
+- `## Preserved` section confirming what stays unchanged (existing API methods, config fields, event contracts)
+- `## Migration` section if there are breaking changes (how existing consumers adapt, deprecation path)
+- All other sections from the Plugin Specification Template, but reflecting the final post-update state (not just the delta)
+
+The spec file overwrites the existing spec at `.planning/specs/NN-{name}.md` if one exists, or creates a new one.
+
+### Update App Specification
+
+When updating an existing app, write an updated `.planning/app-spec.md` that includes:
+
+- `## Changes` section listing what is being modified
+- `## Preserved` section confirming unchanged composition
+- Updated Plugin Composition, Configuration, and Custom Plugins sections reflecting final state
 
 ---
 

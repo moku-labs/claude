@@ -7,7 +7,7 @@ if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; t
   if grep -q '@moku-labs' package.json 2>/dev/null; then
     echo "Welcome to Moku! Get started with:"
     echo "  /moku:init   — scaffold a new framework project"
-    echo "  /moku:plan   — plan plugins from specifications"
+    echo "  /moku:plan create framework — plan a new framework"
     echo "  /moku:check  — run project diagnostics"
   fi
 fi

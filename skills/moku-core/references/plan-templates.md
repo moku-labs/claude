@@ -186,6 +186,7 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 # Project State
 
 ## Phase: [stage1/approved | stage2/approved | stage3/approved | plan/complete]
+## Verb: [create|update|add|migrate]
 ## Target: [framework/app/plugin]
 ## Last Updated: [ISO timestamp]
 
