@@ -37,9 +37,9 @@ if [ -f .planning/STATE.md ]; then
 fi
 
 # Check for specifications
-SPEC_COUNT=$(find specifications -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
+SPEC_COUNT=$(find .planning/specs -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SPEC_COUNT" -gt 0 ]; then
-  echo "Specifications found: $SPEC_COUNT files in specifications/"
+  echo "Specifications found: $SPEC_COUNT files in .planning/specs/"
 fi
 
 # C9: Environment validation — warn early if required tools are missing or outdated

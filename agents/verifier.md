@@ -84,6 +84,14 @@ Verify the plugin is correctly integrated into the project.
 - No `createPlugin<` explicit generics found in plugin files
 - `import type` used for type-only imports
 - No imports from `@moku-labs/core` in plugin files (except `PluginCtx`, `EmitFn` type utilities)
+- No plugin-specific tests in root `tests/unit/plugins/` or `tests/integration/plugins/` — BLOCKER if found
+- No wire factory patterns (`function wire[A-Z]`) in plugin files — BLOCKER if found
+- No inline type assertions (`null as`, `{} as`, `[] as`) in createState/config — BLOCKER if found
+
+**Framework entry point (if verifying whole framework):**
+- `src/plugins/index.ts` barrel exists and re-exports all plugins in `createCore` array — BLOCKER if missing
+- `src/index.ts` has JSDoc `@module` comment with options table — WARNING if missing
+- `src/index.ts` exports grouped into sections (Framework API → Plugins → Helpers → Types) — WARNING if mixed
 
 ## Process
 
@@ -96,7 +104,12 @@ Verify the plugin is correctly integrated into the project.
 
 ## Verification Criteria Integration
 
-If the plugin has a specification file with a `## Verification` section, use those criteria as additional checkpoints. Mark each criterion as PASS or FAIL.
+If the plugin has a specification file (look in `.planning/specs/` for a file matching the plugin name):
+1. Read the `## Verification` section
+2. Evaluate each checkbox criterion against the built plugin
+3. Report each as PASS or FAIL with specific evidence
+4. Return a list of `{ criterion, status, evidence }` so the build command can tick checkboxes in the spec file (Step 4d)
+5. Failed criteria are treated as BLOCKER-level issues
 
 ## Output Format
 

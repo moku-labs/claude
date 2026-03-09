@@ -39,7 +39,7 @@ Read the existing framework to understand the plugin's context:
 1. Read `src/config.ts` for Config and Events types
 2. Read `src/index.ts` for existing plugins array and dependency order
 3. Scan `src/plugins/*/index.ts` for existing plugin names, events, and APIs
-4. If `specifications/` exists, scan for relevant specs that mention this domain
+4. If `.planning/specs/` exists, scan for relevant specs that mention this domain
 
 From this analysis, determine:
 - What existing plugins could this new plugin depend on?

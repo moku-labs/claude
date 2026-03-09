@@ -35,7 +35,7 @@ export const { createPlugin, createCore } = coreConfig;
 // plugins/router/index.ts
 import { createPlugin } from '../../config';
 
-export const routerPlugin = createPlugin('router', {
+export const router = createPlugin('router', {
   config: { basePath: '/' },
   createState: () => ({ currentPath: '/' }),
   api: (ctx) => ({
@@ -51,11 +51,11 @@ export const routerPlugin = createPlugin('router', {
 ### Layer 2: Framework index.ts (Step 2)
 ```typescript
 import { createCore, coreConfig } from './config';
-import { routerPlugin } from './plugins/router';
-import { rendererPlugin } from './plugins/renderer';
+import { router } from './plugins/router';
+import { renderer } from './plugins/renderer';
 
 const framework = createCore(coreConfig, {
-  plugins: [routerPlugin, rendererPlugin],
+  plugins: [router, renderer],
 });
 export const { createApp, createPlugin } = framework;
 ```
@@ -64,13 +64,13 @@ export const { createApp, createPlugin } = framework;
 ```typescript
 import { createApp, createPlugin } from 'my-framework';
 
-const blogPlugin = createPlugin('blog', {
+const blog = createPlugin('blog', {
   config: { postsPerPage: 10 },
   api: (ctx) => ({ listPosts: () => ['post1', 'post2'] }),
 });
 
 const app = createApp({
-  plugins: [blogPlugin],
+  plugins: [blog],
   config: { siteName: 'My Blog', mode: 'production' },
   pluginConfigs: { blog: { postsPerPage: 5 } },
 });
@@ -87,8 +87,8 @@ await app.stop();
 import { createPlugin } from 'my-framework';
 import { createContactFormApi } from './api';
 
-export const contactFormPlugin = createPlugin('contactForm', {
-  depends: [rendererPlugin],
+export const contactForm = createPlugin('contactForm', {
+  depends: [renderer],
   api: createContactFormApi,
   hooks: (ctx) => ({
     'page:render': (payload) => { /* framework typed */ },
@@ -107,13 +107,81 @@ export const contactFormPlugin = createPlugin('contactForm', {
 7. **Use `ctx.has('name')` for optional deps.** Boolean check, never throws.
 8. **Helpers are static pure functions.** No `ctx`, no lifecycle, no side effects. They produce typed values for `pluginConfigs`.
 
+## Plugin Export Architecture
+
+Frameworks use a two-level export system: a plugin barrel (`src/plugins/index.ts`) and a self-documenting framework entry (`src/index.ts`).
+
+### Plugin Barrel: `src/plugins/index.ts`
+
+Central file that re-exports all plugin instances, helpers, and namespaced types:
+
+```typescript
+/**
+ * Plugin barrel — all default plugin instances, helpers, and namespaced types.
+ * @module
+ */
+
+// ─── Plugin Instances ───────────────────────────────────────
+export { build } from "./build";
+export { env } from "./env";
+export { router } from "./router";
+export { seo } from "./seo";
+export { spa } from "./spa";
+
+// ─── Helpers ────────────────────────────────────────────────
+export { route } from "./router";           // builder helper (not the plugin)
+export { createComponent } from "./spa";
+
+// ─── Namespaced Types ───────────────────────────────────────
+export type * as Build from "./build/types";
+export type * as Router from "./router/types";
+export type * as Seo from "./seo/types";
+export type * as Spa from "./spa/types";
+```
+
+**Rules:**
+- Each plugin directory exports exactly ONE `createPlugin` instance
+- Helpers are in a separate section from plugin instances
+- Types use `export type * as Namespace from` (TS 5.0+) for clean namespace grouping
+- Only Standard+ plugins with `types.ts` get namespace type exports
+
+### Package.json Subpath Exports
+
+Expose the barrel as a subpath so consumers can import plugins independently:
+
+```json
+{
+  "exports": {
+    ".": { "import": "./dist/index.mjs", "require": "./dist/index.cjs" },
+    "./plugins": { "import": "./dist/plugins/index.mjs", "require": "./dist/plugins/index.cjs" }
+  }
+}
+```
+
+Consumer usage:
+```typescript
+import { createApp } from "@moku-labs/web";
+import { router, route, type Router } from "@moku-labs/web/plugins";
+
+const home = route("/");
+const app = createApp({ pluginConfigs: { router: { routes: [home] } } });
+// Router.RouteDefinition, Router.RouteMatch — namespaced types
+```
+
+### Verification
+
+- Every plugin in `createCore`'s plugins array is re-exported from `src/plugins/index.ts`
+- Each plugin directory exports exactly ONE `createPlugin` call
+- No plugin imports in `src/index.ts` go directly to plugin directories (use barrel)
+- `package.json` has `./plugins` subpath export
+
 ## Helpers Pattern (Pre-createApp Factory Functions)
 
 When a plugin needs to provide typed builder/factory functions that consumers call before `createApp`:
 
 ```typescript
 // Framework plugin:
-export const routerPlugin = createPlugin('router', {
+export const router = createPlugin('router', {
   config: { routes: [] as Route[] },
   helpers: {
     route: (path: string, component: string): Route => ({ path, component }),
@@ -121,13 +189,13 @@ export const routerPlugin = createPlugin('router', {
 });
 
 // Consumer:
-const home = routerPlugin.route('/home', 'HomePage');  // typed, autocomplete
+const home = router.route('/home', 'HomePage');  // typed, autocomplete
 const app = createApp({
   pluginConfigs: { router: { routes: [home] } },
 });
 
 // Destructuring also works:
-const { route } = routerPlugin;  // types preserved
+const { route } = router;  // types preserved
 ```
 
 **Design constraints:**

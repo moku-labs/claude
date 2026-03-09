@@ -110,6 +110,12 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
       }
     },
     {
+      "includes": ["src/**/__tests__/**"],
+      "linter": {
+        "rules": { "suspicious": { "noConsole": "off" } }
+      }
+    },
+    {
       "includes": ["*.config.ts"],
       "linter": {
         "rules": { "suspicious": { "noConsole": "off" } }
@@ -185,7 +191,7 @@ export default [
 
   // 7. Test files: relaxed rules
   {
-    files: ["tests/**/*.ts"],
+    files: ["tests/**/*.ts", "src/plugins/**/__tests__/**/*.ts"],
     rules: {
       "jsdoc/require-jsdoc": "off",
       "jsdoc/require-description": "off",
@@ -291,13 +297,13 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     projects: [
-      { test: { name: "unit", include: ["tests/unit/**/*.test.ts"] } },
-      { test: { name: "integration", include: ["tests/integration/**/*.test.ts"] } }
+      { test: { name: "unit", include: ["tests/unit/**/*.test.ts", "src/plugins/**/__tests__/unit/**/*.test.ts"] } },
+      { test: { name: "integration", include: ["tests/integration/**/*.test.ts", "src/plugins/**/__tests__/integration/**/*.test.ts"] } }
     ],
     coverage: {
       provider: "istanbul",
       include: ["src/**/*.ts"],
-      exclude: ["src/**/types.ts", "src/**/types/**"],
+      exclude: ["src/**/types.ts", "src/**/types/**", "src/**/__tests__/**"],
       reporter: ["text", "lcov"],
       thresholds: { lines: 90, functions: 90, branches: 90, statements: 90 }
     }
@@ -442,9 +448,10 @@ Plugins go in `src/plugins/`.
 ## Testing
 
 - Vitest with unit + integration projects
-- Unit tests: `tests/unit/**/*.test.ts`
-- Integration tests: `tests/integration/**/*.test.ts`
+- Framework-level tests: `tests/unit/` and `tests/integration/` (cross-plugin scenarios, createApp validation)
+- Plugin-specific tests: `src/plugins/[name]/__tests__/unit/` and `__tests__/integration/` (colocated inside each plugin)
 - 90% coverage threshold
+- Never put plugin-specific tests in root `tests/` — root tests are for framework-level integration only
 
 ## Moku Development Toolkit
 
@@ -453,7 +460,7 @@ This project uses the **moku** Claude Code plugin for development workflows. Bel
 ### Commands (slash commands)
 
 **Planning:**
-- `/moku:plan [framework|app|plugin] [description]` — 2-stage gated workflow to design a framework, consumer app, or plugin. Auto-detects target from project type. Output goes to `specifications/` (framework/plugin) or `.planning/app-spec.md` (app).
+- `/moku:plan [framework|app|plugin] [description]` — 2-stage gated workflow to design a framework, consumer app, or plugin. Auto-detects target from project type. Output goes to `.planning/specs/` (framework/plugin) or `.planning/app-spec.md` (app).
 
 **Building:**
 - `/moku:build [framework|app|plugin] [spec-or-name]` — Build from specifications. Auto-detects what to build based on existing spec files. Resumes if partially built. Supports `/moku:build plugin #3` for individual plugins.

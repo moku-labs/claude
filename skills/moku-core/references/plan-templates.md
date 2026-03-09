@@ -49,26 +49,30 @@ Each specification file must contain:
 [npm/bun packages needed with versions]
 
 ## Testing Strategy
-- **Unit tests:** [What to test for each domain file]
-- **Integration tests:** [Full plugin wiring tests]
+- **Unit tests** (`__tests__/unit/`): [What to test for each domain file]
+- **Integration tests** (`__tests__/integration/`): [Full plugin wiring tests]
 - **Type-level tests:** [What to verify with expectTypeOf and @ts-expect-error]
+- All tests live inside the plugin directory, NOT in root `tests/`
 
 ## Code Example
 [Complete createPlugin call showing exact spec object — NO explicit generics]
 
 ## Verification
+<!-- These checkboxes are ticked by /moku:build after each wave (Step 4d). Failed items route to gap closure. -->
 - [ ] Plugin directory exists with correct tier structure
 - [ ] Config shape matches spec (field names, types, defaults)
 - [ ] API methods exist and match signatures
 - [ ] Events declared match spec exactly
 - [ ] Dependencies reference correct plugin instances
-- [ ] Unit tests cover all API methods and edge cases
-- [ ] Integration test exercises full lifecycle (createApp → start → API → stop)
+- [ ] Unit tests in `__tests__/unit/` cover all API methods and edge cases
+- [ ] Integration test in `__tests__/integration/` exercises full lifecycle (createApp → start → API → stop)
 - [ ] Type-level tests verify emit, require, and app surface types
 - [ ] `bun run lint` passes with zero warnings
 - [ ] `bun run test` passes
 - [ ] No explicit generics on createPlugin
 - [ ] import type used for type-only imports
+- [ ] No wire factory patterns
+- [ ] No inline type assertions in createState/config
 ```
 
 ---
@@ -104,9 +108,10 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 [npm/bun packages needed with versions. "None" if no external deps.]
 
 ## Testing Strategy
-- **Unit tests:** [What to test]
-- **Integration tests:** [Full core plugin wiring with createCoreConfig]
+- **Unit tests** (`__tests__/unit/`): [What to test]
+- **Integration tests** (`__tests__/integration/`): [Full core plugin wiring with createCoreConfig]
 - **Type-level tests:** [Verify ctx.<name> is typed on regular plugin context]
+- All tests live inside the plugin directory, NOT in root `tests/`
 
 ## Code Example
 [Complete createCorePlugin call — NO explicit generics]
@@ -117,8 +122,8 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 - [ ] NO depends, events, or hooks in spec
 - [ ] Config shape matches spec
 - [ ] API methods exist and match signatures
-- [ ] Unit tests cover all API methods
-- [ ] Integration test: createCoreConfig with plugin, verify ctx.<name> works in regular plugin
+- [ ] Unit tests in `__tests__/unit/` cover all API methods
+- [ ] Integration test in `__tests__/integration/`: createCoreConfig with plugin, verify ctx.<name> works in regular plugin
 - [ ] `bun run lint` passes with zero warnings
 - [ ] `bun run test` passes
 - [ ] No explicit generics on createCorePlugin
@@ -198,14 +203,14 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 ## Core Plugins
 | # | Name | Description | Spec File | Build Status |
 |---|------|-------------|-----------|--------------|
-| 1 | log | Structured logging | specifications/01-log.md | not started |
-| 2 | env | Environment detection | specifications/02-env.md | not started |
+| 1 | log | Structured logging | .planning/specs/01-log.md | not started |
+| 2 | env | Environment detection | .planning/specs/02-env.md | not started |
 
 ## Plugins
 | # | Wave | Name | Tier | Dependencies | Spec File | Build Status |
 |---|------|------|------|-------------|-----------|--------------|
-| 3 | 1 | router | Standard | none | specifications/03-router.md | not started |
-| 4 | 2 | auth | Standard | router | specifications/04-auth.md | not started |
+| 3 | 1 | router | Standard | none | .planning/specs/03-router.md | not started |
+| 4 | 2 | auth | Standard | router | .planning/specs/04-auth.md | not started |
 
 Build Status values: `not started` | `building` | `built` | `agent-incomplete` | `agent-failed` | `verified` | `verify-failed` | `needs-manual` | `done`
 
@@ -213,6 +218,17 @@ Build Status values: `not started` | `building` | `built` | `agent-incomplete` |
 - Wave 0 (core): log, env — built first, no inter-dependencies
 - Wave 1: router (no regular plugin dependencies — parallel build)
 - Wave 2: auth (depends on Wave 1)
+
+## Wave Progress
+| Step | Status | Notes |
+|------|--------|-------|
+| Wave analysis | done | 3 waves identified |
+| Wave 0 (core) | done | log, env — verified, spec checkboxes ticked |
+| Wave 1 | done | router — verified, spec checkboxes ticked |
+| Wave 2 | not started | auth |
+| Final verification | not started | |
+| README wave | not started | |
+| Post-build validation | not started | |
 
 ## Artifacts
 - Spec files: [list after Stage 2]
@@ -222,10 +238,16 @@ Build Status values: `not started` | `building` | `built` | `agent-incomplete` |
 [Populated after Stage 3 — format/lint/tsc/build pass status]
 
 ## Next Action
-Run `/moku:build #1` to build the first plugin (env)
+Run `/moku:build resume` to build Wave 0 (core plugins)
 ```
 
-After each plugin is built by `/moku:build`, update its `Build Status` to `done` and `Next Action` to the next plugin number. After all plugins are built: `Next Action → All plugins built. Run final integration tests.`
+**State machine for resume:** Each `/moku:build resume` reads the Wave Progress table, finds the first row with status `not started`, executes that step, marks it `done`, and stops. Example `Next Action` values:
+- `Run /moku:build resume to build Wave 0 (core plugins)`
+- `Run /moku:build resume to build Wave 1 (router)`
+- `Run /moku:build resume for final framework verification`
+- `Run /moku:build resume for README wave`
+- `Run /moku:build resume for post-build validation`
+- `All steps complete.`
 
 ---
 

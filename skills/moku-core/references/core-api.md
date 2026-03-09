@@ -41,7 +41,7 @@ Reserved names (throw TypeError): same as regular plugins plus `global`, `state`
 ```typescript
 import { createCorePlugin } from '@moku-labs/core';
 
-const logPlugin = createCorePlugin("log", {
+const log = createCorePlugin("log", {
   config: { level: "info" as "info" | "debug" | "error" },
   createState: () => ({ entries: [] as string[] }),
   api: ctx => ({
@@ -82,7 +82,7 @@ function createCoreConfig<
 // Example: config.ts
 import { createCoreConfig, createCorePlugin } from '@moku-labs/core';
 
-const envPlugin = createCorePlugin("env", {
+const env = createCorePlugin("env", {
   config: { nodeEnv: "development" as string },
   api: ctx => ({ isDev: () => ctx.config.nodeEnv === "development" }),
 });
@@ -95,7 +95,7 @@ type Events = {
 
 export const coreConfig = createCoreConfig<Config, Events>('moku-site', {
   config: { siteName: 'Untitled', mode: 'development' },
-  plugins: [envPlugin],
+  plugins: [env],
   pluginConfigs: { env: { nodeEnv: 'production' } },
 });
 export const { createPlugin, createCore } = coreConfig;
@@ -127,10 +127,10 @@ function createCore(
 ```typescript
 // Example: index.ts
 import { createCore, coreConfig } from './config';
-import { routerPlugin } from './plugins/router';
+import { router } from './plugins/router';
 
 const framework = createCore(coreConfig, {
-  plugins: [routerPlugin],
+  plugins: [router],
   pluginConfigs: { router: { basePath: '/app' } },
 });
 export const { createApp, createPlugin } = framework;

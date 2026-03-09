@@ -101,6 +101,8 @@ Moku plugins should include type-level tests:
   - `api.ts` → `__tests__/unit/api.test.ts`
   - `handlers.ts` → `__tests__/unit/handlers.test.ts`
 - Integration test in `__tests__/integration/[plugin-name].test.ts`
+- **BLOCKER**: Plugin tests found in root `tests/unit/plugins/` or `tests/integration/plugins/` instead of inside the plugin's `__tests__/` directory
+- Framework-level tests (cross-plugin, createApp orchestration) belong in root `tests/integration/`
 - Test imports use correct paths (not importing from `@moku-labs/core` unless testing the kernel itself)
 
 ## Severity Levels

@@ -20,7 +20,7 @@ plugins/env/
  */
 import { createPlugin } from '../config';
 
-export const envPlugin = createPlugin('env', {
+export const env = createPlugin('env', {
   config: {
     nodeEnv: process.env.NODE_ENV ?? 'development',
     isCI: Boolean(process.env.CI),
@@ -53,7 +53,7 @@ plugins/counter/
  */
 import { createPlugin } from '../config';
 
-export const counterPlugin = createPlugin('counter', {
+export const counter = createPlugin('counter', {
   config: { initial: 0, step: 1 },
   createState: (ctx) => ({ count: ctx.config.initial }),
   api: (ctx) => ({

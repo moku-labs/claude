@@ -33,7 +33,7 @@ Check `.planning/STATE.md`:
 - If exists: report current phase, completed stages, next action
 - If not: report "No active plan"
 - Check for stale state (last updated > 7 days ago)
-- Check `specifications/` directory for spec files
+- Check `.planning/specs/` directory for spec files
 
 ### 4. Plugin Health (Framework projects)
 

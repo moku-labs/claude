@@ -164,7 +164,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for deta
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for detailed Stage 2 instructions per target type.
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` for the Plugin Specification Template, Application Specification Template, and STATE.md Template.
 
-**Summary**: Create detailed specification files for each plugin/app. Framework specs go to `specifications/01-[name].md` etc. App specs go to `.planning/app-spec.md`. Run validation loop (plan-checker + plugin-spec-validator + spec-validator) until zero BLOCKERs. Present specs, dependency graph, communication map, wave grouping, and implementation order. Update `.planning/STATE.md` on exit. Wait for explicit user approval.
+**Summary**: Create detailed specification files for each plugin/app. Framework specs go to `.planning/specs/01-[name].md` etc. App specs go to `.planning/app-spec.md`. Run validation loop (plan-checker + plugin-spec-validator + spec-validator) until zero BLOCKERs. Present specs, dependency graph, communication map, wave grouping, and implementation order. Update `.planning/STATE.md` on exit. Wait for explicit user approval.
 
 ---
 
@@ -172,7 +172,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` for t
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for detailed Stage 3 instructions per target type.
 
-**Summary**: Create skeleton files (empty types, function signatures, JSDoc headers — NO implementation). Run verification loop: format → lint → tsc → build, fix all issues, loop until zero errors/warnings. Update `.planning/STATE.md` with verification results and set `Next Action` to `/moku:build #1`. Wait for explicit user approval.
+**Summary**: Create skeleton files (empty types, function signatures, JSDoc headers — NO implementation). Includes `src/plugins/index.ts` barrel (plugin instances, helpers, namespaced types) and self-documenting `src/index.ts` (JSDoc module comment, grouped exports). Run verification loop: format → lint → tsc → build, fix all issues, loop until zero errors/warnings. Update `.planning/STATE.md` with verification results and set `Next Action` to `/moku:build #1`. Wait for explicit user approval.
 
 ---
 

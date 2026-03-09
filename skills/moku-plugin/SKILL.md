@@ -114,13 +114,13 @@ Key conventions:
  * @see README.md
  */
 import { createPlugin } from '../../config';
-import { rendererPlugin } from '../renderer';
+import { renderer } from '../renderer';
 import { createRouterState } from './state';
 import { createRouterApi } from './api';
 import { handleRouteNotFound } from './handlers';
 
-export const routerPlugin = createPlugin('router', {
-  depends: [rendererPlugin],
+export const router = createPlugin('router', {
+  depends: [renderer],
   config: { basePath: '/', notFoundRedirect: '/404' },
   createState: createRouterState,
   api: createRouterApi,
@@ -166,6 +166,38 @@ export const utilPlugin = createPlugin('util', {
 
 // DON'T: Create multiple plugins for one domain concern
 // spa-head, spa-router, spa-progress → merge into one "spa" plugin
+
+// DON'T: Add "Plugin" postfix to exported plugin instances
+export const routePlugin = createPlugin("route", { ... })
+export const authPlugin = createPlugin("auth", { ... })
+
+// CORRECT: Use bare name matching the plugin string name
+export const route = createPlugin("route", { ... })
+export const auth = createPlugin("auth", { ... })
+// Exception: use a distinct name when collisions exist (e.g., router vs route helper)
+
+// DON'T: Parameterize createPlugin and dependencies through a factory
+export function wireFooPlugin(pluginFactory, dep) {
+  return pluginFactory("foo", { depends: [dep], ... });
+}
+export const foo = wireFooPlugin(createPlugin, bar);
+
+// CORRECT: Import directly — no indirection
+import { createPlugin } from "../../config";
+import { bar } from "../bar";
+export const foo = createPlugin("foo", { depends: [bar], ... });
+
+// DON'T: Inline type assertions in createState or config
+createState: () => ({ processor: null as import("unified").Processor | null })
+config: { routes: {} as Record<string, RouteInput> }
+
+// CORRECT (Standard+): Define type, use typed factory
+// types.ts: export interface PipelineState { processor: Processor | null; }
+// state.ts: export const createPipelineState = (): PipelineState => ({ processor: null });
+createState: createPipelineState,
+
+// CORRECT (Nano/Micro): Return-type annotation
+createState: (): { processor: Processor | null } => ({ processor: null }),
 ```
 
 ## Lifecycle: start() and stop() Are Optional
@@ -195,15 +227,36 @@ Every file must have full JSDoc. Plugin index.ts must have:
 
 - **Unit tests** for each domain file independently (state, api, handlers)
 - **Integration tests** for the full plugin wiring
-- Unit tests live in `__tests__/unit/`
-- Integration tests live in `__tests__/integration/`
+- Unit tests live in `__tests__/unit/` inside the plugin directory
+- Integration tests live in `__tests__/integration/` inside the plugin directory
+- **Plugin tests live with the plugin.** Never put plugin-specific tests in root `tests/unit/plugins/` or `tests/integration/plugins/`. The root `tests/` directory is reserved for framework-level integration tests (cross-plugin scenarios, createApp validation).
+
+## Single Instance Per Plugin Directory
+
+Each plugin directory exports exactly ONE `createPlugin` (or `createCorePlugin`) instance. If a plugin needs helper functions (builders, factories), those are exported separately — either via the `helpers` spec field or as standalone exports alongside the plugin instance.
+
+```typescript
+// CORRECT: One plugin instance + helper
+export const router = createPlugin("router", { ... });
+export function route(path: string): Route { ... }  // helper, not a plugin
+
+// WRONG: Multiple plugin instances from one directory
+export const routerPlugin = createPlugin("router", { ... });
+export const routerDebug = createPlugin("routerDebug", { ... });  // should be a sub-module
+```
+
+This rule enables the `src/plugins/index.ts` barrel to guarantee one-to-one mapping between plugin directories and plugin instances.
+
+## Client Scripts
+
+For plugins that generate browser-injected JS (livereload, analytics, error overlay): scripts > 20 lines should be extracted to a static `.js` file with `__TOKEN__` placeholders, read and interpolated at runtime. See `references/domain-scenarios.md` → "Client Scripts Pattern".
 
 ## References
 
 For detailed specifications:
 - `references/plugin-structure.md` — Full complexity tier details with examples
 - `references/plugin-patterns.md` — Connection point pattern, file structure, LLM prompt
-- `references/domain-scenarios.md` — Domain-specific layouts (utility, CLI, build, web, SPA)
+- `references/domain-scenarios.md` — Domain-specific layouts (utility, CLI, build, web, SPA, client scripts)
 
 ## Advanced References (load when needed)
 
@@ -224,7 +277,7 @@ import { createPlugin } from '../../config';
 import { createRouterApi } from './router/api';
 import { createHeadApi } from './head/api';
 
-export const spaPlugin = createPlugin('spa', {
+export const spa = createPlugin('spa', {
   config: { router: { basePath: '/' }, head: { titleSuffix: '' } },
   createState: () => ({ router: { currentPath: '/' }, head: { title: '' } }),
   api: (ctx) => ({

@@ -44,6 +44,7 @@ For Standard+ plugins, verify:
 - Should NOT contain business logic (> 50 lines is a red flag)
 - Must have JSDoc comment at top with: tier, description, events emitted, `@see README.md`
 - Exports the plugin instance
+- Exported plugin variable must NOT have "Plugin" postfix (e.g., `routePlugin` -> `route`)
 
 ### 4. JSDoc Coverage
 Check that EVERY file has complete JSDoc:
@@ -58,6 +59,7 @@ Check that EVERY file has complete JSDoc:
 - `__tests__/integration/` exists for Standard+ plugins
 - Integration test tests the full plugin wiring
 - Test files follow vitest patterns
+- No plugin tests in root `tests/unit/plugins/` or `tests/integration/plugins/` — tests must be colocated inside the plugin's `__tests__/` directory
 
 ### 6. Plugin Spec Compliance
 - `config` provides COMPLETE defaults if present
@@ -87,13 +89,31 @@ Check that EVERY file has complete JSDoc:
 - Types must be inferred from the spec object fields (config, createState, api, events)
 - VIOLATION if explicit generics are found — immediate flag
 
-### 10. Lifecycle Necessity Check
+### 10. No Wire Factories
+- Check: no `function wire[A-Z]` patterns in plugin source files
+- Plugin `index.ts` must import `createPlugin` and dependencies directly
+- No factory functions that parameterize the plugin constructor
+- VIOLATION if wire factory pattern is detected
+
+### 11. No Inline Type Assertions in State/Config
+- Check: no `null as `, `{} as `, `[] as ` patterns in `createState` or `config`
+- Standard+ plugins: define type in `types.ts`, use typed factory in `state.ts`
+- Nano/Micro: use return-type annotation on arrow function
+- VIOLATION if inline type assertions are found
+
+### 12. Single Instance Per Directory
+- Each plugin directory must export exactly ONE `createPlugin` (or `createCorePlugin`) call
+- Helper functions (builders, factories) may be exported alongside but are NOT plugin instances
+- VIOLATION if a directory contains multiple `createPlugin` calls — suggests domain merge needed
+- Check: `grep -c 'createPlugin(' index.ts` should return 1
+
+### 13. Lifecycle Necessity Check
 - If `onStart` is present, verify there is an actual resource being started (server, connection, listener, mount)
 - If `onStop` is present, verify there is an actual resource being torn down
 - WARNING if `onStart`/`onStop` exist but only contain logging, config reads, or trivial operations
 - CLI plugins, build tools, and utility plugins should NOT have start/stop unless managing persistent processes
 
-### 11. Domain Merge Check (CRITICAL)
+### 14. Domain Merge Check (CRITICAL)
 Scan ALL plugins in the framework/project and flag groups that should be merged into a Very Complex plugin.
 
 **Detection signals — flag when 2+ plugins share ANY of these:**

@@ -79,17 +79,17 @@ Other plugins may already be stopped. Minimal context prevents unreliable inter-
 
 ### `ctx.require(pluginInstance)` — Instance-Only, Fully Typed
 ```typescript
-const router = ctx.require(routerPlugin);
-//    ^? RouterApi — fully typed, no cast
-router.navigate('/about');
+const routerApi = ctx.require(router);
+//       ^? RouterApi — fully typed, no cast
+routerApi.navigate('/about');
 ```
 Throws with clear error if not registered. Only accepts PluginInstance references, not strings.
 
 ### `ctx.has(name)` — String-Based Boolean Check
 ```typescript
 if (ctx.has('analytics')) {
-  const analytics = ctx.require(analyticsPlugin);
-  analytics.track('pageview');
+  const analyticsApi = ctx.require(analytics);
+  analyticsApi.track('pageview');
 }
 ```
 Never throws. Checks global registration, not restricted by `depends`.

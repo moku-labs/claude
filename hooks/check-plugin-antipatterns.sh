@@ -46,5 +46,23 @@ if printf '%s\n' "$CONTENT" | grep -q 'createCorePlugin<'; then
   exit 0
 fi
 
+# Check 4: "Plugin" postfix in exported plugin variable names
+if printf '%s\n' "$CONTENT" | grep -qE 'export const [a-z][a-zA-Z]*Plugin\b'; then
+  echo '{"decision":"block","reason":"BLOCKED: Plugin export name has \"Plugin\" postfix (e.g. routePlugin). Moku convention: use bare name matching the plugin string name (e.g. route). See moku-plugin skill for naming rules."}'
+  exit 0
+fi
+
+# Check 5: Wire factory pattern — function wireXxx wrapping createPlugin
+if printf '%s\n' "$CONTENT" | grep -qE 'function wire[A-Z]'; then
+  echo '{"decision":"block","reason":"BLOCKED: Wire factory pattern detected (function wireXxx...). Moku plugins import createPlugin and dependencies directly — no factory indirection. See moku-plugin skill Common Mistakes."}'
+  exit 0
+fi
+
+# Check 6: Inline type assertions in state/config (null as X, {} as X, [] as X)
+if printf '%s\n' "$CONTENT" | grep -qE 'null as |^\s*\{\} as |\[\] as '; then
+  echo '{"decision":"block","reason":"BLOCKED: Inline type assertion detected (e.g. null as Foo | null). For Standard+ plugins, define a type and use a typed factory. For Nano/Micro, use a return-type annotation. See moku-plugin skill Common Mistakes."}'
+  exit 0
+fi
+
 # No issues found — don't interfere
 exit 0

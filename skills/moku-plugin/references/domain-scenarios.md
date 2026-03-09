@@ -6,7 +6,7 @@ Formatters, validators, helpers. Pure functions, no state, no lifecycle.
 **Tier: Nano or Micro.**
 
 ```typescript
-export const formatPlugin = createPlugin('format', {
+export const format = createPlugin('format', {
   config: { locale: 'en-US', currency: 'USD' },
   api: (ctx) => ({
     date: (d: Date) => d.toLocaleDateString(ctx.config.locale),
@@ -51,7 +51,7 @@ HTTP server, middleware, routing, auth, database. Almost always need `onStart` (
 **Tier: Standard.**
 
 ```typescript
-export const httpPlugin = createPlugin('http', {
+export const http = createPlugin('http', {
   events: register => register.map<HttpEvents>({
     'http:request': 'Incoming HTTP request',
     'http:response': 'Outgoing HTTP response',
@@ -109,7 +109,7 @@ plugins/content/
 Not built into the kernel. Plugins implement internally:
 
 ```typescript
-const httpPlugin = createPlugin('http', {
+const http = createPlugin('http', {
   createState: () => ({ middlewares: [] as Function[] }),
   api: (ctx) => ({
     use: (fn: Function) => { ctx.state.middlewares.push(fn); },
@@ -121,12 +121,54 @@ const httpPlugin = createPlugin('http', {
   }),
 });
 
-const authPlugin = createPlugin('auth', {
-  depends: [httpPlugin],
+const auth = createPlugin('auth', {
+  depends: [http],
   onInit: (ctx) => {
-    ctx.require(httpPlugin).use((req: any) => ({ ...req, user: 'authenticated' }));
+    ctx.require(http).use((req: any) => ({ ...req, user: 'authenticated' }));
   },
 });
 ```
 
 Explicit, debuggable, doesn't add concepts to the kernel.
+
+## Client Scripts Pattern
+
+When a plugin generates JavaScript to inject into a browser page (e.g., livereload, analytics, error overlay), choose the approach based on script size:
+
+**< 5 lines:** Inline template literal in the generating function. Fine as-is.
+
+**5–20 lines:** Template literal with `${token}` interpolation. Keep in the generating `.ts` file.
+
+**> 20 lines:** Extract to a static `.js` file with placeholder tokens. Read the file at runtime and replace tokens. This keeps the script lintable as real JS and avoids multi-line string templates that are hard to read and maintain.
+
+```
+plugins/dev-server/
+  client-runtime.js      # Real JS file — lintable, formattable
+  client.ts              # Reads client-runtime.js, replaces __DEV_HOST__ / __DEV_PORT__
+  index.ts
+  types.ts
+  ...
+```
+
+```typescript
+// client-runtime.js — uses __TOKEN__ placeholders
+(function() {
+  var protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  var url = protocol + "//" + "__DEV_HOST__:" + __DEV_PORT__ + "/__dev";
+  // ... full script as real JS ...
+})();
+
+// client.ts — reads and interpolates
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const template = readFileSync(join(import.meta.dir, "client-runtime.js"), "utf-8");
+
+export function buildClientScript(port: number, host: string): string {
+  return template
+    .replace(/__DEV_HOST__/g, host)
+    .replace(/__DEV_PORT__/g, String(port));
+}
+```
+
+The `.js` file is real JavaScript: your linter, formatter, and IDE features all work on it. The `.ts` file becomes a thin interpolation wrapper.

@@ -79,6 +79,7 @@ Review all plugin API methods across the framework:
 - Event names should use `pluginName:action` format
 - No plugin name conflicts with JavaScript reserved words or built-in objects
 - Related plugins should share a domain prefix if they will be merged into VeryComplex
+- Plugin export names must NOT have "Plugin" postfix — use bare name matching the plugin string name
 
 ### 5. Performance Red Flags
 
@@ -136,7 +137,32 @@ Review all plugin API methods across the framework:
 
 **Core plugins should NOT appear in event flow** — they have no events. If a core plugin is emitting or hooking events, it is a BLOCKER.
 
-### 9. Mermaid Diagram Generation
+### 9. Framework Entry Point Structure
+
+Validate `src/index.ts` follows the self-documenting manifest pattern:
+
+**Required structure:**
+- JSDoc `@module` comment with options/defaults table and `@example` showing `createApp` usage
+- Exports grouped into 4 sections with separator comments: Framework API → Plugins → Helpers → Types
+- Framework API section exports only `createApp` and `createPlugin`
+- Plugins section re-exports all default plugin instances
+- Helpers section re-exports builder helpers separately from plugins
+- Types section uses `export type * as Namespace` for namespace grouping
+- Plugin imports come from `./plugins` barrel (not individual directories)
+
+**Also validate `src/plugins/index.ts` barrel:**
+- Every plugin in the `createCore` plugins array is re-exported from the barrel
+- Each plugin directory exports exactly ONE `createPlugin` instance
+- Helpers are in a separate section from plugin instances
+- Namespace type exports use `export type * as X from` syntax
+
+**Severity:**
+- Missing `src/plugins/index.ts` → BLOCKER
+- Missing JSDoc module comment on `src/index.ts` → WARNING
+- Mixed export sections (plugins/helpers/types interleaved) → WARNING
+- Plugin imported directly (not via barrel) in `src/index.ts` → WARNING
+
+### 10. Mermaid Diagram Generation
 
 After analysis, generate two mermaid diagrams and include them in the report:
 

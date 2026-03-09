@@ -9,7 +9,7 @@
 Duplicate plugin names throw during init. No silent overwrite. No merge. No "last wins." Core plugin names are cross-checked against regular plugin names — no collisions allowed.
 
 ### Dependency Validation
-If `depends: [loggerPlugin]` is declared:
+If `depends: [logger]` is declared:
 - `logger` must exist in the plugin list
 - `logger` must appear BEFORE the dependent plugin
 - Validation only — does NOT change order
@@ -104,3 +104,9 @@ No services, providers, managers. The primitives are: `createCoreConfig`, `creat
 
 ### Making a regular plugin core when it needs events or depends
 If a plugin needs `events`, `hooks`, or `depends`, it MUST be a regular plugin — not core. Core plugins are for self-contained infrastructure only.
+
+### Wire factory pattern
+Don't wrap `createPlugin` in a factory function that parameterizes the plugin constructor and dependencies. This adds indirection and defeats static analysis. Import `createPlugin` and dependencies directly.
+
+### Inline type assertions in state/config
+Don't use `null as import("foo").Bar | null` or `{} as Record<string, X>` in `createState` or `config`. For Standard+ plugins, define a proper type and use a typed factory function. For Nano/Micro, use a return-type annotation on the arrow function.

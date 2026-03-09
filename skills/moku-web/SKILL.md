@@ -172,7 +172,7 @@ For projects with complex CSS architecture or many islands:
 type Events = { 'page:render': { path: string; html: string } };
 
 // moku-plugin: Standard tier plugin emits events
-export const rendererPlugin = createPlugin('renderer', {
+export const renderer = createPlugin('renderer', {
   api: (ctx) => ({
     render: (path: string, html: string) => {
       void ctx.emit('page:render', { path, html });

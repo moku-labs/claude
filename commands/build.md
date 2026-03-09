@@ -12,17 +12,17 @@ Use configuration values above if present (maxParallelAgents, gapClosureMaxRound
 
 Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
-- `framework` — build framework from `specifications/` directory
-- `framework specifications/` — explicit spec path
+- `framework` — build framework from `.planning/specs/` directory
+- `framework .planning/specs/` — explicit spec path
 - `framework config` — build only config.ts + index.ts (skip plugins)
 - `framework plugins` — build only plugins (skip config if exists)
 - `app` — build consumer app from `.planning/app-spec.md`
 - `app .planning/app-spec.md` — explicit plan path
 - `plugin auth` — build plugin "auth" from description or matching spec
-- `plugin #3` — build plugin #3 from `specifications/03-*.md`
+- `plugin #3` — build plugin #3 from `.planning/specs/03-*.md`
 - `plugin #3-#5` — build plugins #3 through #5
 - `plugin #3,#5,#7` — build specific plugins by number
-- `plugin specifications/03-auth.md` — build from explicit spec file
+- `plugin .planning/specs/03-auth.md` — build from explicit spec file
 - `resume` — continue from `.planning/STATE.md`
 
 ---
@@ -34,17 +34,17 @@ Parse `$ARGUMENTS`:
 2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
 3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
 4. If no explicit target keyword, auto-detect:
-   a. `specifications/*.md` files exist → **framework**
+   a. `.planning/specs/*.md` files exist → **framework**
    b. `.planning/app-spec.md` exists → **app**
    c. Both exist → ask the user which to build
    d. Argument matches a plugin name, `#N` pattern, or spec file path → **plugin**
 5. If no specs found and no recognizable argument → tell the user: "No specifications found. Run `/moku:plan` first to create a plan."
 
 For **plugin** targets, resolve the argument:
-- `#N` → find `specifications/0N-*.md` (e.g., `#3` → `specifications/03-*.md`)
+- `#N` → find `.planning/specs/0N-*.md` (e.g., `#3` → `.planning/specs/03-*.md`)
 - `#N-#M` → find all specs from N to M (e.g., `#3-#5` → specs 03, 04, 05)
 - `#N,#M,#P` → find specific specs (e.g., `#3,#5,#7`)
-- A name like `auth` → search `specifications/*-auth.md` or build from description
+- A name like `auth` → search `.planning/specs/*-auth.md` or build from description
 - A file path → use directly
 
 ### State Check
@@ -71,15 +71,29 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 
 **Summary**: Build all plugins in dependency-aware waves using parallel sub-agents, with post-wave verification and gap closure.
 
-**Flow**: Read specs -> Wave analysis -> For each wave: git checkpoint, spawn sub-agents per plugin, verify (moku-verifier), update framework files (config.ts, index.ts, package.json), run integration checks (format, lint, tsc, build), gap closure if needed -> Final verification -> Post-build validation pipeline (spec, jsdoc, plugin-spec, test, type, architecture validators) -> Report + STATE.md update.
+**Flow**: Each invocation executes exactly ONE step (wave, verification, README, or validation), saves STATE.md, and stops. User runs `/moku:build resume` for the next step. This ensures fresh context and explicit user control.
 
-### Context Budget Management
+**Step sequence per invocation:**
+1. Read specs → Wave analysis → **STOP** (present wave plan)
+2. Build Wave 0 (core plugins) → verify → integrate → tick spec checkboxes → **STOP**
+3. Build Wave 1 → verify → integrate → tick spec checkboxes → **STOP**
+4. Build Wave N → ... → **STOP** (one wave per invocation until all waves done)
+5. Final framework verification → **STOP**
+6. README wave (parallel sub-agents for all plugin READMEs) → **STOP**
+7. Post-build validation pipeline → report → **DONE**
 
-After each wave, assess context usage:
-1. If 3+ waves have been completed in this session, the context is getting heavy
-2. Write STATE.md with current progress and suggest:
-   > "Context is getting heavy. I've completed Waves 1-[N] ([list of plugins]). Run `/moku:build resume` to continue with fresh context from Wave [N+1]."
-3. On `resume`, read STATE.md, skip completed waves, continue from next wave
+### Wave Execution Protocol
+
+**One wave per invocation.** Each `/moku:build` or `/moku:build resume` call:
+1. Reads `.planning/STATE.md` to find the current position
+2. Executes the NEXT incomplete step (wave, verification, README wave, or validation)
+3. Updates `.planning/STATE.md` with results
+4. Stops and tells the user what to run next:
+   > "Wave [N] complete ([plugin list]). Run `/moku:build resume` to continue with Wave [N+1]."
+
+**Do NOT attempt multiple waves in one invocation.** Each wave gets fresh context, fresh sub-agents, and an explicit user checkpoint. This prevents context exhaustion and gives the user control over pacing.
+
+**`#wave:N` syntax:** `/moku:build #wave:2` jumps directly to wave 2 (useful for re-running a specific wave after manual fixes).
 
 ### Quality Requirements
 
@@ -91,7 +105,12 @@ After each wave, assess context usage:
 - Biome and ESLint must pass with zero warnings
 - Follow the exact complexity tier specified in the plan
 - Never use explicit generics on `createPlugin` — see moku-plugin skill
+- Plugin export names must NOT have "Plugin" postfix — use bare name
 - NO unnecessary `onStart`/`onStop` — only when managing actual resources (servers, connections, listeners)
+- `src/plugins/index.ts` must exist as plugin barrel with grouped sections (Instances → Helpers → Types)
+- `src/index.ts` must be self-documenting: JSDoc module comment with options/defaults table, grouped exports (Framework API → Plugins → Helpers → Types)
+- No wire factory patterns — import `createPlugin` and dependencies directly
+- No inline type assertions (`null as X`, `{} as X`) in createState/config
 
 ---
 

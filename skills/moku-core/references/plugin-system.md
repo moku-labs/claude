@@ -72,7 +72,7 @@ Merged map: `Events & PluginEvents & DepsEvents<Deps>`
 
 ### Zero events (most common)
 ```typescript
-export const routerPlugin = createPlugin('router', {
+export const router = createPlugin('router', {
   config: { basePath: '/', notFoundRedirect: '/404' },
   createState: () => ({ currentPath: '/', history: [] as string[] }),
   api: (ctx) => ({
@@ -88,7 +88,7 @@ export const routerPlugin = createPlugin('router', {
 
 ### With events
 ```typescript
-export const authPlugin = createPlugin('auth', {
+export const auth = createPlugin('auth', {
   events: (register) => ({
     'auth:login':  register<{ userId: string }>('After login'),
     'auth:logout': register<{ userId: string }>('After logout'),
@@ -101,11 +101,11 @@ export const authPlugin = createPlugin('auth', {
 
 ### With depends
 ```typescript
-export const seoPlugin = createPlugin('seo', {
-  depends: [routerPlugin, rendererPlugin],
+export const seo = createPlugin('seo', {
+  depends: [router, renderer],
   api: (ctx) => ({
     setTitle: (title: string) => {
-      const path = ctx.require(routerPlugin).current();
+      const path = ctx.require(router).current();
       void ctx.emit('renderer:render', { path, html: `<title>${title}</title>` });
     },
   }),
@@ -116,7 +116,7 @@ export const seoPlugin = createPlugin('seo', {
 ```typescript
 type Route = { path: string; component: string };
 
-export const routerPlugin = createPlugin('router', {
+export const router = createPlugin('router', {
   config: { routes: [] as Route[] },
   api: (ctx) => ({
     navigate: (path: string) => { /* ... */ },
@@ -127,7 +127,7 @@ export const routerPlugin = createPlugin('router', {
 });
 
 // Consumer usage — BEFORE createApp:
-const home = routerPlugin.route('/home', 'HomePage');  // fully typed
+const home = router.route('/home', 'HomePage');  // fully typed
 const app = createApp({
   pluginConfigs: { router: { routes: [home] } },
 });
@@ -172,7 +172,7 @@ Core plugins are self-contained infrastructure plugins whose APIs are injected d
 ```typescript
 import { createCorePlugin } from '@moku-labs/core';
 
-export const logPlugin = createCorePlugin("log", {
+export const log = createCorePlugin("log", {
   config: { level: "info" as "info" | "debug" | "error" },
   createState: () => ({ entries: [] as string[] }),
   api: ctx => ({

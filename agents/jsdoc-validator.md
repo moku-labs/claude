@@ -109,7 +109,7 @@ navigate: (path: string) => void;
  *
  * @example
  * ```typescript
- * type RouterApi = ExtractApi<typeof routerPlugin>;
+ * type RouterApi = ExtractApi<typeof router>;
  * // { navigate: (path: string) => void; current: () => string }
  * ```
  */

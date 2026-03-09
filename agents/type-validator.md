@@ -72,7 +72,7 @@ For each plugin, verify the type inference chain works:
 - Events type inferred from `events` register callback
 - Helpers type inferred from `helpers` object — return type is `PluginInstance<...> & Helpers`
 - Plugin with helpers is assignable to `AnyPluginInstance` (intersection widens away)
-- Destructured helpers preserve types: `const { route } = routerPlugin` retains `route` signature
+- Destructured helpers preserve types: `const { route } = router` retains `route` signature
 
 **Framework level:**
 - `createCoreConfig<Config, Events>(id, opts)` captures Config and Events

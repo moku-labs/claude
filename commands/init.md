@@ -99,11 +99,11 @@ describe("setup", () => {
 src/
   config.ts          # createCoreConfig<Config, Events>
   index.ts           # createCore + exports createApp, createPlugin
-  plugins/           # Framework plugins directory
+  plugins/           # Framework plugins directory (each plugin has its own __tests__/)
 tests/
   unit/
-    setup.test.ts    # Placeholder test
-  integration/
+    setup.test.ts    # Placeholder test (prevents empty-suite failure)
+  integration/       # Framework-level integration tests only (cross-plugin scenarios)
 ```
 
 **Dependencies:** `@moku-labs/core`

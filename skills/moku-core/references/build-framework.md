@@ -2,7 +2,7 @@
 
 ## Step 1: Read and Validate the Plan
 
-Read the specification from the provided path (defaults to `specifications/`). If a directory, read `01-*.md`, `02-*.md`, etc. in order. Verify it contains:
+Read the specification from the provided path (defaults to `.planning/specs/`). If a directory, read `01-*.md`, `02-*.md`, etc. in order. Verify it contains:
 - Global Config and Events types
 - Plugin list with implementation order (core plugins identified separately)
 - Plugin specifications with configs, states, APIs, events
@@ -15,7 +15,7 @@ If the plan is incomplete, ask the user to run `/moku:plan framework` first.
 Analyze all plugin specifications and group into dependency-aware waves:
 
 ```
-1. Read all specifications/0N-*.md files
+1. Read all .planning/specs/0N-*.md files
 2. Separate core plugin specs from regular plugin specs
 3. Core plugins are always Wave 0 — built before all regular plugins, no inter-dependencies
 4. Parse dependency graph from each regular spec's Dependencies section
@@ -51,7 +51,7 @@ Each plugin in a wave is built by a dedicated sub-agent. The sub-agent receives 
 You are building a Moku plugin. Follow the moku-plugin skill strictly.
 
 ## Specification
-[Full contents of specifications/0N-name.md]
+[Full contents of .planning/specs/0N-name.md]
 
 ## Framework Config
 [Contents of src/config.ts — for import paths and type references]
@@ -67,6 +67,8 @@ You are building a Moku plugin. Follow the moku-plugin skill strictly.
 - Write unit tests for each domain file + integration test
 - Use import type for type-only imports
 - Only include onStart/onStop if spec justifies resource management
+- Write all tests inside the plugin directory: `__tests__/unit/` and `__tests__/integration/`
+- Do NOT create tests in root `tests/` — that directory is for framework-level tests only
 
 ## Files to Create
 [List from tier: index.ts, types.ts, state.ts, api.ts, handlers.ts, README.md, tests]
@@ -107,7 +109,7 @@ Each sub-agent builds its plugin following this order:
 6. **Write index.ts** — Plugin wiring (~30 lines, imports from domain files)
    - **Verify no explicit generics** — The `createPlugin(` call must NOT have type parameters.
    - **Verify lifecycle necessity** — Only include `onStart`/`onStop` if the spec explicitly states a resource.
-7. **Write README.md** — Plugin documentation
+7. **Write README.md** — Minimal placeholder only (plugin name + tier + one-line description). Full README is written later in the dedicated README wave (Step 5.5).
 8. **Write unit tests** — For each domain file
 9. **Write integration test** — For the full plugin wiring
 
@@ -146,8 +148,101 @@ Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`
 After the wave's plugins pass verification, update the framework files to include them:
 
 1. **Update `src/config.ts`** — Add the wave's plugin Config and Events types to the framework Config/Events unions. For core plugins (Wave 0): add them to the `createCoreConfig({ plugins: [...] })` call and `pluginConfigs` if config overrides needed.
-2. **Update `src/index.ts`** — Import the wave's plugins, add regular plugins to `createCore` default plugins list, add to re-exports. Core plugins are already registered in config.ts.
-3. **Update `package.json`** — Add any new dependencies from this wave's plugin specs
+2. **Update `src/plugins/index.ts`** — Import the wave's plugins from their directories, add to barrel re-exports. See Step 4b-barrel below.
+3. **Update `src/index.ts`** — Import from `./plugins`, add regular plugins to `createCore` default plugins list, add to grouped export sections. See Step 4b-index below. Core plugins are already registered in config.ts.
+4. **Update `package.json`** — Add any new dependencies from this wave's plugin specs
+
+#### Step 4b-barrel: `src/plugins/index.ts` Structure
+
+The plugins barrel file is the single source for all plugin instances, helpers, and namespaced types. Create it during the first wave and extend with each subsequent wave:
+
+```typescript
+/**
+ * Plugin barrel — all default plugin instances, helpers, and namespaced types.
+ * @module
+ */
+
+// ─── Plugin Instances ───────────────────────────────────────
+export { build } from "./build";
+export { env } from "./env";
+export { router } from "./router";
+
+// ─── Helpers ────────────────────────────────────────────────
+export { route } from "./router";           // builder helper (not the plugin)
+export { createComponent } from "./spa";
+
+// ─── Namespaced Types ───────────────────────────────────────
+export type * as Build from "./build/types";
+export type * as Router from "./router/types";
+```
+
+Rules:
+- Each plugin directory exports exactly ONE `createPlugin` instance
+- Helpers are exported separately from plugin instances (with comment clarifying what they are)
+- Types use `export type * as Namespace from` for namespace grouping
+- Only Standard+ plugins with a `types.ts` get namespace type exports
+
+#### Step 4b-index: `src/index.ts` Self-Documenting Structure
+
+The framework entry point must be a self-documenting manifest. Consumers should understand all available options, defaults, and exports just by reading this file.
+
+```typescript
+/**
+ * @moku-labs/web — Static site generation framework.
+ *
+ * ## Framework Options
+ * | Option | Type | Default | Description |
+ * |--------|------|---------|-------------|
+ * | site.url | string | "" | Site URL for SEO and feeds |
+ * | mode | "ssg" | "spa" | "hybrid" | "ssg" | Rendering mode |
+ *
+ * ## Default Plugins
+ * | Plugin | Description |
+ * |--------|-------------|
+ * | log | Structured logging |
+ * | env | Environment detection |
+ * | router | URL pattern matching and resolution |
+ *
+ * @example
+ * ```ts
+ * import { createApp } from "@moku-labs/web";
+ * const app = createApp({ config: { site: { url: "..." } } });
+ * ```
+ * @module
+ */
+import { coreConfig, createCore } from "./config";
+import { log, env, router, seo, pipeline, build, devServer } from "./plugins";
+
+const framework = createCore(coreConfig, {
+  plugins: [log, env, seo, router, pipeline, build, devServer],
+});
+
+// ─── Framework API ──────────────────────────────────────────
+export const { createApp, createPlugin } = framework;
+
+// ─── Plugins ────────────────────────────────────────────────
+export { build, devServer, env, log, pipeline, router, seo } from "./plugins";
+
+// ─── Helpers ────────────────────────────────────────────────
+export { route } from "./plugins/router";
+export { createComponent } from "./plugins/spa";
+
+// ─── Types ──────────────────────────────────────────────────
+export type * as Build from "./plugins/build/types";
+export type * as Router from "./plugins/router/types";
+// ... namespace type re-exports from plugins barrel
+```
+
+Rules:
+- JSDoc module comment with options table showing ALL config fields with types and defaults
+- Default plugins table showing what ships with the framework
+- `@example` showing minimal createApp usage
+- Exports grouped into 4 sections with separator comments: Framework API → Plugins → Helpers → Types
+- Plugin imports come from `./plugins` barrel (not individual directories)
+- Framework API section: only `createApp` and `createPlugin` from `createCore` result
+- Plugins section: re-export all default plugin instances
+- Helpers section: re-export builder helpers (e.g., `route`, `createComponent`)
+- Types section: namespace type re-exports for consumer convenience
 
 Then run integration checks in the target workspace:
 
@@ -156,9 +251,37 @@ Then run integration checks in the target workspace:
 3. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. Fix all type errors.
 4. **Build** — `bun run build` compiles without errors (if build script exists)
 
-**Loop until clean**: If any check still fails after fixes, re-run the full sequence. All checks must pass with zero errors and zero warnings before proceeding to the next wave.
+**Loop until clean**: If any check still fails after fixes, re-run the full sequence. All checks must pass with zero errors and zero warnings before proceeding.
 
-Update STATE.md with wave completion + integration check results, then proceed to next wave.
+### Step 4d: Spec Verification Ticking
+
+After integration checks pass, verify each plugin in the wave against its specification's `## Verification` section:
+
+1. Read `.planning/specs/0N-name.md` for each verified plugin
+2. Find the `## Verification` section with checkbox items
+3. Evaluate each criterion:
+   - "Plugin directory exists with correct tier structure" → check filesystem
+   - "Config shape matches spec" → compare `types.ts` with spec
+   - "API methods exist and match signatures" → compare `api.ts` with spec
+   - "Events declared and emitted" → grep for `ctx.emit` and `events:` in plugin
+   - "Lint/format passes" → already verified in integration checks
+   - "No explicit generics" → grep for `createPlugin<`
+4. Tick passing checkboxes: `- [ ]` → `- [x]`
+5. Add failure notes to failing checkboxes: `- [ ] API methods — FAIL: missing navigate()`
+6. Failed checkboxes → route to Gap Closure (Step 4c)
+
+### Step 4e: Save Progress and Stop
+
+**One wave per invocation.** After completing the wave (Steps 3 → 4a → 4b → 4d):
+
+1. Update `.planning/STATE.md` with:
+   - Wave completion status and integration check results
+   - Per-plugin status (verified/needs-manual)
+   - Spec verification checkbox results
+   - `## Next Action: Run /moku:build resume to continue with Wave [N+1]`
+2. **STOP and tell the user:**
+   > "Wave [N] complete ([plugin list]). All integration checks pass. Run `/moku:build resume` to continue with Wave [N+1]."
+3. Do NOT proceed to the next wave in the same invocation
 
 ### Step 4c: Gap Closure
 
@@ -188,7 +311,31 @@ After all plugin waves are complete, framework files should already be up-to-dat
    - `bunx tsc --noEmit`
    - `bun run build`
 
+5. Verify root `tests/` contains NO plugin-specific test directories (`tests/unit/plugins/`, `tests/integration/plugins/`). Plugin tests must be colocated inside their respective `src/plugins/[name]/__tests__/` directories.
+
 Fix any remaining issues until all checks pass with zero errors and zero warnings.
+
+**Save progress and STOP.** Update STATE.md: `## Next Action: Run /moku:build resume for README wave.`
+
+## Step 5.5: README Wave
+
+**Separate invocation.** After all plugin waves and final verification are complete, run a dedicated README wave with fresh sub-agents. This produces higher-quality documentation because each agent has full context budget for writing comprehensive READMEs.
+
+For each plugin (fully parallel, batched by `maxParallelAgents`):
+1. Spawn sub-agent with:
+   - Built plugin code (index.ts, types.ts, api.ts, state.ts)
+   - Framework config (`src/config.ts`)
+   - Plugin specification (`.planning/specs/0N-name.md`)
+   - Instruction: "Write a comprehensive README.md for this plugin"
+2. Agent turn limit: 15
+3. README should cover: purpose, config options, API reference, events, usage examples, integration with other plugins
+
+After all agents complete:
+- Run `bun run format` to normalize README formatting
+- Update STATE.md: mark README wave complete
+- **STOP.** Tell the user: `"README wave complete. Run /moku:build resume for post-build validation."`
+
+**Important:** During individual plugin builds in framework waves (Step 3), sub-agents should create a minimal placeholder README only (plugin name + tier). The full README is written here with dedicated context.
 
 ## Step 6: Post-Build Validation Pipeline
 
@@ -221,9 +368,11 @@ Update `.planning/STATE.md`:
 ```markdown
 ## Phase: build/complete
 ## Completed
-- [x] Wave 1: [plugins] — verified — integration checks passed
-- [x] Wave 2: [plugins] — verified — integration checks passed
+- [x] Wave 0: [core plugins] — verified — integration checks passed
+- [x] Wave 1: [plugins] — verified — integration checks passed — spec checkboxes ticked
+- [x] Wave 2: [plugins] — verified — integration checks passed — spec checkboxes ticked
 - [x] Final framework verification passed
+- [x] README wave complete
 - [x] Post-build validation passed
 
 ## Validation Summary

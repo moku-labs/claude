@@ -73,10 +73,13 @@ src/
       index.ts
     router/                          # [Standard] Client-side routing
       index.ts, types.ts, state.ts, api.ts, handlers.ts
+      __tests__/unit/, __tests__/integration/
     auth/                            # [Standard] Authentication + sessions
       index.ts, types.ts, state.ts, api.ts
+      __tests__/unit/, __tests__/integration/
     renderer/                        # [Complex] Page rendering pipeline
       index.ts, types.ts, state.ts, api.ts
+      __tests__/unit/, __tests__/integration/
       transforms/
         markdown.ts, html.ts, types.ts
 ```
@@ -212,10 +215,10 @@ Present the analysis along with the plan-checker validation results. Ask the use
 
 #### Create Plugin Specifications
 
-For each plugin, create a detailed development specification. Save each spec as a separate file in the project's `specifications/` directory:
+For each plugin, create a detailed development specification. Save each spec as a separate file in the project's `.planning/specs/` directory:
 
-- `specifications/01-[plugin-name].md`
-- `specifications/02-[plugin-name].md`
+- `.planning/specs/01-[plugin-name].md`
+- `.planning/specs/02-[plugin-name].md`
 - etc. (numbered by implementation order)
 
 Each specification file must use the appropriate template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`:
@@ -263,7 +266,7 @@ Save to `.planning/app-spec.md` (or user-specified path). Use the template from 
 
 ### Plugin Target
 
-Write a plugin specification file to `specifications/` (if within a framework project) or `.planning/` (if standalone). Use the plugin specification template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` — including the Verification section.
+Write a plugin specification file to `.planning/specs/` (if within a framework project) or `.planning/` (if standalone). Use the plugin specification template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` — including the Verification section.
 
 Include: overview, config, state, API, events, dependencies, hooks, lifecycle, communication, package dependencies, testing strategy, code example, and verification criteria.
 
@@ -295,9 +298,12 @@ Present the completed specifications and validation results. Ask for explicit ap
 Using the **moku-plugin** skill for plugin file patterns and the **moku-core** skill for config.ts and index.ts:
 
 1. **Create `src/config.ts`** — with Config and Events types as empty/placeholder, `createCoreConfig` call with core plugins in `plugins` option if applicable, exports of `{ createPlugin, createCore }`
-2. **Create `src/index.ts`** — with `createCore` call importing all plugins, exports `createApp` and `createPlugin`, re-exports all plugins
-3. **Create each plugin directory** following the approved tier:
+2. **Create `src/plugins/index.ts`** — Plugin barrel: re-exports all plugin instances (grouped sections: Instances → Helpers → Namespaced Types). Initially skeleton imports for all planned plugins.
+3. **Create `src/index.ts`** — Self-documenting manifest: JSDoc `@module` comment with options/defaults table, `createCore` call importing from `./plugins`, grouped exports (Framework API → Plugins → Helpers → Types). See `build-framework.md` Step 4b-index for the exact structure.
+4. **Create each plugin directory** following the approved tier:
    - Create ALL files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
+   - Create `__tests__/unit/` and `__tests__/integration/` directories inside the plugin directory (for Standard+ plugins). For Nano/Micro, create `__tests__/unit/` only.
+   - Do NOT create test skeleton files in root `tests/unit/plugins/` or `tests/integration/plugins/`
    - Files should contain ONLY:
      - Correct imports and exports
      - Empty type definitions (placeholder shapes)
@@ -308,7 +314,7 @@ Using the **moku-plugin** skill for plugin file patterns and the **moku-core** s
    - Core plugin skeletons must NOT have `depends`, `events`, or `hooks`
    - `onStart`/`onStop` included ONLY for plugins that were approved to need them in Stage 1
 
-4. **Create README.md** for each plugin — with plugin name and tier only (content filled during build)
+5. **Create README.md** for each plugin — with plugin name and tier only (content filled during build)
 
 ---
 

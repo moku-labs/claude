@@ -36,19 +36,21 @@ Step 1 — config.ts:  createCoreConfig<Config, Events>(id, { config })
 
 Step 2 — index.ts:   createCore(coreConfig, { plugins: [...] })
                       → exports { createApp, createPlugin }
+                      Self-documenting manifest: JSDoc module comment with options/defaults table,
+                      grouped exports (Framework API → Plugins → Helpers → Types).
 
 Step 3 — main.ts:    createApp({ plugins?, config?, pluginConfigs? })
                       → returns App
 ```
 
-Each step captures types in closures. This solves the circular dependency problem between config and plugins.
+Each step captures types in closures. This solves the circular dependency problem between config and plugins. The `index.ts` (Step 2) doubles as the framework's public API reference — consumers should understand all options, defaults, and exports just by reading it.
 
 ## Core Plugins
 
 Core plugins are self-contained infrastructure plugins (log, storage, env) whose APIs are injected directly onto every regular plugin's context. Created with `createCorePlugin(name, spec)` and registered via `createCoreConfig({ plugins: [...] })`.
 
 ```typescript
-const logPlugin = createCorePlugin("log", {
+const log = createCorePlugin("log", {
   config: { level: "info" },
   createState: () => ({ entries: [] as string[] }),
   api: ctx => ({
@@ -58,7 +60,7 @@ const logPlugin = createCorePlugin("log", {
 
 const { createPlugin, createCore } = createCoreConfig<Config, Events>("app", {
   config: defaults,
-  plugins: [logPlugin],           // core plugins registered here
+  plugins: [log],                 // core plugins registered here
   pluginConfigs: { log: { level: "debug" } },  // core plugin config overrides
 });
 
@@ -159,11 +161,11 @@ api: (ctx) => ({
 
 // DON'T: Use emit for request/response — events are notifications
 ctx.emit('auth:getUser', { id });       // WRONG — events don't return values
-ctx.require(authPlugin).getUser(id);    // CORRECT — use require() for queries
+ctx.require(auth).getUser(id);          // CORRECT — use require() for queries
 
 // DON'T: Make a core plugin that needs events or depends
 createCorePlugin("router", {
-  depends: [authPlugin],               // WRONG — core plugins are self-contained
+  depends: [auth],                     // WRONG — core plugins are self-contained
   events: (r) => ({ ... }),            // WRONG — core plugins can't have events
 })
 ```
@@ -227,7 +229,7 @@ const { createPlugin, createCore } = createCoreConfig<Config, Events>('app', { c
 
 // 2. moku-plugin: Standard tier plugin in plugins/router/index.ts (~30 lines)
 import { createRouterApi } from './api';       // domain logic extracted
-export const routerPlugin = createPlugin('router', {
+export const router = createPlugin('router', {
   config: { basePath: '/' },
   createState: () => ({ currentPath: '/' }),
   api: createRouterApi,                        // wiring harness pattern

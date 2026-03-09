@@ -180,7 +180,7 @@ These diagrams help the user visualize the plan structure before approving.
 
 ## Process
 
-1. Find all specification files (check `specifications/` directory and `.planning/` directory)
+1. Find all specification files (check `.planning/specs/` directory)
 2. Read each specification file
 3. Build the dependency graph
 4. Check each rule above systematically

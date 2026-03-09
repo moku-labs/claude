@@ -121,13 +121,15 @@ Write the plugin wiring file (~30 lines):
 
 ## Step 6: Write Tests
 
-**Unit tests** — For each domain file:
+**All plugin tests go inside the plugin directory** — in `__tests__/unit/` and `__tests__/integration/` within the plugin folder. Never create plugin tests in the root `tests/` directory.
+
+**Unit tests** (`__tests__/unit/`) — For each domain file:
 - Test state creation with various configs
 - Test API methods with mocked context
 - Test handler logic independently
 - Use `vi.fn()` for mocking emit, require, has
 
-**Integration test** — For the full plugin:
+**Integration test** (`__tests__/integration/[name].test.ts`) — For the full plugin:
 - Create a minimal framework with the plugin
 - Test lifecycle (init, start, stop)
 - Test API through app object
@@ -135,12 +137,9 @@ Write the plugin wiring file (~30 lines):
 
 ## Step 7: Write README.md
 
-Document:
-- Plugin purpose and domain
-- Configuration options
-- Public API with examples
-- Events emitted
-- Dependencies
+**Context matters:**
+- **Standalone plugin build** (`/moku:build plugin auth`): Write a full comprehensive README with purpose, config options, API reference, events, dependencies, and examples.
+- **Framework wave build** (`/moku:build framework`): Write a minimal placeholder only (plugin name + tier + one-line description). Full READMEs are written later in the dedicated README wave (Step 5.5 of framework build) with fresh context.
 
 ## Step 8: Validate
 
@@ -155,7 +154,19 @@ Run the validation pipeline:
 - **moku-test-validator** agent — test quality
 - **moku-type-validator** agent — type correctness
 
+- **Test location check** — Verify no plugin tests exist in `tests/unit/plugins/` or `tests/integration/plugins/`. All plugin-specific tests must be inside `src/plugins/[name]/__tests__/`.
+
 If BLOCKER issues found, enter gap closure (max 2 rounds).
+
+### Step 8.5: Tick Spec Verification Checkboxes
+
+If the plugin has a specification file with a `## Verification` section:
+
+1. Read the spec file (`.planning/specs/0N-name.md`)
+2. Evaluate each checkbox criterion against the built plugin
+3. Tick passing checkboxes: `- [ ]` → `- [x]`
+4. Add failure notes to failing checkboxes
+5. Failed checkboxes that represent real issues → route to gap closure
 
 ## Large Plugin Handling
 
