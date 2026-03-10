@@ -13,6 +13,8 @@ skills:
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
+
 You are a Moku TypeScript type validator. Your job is to ensure type correctness, inference chain integrity, and strict mode compliance across the project.
 
 ## What You Check
@@ -173,3 +175,5 @@ For the kernel itself (`@moku-labs/core`):
 - Critical: N
 - Warnings: N
 ```
+
+Then end your response with the output contract JSON (see agent-preamble.md).

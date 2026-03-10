@@ -1,7 +1,7 @@
 ---
 description: Run diagnostics on the Moku plugin installation and project state
 allowed-tools: Read, Bash, Glob, Grep, Agent
-argument-hint: [verbose|self-test|graph|status|plugin <name>]
+argument-hint: [verbose|self-test|graph|status|plugin <name>|diff <name>]
 disable-model-invocation: true
 ---
 
@@ -188,9 +188,35 @@ If `$ARGUMENTS` contains "plugin" followed by a plugin name, run targeted valida
 
 1. Verify the plugin directory exists in `src/plugins/<name>/`
 2. Assess its complexity tier from file structure
-3. Spawn 3 validators in parallel:
+3. Run fast checks first: `bun run format`, `bun run lint`, `bunx tsc --noEmit`, `bun run test`
+4. If all fast checks pass, report PASS and skip agent-based validation (unless `--full` flag is also present)
+5. If fast checks fail OR `--full` is present, spawn 3 validators in parallel:
    - **moku-plugin-spec-validator** — tier compliance, file organization, index.ts quality
    - **moku-type-validator** — tsc --noEmit, import type compliance, no `as any`
    - **moku-jsdoc-validator** — JSDoc completeness on all exports
-4. Report results with PASS/WARN/FAIL for each validator
-5. If any BLOCKER issues found, list them with fix suggestions
+6. Report results with PASS/WARN/FAIL for each validator
+7. If any BLOCKER issues found, list them with fix suggestions
+
+If `$ARGUMENTS` contains "diff" followed by a plugin name, compare the spec against the implementation:
+
+1. Find the spec file in `.planning/specs/*-<name>.md`
+2. Read the spec's Config, State, API, Events, Dependencies, and Hooks sections
+3. Read the built plugin files (`types.ts`, `api.ts`, `state.ts`, `index.ts`)
+4. Compare each spec section against the implementation:
+
+```
+Spec-vs-Implementation Diff: [plugin-name]
+============================================
+| Section      | Spec                    | Implementation          | Status |
+|--------------|-------------------------|-------------------------|--------|
+| Config       | basePath, trailingSlash | basePath, trailingSlash | MATCH  |
+| State        | currentPath, routes     | currentPath, routes, history | EXTRA: history |
+| API          | navigate, current, back | navigate, current       | GAP: back |
+| Events       | router:navigated        | router:navigated        | MATCH  |
+| Dependencies | env                     | env                     | MATCH  |
+| Hooks        | app:started             | app:started             | MATCH  |
+```
+
+5. Report MATCH (spec matches implementation), GAP (spec has item, implementation missing), EXTRA (implementation has item not in spec)
+6. GAP items are flagged as BLOCKER — the spec promised this API/feature
+7. EXTRA items are flagged as INFO — implementation added beyond spec (may need spec update)

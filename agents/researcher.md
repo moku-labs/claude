@@ -14,6 +14,8 @@ skills:
 tools: ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
 ---
 
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
+
 You are a Moku pre-implementation researcher. Your job is to investigate the npm ecosystem, TypeScript patterns, and reference implementations before planning or building a new plugin domain.
 
 ## When You Run
@@ -138,3 +140,5 @@ For packages worth adopting:
 3. [Specific recommendation for dependencies]
 4. [Specific recommendation for testing approach]
 ```
+
+Then end your response with the output contract JSON (see agent-preamble.md).

@@ -38,9 +38,17 @@ Wave 3 (sequential): renderer [Complex] (-> router, content)
 
 ## Step 3: Build by Waves
 
-**Before each wave**, create a safety checkpoint: `git add -A && git commit -m "pre-wave-N: checkpoint before building [plugin list]"`. This enables rollback if the wave produces bad code.
+**Before each wave:**
+1. Create a safety checkpoint: `git add -A && git commit -m "pre-wave-N: checkpoint before building [plugin list]"`. This enables rollback if the wave produces bad code.
+2. Update `.planning/STATE.md`: set each plugin in this wave to status `building` and record `## Git Checkpoint: <sha>`. This enables crash detection — if a future resume finds `building` status, it knows the previous invocation crashed mid-wave.
 
 For each wave, build all plugins in the wave. Within a wave, **spawn parallel sub-agents** for independent plugins using the Agent tool.
+
+**Progress updates — tell the user at these checkpoints:**
+1. Before spawning agents: `"Wave [N]: Building [plugin list] ([count] plugins in parallel)..."`
+2. After each agent completes: `"[plugin] built ([status]). [remaining] plugins remaining in wave."`
+3. After verification: `"Wave [N] verification: [pass/fail count]. [gap closure status if applicable]"`
+4. After integration checks: `"Integration checks [pass/fail]. [details if failed]"`
 
 ### Per-Plugin Executor (Sub-Agent)
 
@@ -272,28 +280,26 @@ After integration checks pass, verify each plugin in the wave against its specif
 
 ### Step 4e: Save Progress and Stop
 
-**One wave per invocation.** After completing the wave (Steps 3 → 4a → 4b → 4d):
+**One wave per invocation (unless `--continue` mode).** After completing the wave (Steps 3 → 4a → 4b → 4d):
 
 1. Update `.planning/STATE.md` with:
    - Wave completion status and integration check results
    - Per-plugin status (verified/needs-manual)
    - Spec verification checkbox results
    - `## Next Action: Run /moku:build resume to continue with Wave [N+1]`
-2. **STOP and tell the user:**
+2. **If `--continue` mode is active:** proceed to the next wave immediately (skip the stop). If context is getting large, stop and tell the user: `"Pausing continuous build after Wave [N]. Run /moku:build resume --continue to continue."`
+3. **Otherwise, STOP and tell the user:**
    > "Wave [N] complete ([plugin list]). All integration checks pass. Run `/moku:build resume` to continue with Wave [N+1]."
-3. Do NOT proceed to the next wave in the same invocation
+4. Do NOT proceed to the next wave in the same invocation (unless `--continue`)
 
 ### Step 4c: Gap Closure
 
 When verification finds issues (plugins with status `verify-failed`):
 
 1. Collect all verification failures into a gap list
-2. For each gap, spawn a targeted fix agent with:
-   - The specific file(s) that failed
-   - The verification criteria that failed
-   - The relevant plugin specification
-   - Instructions to fix ONLY the identified issues (no refactoring)
-3. After fixes, re-run the **moku-verifier** agent on affected plugins
+2. Spawn the **moku-error-diagnostician** agent with the error output to classify root causes and propose targeted fixes
+3. Apply the diagnostician's proposed fixes (root causes first — cascading errors resolve automatically)
+4. After fixes, re-run the **moku-verifier** agent on affected plugins
 4. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
 5. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist, mark remaining plugins as `needs-manual` and report to user:
    > "Some verification issues remain after 2 fix attempts. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
@@ -339,7 +345,11 @@ After all agents complete:
 
 ## Step 6: Post-Build Validation Pipeline
 
-Run the full validation suite across the completed framework:
+Spawn the **moku-validation-coordinator** agent to orchestrate the full validation pipeline. It handles Group A → Group B → architecture sequencing, aggregates output contracts, and returns a unified disposition (PASS/FIX/MANUAL).
+
+If the coordinator returns FIX disposition, enter gap closure with the **moku-error-diagnostician**. If MANUAL, report to user. If PASS, proceed to Step 7.
+
+**Fallback (if coordinator unavailable):** Run the pipeline manually:
 
 **Parallel Group A (structure + docs):**
 - **moku-spec-validator** agent — specification compliance per plugin

@@ -1,14 +1,20 @@
 ---
 description: Build a framework, consumer app, or plugin from a specification
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
-argument-hint: [framework|app|plugin] [spec-path-or-name] [--dry-run]
+argument-hint: [framework|app|plugin] [spec-path-or-name] [--dry-run] [--continue]
 disable-model-invocation: true
 ---
 
 ## Project Configuration
 !`if [ -f .claude/moku.local.md ]; then head -20 .claude/moku.local.md; fi`
 
-Use configuration values above if present (maxParallelAgents, gapClosureMaxRounds, etc.). Otherwise use defaults: maxParallelAgents=3, gapClosureMaxRounds=2.
+Use configuration values above if present. Validate before using — ignore invalid values and use defaults:
+
+| Setting | Type | Range | Default |
+|---------|------|-------|---------|
+| `maxParallelAgents` | integer | 1–5 | 3 |
+| `gapClosureMaxRounds` | integer | 0–5 | 2 |
+| `skipValidation` | boolean | true/false | false |
 
 Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
@@ -31,6 +37,7 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
 Parse `$ARGUMENTS`:
 1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files. Present the plan and exit.
+1b. If `--continue` is present anywhere in the arguments, enter **continuous mode**: auto-advance through all remaining waves without stopping between them. Git checkpoint commits still happen per wave for rollback safety. The ONLY stopping trigger is approaching context exhaustion (if you sense compaction is imminent, stop after the current wave and tell the user to run `/moku:build resume --continue` to pick up). Default behavior (without `--continue`) is unchanged — one wave per invocation.
 2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
 3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
 4. If no explicit target keyword, auto-detect:
@@ -55,6 +62,17 @@ Before starting, check if `.planning/STATE.md` exists:
 - If headers are missing or malformed, warn the user and offer to regenerate from spec files
 - Skip plugins/waves that are already marked as complete
 - Report: "Detected existing state. Resuming from [position]. Already built: [list]."
+
+### Idempotency Protocol
+
+Before executing a wave, check for partial completion from a previous crash:
+
+1. Read `.planning/STATE.md` — if any plugin has status `building`, the previous invocation crashed mid-wave
+2. For each `building` plugin, check if its directory (`src/plugins/{name}/`) contains non-skeleton files (files with real implementations, not just type stubs)
+3. If non-skeleton files exist: treat as partially built — present to user: `"Plugin {name} was partially built in a previous run. Resume from current state or reset to checkpoint? (resume/reset)"`
+4. If reset: `git checkout` the pre-wave checkpoint commit (from `## Git Checkpoint:` in STATE.md)
+5. If resume: re-spawn the builder agent with note about existing files
+6. Update status at wave START (set `building`) not just at completion — this ensures crash detection works
 
 ### State Write Protocol
 
@@ -84,14 +102,16 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 
 ### Wave Execution Protocol
 
-**One wave per invocation.** Each `/moku:build` or `/moku:build resume` call:
+**One wave per invocation (default).** Each `/moku:build` or `/moku:build resume` call:
 1. Reads `.planning/STATE.md` to find the current position
 2. Executes the NEXT incomplete step (wave, verification, README wave, or validation)
 3. Updates `.planning/STATE.md` with results
 4. Stops and tells the user what to run next:
    > "Wave [N] complete ([plugin list]). Run `/moku:build resume` to continue with Wave [N+1]."
 
-**Do NOT attempt multiple waves in one invocation.** Each wave gets fresh context, fresh sub-agents, and an explicit user checkpoint. This prevents context exhaustion and gives the user control over pacing.
+**Do NOT attempt multiple waves in one invocation** unless `--continue` mode is active. Each wave gets fresh sub-agents and an explicit user checkpoint. This prevents context exhaustion and gives the user control over pacing.
+
+**Continuous mode (`--continue`):** When active, skip the stop-and-wait between waves. After completing a wave, immediately proceed to the next. Still commit git checkpoints per wave. If you sense context is getting large (many waves completed, approaching compaction), stop after the current wave: `"Pausing continuous build after Wave [N] to preserve context. Run /moku:build resume --continue to continue."`
 
 **`#wave:N` syntax:** `/moku:build #wave:2` jumps directly to wave 2 (useful for re-running a specific wave after manual fixes).
 
@@ -135,3 +155,28 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-plugin.md` for det
 **Flow**: Understand plugin (from spec, description, or hierarchy) -> Determine tier (Nano/Micro/Standard/Complex/VeryComplex) + domain merge check -> Create directory structure -> Implement domain files (types.ts, state.ts, api.ts, handlers.ts) -> Write index.ts (~30 lines wiring, NO explicit generics) -> Write tests (unit + integration) -> Write README.md -> Validate (verifier, plugin-spec, jsdoc, test, type validators) -> Gap closure if needed (max 2 rounds).
 
 **Key rules**: Domain merge check before creating new plugins. No explicit generics on createPlugin. No unnecessary onStart/onStop. Full JSDoc everywhere.
+
+---
+
+## Error Recovery (`fix`)
+
+If `$ARGUMENTS` starts with `fix`, enter error recovery mode. This targets failed or partially built plugins.
+
+**Syntax:**
+- `fix auth` — fix a specific plugin by name
+- `fix #3` — fix a specific plugin by number
+- `fix --all` — fix all plugins with `needs-manual` or `verify-failed` status
+
+**Process:**
+1. Read `.planning/STATE.md` to identify plugins needing fixes and their status
+2. For each target plugin, read:
+   - Existing partial files in `src/plugins/{name}/`
+   - Plugin specification from `.planning/specs/`
+   - Previous failure report (from STATE.md or agent-log.md)
+3. Spawn the **moku-error-diagnostician** agent with the failure context
+4. Apply the diagnostician's proposed fixes
+5. Re-run verification (format → lint → tsc → test)
+6. If verification passes, update plugin status to `verified` in STATE.md
+7. If still failing after 2 rounds, report remaining issues to user
+
+**Key difference from normal build:** The builder agent receives enhanced context about what already exists and what specifically failed, avoiding redundant work.

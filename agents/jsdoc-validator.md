@@ -13,6 +13,8 @@ skills:
 tools: ["Read", "Grep", "Glob"]
 ---
 
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
+
 You are a JSDoc documentation validator for Moku projects. Your job is to ensure all source code has correct, meaningful, and complete JSDoc documentation following the project's eslint-plugin-jsdoc rules.
 
 ## What You Validate
@@ -167,3 +169,5 @@ Issues:
 - Missing @example: N
 - Low quality descriptions: N
 ```
+
+Then end your response with the output contract JSON (see agent-preamble.md).

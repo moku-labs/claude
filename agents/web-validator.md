@@ -14,6 +14,8 @@ skills:
 tools: ["Read", "Grep", "Glob"]
 ---
 
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
+
 You are a Moku web patterns validator. Your job is to ensure web projects follow the established Moku web conventions — data-attribute styling, @scope encapsulation, @layer ordering, island architecture, and the two-layer token system.
 
 ## What You Check
@@ -194,3 +196,5 @@ Verify the expected directory structure:
 - Components scanned: N
 - CSS files scanned: N
 ```
+
+Then end your response with the output contract JSON (see agent-preamble.md).

@@ -2,13 +2,22 @@
 # Detect Moku project type and state on session start.
 # Outputs context hints for Claude to understand the current project.
 
-# First-run detection — welcome new users
+# First-run detection — welcome new users with decision tree
 if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; then
   if grep -q '@moku-labs' package.json 2>/dev/null; then
-    echo "Welcome to Moku! Get started with:"
-    echo "  /moku:init   — scaffold a new framework project"
-    echo "  /moku:plan create framework — plan a new framework"
-    echo "  /moku:check  — run project diagnostics"
+    echo "Welcome to Moku! Choose your path:"
+    echo ""
+    echo "  Quick start:"
+    echo "    /moku:init            — scaffold a new project (framework, app, or tools)"
+    echo "    /moku:plan add plugin — add a plugin to an existing framework"
+    echo ""
+    echo "  Full workflow:"
+    echo "    /moku:plan create framework \"description\" — plan a new framework (3-stage gated)"
+    echo "    /moku:plan create app \"description\"       — plan a consumer app"
+    echo "    /moku:plan migrate ~/path/to/project       — migrate existing code to Moku"
+    echo ""
+    echo "  Diagnostics:"
+    echo "    /moku:check — run project diagnostics"
   fi
 fi
 
@@ -27,13 +36,24 @@ elif [ -f package.json ] && [ -f biome.json ] && [ -f vitest.config.ts ]; then
   echo "Moku Tools/Library project detected."
 fi
 
-# Check planning state
+# Check planning state with quick-action suggestions
 if [ -f .planning/STATE.md ]; then
   PHASE=$(grep '^## Phase:' .planning/STATE.md 2>/dev/null | head -1 | sed 's/## Phase: //')
+  NEXT=$(grep '^## Next Action:' .planning/STATE.md 2>/dev/null | head -1 | sed 's/## Next Action: //')
   if [ -n "$PHASE" ]; then
     echo "Planning state: $PHASE"
-    echo "Resume with /moku:build resume or /moku:plan to continue."
+    if [ -n "$NEXT" ]; then
+      echo "Quick action: $NEXT"
+    else
+      echo "Resume with /moku:plan resume or /moku:build resume"
+    fi
   fi
+fi
+
+# Check for project-level memory
+if [ -f .planning/memory.md ]; then
+  MEMORY_LINES=$(wc -l < .planning/memory.md 2>/dev/null | tr -d ' ')
+  echo "Project memory: $MEMORY_LINES lines in .planning/memory.md"
 fi
 
 # Check for specifications
@@ -42,7 +62,7 @@ if [ "$SPEC_COUNT" -gt 0 ]; then
   echo "Specifications found: $SPEC_COUNT files in .planning/specs/"
 fi
 
-# C9: Environment validation — warn early if required tools are missing or outdated
+# Environment validation — warn early if required tools are missing or outdated
 if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
   WARNINGS=""
 
@@ -79,7 +99,7 @@ if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
     printf "$WARNINGS"
   fi
 
-  # C8: Version compatibility — check @moku-labs/core version
+  # Version compatibility — check @moku-labs/core version
   if command -v jq &>/dev/null; then
     CORE_VER=$(jq -r '.dependencies["@moku-labs/core"] // .devDependencies["@moku-labs/core"] // empty' package.json 2>/dev/null | sed 's/[\^~>=<]//g')
   elif command -v node &>/dev/null; then

@@ -11,8 +11,11 @@ maxTurns: 30
 skills:
   - moku-core
   - moku-plugin
+  - moku-testing
 tools: ["Read", "Grep", "Glob"]
 ---
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
 
 You are a Moku test quality validator. Your job is to ensure tests actually test the right things with proper patterns, not just exist on disk.
 
@@ -163,3 +166,5 @@ Moku plugins should include type-level tests:
 - Unit coverage: [files tested] / [domain files total]
 - Type assertions: N
 ```
+
+Then end your response with the output contract JSON (see agent-preamble.md).

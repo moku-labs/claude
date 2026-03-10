@@ -5,19 +5,23 @@
 INPUT="$1"
 
 # Extract file_path and content/new_string from JSON input
+# Priority: jq (fast) → python3 (reliable) → exit with warning (no silent failure)
 if command -v jq &>/dev/null; then
   FILE_PATH=$(jq -r '.file_path // empty' <<< "$INPUT" 2>/dev/null)
-  # For Write tool: content field; for Edit tool: new_string field
   CONTENT=$(jq -r '.content // .new_string // empty' <<< "$INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
-  FILE_PATH=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('file_path',''))" <<< "$INPUT" 2>/dev/null)
-  CONTENT=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('content','') or d.get('new_string',''))" <<< "$INPUT" 2>/dev/null)
+  eval "$(python3 -c "
+import sys, json
+d = json.loads(sys.stdin.read())
+fp = d.get('file_path', '').replace(\"'\", \"'\\''\")
+ct = (d.get('content', '') or d.get('new_string', '')).replace(\"'\", \"'\\''\")
+print(f\"FILE_PATH='{fp}'\")
+print(f\"CONTENT='{ct}'\")
+" <<< "$INPUT" 2>/dev/null)"
 else
-  FILE_PATH=$(printf '%s' "$INPUT" | grep -o '"file_path"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"file_path"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
-  CONTENT=$(printf '%s' "$INPUT" | grep -o '"content"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"content"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
-  if [ -z "$CONTENT" ]; then
-    CONTENT=$(printf '%s' "$INPUT" | grep -o '"new_string"[[:space:]]*:[[:space:]]*"[^"]*"' | head -1 | sed 's/.*"new_string"[[:space:]]*:[[:space:]]*"//' | sed 's/"$//')
-  fi
+  # No JSON parser available — log warning, don't silently skip checks
+  echo '{"decision":"warn","reason":"Anti-pattern check skipped: neither jq nor python3 available. Install one for Moku hook support."}'
+  exit 0
 fi
 
 # Only check plugin source files (not specs, not planning files, not tests)
