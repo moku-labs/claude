@@ -25,24 +25,44 @@ if [ -f .planning/STATE.md ]; then
   # Extract Verification Results if present (up to 10 lines)
   awk '/^## Verification/{found=1; print; next} found && /^## /{exit} found && NR>0{print}' .planning/STATE.md 2>/dev/null | head -10
 
-  echo '... (full state in .planning/STATE.md)'
+  echo '... (full state in .planning/STATE.md, wave history in .planning/STATE-history.md)'
 fi
 
-# memory.md: inject structured memory with recency priority (5 most recent per section)
+# memory.md: inject structured memory with context-aware relevance + recency priority
 if [ -f .planning/memory.md ]; then
   echo ''
   echo '## Moku Project Memory (re-injected before compaction)'
 
-  # Extract each known section, reverse-sort by date, take 5 most recent entries
+  # Extract task context keywords from STATE.md for relevance filtering
+  KEYWORDS=""
+  if [ -f .planning/STATE.md ]; then
+    # Get current action and phase for keyword extraction
+    NEXT_ACTION=$(grep '^## Next Action:' .planning/STATE.md 2>/dev/null | head -1 | sed 's/## Next Action: //')
+    PHASE=$(grep '^## Phase:' .planning/STATE.md 2>/dev/null | head -1 | sed 's/## Phase: //')
+    # Extract plugin names mentioned in next action (e.g., "build router" → "router")
+    KEYWORDS=$(echo "$NEXT_ACTION $PHASE" | tr ' /:' '\n' | grep -v '^$' | grep -v '^#' | sort -u | tr '\n' '|' | sed 's/|$//')
+  fi
+
+  # Extract each known section with relevance-first, recency-fallback
   for section in "Error Patterns" "Architecture Decisions" "Validation Baselines"; do
-    ENTRIES=$(awk -v sec="## $section" '
+    ALL_ENTRIES=$(awk -v sec="## $section" '
       $0 == sec {found=1; next}
       found && /^## /{exit}
       found && /^- \[/ {print}
-    ' .planning/memory.md 2>/dev/null | sort -t'[' -k2 -r | head -5)
-    if [ -n "$ENTRIES" ]; then
+    ' .planning/memory.md 2>/dev/null)
+
+    if [ -n "$ALL_ENTRIES" ]; then
       echo "## $section"
-      echo "$ENTRIES"
+      if [ -n "$KEYWORDS" ]; then
+        # Prioritize keyword-matching entries, then fill remaining slots with recent entries
+        RELEVANT=$(echo "$ALL_ENTRIES" | grep -iE "$KEYWORDS" | sort -t'[' -k2 -r | head -3)
+        RECENT=$(echo "$ALL_ENTRIES" | sort -t'[' -k2 -r | head -5)
+        # Combine: relevant first, then recent (dedup)
+        { echo "$RELEVANT"; echo "$RECENT"; } | awk '!seen[$0]++' | head -5
+      else
+        # No keywords available — pure recency
+        echo "$ALL_ENTRIES" | sort -t'[' -k2 -r | head -5
+      fi
     fi
   done
 

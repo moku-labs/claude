@@ -28,17 +28,29 @@ Spawn these 3 agents simultaneously:
 2. **moku-jsdoc-validator** — documentation quality per plugin
 3. **moku-plugin-spec-validator** — structure compliance per plugin
 
-Wait for all 3 to complete.
+Wait for all 3 to complete. Parse their output contract JSON blocks.
+
+### Cross-Group Findings Injection
+
+After Group A completes, extract a "Prior Findings Summary" from Group A results to inform Group B and the architecture validator. This helps downstream validators focus on problematic areas.
+
+Build the summary (~20-30 lines max):
+1. List all BLOCKERs from Group A with file paths and rule references
+2. List plugins flagged for domain merge by plugin-spec-validator
+3. List plugins with lifecycle concerns from spec-validator
+4. List plugins with low JSDoc coverage from jsdoc-validator
+
+Inject this summary as a `## Prior Findings (from Group A)` section in the prompts for Group B agents and the architecture-validator.
 
 ### Group B (parallel — quality + types)
-Spawn these 2 agents simultaneously:
+Spawn these 2 agents simultaneously, including the Prior Findings Summary:
 1. **moku-test-validator** — test quality per plugin
 2. **moku-type-validator** — TypeScript type correctness (whole project)
 
-Wait for both to complete.
+Wait for both to complete. Parse their output contract JSON blocks.
 
 ### Sequential (after A + B)
-Spawn 1 agent:
+Spawn 1 agent, including Prior Findings from both Group A and Group B:
 1. **moku-architecture-validator** — cross-plugin architecture (whole framework)
 
 Wait for completion.
@@ -50,6 +62,21 @@ For each agent, provide the appropriate scope:
 - **Project-wide validators** (type, architecture): spawn with the project root
 
 Use `maxParallelAgents` from project config (default: 3) to limit concurrent agents within each group.
+
+### Adaptive Model Selection
+
+Before spawning validators, assess project complexity to choose appropriate model tiers:
+
+1. Count plugins in scope and identify the maximum complexity tier
+2. Apply these rules:
+
+| Project Complexity | Criteria | Model Overrides |
+|---|---|---|
+| **Small** | < 5 plugins AND no Complex/VeryComplex tiers | architecture-validator: `sonnet` (instead of opus) |
+| **Standard** | 5–15 plugins OR at least one Complex tier | Use default models (no overrides) |
+| **Large** | 15+ plugins OR any VeryComplex tier | jsdoc-validator: `sonnet` (instead of haiku) |
+
+This optimizes cost for simple projects and quality for complex ones. Pass the model override when spawning the Agent tool.
 
 ### Incremental Validation (Hash-Based Caching)
 

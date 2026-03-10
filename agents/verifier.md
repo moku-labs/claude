@@ -83,13 +83,9 @@ Verify the plugin is correctly integrated into the project.
 - Run `bun run test` — report pass/fail and any failures
 - If lint or test commands don't exist, report as WARNING
 
-**Code compliance:**
-- No `createPlugin<` explicit generics found in plugin files
-- `import type` used for type-only imports
-- No imports from `@moku-labs/core` in plugin files (except `PluginCtx`, `EmitFn` type utilities)
-- No plugin-specific tests in root `tests/unit/plugins/` or `tests/integration/plugins/` — BLOCKER if found
-- No wire factory patterns (`function wire[A-Z]`) in plugin files — BLOCKER if found
-- No inline type assertions (`null as`, `{} as`, `[] as`) in createState/config — BLOCKER if found
+**Code compliance (preamble rules R1–R8):**
+- Enforce all Moku Code Rules from agent-preamble.md — each violation is a BLOCKER
+- Additionally: no imports from `@moku-labs/core` in plugin files (except `PluginCtx`, `EmitFn` type utilities)
 
 **Framework entry point (if verifying whole framework):**
 - `src/plugins/index.ts` barrel exists and re-exports all plugins in `createCore` array — BLOCKER if missing

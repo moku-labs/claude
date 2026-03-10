@@ -148,8 +148,8 @@ gantt
 Output all three diagrams with brief descriptions. If the project has no plugins yet, report "No plugins found — nothing to graph."
 
 If `$ARGUMENTS` contains "self-test", skip project checks and instead validate the Moku Claude plugin itself:
-1. Verify all 10 agent files exist in `${CLAUDE_PLUGIN_ROOT}/agents/` and have valid YAML frontmatter (name, description, model, tools)
-2. Verify all 3 skill directories exist with SKILL.md files in `${CLAUDE_PLUGIN_ROOT}/skills/`
+1. Verify all agent `.md` files exist in `${CLAUDE_PLUGIN_ROOT}/agents/` and have valid YAML frontmatter (name, description, model, tools). Count them dynamically — do not hardcode an expected number.
+2. Verify all skill directories exist with SKILL.md files in `${CLAUDE_PLUGIN_ROOT}/skills/`
 3. Verify `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` parses as valid JSON
 4. Verify all referenced hook scripts exist and are executable
 5. Verify all reference files mentioned in skills/commands exist

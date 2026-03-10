@@ -47,11 +47,9 @@ Search all source files for type assertions:
 - `as Type` assertions that could be replaced with type narrowing
 - Unnecessary type assertions where TypeScript can already infer
 
-### 3. No Explicit Generics on createPlugin
+### 3. No Explicit Generics on createPlugin (Preamble R1)
 
-This is the #1 anti-pattern. Grep all source files for:
-- `createPlugin<` — if angle brackets appear between `createPlugin` and `(`, it is a BLOCKER
-- Check every file in `src/plugins/` recursively
+Grep all source files in `src/plugins/` recursively for `createPlugin<` or `createCorePlugin<`. Any angle brackets between the function name and `(` is a BLOCKER. See preamble rule R1.
 
 ### 4. Import Type Enforcement
 

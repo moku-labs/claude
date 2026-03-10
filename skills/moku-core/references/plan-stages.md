@@ -347,7 +347,7 @@ Using the **moku-plugin** skill for plugin file patterns and the **moku-core** s
 
 1. **Create `src/config.ts`** — with Config and Events types as empty/placeholder, `createCoreConfig` call with core plugins in `plugins` option if applicable, exports of `{ createPlugin, createCore }`
 2. **Create `src/plugins/index.ts`** — Plugin barrel: re-exports all plugin instances (grouped sections: Instances → Helpers → Namespaced Types). Initially skeleton imports for all planned plugins.
-3. **Create `src/index.ts`** — Self-documenting manifest: JSDoc `@module` comment with options/defaults table, `createCore` call importing from `./plugins`, grouped exports (Framework API → Plugins → Helpers → Types). See `build-framework.md` Step 4b-index for the exact structure.
+3. **Create `src/index.ts`** — Self-documenting manifest: JSDoc `@module` comment with options/defaults table, `createCore` call importing from `./plugins`, grouped exports (Framework API → Plugins → Helpers → Types). See `build-assembly.md` Step 4b-index for the exact structure.
 4. **Create each plugin directory** following the approved tier:
    - Create ALL files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
    - Create `__tests__/unit/` and `__tests__/integration/` directories inside the plugin directory (for Standard+ plugins). For Nano/Micro, create `__tests__/unit/` only.

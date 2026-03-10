@@ -43,16 +43,27 @@ Classify every error into exactly one category:
 | `anti-pattern` | Explicit generics, as any, wire factory, etc. | Plugin code |
 | `other` | Doesn't fit above categories | Any |
 
+## Reasoning Protocol
+
+Before writing the report, materialize these intermediate results explicitly (write them out):
+
+1. **Error inventory**: List every error with file path, line, error code, and message
+2. **Per-file grouping**: Group errors by source file — identify which files have the most errors
+3. **Dependency chain**: For each error, determine if it is a root cause or a cascading effect. Map cascading errors back to their root: `error X in api.ts → caused by missing export in types.ts (root)`
+4. **Root cause list**: Deduplicated list of root causes, ordered by cascade impact (most downstream errors first)
+
+Only AFTER materializing these intermediates, write fix proposals. This prevents missed root causes and over-fixing cascading errors that resolve automatically.
+
 ## Process
 
 1. **Receive error input**: tsc output, lint output, test output, or error description
 2. **Parse errors**: Extract file path, line number, error code, and message for each error
 3. **Read context**: For each unique file with errors, read the relevant lines (±10 lines around error)
 4. **Read spec**: If plugin errors, read the corresponding `.planning/specs/` file for expected types
-5. **Classify**: Assign each error to a category
-6. **Root cause**: Identify the upstream cause (often one error causes cascading others)
-6b. **Research (if needed)**: If the root cause relates to an npm package behavior, version conflict, breaking API change, or ecosystem pattern you cannot resolve from local files alone, spawn `moku-researcher` with a focused question. Do not request a broad ecosystem survey — ask the specific question needed to resolve the error.
-7. **Propose fix**: For each root cause, provide the specific code change
+5. **Materialize intermediates**: Write out the error inventory, per-file grouping, dependency chain, and root cause list (see Reasoning Protocol above)
+6. **Classify**: Assign each root cause error to a category
+7. **Research (if needed)**: If the root cause relates to an npm package behavior, version conflict, breaking API change, or ecosystem pattern you cannot resolve from local files alone, spawn `moku-researcher` with a focused question. Do not request a broad ecosystem survey — ask the specific question needed to resolve the error.
+8. **Propose fix**: For each root cause, provide the specific code change
 
 ## Fix Proposal Format
 

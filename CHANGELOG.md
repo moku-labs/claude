@@ -2,6 +2,28 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.11.1 (2026-03-10)
+
+### Changed
+- **Agent preamble canonicalized** — expanded from 33 to ~65 lines with canonical R1–R8 code rules. All 12 agents now reference preamble rules instead of duplicating them, reducing per-agent prompt size and ensuring single-source-of-truth for rule updates.
+- **Error diagnostician reasoning protocol** — added 4-step materialization (error inventory → per-file grouping → dependency chain → root cause list) before writing fix proposals.
+- **Build-framework.md split into stages** — 451-line monolith replaced with 45-line router + 4 focused files (`build-wave-execution.md`, `build-verification.md`, `build-assembly.md`, `build-final.md`). Each file loaded only when needed, reducing context budget per build phase.
+- **Context-aware memory retrieval** — PreCompact hook extracts keywords from STATE.md's Next Action and Phase, prioritizes keyword-matching memory entries before falling back to recency sort.
+- **Bounded STATE.md with archival** — completed wave details archived to `.planning/STATE-history.md`, replaced with summary lines. Keeps STATE.md under ~60 lines regardless of project size.
+
+### Added
+- **Builder sub-agent output contract** — structured JSON block (`verdict`, `filesCreated`, `testsPass`, `lintPass`, `issues`) required at end of every builder response. Parent command parses JSON instead of inferring from text.
+- **Pre-flight checks** — `bun install` + `bunx tsc --noEmit` + `bun run lint` before wave execution. Catches systemic issues once instead of N times across N parallel agents.
+- **Incremental tsc during builds** — builder sub-agents run `bunx tsc --noEmit` after writing all source files (before tests), catching type errors early.
+- **Adaptive model selection** — validation-coordinator selects agent models based on project size: <5 plugins → all sonnet; 5-15 → defaults; 15+ → upgrade haiku to sonnet.
+- **Validator cross-communication** — Group A findings parsed and injected as Prior Findings Summary into Group B and architecture validator prompts.
+- **Integration re-check after gap closure** — format/lint/tsc re-run after diagnostician fixes to catch fix-introduced regressions.
+- **Memory aging policy** — agents delete `confidence:low` entries >14 days and `confidence:medium` >30 days.
+- **Plugin structural validation hook** — new `validate-plugin-structure.sh` PreToolUse command hook checks filesystem structure (file count, nesting depth, types.ts import).
+- **PreToolUse prompt hook few-shot examples** — approve/deny examples for better instruction-following.
+- **Agent preamble few-shot example** — complete realistic output contract example for haiku-level agent consistency.
+- **Dynamic self-test count** — `/moku:check self-test` counts agents dynamically instead of hardcoding.
+
 ## 0.11.0 (2026-03-10)
 
 ### Changed

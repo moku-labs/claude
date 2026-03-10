@@ -85,23 +85,8 @@ Check that EVERY file has complete JSDoc:
 - No direct exposure of `ctx.state` through API
 - State mutations only through plugin's own API/lifecycle methods
 
-### 9. No Explicit Generics on createPlugin
-- The `createPlugin(` call in index.ts must NOT have type parameters
-- Check: `createPlugin<` should never appear in plugin code
-- Types must be inferred from the spec object fields (config, createState, api, events)
-- VIOLATION if explicit generics are found — immediate flag
-
-### 10. No Wire Factories
-- Check: no `function wire[A-Z]` patterns in plugin source files
-- Plugin `index.ts` must import `createPlugin` and dependencies directly
-- No factory functions that parameterize the plugin constructor
-- VIOLATION if wire factory pattern is detected
-
-### 11. No Inline Type Assertions in State/Config
-- Check: no `null as `, `{} as `, `[] as ` patterns in `createState` or `config`
-- Standard+ plugins: define type in `types.ts`, use typed factory in `state.ts`
-- Nano/Micro: use return-type annotation on arrow function
-- VIOLATION if inline type assertions are found
+### 9. Moku Code Rules (R1, R4–R7)
+Enforce preamble rules R1 (no explicit generics), R4 (no Plugin postfix), R5 (no wire factories), R6 (no inline type assertions), R7 (no `as any`). See agent-preamble.md for canonical definitions. Each violation is a BLOCKER.
 
 ### 12. Single Instance Per Directory
 - Each plugin directory must export exactly ONE `createPlugin` (or `createCorePlugin`) call

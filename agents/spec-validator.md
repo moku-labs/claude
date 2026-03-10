@@ -62,23 +62,14 @@ You are a Moku Core specification validator. Your job is to ensure all code foll
 - Lifecycle errors use `Error`
 
 ### 8. No Anti-Patterns
-- No business logic in plugin `index.ts` (must be ~30 lines wiring)
+Enforce all Moku Code Rules from agent-preamble.md (R1–R8). Additionally:
 - No god plugins (one plugin = one domain concern)
 - No new abstractions (services, providers, managers) — use `createPlugin` or `createCorePlugin`
-- No `as any` to bypass type system
 - No string-based `require` — instance-only
-- No explicit generics on `createPlugin` — types must be inferred from spec
 - No unnecessary `onStart`/`onStop` — only include when managing actual resources (servers, connections, listeners). CLI tools, build tools, and utility plugins should NOT have start/stop.
 - Helpers must be static pure functions — no `ctx` access, no lifecycle, no side effects
 - Helper names must not collide with PluginInstance fields (`name`, `spec`, `_phantom`)
 - Helpers must not access core plugin APIs or any runtime context — they run before `createApp`
-
-### 9. No Explicit Generics on createPlugin or createCorePlugin
-- `createPlugin` calls must NEVER have type parameters: `createPlugin<...>(...)`
-- `createCorePlugin` calls must NEVER have type parameters: `createCorePlugin<...>(...)`
-- All types must be inferred from the spec object
-- Check every `createPlugin(` and `createCorePlugin(` call — if angle brackets appear before the opening parenthesis, it is a VIOLATION
-- This is the #1 anti-pattern. Flag immediately.
 
 ### 10. Core Plugin Compliance
 - Core plugins must be created with `createCorePlugin`, NOT `createPlugin`

@@ -15,8 +15,13 @@
             "timeout": 5
           },
           {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/validate-plugin-structure.sh \"$TOOL_INPUT\"",
+            "timeout": 5
+          },
+          {
             "type": "prompt",
-            "prompt": "If this write targets a Moku plugin file (*/plugins/*/index.ts), verify: 1) index.ts is under ~30 lines of wiring (imports + createPlugin call), no business logic inline. 2) No explicit generics on createPlugin/createCorePlugin. 3) onStart/onStop only present if managing a resource (server, connection, listener). If the file is NOT a plugin index.ts, approve immediately. Return 'approve' if valid. If invalid, return 'deny' with: the specific rule violated AND the fix (e.g., 'Rule 1 violated: 45 lines with inline logic. Fix: extract the login/logout functions to api.ts as createAuthApi factory, import it in index.ts').",
+            "prompt": "If this write targets a Moku plugin file (*/plugins/*/index.ts), verify: 1) index.ts is under ~30 lines of wiring (imports + createPlugin call), no business logic inline. 2) No explicit generics on createPlugin/createCorePlugin. 3) onStart/onStop only present if managing a resource (server, connection, listener). If the file is NOT a plugin index.ts, approve immediately. Return 'approve' if valid. If invalid, return 'deny' with: the specific rule violated AND the fix. Example approval: 'approve — 28 lines, wiring only, no explicit generics, no lifecycle.' Example denial: 'deny — Rule 1 violated: 45 lines with inline bcrypt logic on lines 15-38. Fix: extract to api.ts as createAuthApi factory, import in index.ts.'",
             "timeout": 15
           }
         ]
