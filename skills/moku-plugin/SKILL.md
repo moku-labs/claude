@@ -10,8 +10,8 @@ description: >
 # Moku Plugin Structure
 
 ## Current Project State
-!`if [ -f .planning/STATE.md ]; then grep -A2 '## Phase:' .planning/STATE.md 2>/dev/null; fi`
-!`if [ -d src/plugins ]; then echo "Existing plugins:"; ls src/plugins/ 2>/dev/null; fi`
+!`test -f .planning/STATE.md && grep -A2 '## Phase:' .planning/STATE.md 2>/dev/null || true`
+!`test -d src/plugins && echo "Existing plugins:" && ls src/plugins/ 2>/dev/null || true`
 
 Enforce strict compliance with Moku plugin structure specification. Follow all plugin structure rules. Require full JSDoc coverage on all source code. Be creative within the defined guidelines.
 
@@ -261,7 +261,7 @@ For detailed specifications:
 ## Advanced References (load when needed)
 
 For complex/very-complex plugins with sub-modules:
-!`if [ -d src/plugins ] && find src/plugins -mindepth 2 -maxdepth 2 -type d 2>/dev/null | grep -q .; then echo "Sub-module directories detected — consult references/domain-scenarios.md for Very Complex tier patterns."; fi`
+!`test -d src/plugins && find src/plugins -mindepth 2 -maxdepth 2 -type d 2>/dev/null | grep -q . && echo "Sub-module directories detected — consult references/domain-scenarios.md for Very Complex tier patterns." || true`
 
 ## Related Skills
 

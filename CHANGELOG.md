@@ -2,6 +2,11 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.11.2 (2026-03-10)
+
+### Fixed
+- **Inline bash permission errors** — replaced all `if/then/fi` patterns in skill and command `!` backtick injections with `test && command || true` chaining. Claude Code's permission checker rejects semicolons as "ambiguous command separators"; the new pattern avoids semicolons entirely. Fixed 9 instances across 6 files (moku-plugin/SKILL.md, moku-core/SKILL.md, moku-web/SKILL.md, plan.md, build.md, plugin-settings.md).
+
 ## 0.11.1 (2026-03-10)
 
 ### Changed

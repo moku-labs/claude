@@ -10,8 +10,8 @@ description: >
 # Moku Core Architecture
 
 ## Current Project State
-!`if [ -f .planning/STATE.md ]; then head -20 .planning/STATE.md; fi`
-!`if [ -f src/config.ts ]; then echo "Framework config: src/config.ts exists"; fi`
+!`test -f .planning/STATE.md && head -20 .planning/STATE.md || true`
+!`test -f src/config.ts && echo "Framework config: src/config.ts exists" || true`
 
 Enforce strict compliance with Moku Core specifications when generating, reviewing, or modifying code. Never skip Biome warnings. Never skip quality linter warnings. Require full JSDoc coverage on all source files. Use extended thinking (ultrathink) for complex architecture decisions.
 
@@ -212,8 +212,8 @@ For detailed specifications, consult:
 ## Advanced References (load when needed)
 
 For complex projects with 5+ plugins or core plugin design:
-!`if [ -d src/plugins ] && [ "$(find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')" -gt 4 ]; then echo "Large project detected — consult references/type-system.md for advanced type helpers and references/build-framework.md for framework assembly patterns."; fi`
-!`if grep -rq 'createCorePlugin' src/ 2>/dev/null; then echo "Core plugins in use — consult references/plugin-settings.md for 4-level config cascade details."; fi`
+!`test -d src/plugins && test "$(find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')" -gt 4 && echo "Large project detected — consult references/type-system.md for advanced type helpers and references/build-framework.md for framework assembly patterns." || true`
+!`grep -rq 'createCorePlugin' src/ 2>/dev/null && echo "Core plugins in use — consult references/plugin-settings.md for 4-level config cascade details." || true`
 
 ## Related Skills
 

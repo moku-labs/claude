@@ -6,7 +6,7 @@ disable-model-invocation: true
 ---
 
 ## Project Configuration
-!`if [ -f .claude/moku.local.md ]; then head -20 .claude/moku.local.md; fi`
+!`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 
 Use configuration values above if present. Validate before using — ignore invalid values and use defaults:
 

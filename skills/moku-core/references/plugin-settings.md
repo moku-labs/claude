@@ -49,7 +49,7 @@ Preferences, decisions, and patterns specific to this codebase.
 Commands and skills can read settings via shell injection:
 
 ```markdown
-!`if [ -f .claude/moku.local.md ]; then head -20 .claude/moku.local.md; fi`
+!`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 ```
 
 Or in hook scripts:

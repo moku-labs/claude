@@ -10,7 +10,7 @@ description: >
 # Moku Web Patterns
 
 ## Current Project State
-!`if [ -f package.json ]; then grep -E '"(preact|vite)"' package.json 2>/dev/null; fi`
+!`test -f package.json && grep -E '"(preact|vite)"' package.json 2>/dev/null || true`
 
 Enforce the established web patterns from the Moku blog reference implementation. Keep structure clear, documented, and simple.
 
@@ -157,8 +157,8 @@ article { padding: 1rem; }              // WRONG — global pollution
 ## Advanced References (load when needed)
 
 For projects with complex CSS architecture or many islands:
-!`if [ -d src/styles ] && [ "$(find src/styles -name '*.css' 2>/dev/null | wc -l | tr -d ' ')" -gt 5 ]; then echo "Multiple CSS files detected — consult references/css-architecture.md for token system and @layer ordering details."; fi`
-!`if find src/components -name '*Island.ts' 2>/dev/null | wc -l | tr -d ' ' | grep -qv '^0$'; then echo "Islands in use — consult references/component-patterns.md for island lifecycle hooks (onCreate/onDestroy/onNavEnd)."; fi`
+!`test -d src/styles && test "$(find src/styles -name '*.css' 2>/dev/null | wc -l | tr -d ' ')" -gt 5 && echo "Multiple CSS files detected — consult references/css-architecture.md for token system and @layer ordering details." || true`
+!`find src/components -name '*Island.ts' 2>/dev/null | wc -l | tr -d ' ' | grep -qv '^0$' && echo "Islands in use — consult references/component-patterns.md for island lifecycle hooks (onCreate/onDestroy/onNavEnd)." || true`
 
 ## Related Skills
 
