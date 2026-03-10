@@ -298,4 +298,14 @@ graph LR
 - Events cataloged: N
 ```
 
+## Critical Reminders (Most Commonly Missed)
+
+Before writing your report, double-check these rules — they are the most frequently violated:
+
+- **Core plugins MUST NOT appear in event flow** — if a core plugin emits or hooks events, it is a BLOCKER
+- **Every `createPlugin(` with angle brackets before the parenthesis is a BLOCKER** — no explicit generics
+- **Plugin export names must NOT have "Plugin" postfix** — use bare name (`router`, not `routerPlugin`)
+- **`ctx.require()` inside frequently-called API methods is a performance flag** — should be cached at factory level
+- **Helpers must be static pure functions** — no `ctx` access, no lifecycle, no side effects
+
 Then end your response with the output contract JSON (see agent-preamble.md).

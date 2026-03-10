@@ -278,6 +278,19 @@ After integration checks pass, verify each plugin in the wave against its specif
 5. Add failure notes to failing checkboxes: `- [ ] API methods — FAIL: missing navigate()`
 6. Failed checkboxes → route to Gap Closure (Step 4c)
 
+### Step 4d2: Record Content Hashes
+
+After spec verification ticking, compute and record a content hash for each verified plugin. This enables incremental validation — unchanged plugins can be skipped in future validation runs.
+
+```bash
+# Per-plugin hash: hash of all .ts files in the plugin directory
+find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1
+```
+
+Store the hash in the STATE.md plugins table as a `Hash` column: `| Name | Tier | Wave | Status | Hash |`
+
+The validation-coordinator uses these hashes to skip per-plugin validators for unchanged plugins. Cross-plugin validators (architecture-validator) always run on the full framework regardless of hashes.
+
 ### Step 4e: Save Progress and Stop
 
 **One wave per invocation (unless `--continue` mode).** After completing the wave (Steps 3 → 4a → 4b → 4d):
@@ -299,9 +312,15 @@ When verification finds issues (plugins with status `verify-failed`):
 1. Collect all verification failures into a gap list
 2. Spawn the **moku-error-diagnostician** agent with the error output to classify root causes and propose targeted fixes
 3. Apply the diagnostician's proposed fixes (root causes first — cascading errors resolve automatically)
-4. After fixes, re-run the **moku-verifier** agent on affected plugins
-4. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
-5. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist, mark remaining plugins as `needs-manual` and report to user:
+4. **Re-run the original validator** that found the blocker (not just the verifier). Map the diagnostician's error category to the originating validator:
+   - `type-inference`, `import-type` → **moku-type-validator**
+   - `test-mock`, `test-assertion` → **moku-test-validator**
+   - `anti-pattern`, `config-shape`, `lifecycle`, `event-type` → **moku-spec-validator**
+   - `lint-format` → no agent needed, just re-run `bun run lint`
+   - `missing-export`, `dependency` → **moku-verifier** (Level 3 wiring checks)
+5. After the targeted validator passes, re-run the **moku-verifier** agent on affected plugins for final confirmation
+6. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
+7. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist, mark remaining plugins as `needs-manual` and report to user:
    > "Some verification issues remain after 2 fix attempts. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
 
 ## Step 5: Final Framework Verification

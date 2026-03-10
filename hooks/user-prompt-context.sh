@@ -26,6 +26,12 @@ if [ -f .planning/STATE.md ]; then
   NEXT=$(grep '^## Next Action:' .planning/STATE.md 2>/dev/null | head -1 | sed 's/## Next Action: //')
   [ -n "$PHASE" ] && echo "Plan: $PHASE"
   [ -n "$NEXT" ] && echo "Next: $NEXT"
+
+  # Context budget warning for continuous builds
+  WAVES_DONE=$(grep -c '|.*| done\|| .*| verified' .planning/STATE.md 2>/dev/null || echo 0)
+  if [ "$WAVES_DONE" -ge 3 ]; then
+    echo "Context note: $WAVES_DONE waves completed. Consider /moku:build resume in a fresh session for best results."
+  fi
 fi
 
 exit 0

@@ -11,7 +11,7 @@ These rules apply to ALL Moku agents. Follow them strictly.
 5. **No false positives**: If uncertain whether something is a violation, report as WARNING, not BLOCKER.
 6. **Efficiency**: Read the minimum files needed. Don't read the entire codebase if checking one plugin.
 7. **Moku conventions**: `import type` for type-only imports. No explicit generics on `createPlugin`. No `as any` in plugin code. Plugin index.ts is wiring only (~30 lines).
-8. **Project memory**: If you have persistent memory (`memory: user`), consult it for project-specific patterns before validating.
+8. **Project memory**: If you have persistent memory (`memory: user`), consult it for project-specific patterns before validating. When writing to memory, use the structured format: `- [YYYY-MM-DD] description | confidence:{high|medium|low}` under one of these sections: `## Error Patterns`, `## Architecture Decisions`, or `## Validation Baselines`. This enables recency-based injection during context compaction.
 
 ## Output Contract
 

@@ -12,7 +12,7 @@ maxTurns: 25
 skills:
   - moku-core
   - moku-plugin
-tools: ["Read", "Grep", "Glob", "Bash"]
+tools: ["Read", "Grep", "Glob", "Bash", "Agent"]
 ---
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
@@ -51,6 +51,7 @@ Classify every error into exactly one category:
 4. **Read spec**: If plugin errors, read the corresponding `.planning/specs/` file for expected types
 5. **Classify**: Assign each error to a category
 6. **Root cause**: Identify the upstream cause (often one error causes cascading others)
+6b. **Research (if needed)**: If the root cause relates to an npm package behavior, version conflict, breaking API change, or ecosystem pattern you cannot resolve from local files alone, spawn `moku-researcher` with a focused question. Do not request a broad ecosystem survey — ask the specific question needed to resolve the error.
 7. **Propose fix**: For each root cause, provide the specific code change
 
 ## Fix Proposal Format

@@ -51,6 +51,16 @@ For each agent, provide the appropriate scope:
 
 Use `maxParallelAgents` from project config (default: 3) to limit concurrent agents within each group.
 
+### Incremental Validation (Hash-Based Caching)
+
+Before spawning per-plugin validators, check `.planning/STATE.md` for content hashes:
+
+1. For each plugin in scope, compute current hash: `find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1`
+2. Compare against the `Hash` column in STATE.md's plugins table
+3. If a plugin's hash matches AND its status is `verified`, skip it from per-plugin validators with note: `"Skipping {name} — unchanged since last validation (hash: {short})"`
+4. Include skipped plugins in the report with `CACHED` verdict
+5. **Always run architecture-validator on the full framework** — cross-plugin concerns cannot be cached per-plugin
+
 ## Result Aggregation
 
 After each group completes, parse the output contract JSON from each agent's response. Look for the fenced `json` code block at the end of each response.
@@ -78,9 +88,9 @@ Aggregate into a unified report:
 |-----------|---------|----------|----------|
 | architecture-validator | PASS | 0 | 4 |
 
-### All Blockers
-1. [validator] [file:line] [message] — Fix: [fix]
-2. [validator] [file:line] [message] — Fix: [fix]
+### All Blockers (with source validator for targeted re-validation)
+1. [validator] [file:line] [message] — Fix: [fix] — Source: [validator-name]
+2. [validator] [file:line] [message] — Fix: [fix] — Source: [validator-name]
 
 ### Disposition
 - **PASS**: Zero blockers across all validators

@@ -28,11 +28,28 @@ if [ -f .planning/STATE.md ]; then
   echo '... (full state in .planning/STATE.md)'
 fi
 
-# memory.md: inject project-level memory (first 30 lines)
+# memory.md: inject structured memory with recency priority (5 most recent per section)
 if [ -f .planning/memory.md ]; then
   echo ''
   echo '## Moku Project Memory (re-injected before compaction)'
-  head -30 .planning/memory.md
+
+  # Extract each known section, reverse-sort by date, take 5 most recent entries
+  for section in "Error Patterns" "Architecture Decisions" "Validation Baselines"; do
+    ENTRIES=$(awk -v sec="## $section" '
+      $0 == sec {found=1; next}
+      found && /^## /{exit}
+      found && /^- \[/ {print}
+    ' .planning/memory.md 2>/dev/null | sort -t'[' -k2 -r | head -5)
+    if [ -n "$ENTRIES" ]; then
+      echo "## $section"
+      echo "$ENTRIES"
+    fi
+  done
+
+  # Fallback: if no structured sections found, inject first 15 lines (legacy format)
+  if ! grep -q '^## Error Patterns\|^## Architecture Decisions\|^## Validation Baselines' .planning/memory.md 2>/dev/null; then
+    head -15 .planning/memory.md
+  fi
 fi
 
 # decisions.md: inject first 40 lines (key decisions summary)

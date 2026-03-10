@@ -59,10 +59,12 @@ Check `src/styles/index.css` for proper layer definition:
 - **WARNING**: Styles outside any `@layer` (will override layered styles)
 
 **How to check:**
-- Read `src/styles/index.css` for the `@layer` declaration
-- Grep all `.css` files for `@layer` usage
-- Verify component CSS uses `@layer components`
-- Verify token CSS uses `@layer tokens`
+- Read `src/styles/index.css` — look for `@layer reset, tokens, base, components, animations, utilities;` at the top
+- If the `@layer` declaration exists, verify the exact ordering: reset → tokens → base → components → animations → utilities
+- Grep all `.css` files for `@layer` usage: each component `.css` should use `@layer components { ... }`
+- Grep for `@layer tokens` in `tokens.css` (or wherever token definitions live)
+- Grep for CSS rules NOT inside any `@layer` block — scan for top-level selectors outside `@layer { }` wrappers. These override layered styles unintentionally.
+- Check `reset.css` uses `@layer reset { ... }` and `base.css` uses `@layer base { ... }`
 
 ### 4. Two-Layer Token System
 
@@ -74,9 +76,11 @@ Check `src/styles/tokens.css` for proper token architecture:
 - **INFO**: Primitive tokens not following naming convention (`--color-{name}-{shade}`)
 
 **How to check:**
-- Read `tokens.css` for primitive and semantic token definitions
-- Grep all `.css` files (except tokens.css) for raw color values
-- Verify semantic tokens reference primitives via `var(--color-...)`
+- Read `tokens.css` — look for two sections: primitive tokens (`--color-blue-500`, `--space-4`) and semantic tokens (`--color-primary`, `--text-body`)
+- Grep all `.css` files (excluding `tokens.css` and `reset.css`) for raw color values: patterns like `#[0-9a-fA-F]{3,8}`, `rgb(`, `rgba(`, `hsl(`, `hsla(`. Each match is a WARNING — should use `var(--...)`
+- Verify semantic tokens reference primitives: check for `var(--color-...)` patterns inside semantic token definitions
+- Check for `light-dark()` usage in semantic tokens — e.g., `--color-bg: light-dark(var(--color-white), var(--color-gray-900))`. Missing `light-dark()` on color semantics is a WARNING (no dark mode support)
+- Verify naming convention: primitives use `--{category}-{name}-{shade}` pattern, semantics use `--{category}-{purpose}` pattern
 
 ### 5. Island Architecture
 
