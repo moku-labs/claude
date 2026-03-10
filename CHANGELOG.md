@@ -2,6 +2,11 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.11.3 (2026-03-10)
+
+### Fixed
+- **Prompt hook false-blocking on non-plugin files** — PreToolUse prompt hook for plugin index.ts validation was erroring on `.planning/specs/*.md` and other non-plugin files instead of approving them. Rewrote prompt to check file_path pattern first and immediately approve anything outside `*/plugins/*/index.ts`.
+
 ## 0.11.2 (2026-03-10)
 
 ### Fixed

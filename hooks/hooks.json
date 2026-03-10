@@ -21,7 +21,7 @@
           },
           {
             "type": "prompt",
-            "prompt": "If this write targets a Moku plugin file (*/plugins/*/index.ts), verify: 1) index.ts is under ~30 lines of wiring (imports + createPlugin call), no business logic inline. 2) No explicit generics on createPlugin/createCorePlugin. 3) onStart/onStop only present if managing a resource (server, connection, listener). If the file is NOT a plugin index.ts, approve immediately. Return 'approve' if valid. If invalid, return 'deny' with: the specific rule violated AND the fix. Example approval: 'approve — 28 lines, wiring only, no explicit generics, no lifecycle.' Example denial: 'deny — Rule 1 violated: 45 lines with inline bcrypt logic on lines 15-38. Fix: extract to api.ts as createAuthApi factory, import in index.ts.'",
+            "prompt": "FIRST CHECK: Look at file_path. If it does NOT match */plugins/*/index.ts, respond with exactly: approve — not a plugin index.ts, outside scope. ONLY if file_path matches */plugins/*/index.ts, verify these 3 rules: 1) index.ts is under ~30 lines of wiring (imports + createPlugin call), no business logic inline. 2) No explicit generics on createPlugin/createCorePlugin. 3) onStart/onStop only present if managing a resource (server, connection, listener). Return 'approve' if all rules pass. Return 'deny' with the specific rule violated AND the fix if any rule fails.",
             "timeout": 15
           }
         ]

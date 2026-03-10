@@ -1,6 +1,6 @@
 {
   "name": "moku",
-  "version": "0.11.2",
+  "version": "0.11.3",
   "description": "Development toolkit for Moku Core — scaffolding, framework planning, plugin building, migration, and specification enforcement for the micro-kernel plugin framework. Features wave-based parallel execution, 12-agent validation pipeline with structured output contracts, validation coordinator, error diagnostician, mermaid diagram generation, and cross-session state tracking.",
   "author": {
     "name": "Oleksandr Kucherenko",
