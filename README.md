@@ -4,7 +4,7 @@ Development toolkit for [Moku Core](https://github.com/moku-labs/core) — the m
 
 ## What This Plugin Does
 
-Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, and a 10-agent validation pipeline.
+Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 10-agent validation pipeline, and a self-auditing system that finds gaps in commands and hooks then proposes improvements.
 
 ## Commands
 
@@ -14,6 +14,7 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 | `/moku:plan [verb] [type] [args]` | Plan a project: create, update, add plugin, or migrate. 3-stage gated workflow with validation. |
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`. |
 | `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
+| `/moku:audit <command\|hooks\|all>` | Audit a command or the hooks system — simulate scenarios, find gaps, propose an improved version. |
 
 ### Plan Targets
 
@@ -28,6 +29,17 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 ```
 
 Type synonyms: `tool`/`engine`/`library` → framework, `application`/`service`/`server`/`game` → app. Backward-compatible: `moku:plan framework "desc"` still works (infers `create`).
+
+### Audit Targets
+
+```
+/moku:audit plan              # Audit commands/plan.md
+/moku:audit build             # Audit commands/build.md
+/moku:audit hooks             # Audit hooks.json + all hook scripts
+/moku:audit all               # Audit all commands + hooks sequentially
+/moku:audit plan --sim-only   # Skip real execution (faster)
+/moku:audit plan --iterate    # Auto re-audit after applying fixes (up to 3 passes)
+```
 
 ### Build Targets
 
@@ -52,7 +64,7 @@ Type synonyms: `tool`/`engine`/`library` → framework, `application`/`service`/
 
 Skills include dynamic context injection to auto-detect project state and planning phase.
 
-## Agents (10 total)
+## Agents (15 total)
 
 ### Structural Validators
 
@@ -73,6 +85,16 @@ Skills include dynamic context injection to auto-detect project state and planni
 | **moku-type-validator** | TypeScript type correctness: `tsc --noEmit`, `as any` audit, inference chain |
 | **moku-architecture-validator** | Cross-plugin analysis: dependency graph, event flow, API consistency |
 | **moku-researcher** | Pre-implementation research: npm ecosystem, TypeScript patterns |
+
+### Audit Agents
+
+| Agent | Purpose |
+|-------|---------|
+| **moku-audit-scenario-generator** | Reads a command and generates 7–20 test scenarios (valid, edge, error, adversarial) |
+| **moku-audit-simulator** | Simulates a batch of scenarios step-by-step — pure text analysis, identifies gaps |
+| **moku-audit-executor** | Runs high-value scenarios in a real temp project; always cleans up |
+| **moku-audit-synthesizer** | Deduplicates gaps, prioritizes by severity, produces unified diff + complete improved command |
+| **moku-audit-hooks-analyzer** | Tests hook scripts with real inputs, analyzes prompt hook root cause, checks allowlist completeness |
 
 ### Validation Pipeline
 
@@ -107,6 +129,8 @@ Create `.claude/moku.local.md` with YAML frontmatter for project-specific overri
 ---
 maxParallelAgents: 3
 gapClosureMaxRounds: 2
+auditMaxScenarios: 20
+auditIterateLimit: 3
 ---
 
 Project-specific notes and context here.
