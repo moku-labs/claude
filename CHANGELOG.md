@@ -2,6 +2,24 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.0 (2026-03-11)
+
+### Added
+- **`/moku:audit` command** — new self-auditing command that reads a moku command file, generates test scenarios (valid, edge, error, adversarial), simulates execution step-by-step, runs a subset in a real temp project, identifies gaps, and proposes a concrete improved version with a unified diff. User approves before changes are written.
+  - `plan`, `build`, `check`, `status`, `init` — audit any command
+  - `hooks` — dedicated hooks audit mode (see below)
+  - `all` — audit all commands + hooks sequentially
+  - `--sim-only` — skip real execution (faster)
+  - `--iterate` — re-audit after applying fixes (up to `auditIterateLimit` passes, default 3)
+  - `--max-scenarios N` — per-run scenario cap override
+  - AUDIT-STABLE declaration when zero blockers + ≤2 warnings across all scenarios
+- **`moku-audit-scenario-generator` agent** — reads a command's full argument patterns, conditional branches, and documented modes; generates a structured scenario list in 4 categories with execution-value markers for real-execution selection.
+- **`moku-audit-simulator` agent** — simulates scenarios as pure text analysis (no bash, no file I/O); uses the error-diagnostician reasoning protocol (materialize per-scenario traces before writing gaps); runs in parallel batches on haiku for speed.
+- **`moku-audit-executor` agent** — runs high-execution-value scenarios in a bootstrapped temp project using Bash+Write+Read; manually applies command steps and captures real divergences; always cleans up temp directory.
+- **`moku-audit-synthesizer` agent** — deduplicates gaps from all simulator + executor outputs; builds a priority table by severity and agent-agreement count; produces a unified diff and complete improved command text for user approval.
+- **`moku-audit-hooks-analyzer` agent** — tests every hook script with real inputs via Bash; analyzes the prompt hook for the false-block root cause (insufficient output constraints); checks allowlists for completeness (detects missing `skeleton-spec.md`); proposes concrete fixes for `hooks.json` and `.sh` files.
+- **`audit-framework.md` reference** — shared taxonomy for scenario categories (valid/edge/error/adversarial), gap types (10 types including silent-failure, state-corruption-risk, user-experience-gap), temp project bootstrap templates, circuit breaker thresholds, and diff generation rules.
+
 ## 0.12.1 (2026-03-11)
 
 ### Changed
