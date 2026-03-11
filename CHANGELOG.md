@@ -2,6 +2,24 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.4 (2026-03-12)
+
+### Added
+- **`validate-plugin-index.sh`** — new deterministic shell hook replacing the prompt-based `type: prompt` validator for `plugins/*/index.ts`. Checks rule1 (≤30 lines, Write only), rule3 (onStart/onStop require a real resource method call); rule2 (explicit type params) is already covered by `check-plugin-antipatterns.sh`. Fast-path exits 0 instantly for all non-plugin-index files — zero latency on every other write.
+
+### Changed
+- **`hooks.json` plugin index validator** — replaced `type: prompt` entry (LLM-based, 15 s timeout, prone to preamble false-blocks) with `type: command` pointing to `validate-plugin-index.sh` (5 s timeout, deterministic, no model call).
+- **`commands/init.md`** — multiple robustness improvements:
+  - Added **Step 0** gate requiring `tooling-config.md` to be read before any files are written; eliminates fabricated version numbers.
+  - Tightened **Step 1** to collect Consumer App framework package name upfront instead of mid-flow.
+  - **Step 2** uses `mkdir -p` (idempotent), skips `git init` when `.git` already exists, and confirms before overwriting non-empty directories.
+  - **Step 3** adds `-y` to `bun init` and uses absolute paths throughout; documents why `rm` works before `.claude/settings.local.json` exists.
+  - **Step 5b** (`lefthook install`) is now an explicit named step with a failure gate.
+  - **Step 5c** (format) renamed from Step 5b for clarity.
+  - **Verification checklist** — item 3 uses `bun run lint` (not format), item 7 explicitly checks Consumer App has no `@moku-labs/core` direct dependency, item 8/9 updated to match new step numbering.
+  - Consumer App `src/index.ts` and `src/config.ts` templates now use a placeholder instruction to substitute the actual project name rather than hardcoding `"my-framework"`.
+- **`skills/moku-core/SKILL.md`, `skills/moku-web/SKILL.md`** — replaced `test … && echo` shell one-liners in bash inlines with `awk 'END{if(NR>N)print …}'` to avoid `test` exit-code 1 being swallowed as a skill load error.
+
 ## 0.13.3 (2026-03-11)
 
 ### Fixed

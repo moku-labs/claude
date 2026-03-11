@@ -9,7 +9,11 @@ Initialize a new Moku development environment at the path specified by `$1` (or 
 
 ## Setup Process
 
-### Step 1: Determine Project Type
+### Step 0: Read Tooling Reference (Required Gate)
+
+**Before writing any files**, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` in full. Do not proceed to Step 1 until this file has been read. All dependency versions, config file contents, and script definitions must come from this file — never guess or fabricate versions.
+
+### Step 1: Determine Project Type and Gather All Required Information
 
 Ask the user (if not clear from context) what type of project they are creating:
 
@@ -19,22 +23,31 @@ Ask the user (if not clear from context) what type of project they are creating:
 
 Default to **Framework** if the user doesn't specify.
 
+**If the project type is Consumer App**, also ask for the framework package name (e.g., `@moku-labs/web`) now — this is needed in Step 3 when writing `package.json`. Do not proceed until you have this information.
+
+Note the `$ABSOLUTE_PROJECT_PATH` (resolved from `$1` or `pwd`). Use this absolute path in all subsequent Bash commands — the working directory is not preserved between tool calls.
+
 ### Step 2: Create Project Directory and Git Repo
 
-If `$1` is provided, create the directory and cd into it. If it already exists, verify it's empty or confirm with the user before proceeding.
+If `$1` is provided, create the directory at the absolute path. Use `mkdir -p "$ABSOLUTE_PROJECT_PATH"` — this is safe to run whether or not the directory exists.
 
-Run `git init` to initialize a git repository. This is needed for lefthook (git hooks) and standard development workflow.
+If the directory already exists and is **non-empty** (check with `ls -A "$ABSOLUTE_PROJECT_PATH"`):
+- Confirm with the user before proceeding.
+- If the user declines, **stop and report** — do not proceed.
+- If the user confirms, explain that existing tooling files (`package.json`, `biome.json`, `tsconfig.json`, etc.) will be overwritten with Moku versions, but source files in `src/` will be left untouched. Proceed only with that understanding.
+
+If `.git` does not already exist at `$ABSOLUTE_PROJECT_PATH/.git`, run `git init "$ABSOLUTE_PROJECT_PATH"`. Skip `git init` if `.git` already exists — re-initializing an existing repo can corrupt hooks.
 
 ### Step 3: Initialize Project
 
-Run `bun init` to create the base project.
+Run `bun init -y` in the project directory (using absolute path: `cd "$ABSOLUTE_PROJECT_PATH" && bun init -y`). The `-y` flag prevents interactive prompts when the directory is non-empty.
 
 **Note:** `bun init` generates its own `package.json`, `tsconfig.json`, `.gitignore`, `index.ts`, `README.md`, and `CLAUDE.md`. Handle these as follows:
 - `package.json`, `tsconfig.json`, `.gitignore`, `CLAUDE.md` — Will be overwritten with Moku-specific versions below. Read each generated file before overwriting it (the Write tool requires reading a file before it can overwrite it).
 - `index.ts` — Delete it. Moku projects use `src/index.ts` instead.
 - `README.md` — Delete it. The user will create their own.
 
-After running `bun init`, delete the root `index.ts` and `README.md` before proceeding.
+After running `bun init`, delete the root `index.ts` and `README.md` using Bash: `rm -f "$ABSOLUTE_PROJECT_PATH/index.ts" "$ABSOLUTE_PROJECT_PATH/README.md"`. The `rm` command is not in the new project's `.claude/settings.local.json` allow-list (that file hasn't been written yet), but the current session's parent permissions apply during init — use Bash directly.
 
 Then configure all tooling files (these are **identical across all project types**):
 
@@ -42,8 +55,8 @@ Then configure all tooling files (these are **identical across all project types
    - `"type": "module"`
    - `"engines": { "node": ">=22.0.0", "bun": ">=1.3.8" }`
    - `main`, `module`, `types`, `exports`, `files` fields for publishable packages (copy from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`). Consumer apps can omit these if not publishing.
-   - Dependencies vary by project type (see Step 5)
-   - Add all devDependencies with exact versions from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
+   - Dependencies vary by project type (see Step 4)
+   - Add all devDependencies with exact versions from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` (you read this in Step 0)
    - Add scripts: `build`, `validate`, `lint`, `lint:fix`, `format`, `test`, `test:unit`, `test:integration`, `test:coverage`
 
 2. **biome.json** — Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`
@@ -81,7 +94,7 @@ Then configure all tooling files (these are **identical across all project types
 
 ### Step 4: Create Directory Structure and Template Files
 
-Structure and templates vary by project type. **All project types** must include a placeholder test file at `tests/unit/setup.test.ts` to prevent vitest from exiting with code 1 on an empty test suite:
+Structure and templates vary by project type. **All project types** must include a placeholder test file at `tests/unit/setup.test.ts` to prevent vitest from exiting with code 1 on an empty test suite. Create this file in every project type:
 
 ```typescript
 import { describe, expect, it } from "vitest";
@@ -102,13 +115,13 @@ src/
   plugins/           # Framework plugins directory (each plugin has its own __tests__/)
 tests/
   unit/
-    setup.test.ts    # Placeholder test (prevents empty-suite failure)
+    setup.test.ts    # Placeholder test (prevents empty-suite failure) — required
   integration/       # Framework-level integration tests only (cross-plugin scenarios)
 ```
 
 **Dependencies:** `@moku-labs/core`
 
-**src/config.ts:**
+**src/config.ts** — Replace `"<actual-project-name>"` with the actual project name (e.g., derive from the `package.json` `name` field, stripping any npm scope):
 ```typescript
 import { createCoreConfig } from "@moku-labs/core";
 
@@ -134,7 +147,7 @@ type Config = {};
 // biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined events
 type Events = {};
 
-export const coreConfig = createCoreConfig<Config, Events>("my-framework", {
+export const coreConfig = createCoreConfig<Config, Events>("<actual-project-name>", {
   config: {}
 });
 
@@ -161,13 +174,13 @@ src/
   index.ts           # createApp entry point
 tests/
   unit/
-    setup.test.ts    # Placeholder test
+    setup.test.ts    # Placeholder test (prevents empty-suite failure) — required
   integration/
 ```
 
-**Dependencies:** The framework package (e.g., `@moku-labs/web`) — ask the user which framework to use. The consumer NEVER depends on `@moku-labs/core` directly.
+**Dependencies:** The framework package gathered in Step 1 (e.g., `@moku-labs/web`). The consumer NEVER depends on `@moku-labs/core` directly — if `@moku-labs/core` appears in the dependency list, remove it.
 
-**src/index.ts:**
+**src/index.ts** — Use the framework package name gathered in Step 1:
 ```typescript
 import { createApp } from "<framework-package>";
 
@@ -185,7 +198,7 @@ src/
   index.ts           # Library entry point
 tests/
   unit/
-    setup.test.ts    # Placeholder test
+    setup.test.ts    # Placeholder test (prevents empty-suite failure) — required
   integration/
 ```
 
@@ -195,28 +208,36 @@ tests/
 
 ### Step 5: Install Dependencies
 
-Run `bun install` and verify no errors.
+Run `bun install` using the absolute path: `cd "$ABSOLUTE_PROJECT_PATH" && bun install`.
 
-### Step 5b: Format All Files
+**If `bun install` fails**, stop immediately and report the error to the user. Do not proceed to Step 5b or Step 6. Common causes: registry connectivity, version conflict, invalid `package.json`. Fix the issue (or ask the user) before retrying.
 
-Run `bun run format` to normalize all generated files to Biome's output. This prevents formatting drift between the templates and Biome's actual formatting rules (e.g., trailing comma removal). This must happen before the verification checklist.
+### Step 5b: Install Git Hooks
+
+Run `cd "$ABSOLUTE_PROJECT_PATH" && bunx lefthook install` to register the pre-commit hooks defined in `lefthook.yml`. This must happen after `bun install` (lefthook binary must be available in `node_modules/.bin`).
+
+**If `lefthook install` fails**, report the error — do not proceed.
+
+### Step 5c: Format All Files
+
+Run `cd "$ABSOLUTE_PROJECT_PATH" && bun run format` to normalize all generated files to Biome's output. This prevents formatting drift between the templates and Biome's actual formatting rules (e.g., trailing comma removal). This must happen before the verification checklist.
 
 ### Step 6: Verification Checklist
 
 After setup, run through this checklist to verify everything works. Fix any issues before reporting success.
 
 1. **Dependencies** — `bun install` completed without errors
-2. **TypeScript** — `bunx tsc --noEmit` passes with zero errors
-3. **Biome** — `bun run format` runs without errors (formatting works)
+2. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. If it fails, the most common cause is a missing entry in tsconfig.json's `include` array (e.g., `"declarations.d.ts"` or `"*.config.ts"` omitted). Verify the tsconfig matches the reference exactly.
+3. **Biome** — `bun run lint` includes `biome check .` — verify it exits cleanly (formatting was already normalized in Step 5c)
 4. **ESLint** — `bun run lint` passes with zero warnings and zero errors
 5. **Tests** — `bun run test` runs successfully (placeholder test must pass — vitest exits code 1 on empty suites)
 6. **Build** — `bun run build` compiles without errors
 7. **Template files** — Source files exist and match the project type:
    - **Framework:** `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists
-   - **Consumer:** `src/index.ts` imports `createApp` from the framework package
+   - **Consumer:** `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` does NOT appear in `package.json` dependencies
    - **Tools:** `src/index.ts` exists
-8. **Git repo** — `git init` ran successfully
-9. **Git hooks** — `lefthook install` ran successfully
+8. **Git repo** — `.git` directory exists at project root
+9. **Git hooks** — `lefthook install` ran successfully (Step 5b)
 
 If any check fails, fix the issue and re-run the failing check before proceeding.
 
@@ -239,9 +260,11 @@ Tell the user what was created, show the verification checklist results, and pro
 
 ## Important
 
-- Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` for exact config contents — do NOT guess versions
+- Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` in Step 0 before writing any files — do NOT guess versions
 - Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/architecture.md` for architecture reference
 - Use `bun` as the package manager, never npm or yarn
+- Use absolute paths in all Bash commands — the working directory is not preserved between tool calls
 - Keep type names generic: `Config`, `Events` — never domain-specific names
+- Consumer Apps must NEVER depend on `@moku-labs/core` directly — verify in checklist item 7
 - Run the full verification checklist before reporting success
 - Tooling config (items 1-15) is identical across ALL project types — only template files and dependencies differ

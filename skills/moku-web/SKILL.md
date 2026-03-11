@@ -157,7 +157,7 @@ article { padding: 1rem; }              // WRONG — global pollution
 ## Advanced References (load when needed)
 
 For projects with complex CSS architecture or many islands:
-!`test -d src/styles && test "$(find src/styles -name '*.css' 2>/dev/null | wc -l | tr -d ' ')" -gt 5 && echo "Multiple CSS files detected — consult references/css-architecture.md for token system and @layer ordering details." || true`
+!`find src/styles -name '*.css' 2>/dev/null | awk 'END{if(NR>5)print "Multiple CSS files detected — consult references/css-architecture.md for token system and @layer ordering details."}' || true`
 !`find src/components -name '*Island.ts' 2>/dev/null | wc -l | tr -d ' ' | grep -qv '^0$' && echo "Islands in use — consult references/component-patterns.md for island lifecycle hooks (onCreate/onDestroy/onNavEnd)." || true`
 
 ## Related Skills

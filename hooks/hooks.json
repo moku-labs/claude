@@ -20,9 +20,9 @@
             "timeout": 5
           },
           {
-            "type": "prompt",
-            "prompt": "You are a one-line gatekeeper. Your ENTIRE response must be exactly one of:\n  approve\n  deny: rule1 — <one-line hint>\n  deny: rule2 — <one-line hint>\n  deny: rule3 — <one-line hint>\nNo explanation. No preamble. No extra punctuation.\n\nRules (stop at first match):\n1. file_path does NOT end with /index.ts → approve\n2. file_path does NOT contain /plugins/ → approve\n3. This IS a plugins/*/index.ts — check content:\n   rule1: must be ≤30 lines, wiring-only (imports + createPlugin + export), no business logic\n   rule2: createPlugin/createCorePlugin must NOT have explicit type parameters\n   rule3: onStart/onStop ONLY for real resources (server/listener/connection)\n   All pass → approve   |   Any fail → deny: rule[N] — hint\n\nREMINDER: Output exactly one line — either the word `approve` or `deny: rule[N] — hint`.",
-            "timeout": 15
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/validate-plugin-index.sh \"$TOOL_INPUT\"",
+            "timeout": 5
           }
         ]
       }

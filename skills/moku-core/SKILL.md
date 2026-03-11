@@ -212,7 +212,7 @@ For detailed specifications, consult:
 ## Advanced References (load when needed)
 
 For complex projects with 5+ plugins or core plugin design:
-!`test -d src/plugins && test "$(find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')" -gt 4 && echo "Large project detected — consult references/type-system.md for advanced type helpers and references/build-framework.md for framework assembly patterns." || true`
+!`find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | awk 'END{if(NR>4)print "Large project detected — consult references/type-system.md for advanced type helpers and references/build-framework.md for framework assembly patterns."}' || true`
 !`grep -rq 'createCorePlugin' src/ 2>/dev/null && echo "Core plugins in use — consult references/plugin-settings.md for 4-level config cascade details." || true`
 
 ## Related Skills

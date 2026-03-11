@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# PreToolUse hook: validate plugins/*/index.ts content constraints.
+# Fast-path exits 0 immediately for all other files — no LLM, no delay.
+
+INPUT="$1"
+
+# Parse file path, content, and tool type
+if command -v jq &>/dev/null; then
+  FILE_PATH=$(jq -r '.file_path // empty' <<< "$INPUT" 2>/dev/null)
+  CONTENT=$(jq -r '.content // .new_string // empty' <<< "$INPUT" 2>/dev/null)
+  IS_WRITE=$(jq -r 'if .content != null then "yes" else "no" end' <<< "$INPUT" 2>/dev/null)
+elif command -v python3 &>/dev/null; then
+  FILE_PATH=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('file_path',''))" <<< "$INPUT" 2>/dev/null)
+  CONTENT=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('content','') or d.get('new_string',''))" <<< "$INPUT" 2>/dev/null)
+  IS_WRITE=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print('yes' if d.get('content') is not None else 'no')" <<< "$INPUT" 2>/dev/null)
+else
+  exit 0
+fi
+
+# Fast-path: only validate plugins/*/index.ts — everything else approved instantly
+case "$FILE_PATH" in
+  */plugins/*/index.ts) ;;   # fall through to checks
+  *) exit 0 ;;
+esac
+
+# Rule 1: ≤30 lines, wiring-only (Write only — Edit's new_string is a partial replacement)
+if [ "$IS_WRITE" = "yes" ]; then
+  LINE_COUNT=$(printf '%s\n' "$CONTENT" | wc -l | tr -d ' ')
+  if [ "$LINE_COUNT" -gt 30 ]; then
+    echo "{\"decision\":\"block\",\"reason\":\"BLOCKED: plugins/*/index.ts must be ≤30 lines (wiring-only), got $LINE_COUNT lines. Move business logic into separate module files.\"}"
+    exit 0
+  fi
+fi
+
+# Rule 2: explicit type params — already blocked by check-plugin-antipatterns.sh
+
+# Rule 3: onStart/onStop must reference a real resource lifecycle method
+if printf '%s\n' "$CONTENT" | grep -qE '\bon(Start|Stop)\s*:'; then
+  if ! printf '%s\n' "$CONTENT" | grep -qE '\.(listen|close|connect|disconnect|start|stop|end|destroy|kill|open|shutdown)\('; then
+    echo "{\"decision\":\"block\",\"reason\":\"BLOCKED: onStart/onStop in index.ts must manage a real resource (server, connection, listener). Remove lifecycle hooks if no resource is being managed.\"}"
+    exit 0
+  fi
+fi
+
+exit 0
