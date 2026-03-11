@@ -21,7 +21,7 @@
           },
           {
             "type": "prompt",
-            "prompt": "FIRST CHECK: Look at file_path. If it does NOT match */plugins/*/index.ts, respond with exactly: approve — not a plugin index.ts, outside scope. ONLY if file_path matches */plugins/*/index.ts, verify these 3 rules: 1) index.ts is under ~30 lines of wiring (imports + createPlugin call), no business logic inline. 2) No explicit generics on createPlugin/createCorePlugin. 3) onStart/onStop only present if managing a resource (server, connection, listener). Return 'approve' if all rules pass. Return 'deny' with the specific rule violated AND the fix if any rule fails.",
+            "prompt": "Gate-keeper for plugin index.ts quality. Decision logic: (A) If the tool input's file_path does NOT end with '/index.ts' OR does NOT contain '/plugins/', output only: approve. (B) Only if file_path matches the pattern */plugins/*/index.ts, check 3 rules: rule1=index.ts is under ~30 lines of wiring with no business logic inline; rule2=no explicit generics on createPlugin or createCorePlugin; rule3=onStart/onStop only present if managing a real resource like a server connection or listener. Output 'approve' if all 3 pass. Output 'deny: rule[N] — [specific violation and fix]' if any fail.",
             "timeout": 15
           }
         ]

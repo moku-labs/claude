@@ -174,4 +174,4 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 - The spec must be complete enough to implement without further questions
 - Run plan-checker agent BEFORE every user gate — users see validated plans only
 - Read `.planning/STATE.md` at the start of every stage, write it at the end — enable cross-session continuity
-- After all stages complete, `Next Action` must point to `/moku:build #1` (first plugin by implementation order)
+- After all stages complete, `Next Action` must point to `Run /moku:build resume (build command detects skeleton not-started and runs skeleton build first)`

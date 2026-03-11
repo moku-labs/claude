@@ -335,73 +335,49 @@ Present the completed specifications and validation results. Ask for explicit ap
 
 ---
 
-## Stage 3: Skeleton + Verification
+## Stage 3: Skeleton Specification
 
 **On entry**: Read `.planning/STATE.md`, confirm Stage 2 is approved. Load spec file paths and plugin table from state.
 
 ### Framework Target
 
-#### Create the Skeleton
+#### Produce the Skeleton Spec Document
 
-Using the **moku-plugin** skill for plugin file patterns and the **moku-core** skill for config.ts and index.ts:
+Save to `.planning/skeleton-spec.md`. Use the Skeleton Specification Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. The document must contain all five sections:
 
-1. **Create `src/config.ts`** — with Config and Events types as empty/placeholder, `createCoreConfig` call with core plugins in `plugins` option if applicable, exports of `{ createPlugin, createCore }`
-2. **Create `src/plugins/index.ts`** — Plugin barrel: re-exports all plugin instances (grouped sections: Instances → Helpers → Namespaced Types). Initially skeleton imports for all planned plugins.
-3. **Create `src/index.ts`** — Self-documenting manifest: JSDoc `@module` comment with options/defaults table, `createCore` call importing from `./plugins`, grouped exports (Framework API → Plugins → Helpers → Types). See `build-assembly.md` Step 4b-index for the exact structure.
-4. **Create each plugin directory** following the approved tier:
-   - Create ALL files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
-   - Create `__tests__/unit/` and `__tests__/integration/` directories inside the plugin directory (for Standard+ plugins). For Nano/Micro, create `__tests__/unit/` only.
-   - Do NOT create test skeleton files in root `tests/unit/plugins/` or `tests/integration/plugins/`
-   - Files should contain ONLY:
-     - Correct imports and exports
-     - Empty type definitions (placeholder shapes)
-     - Empty function signatures (correct parameter names and return types, but NO implementation)
-     - JSDoc headers with tier, description, events, `@see README.md`
-   - NO actual business logic, NO implementation code
-   - `createPlugin` (or `createCorePlugin` for core plugins) call uses inference — NO explicit generics
-   - Core plugin skeletons must NOT have `depends`, `events`, or `hooks`
-   - `onStart`/`onStop` included ONLY for plugins that were approved to need them in Stage 1
+1. **Architecture Overview** — entry structure, barrel pattern, core config registration
+2. **File Structure** — complete file tree with every file annotated (tier, purpose)
+3. **System Connections** — import map table, type reference chain, barrel export pattern
+4. **Skeleton Build Waves** — same wave grouping as build waves; each wave contains ready-to-paste code blocks for every file (correct imports/exports, empty types, empty function bodies with correct signatures, JSDoc headers); Wave 0 must include core plugin skeletons + `src/config.ts` + `src/plugins/index.ts` + `src/index.ts`
+5. **Verification Checklist** — checkboxes for format/lint/tsc/build + structural checks
 
-5. **Create README.md** for each plugin — with plugin name and tier only (content filled during build)
+**Do NOT create actual source files** — this is a specification document only.
 
 ---
 
 ### App Target
 
-Create skeleton files per the approved specification:
-- `main.ts` with `createApp` call structure
-- Custom plugin directories following approved tier patterns
-- Configuration files as specified
+Produce `.planning/skeleton-spec.md` covering: `main.ts` structure, custom plugin skeletons per their approved tiers, framework import map, and verification checklist.
 
 ---
 
 ### Plugin Target
 
-Create skeleton files per the approved specification:
-- Plugin directory following the approved tier pattern
-- All files for the tier (index.ts, types.ts, state.ts, api.ts, handlers.ts as needed)
-- Empty type definitions, function signatures, JSDoc headers
-- No implementation code
+Produce `.planning/skeleton-spec.md` covering: tier-appropriate file structure, ready-to-paste code blocks for every file (imports, exports, empty types, empty function bodies, JSDoc headers), and verification checklist.
 
 ---
 
-### Skeleton Verification & Cleanup (all targets)
-
-After creating all skeleton files, run a comprehensive check-and-fix loop in the target workspace. Fix ALL issues found — including pre-existing ones — until every check passes with zero errors and zero warnings.
-
-1. **Format** — `bun run format` (Biome auto-formats all files)
-2. **Lint** — `bun run lint` → if errors, run `bun run lint:fix` then re-check. Manually fix anything lint:fix cannot resolve.
-3. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. Fix all type errors in skeleton files.
-4. **Build** — `bun run build` compiles without errors (if build script exists)
-
-**Loop until clean**: If any check still fails after fixes, re-run the full sequence. The skeleton must reach zero errors and zero warnings across ALL checks before proceeding.
-
 ### State Update (all targets)
 
-**On exit**: Update `.planning/STATE.md` — mark Stage 3 as complete, record verification results (pass/fail for each check). Set `Next Action` to `Run /moku:build #1` pointing to the first plugin by implementation order.
+**On exit**: Update `.planning/STATE.md`:
+- Phase: `stage3/pending-approval`
+- `## Skeleton: not-started`
+- Add skeleton spec path to Artifacts section: `Skeleton spec: .planning/skeleton-spec.md`
+- Add skeleton wave rows to Wave Progress table (one row per skeleton wave + verification + commit), all with Status `not started`
+- Set `Next Action: Run /moku:build resume (skeleton build will run first)`
 
 ### User Gate (all targets)
 
-Present the completed skeleton, verification results, and final state. Final approval from user.
+Present the completed skeleton spec document. Ask for explicit approval.
 
-**Wait for explicit user approval.**
+**Wait for explicit user approval before proceeding.**

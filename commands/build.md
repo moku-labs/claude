@@ -83,6 +83,28 @@ When updating `.planning/STATE.md`:
 
 ---
 
+## Skeleton Detection & Routing
+
+After reading STATE.md, check skeleton status **before** routing to any build target. This step runs on every invocation regardless of arguments.
+
+### Skeleton Status Check
+
+Read `## Skeleton:` from STATE.md:
+
+| Status | Action |
+|--------|--------|
+| field absent | Old STATE.md format — assume skeleton committed, proceed to normal build routing |
+| `not-started` | Read `.planning/skeleton-spec.md` → route to `build-skeleton.md` Step S1 |
+| `in-progress` | Read skeleton-spec.md, find last completed skeleton wave → resume from next wave |
+| `verified` | Re-present skeleton report (from STATE.md Verification Results), ask to approve or adjust |
+| `committed` | Skeleton complete — proceed to Framework/App/Plugin build routing below |
+
+**Skeleton always takes priority.** Any argument (`resume`, `framework #wave:2`, `--continue`) is held until skeleton is `committed`. The skeleton MUST be committed before any plugin build wave begins.
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-skeleton.md` for detailed skeleton build steps.
+
+---
+
 ## Framework Build
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for detailed framework build steps.

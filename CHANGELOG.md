@@ -2,6 +2,20 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.12.0 (2026-03-11)
+
+### Added
+- **`build-skeleton.md` reference** — new step-by-step skeleton build reference (S1–S7) for creating source files from the skeleton spec, running verification, collecting user approval, and committing the initial commit. Skeleton waves are stop-and-resume (one per invocation), copying code blocks directly from the spec — no sub-agents needed.
+- **Skeleton detection & routing in `build.md`** — `/moku:build` now reads `## Skeleton:` from STATE.md before any other routing. Routes to `build-skeleton.md` when status is `not-started` or `in-progress`; skeleton always takes priority over plugin build waves.
+- **`## Skeleton:` field in STATE.md schema** — new field with values `not-started | in-progress | verified | committed`. Extended Wave Progress table template with skeleton wave rows (Wave 0, Wave N, verify, commit).
+- **Skeleton Specification Template in `plan-templates.md`** — full ready-to-paste template for `.planning/skeleton-spec.md` covering all five required sections: Architecture Overview, File Structure, System Connections, Skeleton Build Waves (with code blocks per file), and Verification Checklist.
+
+### Changed
+- **Stage 3 of `/moku:plan` rearchitected as Skeleton Specification** — stage now produces `.planning/skeleton-spec.md` (a spec document) instead of creating actual source files. Source file creation moved to `/moku:build` via the new skeleton build system. Updates STATE.md with `## Skeleton: not-started` and skeleton wave rows.
+- **`plan.md` Next Action corrected** — after plan completes, Next Action now points to `Run /moku:build resume (skeleton build will run first)` instead of `/moku:build #1`.
+- **Prompt hook prompt rewritten** — plugin index.ts gatekeeper uses clearer condition A/B structure (path check first, then 3-rule quality check) instead of the previous FIRST CHECK pattern, improving instruction-following reliability.
+- **`build-framework.md` pre-requisite note added** — clarifies that if you are reading the file the skeleton is already committed; updated reference table to include skeleton build stage.
+
 ## 0.11.3 (2026-03-10)
 
 ### Fixed

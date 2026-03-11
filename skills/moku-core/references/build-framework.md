@@ -1,5 +1,9 @@
 # Framework Build — Detailed Steps
 
+## Pre-requisite: Skeleton Must Be Committed
+
+The build command's Skeleton Detection step (in `commands/build.md`) handles this automatically. If `## Skeleton:` in STATE.md is not `committed`, the build command routes to `build-skeleton.md` first and never reaches this file. If you are reading this file, the skeleton is already committed and all skeleton source files exist.
+
 This is the master reference for `/moku:build framework`. Each step links to a dedicated reference file. Read only the file relevant to your current phase — this keeps context lean.
 
 ## Step 1: Read and Validate the Plan
@@ -42,6 +46,7 @@ Covers: final framework verification, README wave (dedicated sub-agents), post-b
 
 | Phase | Reference File | When to Read |
 |-------|---------------|--------------|
+| Skeleton build | `build-skeleton.md` | Before all other steps |
 | Wave analysis & building | `build-wave-execution.md` | Starting a new wave |
 | Verification & gap closure | `build-verification.md` | After wave agents return |
 | Barrel & index patterns | `build-assembly.md` | Updating framework files |

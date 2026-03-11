@@ -72,11 +72,11 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` for t
 
 ---
 
-## Stage 3: Skeleton + Verification
+## Stage 3: Skeleton Specification
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for detailed Stage 3 instructions per target type.
 
-**Summary**: Create skeleton files (empty types, function signatures, JSDoc headers — NO implementation). Includes `src/plugins/index.ts` barrel (plugin instances, helpers, namespaced types) and self-documenting `src/index.ts` (JSDoc module comment, grouped exports). Run verification loop: format → lint → tsc → build, fix all issues, loop until zero errors/warnings. Update `.planning/STATE.md` with verification results and set `Next Action` to `/moku:build #1`. Wait for explicit user approval.
+**Summary**: Produce `.planning/skeleton-spec.md` — a specification document (NOT actual source files) containing: architecture overview, complete file structure, system connections, skeleton build waves with ready-to-paste code blocks per file, and verification checklist. Update `.planning/STATE.md` with `## Skeleton: not-started` and Wave Progress rows for skeleton waves. Set `Next Action: Run /moku:build resume (skeleton build will run first)`. Wait for explicit user approval.
 
 ---
 
