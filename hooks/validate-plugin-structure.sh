@@ -32,7 +32,8 @@ if [ "$SOURCE_COUNT" -gt 12 ]; then
 fi
 
 # Check 2: Plugin should not have deeply nested subdirectories (max 1 level of sub-modules)
-DEEP_DIRS=$(find "$PLUGIN_DIR" -mindepth 2 -maxdepth 2 -type d ! -path '*__tests__*' ! -path '*node_modules*' 2>/dev/null | head -1)
+DEEP_DIRS=$(find "$PLUGIN_DIR" -mindepth 2 -maxdepth 2 -type d \
+  ! -path '*__tests__*' ! -path '*/tests/*' ! -path '*/spec*' ! -path '*node_modules*' 2>/dev/null | head -1)
 if [ -n "$DEEP_DIRS" ]; then
   echo "{\"decision\":\"warn\",\"reason\":\"WARNING: Plugin '$PLUGIN_NAME' has deeply nested directories. Moku plugins should be flat (1 level of sub-modules max).\"}"
   exit 0

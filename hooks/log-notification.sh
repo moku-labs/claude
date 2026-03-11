@@ -13,13 +13,9 @@ if command -v jq &>/dev/null; then
   MSG=$(jq -r '.message // empty' <<< "$INPUT" 2>/dev/null)
   NTYPE=$(jq -r '.notification_type // empty' <<< "$INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
-  eval "$(python3 -c "
-import sys, json
-d = json.loads(sys.stdin.read())
-print(f\"TITLE='{d.get('title', '').replace(chr(39), chr(39)+chr(92)+chr(92)+chr(39)+chr(39))}'\")
-print(f\"MSG='{d.get('message', '').replace(chr(39), chr(39)+chr(92)+chr(92)+chr(39)+chr(39))}'\")
-print(f\"NTYPE='{d.get('notification_type', '').replace(chr(39), chr(39)+chr(92)+chr(92)+chr(39)+chr(39))}'\")
-" <<< "$INPUT" 2>/dev/null)"
+  TITLE=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('title',''))" <<< "$INPUT" 2>/dev/null)
+  MSG=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('message',''))" <<< "$INPUT" 2>/dev/null)
+  NTYPE=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('notification_type',''))" <<< "$INPUT" 2>/dev/null)
 else
   exit 0
 fi

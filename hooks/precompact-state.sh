@@ -55,7 +55,8 @@ if [ -f .planning/memory.md ]; then
       echo "## $section"
       if [ -n "$KEYWORDS" ]; then
         # Prioritize keyword-matching entries, then fill remaining slots with recent entries
-        RELEVANT=$(echo "$ALL_ENTRIES" | grep -iE "$KEYWORDS" | sort -t'[' -k2 -r | head -3)
+        SAFE_KEYWORDS=$(echo "$KEYWORDS" | sed 's/[.+*\[\]()^${}|\\]/\\&/g')
+        RELEVANT=$(echo "$ALL_ENTRIES" | grep -iE "${SAFE_KEYWORDS:-__NOMATCH__}" | sort -t'[' -k2 -r | head -3)
         RECENT=$(echo "$ALL_ENTRIES" | sort -t'[' -k2 -r | head -5)
         # Combine: relevant first, then recent (dedup)
         { echo "$RELEVANT"; echo "$RECENT"; } | awk '!seen[$0]++' | head -5

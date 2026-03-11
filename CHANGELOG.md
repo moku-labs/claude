@@ -2,6 +2,15 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.3 (2026-03-11)
+
+### Fixed
+- **`check-plugin-antipatterns.sh` empty-object assertion regex** — removed erroneous `^\s*` anchor from `{} as` pattern so it also catches inline usages (not just line-start).
+- **`hooks.json` prompt hook wording** — rewrote gatekeeper prompt with stronger output constraints ("Your ENTIRE response must be exactly one of…") and an explicit closing REMINDER line; reduces residual cases where the model adds preamble before the verdict.
+- **`log-notification.sh` python3 eval** — replaced `eval` + complex quoting with direct subshell capture per field (same pattern applied to `check-plugin-antipatterns.sh` in v0.13.2), eliminating quoting hazards.
+- **`precompact-state.sh` regex injection** — user-supplied `KEYWORDS` string was passed directly into `grep -iE`; special regex characters could cause grep to error or match unintentionally. Now escaped with `sed` before use; falls back to `__NOMATCH__` when keywords are empty.
+- **`validate-plugin-structure.sh` test directory exclusions** — depth check only excluded `__tests__`; directories named `tests/` or `spec/` (common Vitest conventions) were still flagged. Added `*/tests/*` and `*/spec*` to the exclusion list.
+
 ## 0.13.2 (2026-03-11)
 
 ### Fixed

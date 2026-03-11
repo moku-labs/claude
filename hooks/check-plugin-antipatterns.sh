@@ -57,7 +57,7 @@ if printf '%s\n' "$CONTENT" | grep -qE 'function wire[A-Z]'; then
 fi
 
 # Check 6: Inline type assertions in state/config (null as X, {} as X, [] as X)
-if printf '%s\n' "$CONTENT" | grep -qE 'null as [A-Za-z_]|^\s*\{\} as |\[\] as '; then
+if printf '%s\n' "$CONTENT" | grep -qE 'null as [A-Za-z_]|\{\} as |\[\] as '; then
   echo '{"decision":"block","reason":"BLOCKED: Inline type assertion detected (e.g. null as Foo | null). For Standard+ plugins, define a type and use a typed factory. For Nano/Micro, use a return-type annotation. See moku-plugin skill Common Mistakes."}'
   exit 0
 fi
