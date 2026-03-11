@@ -2,6 +2,15 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.12.1 (2026-03-11)
+
+### Changed
+- **Plugin barrel architecture (`build-assembly.md`)** — replaced 3-section barrel (Instances + Helpers + Namespaced Types) with 2-section barrel (Plugin Instances → Plugin Types). Helpers are never exported from the barrel; types use plain `export type *` instead of namespace-qualified `export type * as Namespace`. Updated `src/index.ts` pattern to require `pluginConfigs` in `createCore` with JSDoc per-property comments, and simplified to 2 export sections (`Plugins + Types` → `Framework API + Plugin Helpers`).
+- **Skeleton templates (`plan-templates.md`)** — updated Architecture Overview, File Structure comment, Barrel Pattern section, and both Wave 0 skeleton code blocks (barrel + index.ts) to match the new architecture.
+
+### Added
+- **Validator rule 15 (`plugin-spec-validator.md`)** — Rule 15 (Barrel Export Structure): validates that `src/plugins/index.ts` has the two required section headers in order, flags helpers in the barrel as violations, and validates that `src/index.ts` uses `export * from "./plugins"` and includes `pluginConfigs`.
+
 ## 0.12.0 (2026-03-11)
 
 ### Added

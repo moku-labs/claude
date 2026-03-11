@@ -301,7 +301,7 @@ Save to `.planning/skeleton-spec.md`.
 ## Architecture Overview
 
 [2–3 paragraphs describing:
-1. The overall file structure: `src/config.ts` owns Config + Events types and core plugin registration via `createCoreConfig`; `src/plugins/index.ts` is the barrel barrel (Instances → Helpers → Namespaced Types); `src/index.ts` is the framework entry with `createCore` and grouped exports.
+1. The overall file structure: `src/config.ts` owns Config + Events types and core plugin registration via `createCoreConfig`; `src/plugins/index.ts` is the two-section barrel (Plugin Instances → Plugin Types). Helpers are NOT in the barrel — they go in `src/index.ts` only. `src/index.ts` is the framework entry with `createCore` (including `pluginConfigs` with JSDoc per-property docs) and two export sections.
 2. How core plugins flow: registered in `createCoreConfig`, injected as `ctx.[name]` on all regular plugin contexts.
 3. The consumer API surface: what `createApp` exposes, how plugins are accessed.]
 
@@ -312,7 +312,7 @@ src/
   config.ts                    # Framework config: Config + Events types, createCoreConfig call
   index.ts                     # Framework entry: createCore, grouped exports
   plugins/
-    index.ts                   # Plugin barrel: instances, helpers, namespaced types
+    index.ts                   # Plugin barrel: instances + plugin types (NO helpers)
     [core-plugin]/             # [Core] — createCorePlugin
       index.ts
       README.md
@@ -357,10 +357,12 @@ Events union: `FrameworkEvents extends Plugin1Events & Plugin2Events & ...`
 
 ### Barrel Pattern
 
-`src/plugins/index.ts` exports in three sections:
-- **Instances**: `export { [name] } from "./[name]"` for every planned plugin
-- **Helpers**: `export { [helper] } from "./[plugin]"` for builder helpers (e.g. `route`, `createComponent`)
-- **Namespaced Types**: `export type * as [Name] from "./[name]/types"` for Standard+ plugins
+`src/plugins/index.ts` exports in two sections:
+- **Plugin Instances**: `export { [name] } from "./[name]"` for every planned plugin, alphabetical.
+  Helpers (builders, factories) are **NEVER** exported here — they go in `src/index.ts`.
+- **Plugin Types**: `export type * from "./[name]/types"` for each plugin that has `types.ts`, alphabetical.
+  Exception: plugins with no `types.ts` use explicit `export type { Foo } from "./[plugin]"`.
+  Thin plugins with no public types (Nano/Micro) have no entry.
 
 ## Skeleton Build Waves
 
@@ -416,37 +418,23 @@ export { createPlugin, createCore };
 **`src/plugins/index.ts`** (after config.ts exists):
 ~~~typescript
 /**
- * Plugin barrel — all default plugin instances, helpers, and namespaced types.
- * @module
+ * Plugin barrel — re-exports all framework plugin instances and types.
+ * Helpers are NOT exported here — see src/index.ts.
  */
 
 // ─── Plugin Instances ────────────────────────────────────────
 export { [plugin1] } from "./[plugin1]";
 export { [plugin2] } from "./[plugin2]";
-// [all planned plugins listed here — even if not yet built]
+// [all planned plugins listed here — even if not yet built, alphabetical]
 
-// ─── Helpers ────────────────────────────────────────────────
-// (helpers added during build)
-
-// ─── Namespaced Types ───────────────────────────────────────
-// (type namespaces added during build)
+// ─── Plugin Types ─────────────────────────────────────────────
+// (populated during build — export type * from "./[plugin]/types" per Standard+ plugin, alphabetical)
 ~~~
 
 **`src/index.ts`** (after plugins/index.ts exists):
 ~~~typescript
 /**
  * [Framework name] — [brief description].
- *
- * ## Framework Options
- * | Option | Type | Default | Description |
- * |--------|------|---------|-------------|
- * | (populated during build) | | | |
- *
- * ## Default Plugins
- * | Plugin | Description |
- * |--------|-------------|
- * | (populated during build) | |
- *
  * @module
  */
 import { coreConfig, createCore } from "./config";
@@ -454,19 +442,20 @@ import { [plugin1], [plugin2] } from "./plugins";
 
 const framework = createCore(coreConfig, {
   plugins: [[plugin1], [plugin2]],
+  // Framework default plugin configuration.
+  // Consumer apps override specific values via createApp({ pluginConfigs: { ... } }).
+  pluginConfigs: {
+    // (populated during build — all non-trivial plugin configs.
+    //  Every property gets a JSDoc comment: description + allowed values + @example for complex values)
+  }
 });
 
-// ─── Framework API ───────────────────────────────────────────
+// ─── Plugins + Types ──────────────────────────────────────────
+export * from "./plugins";
+
+// ─── Framework API + Plugin Helpers ──────────────────────────
 export const { createApp, createPlugin } = framework;
-
-// ─── Plugins ────────────────────────────────────────────────
-export { [plugin1], [plugin2] } from "./plugins";
-
-// ─── Helpers ────────────────────────────────────────────────
-// (populated during build)
-
-// ─── Types ──────────────────────────────────────────────────
-// (populated during build)
+// (helpers added during build — all consumer-facing helpers explicitly named, no export *)
 ~~~
 
 ### Wave 1: [Plugin Names — no dependencies]

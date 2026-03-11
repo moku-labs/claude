@@ -4,92 +4,97 @@ This file defines the canonical patterns for `src/plugins/index.ts` (barrel) and
 
 ## Step 4b-barrel: `src/plugins/index.ts` Structure
 
-The plugins barrel file is the single source for all plugin instances, helpers, and namespaced types. Create it during the first wave and extend with each subsequent wave:
+Two-section barrel. Plugin instances first, types second. **No helpers.**
 
 ```typescript
 /**
- * Plugin barrel — all default plugin instances, helpers, and namespaced types.
- * @module
+ * Plugin barrel — re-exports all framework plugin instances and types.
+ * Helpers are NOT exported here — see src/index.ts.
  */
 
-// ─── Plugin Instances ───────────────────────────────────────
+// ─── Plugin Instances ────────────────────────────────────────
 export { build } from "./build";
-export { env } from "./env";
 export { router } from "./router";
+export { seo } from "./seo";
+// ... one line per plugin, alphabetical
 
-// ─── Helpers ────────────────────────────────────────────────
-export { route } from "./router";           // builder helper (not the plugin)
-export { createComponent } from "./spa";
-
-// ─── Namespaced Types ───────────────────────────────────────
-export type * as Build from "./build/types";
-export type * as Router from "./router/types";
+// ─── Plugin Types ─────────────────────────────────────────────
+export type * from "./build/types";
+export type * from "./router/types";
+export type * from "./seo/types";
+// ... one line per plugin that has types.ts, alphabetical
+// Exception: plugins with no types.ts → explicit export type { Foo } from "./plugin"
+// Plugins with no public types (thin Nano/Micro) → no entry
 ```
 
 Rules:
-- Each plugin directory exports exactly ONE `createPlugin` instance
-- Helpers are exported separately from plugin instances (with comment clarifying what they are)
-- Types use `export type * as Namespace from` for namespace grouping
-- Only Standard+ plugins with a `types.ts` get namespace type exports
+- **Plugin Instances** section: one `export { name }` per plugin, alphabetical
+- **Plugin Types** section: `export type * from "./plugin/types"` per plugin, alphabetical
+- **NEVER list individual type names** — use `export type *` to avoid maintenance burden
+- **NEVER export helpers** (builders, factories) from the barrel — they belong in `src/index.ts`
 
-## Step 4b-index: `src/index.ts` Self-Documenting Structure
+## Step 4b-index: `src/index.ts` Self-Documenting Manifest
 
-The framework entry point must be a self-documenting manifest. Consumers should understand all available options, defaults, and exports just by reading this file.
+Import plugin instances from the barrel (no circular dep: barrel → plugin dirs → `../../config`, never back to `src/index.ts`). `createCore` includes explicit `pluginConfigs` — single visible source of truth for framework defaults.
 
 ```typescript
 /**
- * @moku-labs/web — Static site generation framework.
- *
- * ## Framework Options
- * | Option | Type | Default | Description |
- * |--------|------|---------|-------------|
- * | site.url | string | "" | Site URL for SEO and feeds |
- * | mode | "ssg" | "spa" | "hybrid" | "ssg" | Rendering mode |
- *
- * ## Default Plugins
- * | Plugin | Description |
- * |--------|-------------|
- * | log | Structured logging |
- * | env | Environment detection |
- * | router | URL pattern matching and resolution |
- *
- * @example
- * ```ts
- * import { createApp } from "@moku-labs/web";
- * const app = createApp({ config: { site: { url: "..." } } });
- * ```
+ * [Framework name] — [brief description].
  * @module
  */
 import { coreConfig, createCore } from "./config";
-import { log, env, router, seo, pipeline, build, devServer } from "./plugins";
+import { build, router, seo, spa } from "./plugins"; // from barrel, not individual dirs
 
 const framework = createCore(coreConfig, {
-  plugins: [log, env, seo, router, pipeline, build, devServer],
+  plugins: [seo, router, spa, build],
+  // Framework default plugin configuration.
+  // Consumer apps override specific values via createApp({ pluginConfigs: { ... } }).
+  pluginConfigs: {
+    router: {
+      /**
+       * Rendering mode for the framework.
+       *
+       * - `"ssg"` — every page pre-rendered at build; no client-side router
+       * - `"spa"` — client-side only; pages rendered by JS on demand; requires `boot()`
+       * - `"hybrid"` — pages pre-rendered + client router for subsequent navigation (recommended)
+       */
+      mode: "hybrid",
+      /**
+       * Page rendered when no route matches. Relative to content dir.
+       *
+       * @example "" // 404.html generated from content dir root
+       * @example "src/pages/404.astro"
+       */
+      defaultPage: "",
+      // ... every property gets a JSDoc comment with description, allowed values, and @example for complex types
+    },
+    build: {
+      /**
+       * Output directory for the static build, relative to project root.
+       *
+       * @example "dist"
+       * @example "public"
+       */
+      output: "dist",
+      // ...
+    },
+    // ... all plugins with non-trivial config
+  }
 });
 
-// ─── Framework API ──────────────────────────────────────────
+// ─── Plugins + Types ──────────────────────────────────────────
+export * from "./plugins";
+
+// ─── Framework API + Plugin Helpers ──────────────────────────
 export const { createApp, createPlugin } = framework;
-
-// ─── Plugins ────────────────────────────────────────────────
-export { build, devServer, env, log, pipeline, router, seo } from "./plugins";
-
-// ─── Helpers ────────────────────────────────────────────────
-export { route } from "./plugins/router";
-export { createComponent } from "./plugins/spa";
-
-// ─── Types ──────────────────────────────────────────────────
-export type * as Build from "./plugins/build/types";
-export type * as Router from "./plugins/router/types";
-// ... namespace type re-exports from plugins barrel
+export { route } from "./plugins/router";         // builder helper, explicitly named
+// ... all consumer-facing helpers explicitly named, no export * for helpers
 ```
 
 Rules:
-- JSDoc module comment with options table showing ALL config fields with types and defaults
-- Default plugins table showing what ships with the framework
-- `@example` showing minimal createApp usage
-- Exports grouped into 4 sections with separator comments: Framework API → Plugins → Helpers → Types
-- Plugin imports come from `./plugins` barrel (not individual directories)
-- Framework API section: only `createApp` and `createPlugin` from `createCore` result
-- Plugins section: re-export all default plugin instances
-- Helpers section: re-export builder helpers (e.g., `route`, `createComponent`)
-- Types section: namespace type re-exports for consumer convenience
+- Import plugin instances from `"./plugins"` barrel, never from individual plugin dirs
+- `createCore` MUST include `pluginConfigs` with ALL non-trivial plugin defaults documented
+- Every config property MUST have a JSDoc comment (`/** ... */`) with: description, allowed values as a list, and `@example` for complex or non-obvious values
+- `export * from "./plugins"` covers all instances + types in one line — no separate types section needed
+- `createApp` and `createPlugin` always live in the `// ─── Framework API + Plugin Helpers` section
+- Every helper is explicitly named — no `export *` for helpers

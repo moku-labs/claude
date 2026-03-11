@@ -120,6 +120,30 @@ Scan ALL plugins in the framework/project and flag groups that should be merged 
 
 **Fix:** Merge into one Very Complex plugin with sub-module directories. One `createPlugin` call, namespaced API, composed state, shared events.
 
+### 15. Barrel Export Structure
+
+If `src/plugins/index.ts` exists, validate:
+
+**Required sections (in order):**
+1. `// ─── Plugin Instances ─────` — only `export { name }` lines, alphabetical
+2. `// ─── Plugin Types ──────────` — only `export type * from` or explicit `export type { }`, alphabetical
+
+**VIOLATION — helper in barrel:**
+`export { name }` where `name` is NOT a plugin instance (i.e., not a `createPlugin()`
+return value). E.g.: `articleToCard`, `route`, `loadJson`, `boot`, `createComponent`.
+
+**VIOLATION — missing structure:**
+- No `// ─── Plugin Instances` or `// ─── Plugin Types` comment headers
+- Instance and type exports interleaved without section separation
+- Individual type names listed instead of `export type *`
+
+**Fix:** Remove helpers from barrel → add to `// ─── Framework API + Plugin Helpers` in `src/index.ts`.
+
+Validate `src/index.ts`:
+- Uses `export * from "./plugins"` (not per-plugin exports)
+- Has `// ─── Framework API + Plugin Helpers` section
+- `createCore` call includes `pluginConfigs` with framework defaults
+
 ## Process
 
 1. Find the plugin's root directory
