@@ -2,6 +2,19 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.2 (2026-03-11)
+
+### Fixed
+- **`check-plugin-antipatterns.sh` python3 fallback** — replaced `eval` + here-doc approach with direct subshell capture per field; eliminates quoting hazards with special characters in file paths or content.
+- **`check-plugin-antipatterns.sh` null-assertion regex** — `null as ` was too broad, matching safe casts like `null as unknown`. Tightened to `null as [A-Za-z_]` so only concrete type assertions are flagged.
+- **`detect-moku-project.sh` printf format** — replaced bare `printf "$WARNINGS"` with `printf '%b' "$WARNINGS"` to avoid format-string injection when warnings contain `%` characters.
+- **`format-on-save.sh`, `precompact-state.sh`, `user-prompt-context.sh`** — replaced `grep -q 'a\|b'` with `grep -qE 'a|b'` throughout; POSIX `grep` treats `|` as a literal character without `-E`, silently breaking alternation.
+- **`hooks.json` prompt hook routing** — rewrote prompt to use explicit sequential routing rules (non-plugin index.ts → approve immediately) so the model outputs a bare `approve` or `deny:` with no preamble, eliminating the false-block that occurred when the model generated explanatory text.
+- **`on-subagent-stop.sh` double-parse** — consolidated `agent_type` and `status` extraction into a single JSON parse pass; removes a second `<<<` redirect that re-read stdin after it was already consumed.
+- **`session-end.sh` stale cleanup** — removed `hook-debug.log` deletion that was left over from debugging; debug log is no longer created so the `rm` was a no-op.
+- **`user-prompt-context.sh` plugin listing** — replaced `ls src/plugins/` with `find … -mindepth 1 -maxdepth 1 -type d` to avoid parsing ls output and correctly exclude files in the plugins root.
+- **`validate-plugin-structure.sh` nesting depth** — depth check used `mindepth 3 / maxdepth 3` relative to repo root, so a plugin two levels deep never triggered. Corrected to `mindepth 2 / maxdepth 2` relative to the plugin directory.
+
 ## 0.13.1 (2026-03-11)
 
 ### Fixed

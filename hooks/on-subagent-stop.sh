@@ -7,15 +7,23 @@
 
 TOOL_INPUT="$1"
 
-# Extract agent_type from input
+# Parse agent_type and status in a single pass
 # Priority: jq (fast) → python3 (reliable) → skip
 if command -v jq &>/dev/null; then
-  AGENT_TYPE=$(jq -r '.agent_type // empty' <<< "$TOOL_INPUT" 2>/dev/null)
+  PARSED=$(jq -r '(.agent_type // "") + "\n" + (.status // "completed")' <<< "$TOOL_INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
-  AGENT_TYPE=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('agent_type',''))" <<< "$TOOL_INPUT" 2>/dev/null)
+  PARSED=$(python3 -c "
+import sys, json
+d = json.loads(sys.stdin.read())
+print(d.get('agent_type', ''))
+print(d.get('status', 'completed'))
+" <<< "$TOOL_INPUT" 2>/dev/null)
 else
   exit 0
 fi
+AGENT_TYPE=$(echo "$PARSED" | head -1)
+STATUS=$(echo "$PARSED" | tail -1)
+[ -z "$STATUS" ] && STATUS="completed"
 
 # Only track moku agents
 [ -z "$AGENT_TYPE" ] && exit 0
@@ -25,14 +33,6 @@ case "$AGENT_TYPE" in
 esac
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
-
-# Extract status from tool input (fallback to "completed")
-if command -v jq &>/dev/null; then
-  STATUS=$(jq -r '.status // "completed"' <<< "$TOOL_INPUT" 2>/dev/null)
-elif command -v python3 &>/dev/null; then
-  STATUS=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('status','completed'))" <<< "$TOOL_INPUT" 2>/dev/null)
-fi
-[ -z "$STATUS" ] && STATUS="completed"
 
 # Append agent completion to log (atomic write for header creation)
 if [ -f .planning/agent-log.md ]; then

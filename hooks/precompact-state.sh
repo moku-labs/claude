@@ -67,7 +67,7 @@ if [ -f .planning/memory.md ]; then
   done
 
   # Fallback: if no structured sections found, inject first 15 lines (legacy format)
-  if ! grep -q '^## Error Patterns\|^## Architecture Decisions\|^## Validation Baselines' .planning/memory.md 2>/dev/null; then
+  if ! grep -qE '^## Error Patterns|^## Architecture Decisions|^## Validation Baselines' .planning/memory.md 2>/dev/null; then
     head -15 .planning/memory.md
   fi
 fi
@@ -87,7 +87,7 @@ if [ -f .planning/research.md ]; then
 fi
 
 # Fallback: inject minimal project fingerprint when no planning state exists
-if [ ! -f .planning/STATE.md ] && [ -d src/plugins ] && grep -q 'createCoreConfig\|@moku-labs' src/config.ts 2>/dev/null; then
+if [ ! -f .planning/STATE.md ] && [ -d src/plugins ] && grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null; then
   echo ''
   echo '## Moku Project Context (re-injected before compaction)'
   FRAMEWORK_ID=$(grep -o 'createCoreConfig.*"[^"]*"' src/config.ts 2>/dev/null | grep -o '"[^"]*"' | head -1 | tr -d '"')

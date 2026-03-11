@@ -96,7 +96,7 @@ if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
 
   if [ -n "$WARNINGS" ]; then
     echo "Environment warnings:"
-    printf "$WARNINGS"
+    printf '%b' "$WARNINGS"
   fi
 
   # Version compatibility — check @moku-labs/core version

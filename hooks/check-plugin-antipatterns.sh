@@ -10,14 +10,8 @@ if command -v jq &>/dev/null; then
   FILE_PATH=$(jq -r '.file_path // empty' <<< "$INPUT" 2>/dev/null)
   CONTENT=$(jq -r '.content // .new_string // empty' <<< "$INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
-  eval "$(python3 -c "
-import sys, json
-d = json.loads(sys.stdin.read())
-fp = d.get('file_path', '').replace(\"'\", \"'\\''\")
-ct = (d.get('content', '') or d.get('new_string', '')).replace(\"'\", \"'\\''\")
-print(f\"FILE_PATH='{fp}'\")
-print(f\"CONTENT='{ct}'\")
-" <<< "$INPUT" 2>/dev/null)"
+  FILE_PATH=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('file_path',''))" <<< "$INPUT" 2>/dev/null)
+  CONTENT=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('content','') or d.get('new_string',''))" <<< "$INPUT" 2>/dev/null)
 else
   # No JSON parser available — log warning, don't silently skip checks
   echo '{"decision":"warn","reason":"Anti-pattern check skipped: neither jq nor python3 available. Install one for Moku hook support."}'
@@ -63,7 +57,7 @@ if printf '%s\n' "$CONTENT" | grep -qE 'function wire[A-Z]'; then
 fi
 
 # Check 6: Inline type assertions in state/config (null as X, {} as X, [] as X)
-if printf '%s\n' "$CONTENT" | grep -qE 'null as |^\s*\{\} as |\[\] as '; then
+if printf '%s\n' "$CONTENT" | grep -qE 'null as [A-Za-z_]|^\s*\{\} as |\[\] as '; then
   echo '{"decision":"block","reason":"BLOCKED: Inline type assertion detected (e.g. null as Foo | null). For Standard+ plugins, define a type and use a typed factory. For Nano/Micro, use a return-type annotation. See moku-plugin skill Common Mistakes."}'
   exit 0
 fi
