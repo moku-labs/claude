@@ -9,8 +9,6 @@ description: >
 model: sonnet
 color: orange
 maxTurns: 30
-skills:
-  - moku-core
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 

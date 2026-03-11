@@ -25,7 +25,7 @@ PLUGIN_NAME=$(basename "$PLUGIN_DIR")
 
 # Check 1: Plugin directory should not have too many .ts source files (excluding tests)
 # >12 source files suggests the plugin is too large and should be split
-SOURCE_COUNT=$(find "$PLUGIN_DIR" -maxdepth 1 -name '*.ts' -type f 2>/dev/null | wc -l | tr -d ' ')
+SOURCE_COUNT=$(find "$PLUGIN_DIR" -maxdepth 1 -name '*.ts' -not -name '*.test.ts' -not -name '*.spec.ts' -type f 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SOURCE_COUNT" -gt 12 ]; then
   echo "{\"decision\":\"warn\",\"reason\":\"WARNING: Plugin '$PLUGIN_NAME' has $SOURCE_COUNT source files — exceeds VeryComplex tier max (12). Consider splitting into sub-plugins.\"}"
   exit 0

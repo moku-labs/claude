@@ -2,6 +2,19 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.1 (2026-03-11)
+
+### Fixed
+- **Prompt hook false-block (root cause)** — restructured prompt hook to make `approve` the explicit default and blocking the exception. Previous phrasing caused the LLM to generate explanatory text instead of the bare word, which the framework treated as a block.
+- **`approve-planning-writes.sh` allow-list gaps** — added `.planning/skeleton-spec.md`, `.planning/STATE-history.md`, and `.planning/audit-*.md` to the auto-approve list. All three are written by commands but were missing, causing unnecessary hook friction.
+- **`check-plugin-antipatterns.sh` overly broad file matcher** — `*/index.ts` and `*/config.ts` matched top-level source files (e.g. `src/index.ts`), triggering anti-pattern checks on non-plugin code. Tightened to `*/plugins/*/index.ts` and `*/plugins/*/config.ts`.
+- **`validate-plugin-structure.sh` test file count** — source file count included `*.test.ts` and `*.spec.ts` at the plugin root, causing false-positive "too many files" warnings. Excluded test files from the count.
+- **`on-subagent-stop.sh` result column** — hardcoded `completed` regardless of outcome. Now reads `.status` from tool input and falls back to `completed` only when absent.
+- **`moku-audit-hooks-analyzer` agent blocked at spawn** — agent had `skills: ["moku-core"]` which loaded a skill with `$()` bash inlines that Claude Code's permission checker blocked. Removed the unused skill dependency.
+
+### Changed
+- **`/moku:audit hooks` workflow** — H1 detects plugin source path (`SOURCE_HOOKS_DIR`) via `./hooks/hooks.json` check. H2 replaced agent spawn with inline analysis (more reliable, no spawn-blocking risk). H3 writes fixes to both cache (`${CLAUDE_PLUGIN_ROOT}/hooks/`) and source (`SOURCE_HOOKS_DIR/`) when both are present; documents python3 Bash fallback for when Edit/Write is blocked on `hooks.json` itself.
+
 ## 0.13.0 (2026-03-11)
 
 ### Added

@@ -26,9 +26,9 @@ fi
 
 # Only check plugin source files (not specs, not planning files, not tests)
 case "$FILE_PATH" in
+  */plugins/*/index.ts) ;;
+  */plugins/*/config.ts) ;;
   */plugins/*) ;;
-  */config.ts) ;;
-  */index.ts) ;;
   *) exit 0 ;;
 esac
 

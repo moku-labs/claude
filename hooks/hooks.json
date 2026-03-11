@@ -21,7 +21,7 @@
           },
           {
             "type": "prompt",
-            "prompt": "Gate-keeper for plugin index.ts quality. Decision logic: (A) If the tool input's file_path does NOT end with '/index.ts' OR does NOT contain '/plugins/', output only: approve. (B) Only if file_path matches the pattern */plugins/*/index.ts, check 3 rules: rule1=index.ts is under ~30 lines of wiring with no business logic inline; rule2=no explicit generics on createPlugin or createCorePlugin; rule3=onStart/onStop only present if managing a real resource like a server connection or listener. Output 'approve' if all 3 pass. Output 'deny: rule[N] — [specific violation and fix]' if any fail.",
+            "prompt": "RESPOND WITH EXACTLY ONE LINE. No explanation, no preamble.\n\nDefault: approve\n\nOverride to block ONLY when ALL are true: (1) file_path ends with '/index.ts' AND (2) '/plugins/' appears in file_path AND at least one rule fails:\n  rule1: index.ts is under ~30 lines of wiring with no business logic inline\n  rule2: no explicit generics on createPlugin or createCorePlugin\n  rule3: onStart/onStop only present if managing a real resource (server, listener)\n\nIf all 3 rules pass \u2192 approve\nIf a rule fails \u2192 deny: rule[N] \u2014 [specific violation and fix]\nIf NOT a plugin index.ts \u2192 approve",
             "timeout": 15
           }
         ]

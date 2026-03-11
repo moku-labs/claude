@@ -26,16 +26,24 @@ esac
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
+# Extract status from tool input (fallback to "completed")
+if command -v jq &>/dev/null; then
+  STATUS=$(jq -r '.status // "completed"' <<< "$TOOL_INPUT" 2>/dev/null)
+elif command -v python3 &>/dev/null; then
+  STATUS=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('status','completed'))" <<< "$TOOL_INPUT" 2>/dev/null)
+fi
+[ -z "$STATUS" ] && STATUS="completed"
+
 # Append agent completion to log (atomic write for header creation)
 if [ -f .planning/agent-log.md ]; then
-  echo "| $TIMESTAMP | $AGENT_TYPE | completed |" >> .planning/agent-log.md
+  echo "| $TIMESTAMP | $AGENT_TYPE | $STATUS |" >> .planning/agent-log.md
 else
   {
     echo "# Agent Completion Log"
     echo ""
     echo "| Timestamp | Agent | Result |"
     echo "|-----------|-------|--------|"
-    echo "| $TIMESTAMP | $AGENT_TYPE | completed |"
+    echo "| $TIMESTAMP | $AGENT_TYPE | $STATUS |"
   } > .planning/agent-log.md
 fi
 
