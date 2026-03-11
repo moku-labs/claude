@@ -37,6 +37,12 @@ case "$REL_PATH" in
     ;;
   .planning/specs/*.md)
     ;;
+  .planning/skeleton-spec.md)
+    ;;
+  .planning/STATE-history.md)
+    ;;
+  .planning/audit-*.md)
+    ;;
   *)
     # Not a known .planning/ file — don't auto-approve, let normal flow handle it
     exit 0
