@@ -260,8 +260,7 @@ For detailed specifications:
 
 ## Advanced References (load when needed)
 
-For complex/very-complex plugins with sub-modules:
-!`test -d src/plugins && find src/plugins -mindepth 2 -maxdepth 2 -type d 2>/dev/null | grep -q . && echo "Sub-module directories detected — consult references/domain-scenarios.md for Very Complex tier patterns." || true`
+For plugins with sub-module directories (Very Complex tier), read `references/domain-scenarios.md`.
 
 ## Related Skills
 

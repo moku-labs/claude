@@ -2,6 +2,11 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.5 (2026-03-12)
+
+### Changed
+- **`skills/moku-core/SKILL.md`, `skills/moku-plugin/SKILL.md`, `skills/moku-web/SKILL.md`** — replaced all bash inline (`!`` `) directives in "Advanced References" sections with plain prose instructions. Shell one-liners in skill files execute at load time and have caused permission prompts and exit-code noise; static prose is simpler and equally actionable.
+
 ## 0.13.4 (2026-03-12)
 
 ### Added
