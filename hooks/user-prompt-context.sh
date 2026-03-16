@@ -28,7 +28,8 @@ if [ -f .planning/STATE.md ]; then
   [ -n "$NEXT" ] && echo "Next: $NEXT"
 
   # Context budget warning for continuous builds
-  WAVES_DONE=$(grep -cE '\| done|\| verified' .planning/STATE.md 2>/dev/null || echo 0)
+  WAVES_DONE=$(grep -cE '\| done|\| verified' .planning/STATE.md 2>/dev/null)
+  WAVES_DONE=${WAVES_DONE:-0}
   if [ "$WAVES_DONE" -ge 3 ]; then
     echo "Context note: $WAVES_DONE waves completed. Consider /moku:build resume in a fresh session for best results."
   fi

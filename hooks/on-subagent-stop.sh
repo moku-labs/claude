@@ -46,6 +46,8 @@ if [ ! -f .planning/agent-log.md ]; then
     } > .planning/agent-log.md 2>/dev/null || true  # loses race gracefully
   )
 fi
+AGENT_TYPE="${AGENT_TYPE//|/ }"
+STATUS="${STATUS//|/ }"
 echo "| $TIMESTAMP | $AGENT_TYPE | $STATUS |" >> .planning/agent-log.md
 
 exit 0

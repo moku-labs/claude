@@ -8,7 +8,7 @@ if [ -f .planning/STATE.md ]; then
   echo '## Moku Planning State (re-injected before compaction)'
 
   # Always extract these key headers (single-line values)
-  for header in "## Phase:" "## Verb:" "## Target:" "## Next Action:" "## Git Checkpoint:"; do
+  for header in "## Phase:" "## Verb:" "## Target:" "## Skeleton:" "## Next Action:" "## Git Checkpoint:"; do
     line=$(grep "^${header}" .planning/STATE.md 2>/dev/null | head -1)
     [ -n "$line" ] && echo "$line"
   done
@@ -57,7 +57,7 @@ if [ -f .planning/memory.md ]; then
         # Prioritize keyword-matching entries, then fill remaining slots with recent entries
         # Escape regex metacharacters portably (BSD sed does not support this)
         if command -v python3 &>/dev/null; then
-          SAFE_KEYWORDS=$(python3 -c "import re,sys; parts=sys.stdin.read().rstrip('|').split('|'); print('|'.join(re.escape(p) for p in parts if p))" <<< "$KEYWORDS")
+          SAFE_KEYWORDS=$(python3 -c "import re,sys; parts=sys.stdin.read().rstrip().rstrip('|').split('|'); print('|'.join(re.escape(p) for p in parts if p))" <<< "$KEYWORDS")
         else
           SAFE_KEYWORDS="$KEYWORDS"  # fallback: slight false-positive risk, no crash
         fi

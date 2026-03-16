@@ -2,6 +2,16 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.7 (2026-03-16)
+
+### Fixed
+- **`precompact-state.sh`** — `re.escape` trailing backslash from herestring `\n` caused `grep -iE` to fail with "trailing backslash" when NEXT_ACTION contained regex metacharacters. Added `.rstrip()` before `.rstrip('|')`.
+- **`precompact-state.sh`** — `## Skeleton:` field was missing from the pre-compaction header loop (present in postcompact but not precompact).
+- **`user-prompt-context.sh`** — `grep -c` with `|| echo 0` produced double-valued `WAVES_DONE` ("0\n0") when zero matches, causing `integer expression expected` error.
+- **`approve-planning-writes.sh`** — shell glob `*` in case patterns matched `/`, allowing path traversal like `.planning/specs/../../etc/passwd.md` to pass the allow-list. Added `..` rejection guard. Also added absolute-path fallback patterns for macOS symlink resolution differences.
+- **`on-subagent-stop.sh`** — unvalidated `|` in AGENT_TYPE/STATUS could corrupt the Markdown table in agent-log.md. Added pipe character sanitization.
+- **`log-notification.sh`** — multiline `message` fields (with embedded `\n`) produced multiple log entries per notification. Added newline flattening.
+
 ## 0.13.6 (2026-03-16)
 
 ### Fixed

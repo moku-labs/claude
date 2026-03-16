@@ -23,6 +23,7 @@ fi
 [ -z "$MSG" ] && exit 0
 
 LABEL="${TITLE:-$NTYPE}"
+MSG="${MSG//$'\n'/ }"
 echo "$(date '+%H:%M:%S') [$LABEL] $MSG" >> .planning/notifications.log
 
 exit 0

@@ -25,23 +25,28 @@ if [[ "$FILE_PATH" == "$PWD/"* ]]; then
   REL_PATH="${FILE_PATH#$PWD/}"
 fi
 
-# Allow-list of known .planning/ files and patterns
+# Reject any path containing traversal components
 case "$REL_PATH" in
-  .planning/STATE.md|.planning/STATE.md.bak)
+  *../*|*/..*) exit 0 ;;
+esac
+
+# Allow-list of known .planning/ files and patterns (relative and absolute paths)
+case "$REL_PATH" in
+  .planning/STATE.md|.planning/STATE.md.bak|*/.planning/STATE.md|*/.planning/STATE.md.bak)
     ;;
-  .planning/decisions.md|.planning/research.md|.planning/memory.md)
+  .planning/decisions.md|.planning/research.md|.planning/memory.md|*/.planning/decisions.md|*/.planning/research.md|*/.planning/memory.md)
     ;;
-  .planning/agent-log.md|.planning/notifications.log)
+  .planning/agent-log.md|.planning/notifications.log|*/.planning/agent-log.md|*/.planning/notifications.log)
     ;;
-  .planning/app-spec.md)
+  .planning/app-spec.md|*/.planning/app-spec.md)
     ;;
-  .planning/specs/*.md)
+  .planning/specs/*.md|*/.planning/specs/*.md)
     ;;
-  .planning/skeleton-spec.md)
+  .planning/skeleton-spec.md|*/.planning/skeleton-spec.md)
     ;;
-  .planning/STATE-history.md)
+  .planning/STATE-history.md|*/.planning/STATE-history.md)
     ;;
-  .planning/audit-*.md)
+  .planning/audit-*.md|*/.planning/audit-*.md)
     ;;
   *)
     # Not a known .planning/ file — don't auto-approve, let normal flow handle it
