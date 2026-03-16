@@ -5,19 +5,19 @@
 # Only act if we're in a Moku project with active planning state
 [ -f .planning/STATE.md ] || exit 0
 
-TOOL_INPUT="$1"
+INPUT=$(cat)
 
 # Parse agent_type and status in a single pass
 # Priority: jq (fast) → python3 (reliable) → skip
 if command -v jq &>/dev/null; then
-  PARSED=$(jq -r '(.agent_type // "") + "\n" + (.status // "completed")' <<< "$TOOL_INPUT" 2>/dev/null)
+  PARSED=$(jq -r '(.agent_type // "") + "\n" + (.status // "completed")' <<< "$INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
   PARSED=$(python3 -c "
 import sys, json
 d = json.loads(sys.stdin.read())
 print(d.get('agent_type', ''))
 print(d.get('status', 'completed'))
-" <<< "$TOOL_INPUT" 2>/dev/null)
+" <<< "$INPUT" 2>/dev/null)
 else
   exit 0
 fi
@@ -34,17 +34,18 @@ esac
 
 TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
-# Append agent completion to log (atomic write for header creation)
-if [ -f .planning/agent-log.md ]; then
-  echo "| $TIMESTAMP | $AGENT_TYPE | $STATUS |" >> .planning/agent-log.md
-else
-  {
-    echo "# Agent Completion Log"
-    echo ""
-    echo "| Timestamp | Agent | Result |"
-    echo "|-----------|-------|--------|"
-    echo "| $TIMESTAMP | $AGENT_TYPE | $STATUS |"
-  } > .planning/agent-log.md
+# Append agent completion to log (atomic creation with noclobber to avoid TOCTOU race)
+if [ ! -f .planning/agent-log.md ]; then
+  (
+    set -o noclobber
+    {
+      echo "# Agent Completion Log"
+      echo ""
+      echo "| Timestamp | Agent | Result |"
+      echo "|-----------|-------|--------|"
+    } > .planning/agent-log.md 2>/dev/null || true  # loses race gracefully
+  )
 fi
+echo "| $TIMESTAMP | $AGENT_TYPE | $STATUS |" >> .planning/agent-log.md
 
 exit 0

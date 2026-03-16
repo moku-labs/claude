@@ -2,17 +2,20 @@
 # PreToolUse hook: validate plugins/*/index.ts content constraints.
 # Fast-path exits 0 immediately for all other files — no LLM, no delay.
 
-INPUT="$1"
+INPUT=$(cat)
 
-# Parse file path, content, and tool type
+# Quick exit if not a Moku project
+[ -f src/config.ts ] && grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null || exit 0
+
+# Parse file path, content, and tool type (nested under tool_input)
 if command -v jq &>/dev/null; then
-  FILE_PATH=$(jq -r '.file_path // empty' <<< "$INPUT" 2>/dev/null)
-  CONTENT=$(jq -r '.content // .new_string // empty' <<< "$INPUT" 2>/dev/null)
-  IS_WRITE=$(jq -r 'if .content != null then "yes" else "no" end' <<< "$INPUT" 2>/dev/null)
+  FILE_PATH=$(jq -r '.tool_input.file_path // empty' <<< "$INPUT" 2>/dev/null)
+  CONTENT=$(jq -r '.tool_input.content // .tool_input.new_string // empty' <<< "$INPUT" 2>/dev/null)
+  IS_WRITE=$(jq -r 'if .tool_input.content != null then "yes" else "no" end' <<< "$INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
-  FILE_PATH=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('file_path',''))" <<< "$INPUT" 2>/dev/null)
-  CONTENT=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('content','') or d.get('new_string',''))" <<< "$INPUT" 2>/dev/null)
-  IS_WRITE=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print('yes' if d.get('content') is not None else 'no')" <<< "$INPUT" 2>/dev/null)
+  FILE_PATH=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('tool_input',{}).get('file_path',''))" <<< "$INPUT" 2>/dev/null)
+  CONTENT=$(python3 -c "import sys,json; ti=json.loads(sys.stdin.read()).get('tool_input',{}); print(ti.get('content','') or ti.get('new_string',''))" <<< "$INPUT" 2>/dev/null)
+  IS_WRITE=$(python3 -c "import sys,json; print('yes' if json.loads(sys.stdin.read()).get('tool_input',{}).get('content') is not None else 'no')" <<< "$INPUT" 2>/dev/null)
 else
   exit 0
 fi
@@ -27,7 +30,7 @@ esac
 if [ "$IS_WRITE" = "yes" ]; then
   LINE_COUNT=$(printf '%s\n' "$CONTENT" | wc -l | tr -d ' ')
   if [ "$LINE_COUNT" -gt 30 ]; then
-    echo "{\"decision\":\"block\",\"reason\":\"BLOCKED: plugins/*/index.ts must be ≤30 lines (wiring-only), got $LINE_COUNT lines. Move business logic into separate module files.\"}"
+    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: plugins/*/index.ts must be ≤30 lines (wiring-only), got $LINE_COUNT lines. Move business logic into separate module files.\"}}"
     exit 0
   fi
 fi
@@ -36,8 +39,8 @@ fi
 
 # Rule 3: onStart/onStop must reference a real resource lifecycle method
 if printf '%s\n' "$CONTENT" | grep -qE '\bon(Start|Stop)\s*:'; then
-  if ! printf '%s\n' "$CONTENT" | grep -qE '\.(listen|close|connect|disconnect|start|stop|end|destroy|kill|open|shutdown)\('; then
-    echo "{\"decision\":\"block\",\"reason\":\"BLOCKED: onStart/onStop in index.ts must manage a real resource (server, connection, listener). Remove lifecycle hooks if no resource is being managed.\"}"
+  if ! printf '%s\n' "$CONTENT" | grep -qE '\.(listen|close|connect|disconnect|start|stop|end|destroy|kill|open|shutdown|init|initialize|cleanup|dispose|terminate|release)\('; then
+    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: onStart/onStop in index.ts must manage a real resource (server, connection, listener). Remove lifecycle hooks if no resource is being managed.\"}}"
     exit 0
   fi
 fi

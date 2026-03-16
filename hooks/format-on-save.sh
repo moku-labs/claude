@@ -14,13 +14,16 @@ if ! grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null && ! [ -d 
   exit 0
 fi
 
-# Extract file path from TOOL_INPUT to format only the changed file
+# Read input from stdin (PostToolUse receives tool info via stdin)
+INPUT=$(cat)
+
+# Extract file path from input to format only the changed file
 CHANGED_FILE=""
-if [ -n "$TOOL_INPUT" ]; then
+if [ -n "$INPUT" ]; then
   if command -v jq &>/dev/null; then
-    CHANGED_FILE=$(jq -r '.file_path // empty' <<< "$TOOL_INPUT" 2>/dev/null)
+    CHANGED_FILE=$(jq -r '.tool_input.file_path // empty' <<< "$INPUT" 2>/dev/null)
   elif command -v python3 &>/dev/null; then
-    CHANGED_FILE=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('file_path',''))" <<< "$TOOL_INPUT" 2>/dev/null)
+    CHANGED_FILE=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('tool_input',{}).get('file_path',''))" <<< "$INPUT" 2>/dev/null)
   fi
 fi
 

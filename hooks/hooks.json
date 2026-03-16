@@ -6,22 +6,22 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh \"$TOOL_INPUT\"",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-plugin-antipatterns.sh \"$TOOL_INPUT\"",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/check-plugin-antipatterns.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/validate-plugin-structure.sh \"$TOOL_INPUT\"",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/validate-plugin-structure.sh",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/validate-plugin-index.sh \"$TOOL_INPUT\"",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/validate-plugin-index.sh",
             "timeout": 5
           }
         ]
@@ -34,7 +34,8 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/format-on-save.sh",
-            "timeout": 15
+            "timeout": 15,
+            "async": true
           }
         ]
       }
@@ -46,6 +47,18 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/hooks/precompact-state.sh",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/postcompact-state.sh",
             "timeout": 10
           }
         ]
@@ -69,7 +82,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/log-notification.sh \"$TOOL_INPUT\"",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/log-notification.sh",
             "timeout": 5
           }
         ]
@@ -93,7 +106,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-stop.sh \"$TOOL_INPUT\"",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-stop.sh",
             "timeout": 5
           }
         ]

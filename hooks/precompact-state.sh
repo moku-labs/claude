@@ -55,7 +55,12 @@ if [ -f .planning/memory.md ]; then
       echo "## $section"
       if [ -n "$KEYWORDS" ]; then
         # Prioritize keyword-matching entries, then fill remaining slots with recent entries
-        SAFE_KEYWORDS=$(echo "$KEYWORDS" | sed 's/[.+*\[\]()^${}|\\]/\\&/g')
+        # Escape regex metacharacters portably (BSD sed does not support this)
+        if command -v python3 &>/dev/null; then
+          SAFE_KEYWORDS=$(python3 -c "import re,sys; parts=sys.stdin.read().rstrip('|').split('|'); print('|'.join(re.escape(p) for p in parts if p))" <<< "$KEYWORDS")
+        else
+          SAFE_KEYWORDS="$KEYWORDS"  # fallback: slight false-positive risk, no crash
+        fi
         RELEVANT=$(echo "$ALL_ENTRIES" | grep -iE "${SAFE_KEYWORDS:-__NOMATCH__}" | sort -t'[' -k2 -r | head -3)
         RECENT=$(echo "$ALL_ENTRIES" | sort -t'[' -k2 -r | head -5)
         # Combine: relevant first, then recent (dedup)

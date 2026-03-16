@@ -4,7 +4,7 @@
 
 [ -f .planning/STATE.md ] || exit 0
 
-INPUT="$1"
+INPUT=$(cat)
 
 # Extract title, message, and notification_type from JSON input
 # Priority: jq (fast) → python3 (reliable) → skip (no silent failure)

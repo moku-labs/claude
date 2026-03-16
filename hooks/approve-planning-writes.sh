@@ -3,14 +3,14 @@
 # Restricted to specific known filenames to prevent bypass of anti-pattern checks
 # on arbitrary files placed under .planning/.
 
-INPUT="$1"
+INPUT=$(cat)
 
-# Extract file_path from the JSON input
+# Extract file_path from the JSON input (nested under tool_input for PreToolUse)
 # Priority: jq (fast) → python3 (reliable) → skip
 if command -v jq &>/dev/null; then
-  FILE_PATH=$(jq -r '.file_path // empty' <<< "$INPUT" 2>/dev/null)
+  FILE_PATH=$(jq -r '.tool_input.file_path // empty' <<< "$INPUT" 2>/dev/null)
 elif command -v python3 &>/dev/null; then
-  FILE_PATH=$(python3 -c "import sys,json; d=json.loads(sys.stdin.read()); print(d.get('file_path',''))" <<< "$INPUT" 2>/dev/null)
+  FILE_PATH=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('tool_input',{}).get('file_path',''))" <<< "$INPUT" 2>/dev/null)
 else
   exit 0
 fi
@@ -49,5 +49,5 @@ case "$REL_PATH" in
     ;;
 esac
 
-echo '{"decision":"approve","reason":"Auto-approved: known .planning/ file for state tracking"}'
+echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"Auto-approved: known .planning/ file for state tracking"}}'
 exit 0

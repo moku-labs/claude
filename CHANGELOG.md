@@ -2,6 +2,26 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.13.6 (2026-03-16)
+
+### Fixed
+- **All hook scripts** — hooks were receiving empty input because `$TOOL_INPUT` is not a real environment variable. All scripts now read from stdin via `INPUT=$(cat)` per the official Claude Code hooks API.
+- **All PreToolUse hook scripts** — JSON extraction paths used `.file_path` at the top level, but PreToolUse input nests tool parameters under `.tool_input`. Updated all jq/python3 paths to `.tool_input.file_path`, `.tool_input.content`, etc.
+- **`format-on-save.sh`** — was formatting the entire project on every Write/Edit because `$TOOL_INPUT` env var was always empty. Now reads stdin and formats only the changed file.
+- **`validate-plugin-structure.sh`** — JSON injection via unescaped `PLUGIN_NAME` in echo-constructed JSON. Replaced with `jq -Rs` safe encoding. Also fixed `types` import grep false-positive matching `types-utils`, `typesafe-actions`, etc.
+- **`on-subagent-stop.sh`** — TOCTOU race condition on `agent-log.md` creation when parallel subagents complete simultaneously. Uses `set -o noclobber` for atomic header creation.
+- **`precompact-state.sh`** — regex metacharacter escaping via `sed` was a no-op on macOS BSD sed. Replaced with portable `python3 re.escape()` approach.
+
+### Changed
+- **`hooks.json`** — removed `"$TOOL_INPUT"` from all command strings (not a real env var). Added `"async": true` to `format-on-save.sh` PostToolUse hook so formatting runs in background without blocking Claude. Added `PostCompact` hook entry.
+- **`approve-planning-writes.sh`, `check-plugin-antipatterns.sh`, `validate-plugin-index.sh`** — migrated from deprecated `{"decision":"block"}` / `{"decision":"approve"}` output format to modern `hookSpecificOutput.permissionDecision` API (`"deny"` / `"allow"`).
+- **`validate-plugin-structure.sh`** — warnings now use `hookSpecificOutput.additionalContext` instead of invalid `{"decision":"warn"}` which was silently ignored.
+- **`check-plugin-antipatterns.sh`, `validate-plugin-structure.sh`, `validate-plugin-index.sh`** — added Moku project detection guard (`createCoreConfig`/`@moku-labs` check) so hooks exit instantly for non-Moku projects.
+- **`check-plugin-antipatterns.sh`** — expanded test file exclusions to cover `*.test.tsx`, `*.spec.tsx`, `*/__tests__/*`, `vitest.setup.ts`, `vitest.config.ts`, `*.mock.ts`, `*.mock.tsx`, `*.fixture.ts`.
+
+### Added
+- **`postcompact-state.sh`** — new PostCompact hook that re-injects critical STATE.md fields (Phase, Verb, Target, Next Action, active waves) into Claude's context after compaction completes, ensuring planning state survives context compression.
+
 ## 0.13.5 (2026-03-12)
 
 ### Changed
