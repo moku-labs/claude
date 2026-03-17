@@ -2,6 +2,16 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.15.1 (2026-03-18)
+
+### Changed
+- **`commands/plan.md`** — 21 fixes from 3-pass iterative audit. Key improvements:
+  - **Resume flow hardened** — resume guard skips token extraction, Phase-to-Stage Jump Table with `none`/unrecognized fallback, explicit phase transition protocol (`pending-approval` → `approved`)
+  - **STATE.md robustness** — read-time validation (presence + non-empty values), expanded schema (7 required headers including `PluginTable`, `WaveGrouping`, `QuickMode`), write validation with halt-on-failure, inline-colon format enforcement
+  - **Argument parsing tightened** — VERB-as-TYPE rejection guard, empty REQUIREMENTS prompt for `create`/`update`, migrate REQUIREMENTS exemption (PATH_OR_LINK is primary input), backward-compat wording clarified, auto-detect follow-through with retry
+  - **State management** — "start fresh" backup+cleanup, "continue" with new REQUIREMENTS confirmation, add-verb guard bypasses resume prompt, QuickMode persistence across sessions via `## QuickMode:` header
+  - **Quick mode defined for all verbs** — `create`/`update` collapse stages, `resume` applies to remaining stages, `migrate` passes through, `add` always quick
+
 ## 0.15.0 (2026-03-17)
 
 ### Added
