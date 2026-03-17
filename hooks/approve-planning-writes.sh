@@ -48,6 +48,10 @@ case "$REL_PATH" in
     ;;
   .planning/audit-*.md|*/.planning/audit-*.md)
     ;;
+  .planning/moku.md|*/.planning/moku.md)
+    ;;
+  .planning/diagnostics.log|*/.planning/diagnostics.log)
+    ;;
   *)
     # Not a known .planning/ file — don't auto-approve, let normal flow handle it
     exit 0

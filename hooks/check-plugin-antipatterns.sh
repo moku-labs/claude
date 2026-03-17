@@ -2,10 +2,13 @@
 # PreToolUse hook: detect common Moku anti-patterns in Write/Edit content.
 # Blocks the tool use with a clear error message so Claude can self-correct.
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
+
 INPUT=$(cat)
 
 # Quick exit if not a Moku project
-[ -f src/config.ts ] && grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null || exit 0
+[ -f .planning/moku.md ] || exit 0
 
 # Extract file_path and content/new_string from JSON input (nested under tool_input)
 # Priority: jq (fast) → python3 (reliable) → exit with warning (no silent failure)
@@ -33,38 +36,44 @@ esac
 
 # Check 1: Explicit generics on createPlugin (CRITICAL anti-pattern)
 if printf '%s\n' "$CONTENT" | grep -q 'createPlugin<'; then
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: Explicit generics on createPlugin detected (e.g. createPlugin<Config, State, ...>). This is a CRITICAL anti-pattern in Moku — all types must be inferred from the spec object. Remove the generic parameters and let TypeScript infer them. See the moku-plugin skill for correct patterns."}}'
-  exit 0
+  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "createPlugin< — explicit generics detected"
+  echo "BLOCKED: Explicit generics on createPlugin detected (e.g. createPlugin<Config, State, ...>). This is a CRITICAL anti-pattern in Moku — all types must be inferred from the spec object. Remove the generic parameters and let TypeScript infer them. See the moku-plugin skill for correct patterns." >&2
+  exit 2
 fi
 
 # Check 2: Unsafe type assertions in plugin source files
 if printf '%s\n' "$CONTENT" | grep -q 'as any'; then
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: \"as any\" detected in plugin source. Use proper typing or \"as unknown as TargetType\" if a cast is truly necessary. Moku plugins rely on type inference — \"as any\" defeats the type system."}}'
-  exit 0
+  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "as any — unsafe type assertion"
+  echo 'BLOCKED: "as any" detected in plugin source. Use proper typing or "as unknown as TargetType" if a cast is truly necessary. Moku plugins rely on type inference — "as any" defeats the type system.' >&2
+  exit 2
 fi
 
 # Check 3: Explicit generics on createCorePlugin (same anti-pattern as createPlugin)
 if printf '%s\n' "$CONTENT" | grep -q 'createCorePlugin<'; then
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: Explicit generics on createCorePlugin detected. Same rule as createPlugin — all types must be inferred from the spec object. Remove the generic parameters."}}'
-  exit 0
+  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "createCorePlugin< — explicit generics detected"
+  echo "BLOCKED: Explicit generics on createCorePlugin detected. Same rule as createPlugin — all types must be inferred from the spec object. Remove the generic parameters." >&2
+  exit 2
 fi
 
 # Check 4: "Plugin" postfix in exported plugin variable names
 if printf '%s\n' "$CONTENT" | grep -qE 'export const [a-z][a-zA-Z]*Plugin\b'; then
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: Plugin export name has \"Plugin\" postfix (e.g. routePlugin). Moku convention: use bare name matching the plugin string name (e.g. route). See moku-plugin skill for naming rules."}}'
-  exit 0
+  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "Plugin postfix in export name"
+  echo 'BLOCKED: Plugin export name has "Plugin" postfix (e.g. routePlugin). Moku convention: use bare name matching the plugin string name (e.g. route). See moku-plugin skill for naming rules.' >&2
+  exit 2
 fi
 
 # Check 5: Wire factory pattern — function wireXxx wrapping createPlugin
 if printf '%s\n' "$CONTENT" | grep -qE 'function wire[A-Z]'; then
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: Wire factory pattern detected (function wireXxx...). Moku plugins import createPlugin and dependencies directly — no factory indirection. See moku-plugin skill Common Mistakes."}}'
-  exit 0
+  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "wire factory pattern (function wireXxx)"
+  echo "BLOCKED: Wire factory pattern detected (function wireXxx...). Moku plugins import createPlugin and dependencies directly — no factory indirection. See moku-plugin skill Common Mistakes." >&2
+  exit 2
 fi
 
 # Check 6: Inline type assertions in state/config (null as X, {} as X, [] as X)
 if printf '%s\n' "$CONTENT" | grep -qE 'null as [A-Za-z_]|\{\} as |\[\] as '; then
-  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"BLOCKED: Inline type assertion detected (e.g. null as Foo | null). For Standard+ plugins, define a type and use a typed factory. For Nano/Micro, use a return-type annotation. See moku-plugin skill Common Mistakes."}}'
-  exit 0
+  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "inline type assertion (null as X / {} as X / [] as X)"
+  echo "BLOCKED: Inline type assertion detected (e.g. null as Foo | null). For Standard+ plugins, define a type and use a typed factory. For Nano/Micro, use a return-type annotation. See moku-plugin skill Common Mistakes." >&2
+  exit 2
 fi
 
 # No issues found — don't interfere

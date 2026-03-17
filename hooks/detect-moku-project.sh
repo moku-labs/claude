@@ -1,40 +1,98 @@
 #!/usr/bin/env bash
 # Detect Moku project type and state on session start.
+# Creates/reads .planning/moku.md marker for fast detection by other hooks.
 # Outputs context hints for Claude to understand the current project.
 
-# First-run detection — welcome new users with decision tree
-if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; then
-  if grep -q '@moku-labs' package.json 2>/dev/null; then
-    echo "Welcome to Moku! Choose your path:"
-    echo ""
-    echo "  Quick start:"
-    echo "    /moku:init            — scaffold a new project (framework, app, or tools)"
-    echo "    /moku:plan add plugin — add a plugin to an existing framework"
-    echo ""
-    echo "  Full workflow:"
-    echo "    /moku:plan create framework \"description\" — plan a new framework (3-stage gated)"
-    echo "    /moku:plan create app \"description\"       — plan a consumer app"
-    echo "    /moku:plan migrate ~/path/to/project       — migrate existing code to Moku"
-    echo ""
-    echo "  Diagnostics:"
-    echo "    /moku:check — run project diagnostics"
+PROJECT_TYPE=""
+PROJECT_NAME=""
+CORE_VER=""
+
+# --- Read from marker if it exists (fast path) ---
+if [ -f .planning/moku.md ]; then
+  PROJECT_TYPE=$(grep '^type:' .planning/moku.md 2>/dev/null | sed 's/type: //')
+  PROJECT_NAME=$(grep '^name:' .planning/moku.md 2>/dev/null | sed 's/name: //')
+  CORE_VER=$(grep '^core_version:' .planning/moku.md 2>/dev/null | sed 's/core_version: //')
+fi
+
+# --- Detect project type if not cached ---
+if [ -z "$PROJECT_TYPE" ]; then
+  # First-run detection — welcome new users with decision tree
+  if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; then
+    if grep -q '@moku-labs' package.json 2>/dev/null; then
+      echo "Welcome to Moku! Choose your path:"
+      echo ""
+      echo "  Quick start:"
+      echo "    /moku:init            — scaffold a new project (framework, app, or tools)"
+      echo "    /moku:plan add plugin — add a plugin to an existing framework"
+      echo ""
+      echo "  Full workflow:"
+      echo "    /moku:plan create framework \"description\" — plan a new framework (3-stage gated)"
+      echo "    /moku:plan create app \"description\"       — plan a consumer app"
+      echo "    /moku:plan migrate ~/path/to/project       — migrate existing code to Moku"
+      echo ""
+      echo "  Diagnostics:"
+      echo "    /moku:check — run project diagnostics"
+    fi
+  fi
+
+  # Check for Moku project markers
+  if [ -f src/config.ts ] && grep -q 'createCoreConfig' src/config.ts 2>/dev/null; then
+    PROJECT_TYPE="framework"
+  elif [ -f package.json ] && grep -q 'createApp' src/index.ts 2>/dev/null; then
+    PROJECT_TYPE="consumer"
+  elif [ -f package.json ] && [ -f biome.json ] && [ -f vitest.config.ts ]; then
+    if grep -q '@moku-labs' package.json 2>/dev/null; then
+      PROJECT_TYPE="tools"
+    fi
+  fi
+
+  # Extract project name from package.json
+  if [ -z "$PROJECT_NAME" ] && [ -f package.json ]; then
+    if command -v jq &>/dev/null; then
+      PROJECT_NAME=$(jq -r '.name // empty' package.json 2>/dev/null)
+    elif command -v python3 &>/dev/null; then
+      PROJECT_NAME=$(python3 -c "import json; print(json.load(open('package.json')).get('name',''))" 2>/dev/null)
+    fi
+  fi
+
+  # Extract @moku-labs/core version
+  if [ -z "$CORE_VER" ] && [ -f package.json ]; then
+    if command -v jq &>/dev/null; then
+      CORE_VER=$(jq -r '.dependencies["@moku-labs/core"] // .devDependencies["@moku-labs/core"] // empty' package.json 2>/dev/null | sed 's/[\^~>=<]//g')
+    elif command -v node &>/dev/null; then
+      CORE_VER=$(node -e "const p=require('./package.json');const v=p.dependencies?.['@moku-labs/core']||p.devDependencies?.['@moku-labs/core']||'';console.log(v.replace(/[\^~>=<]/g,''))" 2>/dev/null)
+    fi
+  fi
+
+  # Create marker file if we detected a project type and .planning/ exists
+  if [ -n "$PROJECT_TYPE" ] && [ -d .planning ]; then
+    cat > .planning/moku.md << MOKUEOF
+# Moku Project
+
+type: ${PROJECT_TYPE}
+name: ${PROJECT_NAME}
+core_version: ${CORE_VER}
+created: $(date '+%Y-%m-%d')
+MOKUEOF
   fi
 fi
 
-# Check for Moku project markers
-if [ -f src/config.ts ] && grep -q 'createCoreConfig' src/config.ts 2>/dev/null; then
-  echo "Moku Framework project detected (Layer 2)."
-
-  # Count plugins
-  PLUGIN_COUNT=$(find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
-  if [ "$PLUGIN_COUNT" -gt 0 ]; then
-    echo "Plugins found: $PLUGIN_COUNT"
-  fi
-elif [ -f package.json ] && grep -q 'createApp' src/index.ts 2>/dev/null; then
-  echo "Moku Consumer App detected (Layer 3)."
-elif [ -f package.json ] && [ -f biome.json ] && [ -f vitest.config.ts ]; then
-  echo "Moku Tools/Library project detected."
-fi
+# --- Output context ---
+case "$PROJECT_TYPE" in
+  framework)
+    echo "Moku Framework project detected (Layer 2)."
+    PLUGIN_COUNT=$(find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$PLUGIN_COUNT" -gt 0 ]; then
+      echo "Plugins found: $PLUGIN_COUNT"
+    fi
+    ;;
+  consumer)
+    echo "Moku Consumer App detected (Layer 3)."
+    ;;
+  tools)
+    echo "Moku Tools/Library project detected."
+    ;;
+esac
 
 # Check planning state with quick-action suggestions
 if [ -f .planning/STATE.md ]; then
@@ -99,12 +157,6 @@ if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
     printf '%b' "$WARNINGS"
   fi
 
-  # Version compatibility — check @moku-labs/core version
-  if command -v jq &>/dev/null; then
-    CORE_VER=$(jq -r '.dependencies["@moku-labs/core"] // .devDependencies["@moku-labs/core"] // empty' package.json 2>/dev/null | sed 's/[\^~>=<]//g')
-  elif command -v node &>/dev/null; then
-    CORE_VER=$(node -e "const p=require('./package.json');const v=p.dependencies?.['@moku-labs/core']||p.devDependencies?.['@moku-labs/core']||'';console.log(v.replace(/[\^~>=<]/g,''))" 2>/dev/null)
-  fi
   if [ -n "$CORE_VER" ]; then
     echo "@moku-labs/core: $CORE_VER"
   fi

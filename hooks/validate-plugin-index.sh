@@ -2,10 +2,13 @@
 # PreToolUse hook: validate plugins/*/index.ts content constraints.
 # Fast-path exits 0 immediately for all other files — no LLM, no delay.
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
+
 INPUT=$(cat)
 
 # Quick exit if not a Moku project
-[ -f src/config.ts ] && grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null || exit 0
+[ -f .planning/moku.md ] || exit 0
 
 # Parse file path, content, and tool type (nested under tool_input)
 if command -v jq &>/dev/null; then
@@ -30,8 +33,9 @@ esac
 if [ "$IS_WRITE" = "yes" ]; then
   LINE_COUNT=$(printf '%s\n' "$CONTENT" | wc -l | tr -d ' ')
   if [ "$LINE_COUNT" -gt 30 ]; then
-    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: plugins/*/index.ts must be ≤30 lines (wiring-only), got $LINE_COUNT lines. Move business logic into separate module files.\"}}"
-    exit 0
+    log_diagnostic "INDEX-RULE" "$FILE_PATH" "index.ts has $LINE_COUNT lines (max 30)"
+    echo "BLOCKED: plugins/*/index.ts must be ≤30 lines (wiring-only), got $LINE_COUNT lines. Move business logic into separate module files." >&2
+    exit 2
   fi
 fi
 
@@ -40,8 +44,9 @@ fi
 # Rule 3: onStart/onStop must reference a real resource lifecycle method
 if printf '%s\n' "$CONTENT" | grep -qE '\bon(Start|Stop)\s*:'; then
   if ! printf '%s\n' "$CONTENT" | grep -qE '\.(listen|close|connect|disconnect|start|stop|end|destroy|kill|open|shutdown|init|initialize|cleanup|dispose|terminate|release)\('; then
-    echo "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",\"permissionDecisionReason\":\"BLOCKED: onStart/onStop in index.ts must manage a real resource (server, connection, listener). Remove lifecycle hooks if no resource is being managed.\"}}"
-    exit 0
+    log_diagnostic "INDEX-RULE" "$FILE_PATH" "onStart/onStop without real resource lifecycle"
+    echo "BLOCKED: onStart/onStop in index.ts must manage a real resource (server, connection, listener). Remove lifecycle hooks if no resource is being managed." >&2
+    exit 2
   fi
 fi
 

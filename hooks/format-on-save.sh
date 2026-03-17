@@ -9,10 +9,8 @@
 [ -d node_modules ] || exit 0
 grep -q '"format"' package.json 2>/dev/null || exit 0
 
-# Must be a Moku project — check for framework marker or active planning
-if ! grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null && ! [ -d .planning ]; then
-  exit 0
-fi
+# Must be a Moku project
+[ -f .planning/moku.md ] || exit 0
 
 # Read input from stdin (PostToolUse receives tool info via stdin)
 INPUT=$(cat)

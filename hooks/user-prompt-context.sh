@@ -2,12 +2,20 @@
 # UserPromptSubmit hook: inject compact Moku project context before every prompt.
 # Keeps output under 200 tokens to minimize context consumption.
 
-# Quick exit if not a Moku project
-[ -f src/config.ts ] && grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null && PROJECT_TYPE="Framework" || {
-  [ -f package.json ] && grep -q 'createApp' src/index.ts 2>/dev/null && PROJECT_TYPE="Consumer" || {
-    [ -f biome.json ] && [ -f vitest.config.ts ] && [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null && PROJECT_TYPE="Tools" || exit 0
-  }
-}
+# Quick exit if not a Moku project — marker first, detection fallback
+PROJECT_TYPE=""
+if [ -f .planning/moku.md ]; then
+  PROJECT_TYPE=$(grep '^type:' .planning/moku.md 2>/dev/null | sed 's/type: //')
+  # Normalize to display names
+  case "$PROJECT_TYPE" in
+    framework) PROJECT_TYPE="Framework" ;;
+    consumer)  PROJECT_TYPE="Consumer" ;;
+    tools)     PROJECT_TYPE="Tools" ;;
+  esac
+fi
+
+# No marker — not a Moku project
+[ -n "$PROJECT_TYPE" ] || exit 0
 
 echo "Moku $PROJECT_TYPE project."
 

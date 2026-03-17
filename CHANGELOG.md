@@ -2,6 +2,30 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.14.0 (2026-03-17)
+
+### Added
+- **`auto-permissions.sh`** — new PermissionRequest hook auto-approves safe operations (read-only tools, project-scoped writes, safe bash commands) and blocks dangerous ones (sudo, force-push, rm -rf /, pipe-to-shell). Eliminates manual permission prompts for routine operations.
+- **`check-wave-complete.sh`** — new Stop hook prevents Claude from stopping mid-wave during builds. Includes `stop_hook_active` guard against infinite loops.
+- **`log-tool-failure.sh`** — new PostToolUseFailure hook logs tool errors to `.planning/diagnostics.log`. Skips user interrupts.
+- **`diagnostics-logger.sh`** — shared logging library sourced by all hooks. Writes structured `[CATEGORY] target: message` entries to `.planning/diagnostics.log` for post-session analysis.
+- **`.planning/moku.md`** — project marker file created on first session start. Caches project type, name, and core version for fast detection by all hooks (replaces per-hook `grep` on `src/config.ts`).
+- **`commands/status.md`** — added `diagnostics` flag and diagnostics dashboard section reading `.planning/diagnostics.log`.
+- **`commands/audit.md`** — added diagnostics log pattern analysis to hooks audit mode with `[c]` clear/archive option.
+
+### Changed
+- **`check-plugin-antipatterns.sh`** — migrated 6 deny responses from JSON `permissionDecision` output to idiomatic `exit 2` + stderr. Added diagnostics logging on each denial.
+- **`validate-plugin-index.sh`** — migrated 2 deny responses to `exit 2` + stderr with diagnostics logging.
+- **`validate-plugin-structure.sh`** — added diagnostics logging for structure warnings.
+- **All hook guards** — replaced `grep -qE 'createCoreConfig|@moku-labs' src/config.ts` with `[ -f .planning/moku.md ]` check in 6 hooks. Only `detect-moku-project.sh` retains grep-based detection (as the marker creator).
+- **`detect-moku-project.sh`** — creates `.planning/moku.md` marker on first detection, reads from it on subsequent sessions.
+- **`approve-planning-writes.sh`** — added `moku.md` and `diagnostics.log` to auto-approve allow-list.
+- **`hooks.json`** — added PermissionRequest, Stop, and PostToolUseFailure event entries.
+
+### Removed
+- **`auto-permissions.sh`** — removed hardcoded `/Users/alex/Projects/moku/*` path. `$CWD` check handles project-scoped writes.
+- **`.claude/settings.local.json`** — trimmed 69 accumulated permission rules to 0. Auto-permissions hook handles all cases.
+
 ## 0.13.7 (2026-03-16)
 
 ### Fixed

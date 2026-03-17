@@ -93,13 +93,14 @@ if [ -f .planning/research.md ]; then
 fi
 
 # Fallback: inject minimal project fingerprint when no planning state exists
-if [ ! -f .planning/STATE.md ] && [ -d src/plugins ] && grep -qE 'createCoreConfig|@moku-labs' src/config.ts 2>/dev/null; then
-  echo ''
-  echo '## Moku Project Context (re-injected before compaction)'
-  FRAMEWORK_ID=$(grep -o 'createCoreConfig.*"[^"]*"' src/config.ts 2>/dev/null | grep -o '"[^"]*"' | head -1 | tr -d '"')
-  [ -n "$FRAMEWORK_ID" ] && echo "Framework: $FRAMEWORK_ID"
-  PLUGINS=$(ls src/plugins/ 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
-  [ -n "$PLUGINS" ] && echo "Plugins: $PLUGINS"
+if [ ! -f .planning/STATE.md ]; then
+  if [ -f .planning/moku.md ]; then
+    echo ''
+    echo '## Moku Project Context (re-injected before compaction)'
+    grep -E '^(type|name|core_version):' .planning/moku.md 2>/dev/null
+    PLUGINS=$(ls src/plugins/ 2>/dev/null | tr '\n' ', ' | sed 's/,$//')
+    [ -n "$PLUGINS" ] && echo "Plugins: $PLUGINS"
+  fi
 fi
 
 exit 0
