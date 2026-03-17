@@ -2,6 +2,21 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.15.0 (2026-03-17)
+
+### Added
+- **`verify-before-commit.sh`** — new PreToolUse hook (Bash) gates checkpoint commits with `bunx tsc --noEmit` + `bun run lint` verification. Blocks commits during active build waves if TypeScript or lint errors exist. Ensures no broken code enters git history.
+- **`pre-commit-review.sh`** — new PostToolUse hook (Bash) runs lightweight self-review after checkpoint commits. Detects stubs, TODO markers, console.log statements, and re-runs tsc/lint. Injects findings as additionalContext for immediate visibility.
+- **`agents/wave-judge.md`** — new **moku-wave-judge** agent completing the Planner/Worker/Judge triad. Evaluates wave quality on 5 dimensions (verification health, code quality trajectory, test coverage, integration stability, blocker severity) and outputs a continuation decision: `continue`, `stop-for-review`, or `fresh-retry`. Includes fixation detection for gap closure loops.
+- **Fresh-Context Retry (Ralph Wiggum Loop)** — new Step 4c2 in `build-verification.md`. When gap closure exhausts its rounds, saves error summary to STATE.md `## Fresh Retry Context` section, sets plugins to `retry-pending`, and stops. On resume, spawns error-diagnostician with only the error context (no accumulated conversation), avoiding fixation loops. Pattern validated as industry best practice in 2026.
+- **Resume with `retry-pending`** — `build-wave-execution.md` now handles `retry-pending` plugin status on resume, routing through fresh-context diagnostician before re-verification.
+- **Wave Judge integration** — new Step 4c3 in `build-verification.md`. After gap closure (or if verification passed cleanly), spawns moku-wave-judge to evaluate wave quality before proceeding. Skipped for trivial waves (1 Nano/Micro plugin, zero warnings).
+
+### Changed
+- **`on-subagent-stop.sh`** — enhanced agent decision tracing. Now extracts `verdict`, `decision`, `blockers` count, and `warnings` count from agent JSON output contracts. Agent log entries show `PASS [continue] B:2 W:1` instead of just `completed`. Falls back gracefully if no JSON contract found.
+- **`diagnostics-logger.sh`** — added `SELF-REVIEW` and `COMMIT-GATE` diagnostic categories.
+- **`hooks.json`** — added PreToolUse Bash matcher for `verify-before-commit.sh` (timeout: 60s) and PostToolUse Bash matcher for `pre-commit-review.sh` (timeout: 30s).
+
 ## 0.14.0 (2026-03-17)
 
 ### Added

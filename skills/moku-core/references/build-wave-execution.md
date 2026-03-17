@@ -161,3 +161,19 @@ For `agent-incomplete` or `agent-failed` plugins:
 - Re-spawn the builder agent with the same prompt + note about what was already created on disk
 - If re-spawn also fails, mark as `needs-manual` and continue with other plugins in the wave
 - `needs-manual` plugins are excluded from verification and reported to the user at the end
+
+### Resume with Fresh-Context Retry
+
+When `/moku:build resume` detects plugins with status `retry-pending` in STATE.md:
+
+1. Read the `## Fresh Retry Context` section from STATE.md (error summary, attempted fixes)
+2. Do NOT re-run the full wave — only process the `retry-pending` plugins
+3. Spawn the **moku-error-diagnostician** with a fresh, minimal prompt containing only:
+   - The error summary from STATE.md
+   - The plugin spec (`.planning/specs/0N-name.md`)
+   - Instructions to read the current source files on disk
+4. Apply fixes → re-run verification (see `build-verification.md` Step 4c2)
+5. On success: mark as `verified`, remove `## Fresh Retry Context` section, continue to next wave
+6. On failure: mark as `needs-manual`, report to user
+
+This is the **Ralph Wiggum Loop** — fresh context avoids the fixation loops that occur when an agent repeatedly attempts the same failed approach within a long conversation.

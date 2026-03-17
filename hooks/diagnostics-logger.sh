@@ -11,6 +11,8 @@
 #   STRUCTURE   — plugin structure warning
 #   TOOL-FAIL   — tool execution failure
 #   STOP-BLOCK  — Claude prevented from stopping mid-wave
+#   SELF-REVIEW — post-commit self-review finding
+#   COMMIT-GATE — pre-commit verification gate result
 
 log_diagnostic() {
   local category="$1" target="$2" message="$3"

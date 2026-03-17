@@ -48,8 +48,69 @@ When verification finds issues (plugins with status `verify-failed`):
 5. After the targeted validator passes, re-run the **moku-verifier** agent on affected plugins for final confirmation
 6. **Integration re-check**: Re-run the integration check suite (`bun run format`, `bun run lint`, `bunx tsc --noEmit`) to ensure the fix didn't introduce new integration-level issues. If integration fails, route back through the diagnostician (this counts toward the circuit breaker).
 7. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
-8. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist, mark remaining plugins as `needs-manual` and report to user:
-   > "Some verification issues remain after 2 fix attempts. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
+8. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist after all rounds, enter **Fresh-Context Retry** (Step 4c2).
+
+## Step 4c2: Fresh-Context Retry (Ralph Wiggum Loop)
+
+When gap closure exhausts its rounds and plugins still have `verify-failed` status, the accumulated conversation context may be causing the agent to fixate on a wrong approach. A fresh context with only the error summary often produces better fixes.
+
+**Procedure:**
+
+1. **Collect the error summary** — For each `verify-failed` plugin, record:
+   - Plugin name and tier
+   - The specific errors (tsc output, test failures, lint errors)
+   - What fixes were attempted and why they didn't work
+   - The relevant spec section (`## Verification` from `.planning/specs/0N-name.md`)
+
+2. **Save to STATE.md** — Add a `## Fresh Retry Context` section:
+   ```markdown
+   ## Fresh Retry Context
+   Plugins needing fresh-context retry: [plugin-list]
+   Error summary:
+   - [plugin]: [tsc error TS2345 in api.ts:42 — attempted fix X, still fails because Y]
+   Attempted fixes: [brief list of what was tried]
+   Gap closure rounds exhausted: [N]
+   ```
+
+3. **Set status** — Mark affected plugins as `retry-pending` in the plugins table. Set:
+   ```markdown
+   ## Next Action: Run /moku:build resume (fresh-context retry for [plugin-list])
+   ```
+
+4. **Stop the current session** — Tell the user:
+   > "Gap closure exhausted after [N] rounds for [plugin-list]. Saving error context for fresh-context retry. Run `/moku:build resume` — the next session will attempt fixes with a clean context window, which often resolves fixation loops."
+
+5. **On resume** — When `/moku:build resume` detects `retry-pending` plugins:
+   - Read the `## Fresh Retry Context` section from STATE.md
+   - Spawn the **moku-error-diagnostician** agent with ONLY:
+     - The error summary (not the full conversation history)
+     - The plugin spec
+     - The current source files on disk
+   - Apply the diagnostician's fixes
+   - Re-run verification (Step 4a)
+   - If verification passes → mark as `verified`, remove `## Fresh Retry Context`
+   - If verification still fails → mark as `needs-manual` and report to user:
+     > "Fresh-context retry also failed for [plugin-list]. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
+
+**Why this works:** Agents within a long context tend to repeat the same failed approaches. A fresh session sees only the error + spec + current code, avoiding the cognitive fixation that builds up over multiple failed attempts. This is the "Ralph Wiggum Loop" pattern — deterministic verification as the halting condition, with fresh context on each iteration.
+
+## Step 4c3: Wave Judge Evaluation
+
+After gap closure completes (or if verification passed with no gap closure needed), spawn the **moku-wave-judge** agent to evaluate whether to proceed:
+
+1. Provide the judge with:
+   - Wave number and plugin list
+   - Verification results (from moku-verifier)
+   - Gap closure history (if any — error counts per round, what was attempted)
+   - Integration check results (tsc, lint, test output)
+2. Parse the judge's decision:
+   - `continue` → proceed to Step 4d (spec verification ticking)
+   - `stop-for-review` → save state and stop, tell the user:
+     > "Wave judge recommends human review before continuing. Reasoning: [judge's reasoning]. Run `/moku:build resume` after reviewing."
+   - `fresh-retry` → enter Step 4c2 (Fresh-Context Retry) for affected plugins
+3. Log the judge's decision to `.planning/agent-log.md` and `.planning/diagnostics.log`
+
+**Skip the judge for trivial waves** — if the wave has only 1 Nano/Micro plugin and verification passed with zero warnings, proceed directly to Step 4d.
 
 ## Step 4d: Spec Verification Ticking
 
