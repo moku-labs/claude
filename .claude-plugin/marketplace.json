@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "moku",
-      "version": "0.12.0",
+      "version": "0.14.0",
       "source": "./",
       "description": "Development toolkit for Moku Core \u2014 scaffolding, framework planning, plugin building, migration, and specification enforcement for the micro-kernel plugin framework",
       "author": {
