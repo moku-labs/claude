@@ -43,7 +43,7 @@ Before spawning any builder sub-agents, run a pre-flight check to catch systemic
 
 **If pre-flight passes:** Proceed to Step 3.
 
-**Skip pre-flight for Wave 0** (core plugins) when no prior code exists yet — there is nothing to check.
+**Skip pre-flight for Wave 0 only when no prior source files exist** (`src/` directory is empty or contains only skeleton stubs). If any real implementation files exist in `src/` from prior waves, run pre-flight even for Wave 0 (e.g., when re-running a specific wave with `#wave:N`).
 
 ## Step 3: Build by Waves
 

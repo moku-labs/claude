@@ -70,7 +70,7 @@ When verification finds issues (plugins with status `verify-failed`):
 7. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
 8. **Stalemate Detection:** Before each gap closure round, record the error state. After applying fixes, compare:
    - **Error count increased**: STALEMATE — fixes are making things worse
-   - **Error signatures identical** (same file:line for tsc, same test name for failures): STALEMATE — same errors persist despite fixes
+   - **Error signatures identical**: For `tsc` errors, two errors are the same signature if they share the same file path, the same error code (e.g., `TS2345`), and a line number within ±3 lines of each other. For test failures, same test name (exact match). For lint errors, same rule + same file. Hash `(file, errorCode, lineRange)` per error for comparison between rounds.
    - **Diagnostician proposed identical fix** to a previous round: STALEMATE — fixation detected
    - On stalemate: skip remaining gap closure rounds, enter Fresh-Context Retry immediately (Step 4c2). Log: `[STALEMATE] Wave N, plugin X: same errors after round Y`
 9. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist after all rounds (and no stalemate detected earlier), enter **Fresh-Context Retry** (Step 4c2).
@@ -105,6 +105,8 @@ When gap closure exhausts its rounds and plugins still have `verify-failed` stat
 4. **Stop the current session** — Tell the user:
    > "Gap closure exhausted after [N] rounds for [plugin-list]. Saving error context for fresh-context retry. Run `/moku:build resume` — the next session will attempt fixes with a clean context window, which often resolves fixation loops."
 
+   **Fresh-Context Retry always stops the current session regardless of `--continue` mode.** This is a safety boundary — the entire point is to get a fresh context window. `--continue` does not override this stop.
+
 5. **On resume** — When `/moku:build resume` detects `retry-pending` plugins:
    - Read the `## Fresh Retry Context` section from STATE.md
    - Spawn the **moku-error-diagnostician** agent with ONLY:
@@ -132,6 +134,7 @@ After gap closure completes (or if verification passed with no gap closure neede
 2. Parse the judge's decision:
    - `continue` → proceed to Step 4d (spec verification ticking)
    - `stop-for-review` → save state and use `AskUserQuestion`:
+     - **`--continue` mode does NOT override `stop-for-review`.** Wave judge safety stops take precedence over continuous mode. Present the AskUserQuestion even when `--continue` is active.
      - Question: "Wave judge recommends review. [judge's reasoning]. How to proceed?"
      - Header: "Review"
      - Options:
@@ -139,8 +142,11 @@ After gap closure completes (or if verification passed with no gap closure neede
        2. label: "Review and fix (Recommended)", description: "Stop here — run /moku:build resume after reviewing"
        3. label: "Show details", description: "Display full judge evaluation before deciding"
      - multiSelect: false
+   - After the user selects "Continue anyway," `--continue` resumes automatic wave progression. The wave judge re-evaluates each subsequent wave independently — if another `stop-for-review` occurs, the user will be asked again. A single "Continue anyway" does not disable the judge for the remainder of the build.
    - `fresh-retry` → enter Step 4c2 (Fresh-Context Retry) for affected plugins
 3. Log the judge's decision to `.planning/agent-log.md` and `.planning/diagnostics.log`
+
+**Wave judge decisions are not persisted in STATE.md.** On resume, the wave judge does NOT re-run for previously completed waves — the previous wave is considered complete (its completion state was saved in STATE.md). The judge evaluates only the CURRENT wave being built, never previous waves.
 
 **Skip the judge for trivial waves** — if the wave has only 1 Nano/Micro plugin and verification passed with zero warnings, proceed directly to Step 4d.
 
