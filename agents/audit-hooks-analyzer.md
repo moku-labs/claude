@@ -9,7 +9,8 @@ description: >
 model: sonnet
 color: orange
 maxTurns: 30
-tools: ["Read", "Grep", "Glob", "Bash"]
+memory: local
+tools: ["Read", "Grep", "Glob", "Bash", "Write"]
 ---
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.

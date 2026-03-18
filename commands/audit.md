@@ -1,6 +1,6 @@
 ---
 description: Audit a moku command or the hooks system — simulate scenarios, find gaps, propose improvements
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: <command-name|hooks|all> [--sim-only] [--iterate] [--max-scenarios N]
 disable-model-invocation: true
 ---
@@ -87,20 +87,17 @@ Spawn **moku-audit-scenario-generator** with:
 
 Wait for it to complete. Parse the JSON output contract from its response.
 
-Present the scenario plan to the user:
+Present the scenario plan, then use `AskUserQuestion`:
+- Question: "Scenario plan for {TARGET}.md: {total} scenarios ({valid} valid, {edge} edge, {error} error, {adversarial} adversarial). {execution_value_count} will run in real temp project. Proceed?"
+- Header: "Scenarios"
+- Options:
+  1. label: "Run all (Recommended)", description: "Execute all {total} scenarios as planned"
+  2. label: "Quick audit", description: "Cap at 10 scenarios — faster but less thorough"
+  3. label: "Minimal", description: "Cap at 5 scenarios — fastest, covers only critical paths"
+  4. label: "Custom cap", description: "Specify a custom scenario limit"
+- multiSelect: false
 
-```
-Scenario Plan: {TARGET}.md ({total} scenarios)
-  Valid inputs:     {valid}
-  Edge cases:       {edge}
-  Error paths:      {error}
-  Adversarial:      {adversarial}
-  Execution-value:  {execution_value_count} (will run in real temp project)
-
-Press Enter to continue, or type a number to cap scenarios at that count:
-```
-
-Wait for user input. If user types a number N: trim scenarios to N using the priority order from audit-framework.md (adversarial first, never below 2 per category). Update the scenario list accordingly.
+If user selects "Custom cap" or provides a number via "Other": trim scenarios to that count using the priority order from audit-framework.md (adversarial first, never below 2 per category).
 
 ---
 
@@ -189,26 +186,35 @@ Parse the synthesizer output. Display:
 1. The audit report section
 2. The unified diff
 
-Then ask:
+Then use `AskUserQuestion`:
+- Question: "{gaps_found} gap(s) found, {gaps_addressed} addressed. Pass rate: {scenario_pass_rate}. Apply improvements to commands/{TARGET}.md?"
+- Header: "Apply"
+- Options:
+  1. label: "Apply all (Recommended)", description: "Write the improved command — {N} changes"
+  2. label: "Show report only", description: "No changes applied — review the full report"
+  3. label: "Edit proposal", description: "Describe adjustments before applying"
+  4. label: "Apply selectively", description: "Choose which gaps to address"
+- multiSelect: false
 
-```
-{gaps_found} gap(s) found | {gaps_addressed} addressed in proposal | Pass rate: {scenario_pass_rate}
-
-Apply this improvement to commands/{TARGET}.md?
-  [y] Yes — apply the proposed changes
-  [n] No  — keep original, show report only
-  [e] Edit — describe specific adjustments to the proposal first
-```
-
-**If user says y:**
+**If user selects Apply all:**
 Write the complete improved command text (from the synthesizer's markdown block) to `${CLAUDE_PLUGIN_ROOT}/commands/{TARGET}.md`.
 Confirm: "Updated commands/{TARGET}.md — {N} changes applied."
+Record the decision in the severity calibration log (see Severity Calibration below).
 
-**If user says n:**
+**If user selects Show report only:**
 Show the full audit report. Say: "No changes applied. Run `/moku:audit {TARGET}` again after manual edits to re-audit."
+Record rejections in the severity calibration log.
 
-**If user says e (edit round):**
-Ask the user to describe what they want changed in the proposal. Apply their described changes to the synthesizer's improved text, re-display the diff. Ask y/n/e again. Track edit rounds — after 3 rounds without y/n, default to n.
+**If user selects Edit proposal:**
+Ask the user to describe what they want changed. Apply their described changes to the synthesizer's improved text, re-display the diff. Re-present the gate with `AskUserQuestion`. Track edit rounds — after 3 rounds without resolution, default to "Show report only".
+
+**If user selects Apply selectively:**
+Present each gap as a separate `AskUserQuestion` (batch up to 4 per question using multiSelect):
+- Question: "Which fixes do you want to apply?"
+- Header: "Select fixes"
+- Options: list gap titles with severity
+- multiSelect: true
+Apply only selected fixes. Record per-gap decisions in severity calibration log.
 
 ---
 
@@ -291,32 +297,110 @@ Produce a structured report grouped by file, with severity (BLOCKER / HIGH / MED
 
 Display the full hooks audit report.
 
-Show each proposed fix grouped by file:
+Show each proposed fix grouped by file, then use `AskUserQuestion`:
+- Question: "Hooks audit found fixes for {N} files. How to proceed?"
+- Header: "Apply fixes"
+- Options:
+  1. label: "Apply all (Recommended)", description: "Write fixes to all {N} hook files"
+  2. label: "Report only", description: "Show full report, apply nothing"
+  3. label: "Select files", description: "Choose which hook files to update"
+  4. label: "Clear diagnostics", description: "Archive diagnostics.log and start fresh" (only include if `.planning/diagnostics.log` exists and has entries)
+- multiSelect: false
 
-```
-hooks.json:          {N} changes
-approve-planning-writes.sh: {N} changes
-...
-
-Apply all proposed fixes?
-  [y] Yes — apply all changes to hooks files
-  [n] No  — show report only, apply nothing
-  [s] Select — choose which files to update
-  [c] Clear diagnostics — archive diagnostics.log and start fresh (only shown if diagnostics.log has entries)
-```
-
-**If y:** For each proposed file change:
+**If Apply all:** For each proposed file change:
 1. Write the fix to `${CLAUDE_PLUGIN_ROOT}/hooks/{file}` (installed/cache copy)
 2. If SOURCE_HOOKS_DIR is set, also write the same fix to `${SOURCE_HOOKS_DIR}/{file}` (source copy)
 3. Confirm: "Updated {file} — cache + source" or "Updated {file} — cache only"
 
 **Note:** Use `python3` via Bash to apply fixes when the Edit/Write tool is blocked by the prompt hook (this is especially likely when editing `hooks.json` itself).
 
-**If s:** List each file with a proposed change and ask individually. Apply the same dual-write logic per file.
+**If Select files:** Use `AskUserQuestion` with multiSelect:
+- Question: "Which hook files should be updated?"
+- Header: "Files"
+- Options: one per file with proposed changes, label=filename, description=change count
+- multiSelect: true
+Apply the same dual-write logic per selected file.
 
-**If n:** Show full report. "No changes applied."
+**If Report only:** Show full report. "No changes applied."
 
-**If c (only shown when `.planning/diagnostics.log` exists and has entries):**
+**If Clear diagnostics (only shown when `.planning/diagnostics.log` exists and has entries):**
 Copy `.planning/diagnostics.log` → `.planning/diagnostics-{YYYY-MM-DD}.log.bak`, then truncate `.planning/diagnostics.log` to empty. Confirm: "Diagnostics archived to diagnostics-{date}.log.bak. Fresh log started."
 
 After hooks audit completes, if TARGET was `all`, proceed to the next command in sequence.
+
+---
+
+## Severity Calibration (Self-Learning)
+
+The audit system learns from user decisions to calibrate gap severity over time. This data persists in `.planning/audit-learning.md` and is read by audit agents that have persistent memory.
+
+### Recording Decisions
+
+After every user gate (Step 7 or H3), record the user's decisions:
+
+1. Read `.planning/audit-learning.md` (create if it doesn't exist)
+2. For each gap in the proposal, append a row:
+   ```markdown
+   | {date} | {command} | {gap_type} | {severity} | {accepted/rejected/edited} | {user_rationale_if_any} |
+   ```
+3. "Accepted" = user applied the fix. "Rejected" = user chose report-only or skipped this gap. "Edited" = user modified the fix before applying.
+
+### Calibration Input
+
+When spawning audit agents (scenario-generator, synthesizer), include a severity calibration summary if `.planning/audit-learning.md` exists and has ≥ 5 entries:
+
+1. Compute per-gap-type acceptance rate:
+   ```
+   missing-error-handling: 10/12 accepted (83%) → keep severity
+   inefficiency: 2/8 accepted (25%) → suggest downgrading
+   ambiguous-step: 6/7 accepted (86%) → keep severity
+   ```
+2. Include as a `## Severity Calibration` section in the agent prompt:
+   - Gap types with < 40% acceptance rate → "This user rarely accepts {type} findings. Only report if HIGH confidence and clearly impactful."
+   - Gap types with > 80% acceptance rate → "This user values {type} findings. Report all instances."
+   - Gap types with 40-80% → no adjustment
+
+### Calibration Decay
+
+Entries older than 90 days are excluded from calibration calculations. Delete entries older than 180 days from the file to keep it bounded.
+
+---
+
+## Cross-Audit Correlation (for `all` mode)
+
+When TARGET is `all`, after auditing all commands + hooks sequentially, add a cross-audit correlation step before the final summary:
+
+### Step A1: Correlate Findings
+
+1. **Collect all gaps** from all individual command audits + hooks audit
+2. **Group by pattern**:
+   - Same gap type appearing in 2+ commands → **Systemic issue** (e.g., `missing-error-handling` in both `plan` and `build`)
+   - STATE.md-related gaps across commands → **Shared state management weakness**
+   - Hook-related gaps mentioned in command audits → **Hook system gap**
+   - Same wording/pattern in gaps → **Possible duplicate or shared root cause**
+3. **Present correlation report** using `AskUserQuestion`:
+   - Question: "Cross-audit found {N} systemic patterns across commands. Review?"
+   - Header: "Correlate"
+   - Options:
+     1. label: "Show correlations (Recommended)", description: "View systemic patterns that affect multiple commands"
+     2. label: "Skip", description: "Individual audit reports are sufficient"
+   - multiSelect: false
+4. If user wants to see: display the correlation report with severity, affected commands, and recommended fix approach (fix once at the root vs fix individually)
+
+### Correlation Report Format
+
+```
+Cross-Audit Correlation ({N} systemic patterns)
+
+1. [SYSTEMIC] missing-error-handling — affects: plan, build, audit
+   Pattern: No recovery path when STATE.md is malformed
+   Root fix: Add shared STATE.md validation helper
+
+2. [SHARED-STATE] STATE.md write race — affects: plan, build
+   Pattern: Both commands write STATE.md without checking concurrent access
+   Root fix: Add file locking or last-writer-wins with backup
+
+3. [HOOK-GAP] prompt hook blocks non-plugin writes — affects: build, audit
+   Pattern: Commands that write to hooks/ or output-styles/ get blocked
+   Root fix: Update approve-planning-writes.sh allowlist
+```

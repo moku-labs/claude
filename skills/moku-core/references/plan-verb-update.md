@@ -53,4 +53,4 @@
 
 After the update analysis, proceed to **Stage 2** (Specifications) and then **Stage 3** (Skeleton + Verification). Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for detailed instructions. Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` for templates.
 
-Update `.planning/STATE.md` at each stage exit. Wait for explicit user approval at each gate.
+Update `.planning/STATE.md` at each stage exit. Use `AskUserQuestion` at each gate (the stage gates in `plan-stages.md` define the exact options).

@@ -1,6 +1,6 @@
 ---
 description: Build a framework, consumer app, or plugin from a specification
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet
 argument-hint: [framework|app|plugin] [spec-path-or-name] [--dry-run] [--continue]
 disable-model-invocation: true
 ---
@@ -43,7 +43,11 @@ Parse `$ARGUMENTS`:
 4. If no explicit target keyword, auto-detect:
    a. `.planning/specs/*.md` files exist → **framework**
    b. `.planning/app-spec.md` exists → **app**
-   c. Both exist → ask the user which to build
+   c. Both exist → use `AskUserQuestion`:
+      - Question: "Both framework specs and app spec found. What would you like to build?"
+      - Header: "Build target"
+      - Options: "Framework (from .planning/specs/)" / "Consumer App (from .planning/app-spec.md)"
+      - multiSelect: false
    d. Argument matches a plugin name, `#N` pattern, or spec file path → **plugin**
 5. If no specs found and no recognizable argument → tell the user: "No specifications found. Run `/moku:plan` first to create a plan."
 
@@ -69,7 +73,13 @@ Before executing a wave, check for partial completion from a previous crash:
 
 1. Read `.planning/STATE.md` — if any plugin has status `building`, the previous invocation crashed mid-wave
 2. For each `building` plugin, check if its directory (`src/plugins/{name}/`) contains non-skeleton files (files with real implementations, not just type stubs)
-3. If non-skeleton files exist: treat as partially built — present to user: `"Plugin {name} was partially built in a previous run. Resume from current state or reset to checkpoint? (resume/reset)"`
+3. If non-skeleton files exist: treat as partially built — use `AskUserQuestion`:
+   - Question: "Plugin {name} was partially built in a previous run. How to proceed?"
+   - Header: "Recovery"
+   - Options:
+     1. label: "Resume (Recommended)", description: "Continue from current state — keep existing files"
+     2. label: "Reset to checkpoint", description: "Rollback to pre-wave commit and rebuild from scratch"
+   - multiSelect: false
 4. If reset: `git checkout` the pre-wave checkpoint commit (from `## Git Checkpoint:` in STATE.md)
 5. If resume: re-spawn the builder agent with note about existing files
 6. Update status at wave START (set `building`) not just at completion — this ensures crash detection works
@@ -96,12 +106,47 @@ Read `## Skeleton:` from STATE.md:
 | field absent | Old STATE.md format — assume skeleton committed, proceed to normal build routing |
 | `not-started` | Read `.planning/skeleton-spec.md` → route to `build-skeleton.md` Step S1 |
 | `in-progress` | Read skeleton-spec.md, find last completed skeleton wave → resume from next wave |
-| `verified` | Re-present skeleton report (from STATE.md Verification Results), ask to approve or adjust |
+| `verified` | Re-present skeleton report, use `AskUserQuestion`: "Skeleton verified. Approve and commit?" — Options: "Approve and commit (Recommended)" / "Review changes first" / "Adjust skeleton" |
 | `committed` | Skeleton complete — proceed to Framework/App/Plugin build routing below |
 
 **Skeleton always takes priority.** Any argument (`resume`, `framework #wave:2`, `--continue`) is held until skeleton is `committed`. The skeleton MUST be committed before any plugin build wave begins.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-skeleton.md` for detailed skeleton build steps.
+
+---
+
+## Output Style
+
+If the project has output styles configured, suggest switching to `moku-building` at the start of this command for terse, progress-focused formatting.
+
+---
+
+## Task DAG for Wave Progress Tracking
+
+Use `TaskCreate` and `TaskUpdate` to provide visual progress tracking during builds. Tasks supplement STATE.md (which remains the cross-session source of truth). Tasks are session-scoped and provide in-session progress UI.
+
+**At wave start:**
+1. Create a parent task for the wave: `TaskCreate("Wave N", "Build plugins: [list]")`
+2. Create a child task for each plugin: `TaskCreate("[name] ([tier])", "Build [name] plugin from spec")`
+3. Set dependencies: `TaskUpdate(child, addBlockedBy: [dependencies from other plugins in this wave if any])`
+
+**During wave:**
+- When a builder agent starts: `TaskUpdate(pluginTask, status: "in_progress")`
+- When a builder agent completes: `TaskUpdate(pluginTask, status: "completed")` or keep as in_progress if failed
+
+**After wave:**
+- Update parent wave task based on results
+- If all plugins verified: `TaskUpdate(waveTask, status: "completed")`
+
+**Example:**
+```
+TaskCreate("Wave 1", "Build env, logger, config-validator")
+TaskCreate("env [Nano]", "Build env core plugin")
+TaskCreate("logger [Nano]", "Build logger core plugin")
+TaskCreate("config-validator [Micro]", "Build config-validator plugin")
+```
+
+This gives the user a live progress view via the task UI while builds run.
 
 ---
 
@@ -136,6 +181,14 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 **Continuous mode (`--continue`):** When active, skip the stop-and-wait between waves. After completing a wave, immediately proceed to the next. Still commit git checkpoints per wave. If you sense context is getting large (many waves completed, approaching compaction), stop after the current wave: `"Pausing continuous build after Wave [N] to preserve context. Run /moku:build resume --continue to continue."`
 
 **`#wave:N` syntax:** `/moku:build #wave:2` jumps directly to wave 2 (useful for re-running a specific wave after manual fixes).
+
+### Post-Wave Code Review
+
+After each wave's verification passes (Step 4a in build-verification.md), spawn the **moku-code-reviewer** agent to review the wave's code changes. The code reviewer catches logic errors, spec deviations, and security issues that automated tools miss. See build-verification.md Step 4a2 for integration details.
+
+### Stalemate Detection
+
+During gap closure, track fix effectiveness between rounds. If the same errors persist or error count increases after applying fixes, skip remaining gap closure rounds and escalate to Fresh-Context Retry immediately. See build-verification.md Step 4c for details.
 
 ### Quality Requirements
 
@@ -188,6 +241,12 @@ If `$ARGUMENTS` starts with `fix`, enter error recovery mode. This targets faile
 - `fix auth` — fix a specific plugin by name
 - `fix #3` — fix a specific plugin by number
 - `fix --all` — fix all plugins with `needs-manual` or `verify-failed` status
+
+When multiple plugins need fixing, use `AskUserQuestion`:
+- Question: "[N] plugins need fixing. Fix all or select specific ones?"
+- Header: "Fix scope"
+- Options: "Fix all (Recommended)" / "Let me choose which ones" / "Show errors first"
+- multiSelect: false
 
 **Process:**
 1. Read `.planning/STATE.md` to identify plugins needing fixes and their status

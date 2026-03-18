@@ -50,6 +50,10 @@ Before spawning any builder sub-agents, run a pre-flight check to catch systemic
 **Before each wave:**
 1. Create a safety checkpoint: `git add -A && git commit -m "pre-wave-N: checkpoint before building [plugin list]"`. This enables rollback if the wave produces bad code.
 2. Update `.planning/STATE.md`: set each plugin in this wave to status `building` and record `## Git Checkpoint: <sha>`. This enables crash detection — if a future resume finds `building` status, it knows the previous invocation crashed mid-wave.
+3. **Create Task DAG for progress tracking:**
+   - Create a parent task: `TaskCreate("Wave N: [plugin-list]", "Build [count] plugins in parallel")`
+   - For each plugin in the wave: `TaskCreate("[name] [tier]", "Build from spec [spec-path]")`
+   - Set intra-wave dependencies if any plugin in this wave depends on another in the same wave (rare but possible): `TaskUpdate(depTask, addBlockedBy: [prerequisiteTaskId])`
 
 For each wave, build all plugins in the wave. Within a wave, **spawn parallel sub-agents** for independent plugins using the Agent tool.
 
@@ -150,11 +154,15 @@ Each sub-agent builds its plugin following this order:
 
 ### Per-Plugin Tracking
 
-After each wave's sub-agents return, parse the output contract JSON from each agent's response and update STATE.md per-plugin:
+After each wave's sub-agents return, parse the output contract JSON from each agent's response and update both STATE.md and Task progress per-plugin:
 
-1. **verdict: PASS** (all files created, tests pass, lint clean) → mark plugin as `built` in STATE.md
-2. **verdict: PARTIAL** (some files created, hit turn limit, or unresolved issues) → mark plugin as `agent-incomplete` in STATE.md
-3. **verdict: FAIL or no output contract found** (crashed, context exhausted, critical failures) → mark plugin as `agent-failed` in STATE.md
+1. **verdict: PASS** (all files created, tests pass, lint clean) → mark plugin as `built` in STATE.md, `TaskUpdate(pluginTask, status: "completed")`
+2. **verdict: PARTIAL** (some files created, hit turn limit, or unresolved issues) → mark plugin as `agent-incomplete` in STATE.md, keep task as `in_progress`
+3. **verdict: FAIL or no output contract found** (crashed, context exhausted, critical failures) → mark plugin as `agent-failed` in STATE.md, keep task as `in_progress`
+
+After all plugins in the wave are tracked, update the parent wave task:
+- All PASS → `TaskUpdate(waveTask, status: "completed")`
+- Mixed results → keep wave task as `in_progress` with updated description noting failures
 
 For `agent-incomplete` or `agent-failed` plugins:
 - Do NOT route through gap closure (gap closure is for verification failures, not build failures)

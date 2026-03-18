@@ -139,16 +139,21 @@ If no issues: "No issues — verification passed on first attempt."
 
 Present the skeleton report.
 
-Ask the user:
-> "Review the skeleton report above. The issues listed show what was found during verification and how each was resolved. If you'd like any adjustments to the skeleton structure or are concerned about any resolution, describe them and I'll apply them. Otherwise, approve to proceed with the initial commit."
+Use `AskUserQuestion`:
+- Question: "Skeleton verified. Review the report above and decide how to proceed."
+- Header: "Skeleton"
+- Options:
+  1. label: "Approve and commit (Recommended)", description: "Skeleton looks good — create the initial commit"
+  2. label: "Adjust skeleton", description: "Make changes to the skeleton structure before committing"
+  3. label: "Show details", description: "Display full verification details before deciding"
+- multiSelect: false
 
-**If the user requests adjustments:**
-1. Apply the changes directly to the skeleton files
-2. Re-run Step S3 (verification loop) — track new issues/fixes
-3. Update the skeleton report with any new findings
-4. Re-present the report and ask for approval again
-
-**Wait for explicit user approval before proceeding to commit.**
+**If the user selects Adjust skeleton:**
+1. Ask what to change (via conversation or follow-up AskUserQuestion)
+2. Apply the changes directly to the skeleton files
+3. Re-run Step S3 (verification loop) — track new issues/fixes
+4. Update the skeleton report with any new findings
+5. Re-present the gate with AskUserQuestion
 
 ---
 

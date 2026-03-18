@@ -9,6 +9,7 @@ description: >
 model: haiku
 color: cyan
 maxTurns: 30
+memory: local
 skills:
   - moku-core
 tools: []

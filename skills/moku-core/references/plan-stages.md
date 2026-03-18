@@ -100,12 +100,14 @@ For each plugin, note:
 
 #### Step 1: Understand Requirements
 
-Ask the user about:
-- What kind of application they want to build
-- What features it needs
-- Any specific frameworks they want to use
-- Performance requirements
-- Target platform
+Use `AskUserQuestion` to gather requirements efficiently:
+
+1. First question — application type:
+   - Question: "What kind of application are you building?"
+   - Header: "App type"
+   - Options: "Web app" / "Mobile app" / "Desktop app" / "CLI tool"
+
+2. Follow-up questions as needed using `AskUserQuestion` for structured choices (framework preferences, performance priorities, etc.) or direct conversation for open-ended requirements.
 
 #### Step 2: Analyze Available Frameworks and Plugins
 
@@ -228,9 +230,21 @@ If the plan-checker finds BLOCKER issues, fix them before presenting to the user
 
 ### User Gate (all targets)
 
-Present the analysis along with the plan-checker validation results. Ask the user to validate and approve before proceeding to Stage 2.
+Present the analysis along with the plan-checker validation results. Then use `AskUserQuestion`:
+- Question: "Stage 1 Analysis complete. How would you like to proceed?"
+- Header: "Stage 1"
+- Options:
+  1. label: "Approve (Recommended)", description: "Analysis looks good — proceed to Stage 2 (Specifications)"
+  2. label: "Request changes", description: "Modify the plugin structure, tiers, or dependencies"
+  3. label: "Add/remove plugins", description: "Change which plugins are included in the plan"
+  4. label: "Start over", description: "Discard this analysis and restart Stage 1"
+- multiSelect: false
 
-**Wait for explicit user approval before proceeding.**
+Route based on selection:
+- **Approve**: Update `## Phase:` to `stage1/approved`, proceed to Stage 2
+- **Request changes**: Ask follow-up about what to change, re-run analysis, re-present gate
+- **Add/remove plugins**: Ask which plugins to add/remove, update analysis, re-present gate
+- **Start over**: Reset to pre-Stage 1 state, re-run Stage 1
 
 ---
 
@@ -329,9 +343,21 @@ When updating an existing app, write an updated `.planning/app-spec.md` that inc
 
 ### User Gate (all targets)
 
-Present the completed specifications and validation results. Ask for explicit approval before proceeding to Stage 3.
+Present the completed specifications and validation results. Then use `AskUserQuestion`:
+- Question: "Stage 2 Specifications complete. How would you like to proceed?"
+- Header: "Stage 2"
+- Options:
+  1. label: "Approve (Recommended)", description: "Specs look good — proceed to Stage 3 (Skeleton Specification)"
+  2. label: "Edit specs", description: "Modify specific plugin specifications before continuing"
+  3. label: "Re-validate", description: "Run the validation pipeline again on current specs"
+  4. label: "Go back to Stage 1", description: "Return to analysis — change plugin structure"
+- multiSelect: false
 
-**Wait for explicit user approval before proceeding.**
+Route based on selection:
+- **Approve**: Update `## Phase:` to `stage2/approved`, proceed to Stage 3
+- **Edit specs**: Ask which spec to edit, apply changes, re-validate, re-present gate
+- **Re-validate**: Run plan-checker + validators again, re-present gate
+- **Go back to Stage 1**: Reset phase to `stage1/pending-approval`, re-run Stage 1 gate
 
 ---
 
@@ -378,6 +404,16 @@ Produce `.planning/skeleton-spec.md` covering: tier-appropriate file structure, 
 
 ### User Gate (all targets)
 
-Present the completed skeleton spec document. Ask for explicit approval.
+Present the completed skeleton spec document. Then use `AskUserQuestion`:
+- Question: "Stage 3 Skeleton Specification complete. Ready to build?"
+- Header: "Stage 3"
+- Options:
+  1. label: "Approve (Recommended)", description: "Skeleton spec looks good — run /moku:build resume to start building"
+  2. label: "Edit skeleton", description: "Modify file structure, wave grouping, or code blocks"
+  3. label: "Go back to Stage 2", description: "Return to specifications — change plugin specs"
+- multiSelect: false
 
-**Wait for explicit user approval before proceeding.**
+Route based on selection:
+- **Approve**: Update `## Phase:` to `stage3/approved` (which sets `complete`), update `## Next Action:`
+- **Edit skeleton**: Ask what to change, apply edits, re-present gate
+- **Go back to Stage 2**: Reset phase to `stage2/pending-approval`, re-run Stage 2 gate

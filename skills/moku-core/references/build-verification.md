@@ -14,6 +14,26 @@ Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`
 3. If ALL verified plugins pass → proceed to Step 4b
 4. If ANY plugin is `verify-failed` → enter Gap Closure (Step 4c)
 
+## Step 4a2: Post-Wave Code Review
+
+After verification passes (all target plugins are `verified`), spawn the **moku-code-reviewer** agent to review the wave's code changes:
+
+1. Provide the code reviewer with:
+   - The git diff for this wave: `git diff <pre-wave-checkpoint>..HEAD`
+   - Plugin specifications from `.planning/specs/` for all plugins in this wave
+   - The wave number and plugin list
+2. Parse the output contract:
+   - `verdict: PASS` → proceed to Step 4b
+   - `verdict: ISSUES` (HIGH findings, no BLOCKERs) → log findings for wave judge, proceed to Step 4b
+   - `verdict: BLOCKER` → route BLOCKER findings to Gap Closure (Step 4c) before proceeding
+3. For BLOCKER findings from code review, treat them like verification failures — the gap closure process applies fixes and re-verifies
+
+**Skip code review for Wave 0** if it contains only Nano/Micro core plugins (low complexity, minimal logic to review).
+
+**Code review findings feed into the wave judge** — the judge receives both verifier results AND code review findings for its evaluation.
+
+---
+
 ## Step 4b: Update Framework Files + Integration Checks
 
 After the wave's plugins pass verification, update the framework files to include them. See **`build-assembly.md`** for the full barrel structure and index.ts manifest patterns.
@@ -48,7 +68,12 @@ When verification finds issues (plugins with status `verify-failed`):
 5. After the targeted validator passes, re-run the **moku-verifier** agent on affected plugins for final confirmation
 6. **Integration re-check**: Re-run the integration check suite (`bun run format`, `bun run lint`, `bunx tsc --noEmit`) to ensure the fix didn't introduce new integration-level issues. If integration fails, route back through the diagnostician (this counts toward the circuit breaker).
 7. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
-8. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist after all rounds, enter **Fresh-Context Retry** (Step 4c2).
+8. **Stalemate Detection:** Before each gap closure round, record the error state. After applying fixes, compare:
+   - **Error count increased**: STALEMATE — fixes are making things worse
+   - **Error signatures identical** (same file:line for tsc, same test name for failures): STALEMATE — same errors persist despite fixes
+   - **Diagnostician proposed identical fix** to a previous round: STALEMATE — fixation detected
+   - On stalemate: skip remaining gap closure rounds, enter Fresh-Context Retry immediately (Step 4c2). Log: `[STALEMATE] Wave N, plugin X: same errors after round Y`
+9. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist after all rounds (and no stalemate detected earlier), enter **Fresh-Context Retry** (Step 4c2).
 
 ## Step 4c2: Fresh-Context Retry (Ralph Wiggum Loop)
 
@@ -101,12 +126,19 @@ After gap closure completes (or if verification passed with no gap closure neede
 1. Provide the judge with:
    - Wave number and plugin list
    - Verification results (from moku-verifier)
-   - Gap closure history (if any — error counts per round, what was attempted)
+   - Code review findings (from moku-code-reviewer, if run in Step 4a2)
+   - Gap closure history (if any — error counts per round, what was attempted, stalemate detection results)
    - Integration check results (tsc, lint, test output)
 2. Parse the judge's decision:
    - `continue` → proceed to Step 4d (spec verification ticking)
-   - `stop-for-review` → save state and stop, tell the user:
-     > "Wave judge recommends human review before continuing. Reasoning: [judge's reasoning]. Run `/moku:build resume` after reviewing."
+   - `stop-for-review` → save state and use `AskUserQuestion`:
+     - Question: "Wave judge recommends review. [judge's reasoning]. How to proceed?"
+     - Header: "Review"
+     - Options:
+       1. label: "Continue anyway", description: "Override judge recommendation and proceed to next wave"
+       2. label: "Review and fix (Recommended)", description: "Stop here — run /moku:build resume after reviewing"
+       3. label: "Show details", description: "Display full judge evaluation before deciding"
+     - multiSelect: false
    - `fresh-retry` → enter Step 4c2 (Fresh-Context Retry) for affected plugins
 3. Log the judge's decision to `.planning/agent-log.md` and `.planning/diagnostics.log`
 

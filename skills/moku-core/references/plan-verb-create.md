@@ -13,16 +13,35 @@
 - The user asks a question rather than stating what to build
 - The target domain is complex or has many possible interpretations
 
-**Discussion process:**
-1. Ask about the target domain and use case
-2. Ask about tech preferences (runtime environment, deployment target)
-3. Ask about scale expectations (how many plugins, team size)
-4. Ask about non-functional requirements (performance targets, bundle size limits, browser support)
-5. Ask about existing constraints (must integrate with X, can't use Y)
+**Discussion process — use `AskUserQuestion` for structured choices:**
+
+1. Domain and use case — use `AskUserQuestion`:
+   - Question: "What is the primary use case for this framework?"
+   - Header: "Use case"
+   - Options: contextual options based on the description (e.g., "Static site generator" / "SPA framework" / "Build tool" / "Game engine")
+   - multiSelect: false
+
+2. Runtime environment — use `AskUserQuestion`:
+   - Question: "What runtime environment are you targeting?"
+   - Header: "Runtime"
+   - Options: "Browser" / "Node.js" / "Bun" / "Universal (browser + server)"
+   - multiSelect: false
+
+3. Scale and constraints — use `AskUserQuestion` with multiSelect:
+   - Question: "Which constraints apply to your project?"
+   - Header: "Constraints"
+   - Options: "Small bundle size (<10KB)" / "SSR/SSG support" / "Plugin ecosystem for third parties" / "Strict TypeScript (no any)"
+   - multiSelect: true
+
+4. For open-ended details not covered by structured choices, use direct conversation.
 
 **Record decisions:** Write captured decisions to `.planning/decisions.md` using the template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` (section: decisions.md Template).
 
-Present a summary and get approval before proceeding.
+Use `AskUserQuestion` to confirm before proceeding:
+- Question: "Discussion complete. Does this capture your requirements?"
+- Header: "Confirm"
+- Options: "Yes, proceed to analysis (Recommended)" / "No, I have more to add"
+- multiSelect: false
 
 ---
 

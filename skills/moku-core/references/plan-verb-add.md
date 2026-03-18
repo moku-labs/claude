@@ -41,7 +41,16 @@ Hooks: [events hooked or none]
 Lifecycle: [onStart/onStop needs or "none — no resources to manage"]
 ```
 
-Wait for user approval before proceeding. If the user wants changes, adjust and re-present.
+Use `AskUserQuestion` for approval:
+- Question: "Plugin spec ready. Proceed to build?"
+- Header: "Approve"
+- Options:
+  1. label: "Build it (Recommended)", description: "Approve spec and start building the plugin"
+  2. label: "Edit spec", description: "Modify the specification before building"
+  3. label: "Cancel", description: "Discard this plugin plan"
+- multiSelect: false
+
+If the user wants changes, adjust the spec and re-present the gate.
 
 ## Build Plugin
 

@@ -8,6 +8,7 @@ description: >
 model: sonnet
 color: yellow
 maxTurns: 20
+memory: local
 skills:
   - moku-core
 tools: ["Read"]
@@ -83,3 +84,15 @@ Then the JSON output contract — use this EXACT structure (it is not the standa
 - `preconditions`: describe the project state (what files exist, what STATE.md contains) — be specific
 - `expected_behavior`: what the command SHOULD do for this input — focus on observable outcomes
 - `execution_value`: true only if applying the command's steps in a temp project would create/modify real files
+
+## Memory-Based Learning
+
+If you have persistent memory with past audit data, use it to improve scenario generation:
+
+1. **Check MEMORY.md** for `## Gap Type Frequency` — if certain gap types are found frequently (e.g., `missing-error-handling` appears in every audit), generate MORE scenarios targeting those areas
+2. **Check for `## Past Scenario Effectiveness`** — if past audits recorded which scenarios found the most gaps, prioritize similar scenarios for `execution_value: true`
+3. **After generating scenarios**, if you have Write tool access, save a memory entry:
+   ```
+   - [YYYY-MM-DD] {command}: generated {N} scenarios ({valid}/{edge}/{error}/{adversarial}) | confidence:medium
+   ```
+   Under `## Past Scenario Counts` in your MEMORY.md

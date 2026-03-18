@@ -9,9 +9,10 @@ description: >
 model: sonnet
 color: magenta
 maxTurns: 35
+memory: local
 skills:
   - moku-core
-tools: ["Read"]
+tools: ["Read", "Write"]
 ---
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
@@ -146,3 +147,25 @@ Produce the full improved command text in a fenced markdown block. This is what 
 
 - `verdict`: PASS if zero blockers (AUDIT-STABLE), FAIL if 1+ blockers remain after proposal
 - `audit_stable`: true when zero blockers + ≤2 warnings across all scenarios
+
+## Severity Calibration (Memory-Based Learning)
+
+If a `## Severity Calibration` section is included in your input prompt, use it to adjust your gap severity assessments:
+
+- Gap types with low acceptance rate (< 40%): only report as BLOCKER if you are very confident and the impact is clearly significant. Consider downgrading to WARNING or deferring.
+- Gap types with high acceptance rate (> 80%): report all instances — the user values these findings.
+- Gap types with no calibration data: use default severity assessment.
+
+**After producing your outputs**, if you have Write tool access, save a memory entry to track patterns:
+
+1. Read your MEMORY.md (if it exists)
+2. Under `## Audit Patterns`, append:
+   ```
+   - [YYYY-MM-DD] {command}: {gaps_found} gaps, {gaps_addressed} addressed | audit_stable:{yes/no} | top_type:{most_common_gap_type} | confidence:medium
+   ```
+3. Under `## Gap Type Frequency`, update counts:
+   ```
+   - missing-error-handling: {total_count} (last seen: YYYY-MM-DD)
+   - ambiguous-step: {total_count} (last seen: YYYY-MM-DD)
+   ```
+4. Follow the aging policy from agent-preamble.md Rule 7

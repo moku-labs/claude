@@ -9,6 +9,7 @@ description: >
 model: sonnet
 color: red
 maxTurns: 40
+memory: local
 skills:
   - moku-core
 tools: ["Read", "Grep", "Glob", "Bash", "Write"]

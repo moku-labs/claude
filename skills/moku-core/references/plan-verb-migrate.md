@@ -5,7 +5,14 @@
 ## Resolve Source
 
 MIGRATE_PATH is set from PATH_OR_LINK:
-- If PATH_OR_LINK was not provided, ask user for the path or URL.
+- If PATH_OR_LINK was not provided, use `AskUserQuestion`:
+  - Question: "Where is the code to migrate?"
+  - Header: "Source"
+  - Options:
+    1. label: "Local path", description: "Enter a local directory path (e.g., ~/Projects/legacy-app)"
+    2. label: "GitHub URL", description: "Enter a GitHub repository URL to clone"
+  - multiSelect: false
+  Then get the path/URL from the user's response.
 - If PATH_OR_LINK starts with `http` or contains `github.com`, clone to a temp directory first:
   `git clone --depth 1 <URL> /tmp/moku-migrate-<hash>` and set MIGRATE_PATH to the clone path.
 - TYPE from Step 0 determines migration focus: `framework` (extract plugins) or `app` (map to consumer composition).

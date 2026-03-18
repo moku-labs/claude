@@ -1,6 +1,6 @@
 ---
 description: Initialize a Moku development environment with full tooling
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: [project-path]
 disable-model-invocation: true
 ---
@@ -15,13 +15,16 @@ Initialize a new Moku development environment at the path specified by `$1` (or 
 
 ### Step 1: Determine Project Type and Gather All Required Information
 
-Ask the user (if not clear from context) what type of project they are creating:
+Use `AskUserQuestion` to determine project type:
+- Question: "What type of project are you creating?"
+- Header: "Project type"
+- Options:
+  1. label: "Framework (Recommended)", description: "Layer 2 — creates plugins, exports createApp/createPlugin. Depends on @moku-labs/core"
+  2. label: "Consumer App", description: "Layer 3 — imports from a framework, uses createApp. Depends on a framework package"
+  3. label: "Tools/Library", description: "Standard TypeScript project with Moku tooling. No Moku dependencies"
+- multiSelect: false
 
-- **Framework** (Layer 2) — Creates plugins, exports `createApp`/`createPlugin`. Depends on `@moku-labs/core`.
-- **Consumer App** (Layer 3) — Imports from a framework package, uses `createApp`. Depends on the framework package (e.g., `@moku-labs/web`), NOT `@moku-labs/core` directly.
-- **Tools/Library** — Standard TypeScript project with Moku tooling. No Moku dependencies unless needed.
-
-Default to **Framework** if the user doesn't specify.
+Default to **Framework** if not clear from context.
 
 **If the project type is Consumer App**, also ask for the framework package name (e.g., `@moku-labs/web`) now — this is needed in Step 3 when writing `package.json`. Do not proceed until you have this information.
 
@@ -221,6 +224,21 @@ Run `cd "$ABSOLUTE_PROJECT_PATH" && bunx lefthook install` to register the pre-c
 ### Step 5c: Format All Files
 
 Run `cd "$ABSOLUTE_PROJECT_PATH" && bun run format` to normalize all generated files to Biome's output. This prevents formatting drift between the templates and Biome's actual formatting rules (e.g., trailing comma removal). This must happen before the verification checklist.
+
+### Step 5d: Install Output Styles (Optional)
+
+If the Moku plugin has output styles available at `${CLAUDE_PLUGIN_ROOT}/output-styles/`, copy them to the project:
+
+```bash
+mkdir -p "$ABSOLUTE_PROJECT_PATH/.claude/output-styles"
+cp "${CLAUDE_PLUGIN_ROOT}/output-styles/"*.md "$ABSOLUTE_PROJECT_PATH/.claude/output-styles/" 2>/dev/null || true
+```
+
+This installs:
+- `moku-planning.md` — Verbose, analytical formatting for planning phases
+- `moku-building.md` — Terse, progress-focused formatting for build phases
+
+Users can switch with `/output-style moku-planning` or `/output-style moku-building`.
 
 ### Step 6: Verification Checklist
 
