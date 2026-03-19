@@ -13,6 +13,8 @@ Initialize a new Moku development environment at the path specified by `$1` (or 
 
 **Before writing any files**, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` in full. Do not proceed to Step 1 until this file has been read. All dependency versions, config file contents, and script definitions must come from this file — never guess or fabricate versions.
 
+**If this read fails** (file not found, permission error, or empty result), stop immediately. Report the exact path that was attempted and the error. Do not proceed to Step 1 — the tooling versions are required before any file can be written.
+
 ### Step 1: Determine Project Type and Gather All Required Information
 
 Use `AskUserQuestion` to determine project type:
@@ -35,9 +37,9 @@ Note the `$ABSOLUTE_PROJECT_PATH` (resolved from `$1` or `pwd`). Use this absolu
 If `$1` is provided, create the directory at the absolute path. Use `mkdir -p "$ABSOLUTE_PROJECT_PATH"` — this is safe to run whether or not the directory exists.
 
 If the directory already exists and is **non-empty** (check with `ls -A "$ABSOLUTE_PROJECT_PATH"`):
-- Confirm with the user before proceeding.
+- Confirm with the user before proceeding. Use `AskUserQuestion` with the question: "The directory `$ABSOLUTE_PROJECT_PATH` is non-empty. Existing tooling files (`package.json`, `biome.json`, `tsconfig.json`, etc.) will be overwritten with Moku versions. Source files in `src/` will be left untouched. Continue?" Accept only an explicit "yes" as confirmation.
 - If the user declines, **stop and report** — do not proceed.
-- If the user confirms, explain that existing tooling files (`package.json`, `biome.json`, `tsconfig.json`, etc.) will be overwritten with Moku versions, but source files in `src/` will be left untouched. Proceed only with that understanding.
+- If the user confirms, proceed with the understanding that tooling files will be overwritten and source files in `src/` will be left untouched.
 
 If `.git` does not already exist at `$ABSOLUTE_PROJECT_PATH/.git`, run `git init "$ABSOLUTE_PROJECT_PATH"`. Skip `git init` if `.git` already exists — re-initializing an existing repo can corrupt hooks.
 
@@ -51,6 +53,8 @@ Run `bun init -y` in the project directory (using absolute path: `cd "$ABSOLUTE_
 - `README.md` — Delete it. The user will create their own.
 
 After running `bun init`, delete the root `index.ts` and `README.md` using Bash: `rm -f "$ABSOLUTE_PROJECT_PATH/index.ts" "$ABSOLUTE_PROJECT_PATH/README.md"`. The `rm` command is not in the new project's `.claude/settings.local.json` allow-list (that file hasn't been written yet), but the current session's parent permissions apply during init — use Bash directly.
+
+**Note on `rm -f`:** The `-f` flag means the command succeeds even if the files do not exist — this is intentional and safe. However, if the project directory is non-writable (e.g., wrong owner or permissions), these deletions will silently fail and subsequent Write operations in this step will also fail. If any Write fails with a permission error, stop and ask the user to check that `$ABSOLUTE_PROJECT_PATH` is writable before retrying.
 
 Then configure all tooling files (these are **identical across all project types**):
 
@@ -215,6 +219,8 @@ Run `bun install` using the absolute path: `cd "$ABSOLUTE_PROJECT_PATH" && bun i
 
 **If `bun install` fails**, stop immediately and report the error to the user. Do not proceed to Step 5b or Step 6. Common causes: registry connectivity, version conflict, invalid `package.json`. Fix the issue (or ask the user) before retrying.
 
+**Recovery after `bun install` failure:** Once the root cause is fixed (connectivity restored, conflict resolved, `package.json` corrected), re-run `bun install` in `$ABSOLUTE_PROJECT_PATH` and then continue from Step 5b. Do not restart the entire init process.
+
 ### Step 5b: Install Git Hooks
 
 Run `cd "$ABSOLUTE_PROJECT_PATH" && bunx lefthook install` to register the pre-commit hooks defined in `lefthook.yml`. This must happen after `bun install` (lefthook binary must be available in `node_modules/.bin`).
@@ -246,6 +252,7 @@ After setup, run through this checklist to verify everything works. Fix any issu
 
 1. **Dependencies** — `bun install` completed without errors
 2. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. If it fails, the most common cause is a missing entry in tsconfig.json's `include` array (e.g., `"declarations.d.ts"` or `"*.config.ts"` omitted). Verify the tsconfig matches the reference exactly.
+   - If the failure is `Cannot find module`, `File not found`, or `No inputs were found`, re-read the written `$ABSOLUTE_PROJECT_PATH/tsconfig.json` and compare its `include` array against the reference in `tooling-config.md`. Rewrite the file if it does not match before re-running the check.
 3. **Biome** — `bun run lint` includes `biome check .` — verify it exits cleanly (formatting was already normalized in Step 5c)
 4. **ESLint** — `bun run lint` passes with zero warnings and zero errors
 5. **Tests** — `bun run test` runs successfully (placeholder test must pass — vitest exits code 1 on empty suites)
@@ -253,6 +260,7 @@ After setup, run through this checklist to verify everything works. Fix any issu
 7. **Template files** — Source files exist and match the project type:
    - **Framework:** `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists
    - **Consumer:** `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` does NOT appear in `package.json` dependencies
+     - **If `@moku-labs/core` IS found in `package.json` dependencies:** Remove the `@moku-labs/core` entry from the `dependencies` section of `package.json`, then re-run `bun install` in `$ABSOLUTE_PROJECT_PATH`, then re-run this checklist item.
    - **Tools:** `src/index.ts` exists
 8. **Git repo** — `.git` directory exists at project root
 9. **Git hooks** — `lefthook install` ran successfully (Step 5b)

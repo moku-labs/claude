@@ -36,10 +36,17 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 ## Step 0: Detect Target
 
 Parse `$ARGUMENTS`:
-1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files. Present the plan and exit.
+1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files.
    - **Dry-run + skeleton routing:** If `## Skeleton:` is `not-started` or `in-progress`, report what each remaining skeleton wave would create (file list from `.planning/skeleton-spec.md`) instead of creating them. Read the `## Skeleton Build Waves` section of skeleton-spec.md. For each wave, list all file paths that appear as markdown sub-headers (`### path/to/file.ts`) or as the first comment line in code blocks (`// path/to/file.ts`). Present as: "Skeleton Wave N would create: [file list]". Then report the framework/app/plugin wave plan as normal. Skeleton routing is suspended — no files are created.
+   - Before presenting the plan, validate that all referenced spec files exist and are non-empty. If any spec file is missing or empty, report: "Dry-run warning: spec [path] is missing or empty — this wave would fail during a real build." List all such issues before the plan.
+   - Present the plan in this format:
+     - **Skeleton waves** (if skeleton not committed): Skeleton Wave N: creates [file list from skeleton-spec.md]
+     - **Plugin waves:** `| Wave | Plugins | Tiers | Dependencies |` table with one row per wave.
+     - Report total: [N] skeleton waves, [M] plugin waves, [P] plugins total.
+   - Exit.
 1b. If `--continue` is present anywhere in the arguments, enter **continuous mode**: auto-advance through all remaining waves without stopping between them. Git checkpoint commits still happen per wave for rollback safety. The ONLY stopping trigger is approaching context exhaustion (if you sense compaction is imminent, stop after the current wave and tell the user to run `/moku:build resume --continue` to pick up). Default behavior (without `--continue`) is unchanged — one wave per invocation.
 2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
+2b. If the first word is `fix` — route directly to **Error Recovery** below. Do NOT enter Skeleton Detection. (The Error Recovery section itself enforces the skeleton-committed prerequisite.)
 3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
 4. If no explicit target keyword, auto-detect:
    a. Both `.planning/specs/*.md` AND `.planning/app-spec.md` exist → use `AskUserQuestion`:
@@ -63,7 +70,7 @@ For **plugin** targets, resolve the argument:
     > "Spec(s) [list] not found in .planning/specs/. Build only the found specs, or cancel?"
     Options: "Build found only" / "Cancel"
 - A name like `auth` → search `.planning/specs/*-auth.md` or build from description
-- A file path → use directly
+- A file path → validate the resolved path stays within `.planning/specs/` (reject any path containing `..` or resolving outside the project root). If the path fails validation, stop: "Spec path must be within .planning/specs/. Path traversal is not allowed." If valid, use directly.
 
 **If plugin spec resolution returns no matches** (glob finds nothing):
 1. Search case-insensitively: `find .planning/specs/ -iname "*-{name}.md"`
@@ -110,10 +117,13 @@ Before starting:
       ```
     - Warn: "STATE.md regenerated with inferred values. Verify the target before continuing."
   - **Retry-Pending Check:** Before wave analysis, scan the plugins table for any plugins with status `retry-pending`. If found, route directly to `build-verification.md` Step 4c2 (Fresh-Context Retry on resume). Skip wave analysis and normal build flow — the retry context is already saved in `## Fresh Retry Context` in STATE.md.
+  - **Completed build check:** If all plugins in the plugins table have status `complete` (or `verified`) AND the build phase is `complete`, tell the user:
+    > "This build is already complete. To re-run validation or generate the README, use `/moku:build resume` which will route to the post-build steps. To rebuild from scratch, delete `.planning/STATE.md` and re-run."
+    Stop.
   - Skip plugins/waves that are already marked as complete
   - Report: "Detected existing state. Resuming from [position]. Already built: [list]."
 
-**Note:** The Idempotency Protocol (checking for `building` status and partial completion) runs at wave execution start (Step 3 in `build-wave-execution.md`), not during this initial State Check.
+**Note:** The Idempotency Protocol (checking for `building` status and partial completion) runs at wave execution start (before spawning builder agents in `build-wave-execution.md`), not during this initial State Check.
 
 ### Idempotency Protocol
 
@@ -134,7 +144,7 @@ Run this at wave execution start (Step 3), before spawning builder agents:
      > "Git checkpoint is missing — safe rollback is not possible. Options: (1) Run `/moku:build resume` to rebuild the plugin from current state, or (2) Check `git log` and manually restore to a known good commit."
      Stop.
    - If the field is present and non-empty, run `git cat-file -e <sha>^{commit}`. If the commit does not exist (branch was reset or SHA is stale), tell the user:
-     > "Git checkpoint SHA <sha> is no longer valid (branch may have been reset). Manual recovery required: check your git log and run /moku:build resume from a known good state."
+     > "Git checkpoint SHA <sha> is no longer valid (branch may have been reset). Manual recovery steps: (1) Run `git log --oneline` to find a known good commit, (2) Run `git checkout <that-sha>`, (3) Open `.planning/STATE.md` and delete the `## Git Checkpoint:` line, (4) Run `/moku:build resume` to continue from the restored state."
      Stop.
    - If the SHA is valid, run `git checkout <sha>`.
 5. If resume: re-spawn the builder agent with note about existing files
@@ -217,7 +227,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 **Flow**: Each invocation executes exactly ONE step (wave, verification, README, or validation), saves STATE.md, and stops. User runs `/moku:build resume` for the next step. This ensures fresh context and explicit user control.
 
 **Step sequence per invocation:**
-1. Read specs → Wave analysis → **STOP** (present wave plan). **On resume:** if STATE.md already contains a stored wave plan (the plugins table has a `Wave` column and all plugins have numeric wave assignments), skip wave analysis and proceed directly to executing the next incomplete wave.
+1. Read specs → Wave analysis → **STOP** (present wave plan). **On resume:** if STATE.md already contains a stored wave plan (detect by looking for `| Wave |` in the plugins table header row AND all plugin rows have a numeric value in the Wave column), skip wave analysis and proceed directly to executing the next incomplete wave.
 2. Build Wave 0 (core plugins) → verify → integrate → tick spec checkboxes → **STOP**
 3. Build Wave 1 → verify → integrate → tick spec checkboxes → **STOP**
 4. Build Wave N → ... → **STOP** (one wave per invocation until all waves done)

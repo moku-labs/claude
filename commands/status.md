@@ -7,10 +7,19 @@ disable-model-invocation: true
 
 Show a consolidated dashboard of the current Moku project state. Reads multiple sources and presents a unified view.
 
+## Execution Guard
+
+Before reading any data source:
+- If `$ARGUMENTS` is non-empty and does not match `--full` or `diagnostics` (exact, case-sensitive), print:
+  `Unknown flag: {value}. Recognized flags: --full, diagnostics` — then continue with default (no-flag) behavior.
+- Read `.planning/STATE.md`. If the file does not exist, skip all STATE.md-dependent sections and render the
+  "No active plan" fallback (Phase/Verb/Target/Next Action all show "—") then proceed directly to
+  Quick Actions using the "No STATE.md" rows from the Quick Action Logic table. Stop after Quick Actions.
+
 ## Data Sources
 
 1. **`.planning/STATE.md`** — phase, verb, target, plugin table, wave progress, next action
-2. **`.planning/agent-log.md`** — recent agent activity (last 10 entries)
+2. **`.planning/agent-log.md`** — recent agent activity (last 10 entries); if file is absent or empty, show `"No agent activity recorded."` in the Recent Activity section
 3. **`.planning/notifications.log`** — recent notifications (last 5 entries)
 4. **`.planning/diagnostics.log`** — hook denials, tool failures, permission blocks (last 10 entries)
 5. **`.planning/memory.md`** — project-specific memory (if exists)
@@ -18,6 +27,13 @@ Show a consolidated dashboard of the current Moku project state. Reads multiple 
 7. **`.planning/specs/`** — specification files count and names
 
 ## Dashboard Format
+
+Wave Progress rows are derived from STATE.md as follows:
+- Wave list and plugin membership: read from the `## Plugin Table:` section of STATE.md (column: wave assignment).
+- Wave status values:
+  - `done` — all plugins in the wave have `status: verified` or `status: committed` in the plugin table
+  - `building` — current `## Phase:` value matches `build/wave-{N}` for this wave's index N
+  - `pending` — wave index is greater than the wave index embedded in `## Phase:`
 
 ```
 Moku Project Dashboard
@@ -79,7 +95,8 @@ If `$ARGUMENTS` contains `--full`, also show:
 - All notification log entries (not just last 5)
 - All diagnostics log entries (not just last 10) with category summary counts
 - Memory.md contents (if exists)
-- Git checkpoint history
+- Git checkpoint history — if no `.git` directory exists in the project root, show
+  `"No git repository found."` in place of checkpoint history
 
 If `$ARGUMENTS` contains `diagnostics`, show ONLY the diagnostics section:
 - Full `.planning/diagnostics.log` contents

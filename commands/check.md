@@ -5,6 +5,15 @@ argument-hint: [verbose|self-test|graph|status|plugin <name>|diff <name>]
 disable-model-invocation: true
 ---
 
+Before routing to any subcommand, validate the raw arguments:
+- If `$ARGUMENTS` is empty, proceed to the default full diagnostic (Checks 1–6).
+- If `$ARGUMENTS` is `plugin` with no following token, stop and output:
+  `Usage: /moku:check plugin <name>` — then list all plugin names found in `src/plugins/`.
+- If `$ARGUMENTS` is `diff` with no following token, stop and output:
+  `Usage: /moku:check diff <name>` — then list all spec files found in `.planning/specs/`.
+- If `$ARGUMENTS` contains an unrecognized subcommand (not one of: verbose, self-test, graph, status, plugin, diff), stop and output:
+  `Unknown subcommand: <token>. Valid subcommands: verbose | self-test | graph | status | plugin <name> | diff <name>`
+
 Run a diagnostic check on the current Moku project and plugin installation. Reports issues with project structure, planning state, and plugin health.
 
 ## Checks
@@ -15,6 +24,10 @@ Detect the project type:
 - Check for `src/config.ts` with `createCoreConfig` → Framework (Layer 2)
 - Check for `createApp` import from a framework package → Consumer App (Layer 3)
 - Check for `package.json` → Generic project
+- If none of the above match (no `package.json`, no `src/config.ts`, no `createApp` import found),
+  stop all further checks and output:
+  `This does not appear to be a Moku project. No package.json found in the current directory.`
+  `Run /moku:check from the root of a Node.js or Moku project.`
 - Report: project type, framework name (if applicable)
 
 ### 2. Tooling Verification
@@ -102,6 +115,11 @@ graph TD
 
 ### Event Flow Map
 Build a mermaid flowchart showing event declarations, emitters, and listeners:
+- To find **emitters**: scan `src/plugins/*/index.ts` for `events:` fields (the register callbacks).
+  Also check `src/config.ts` for the `Events` interface — this lists all known event names for the project.
+- To find **listeners**: scan `src/plugins/*/index.ts` for `hooks:` fields.
+- Use the `Events` interface in `src/config.ts` as the authoritative list of event names.
+  Any event name in a plugin's `events:` or `hooks:` that does not appear in `src/config.ts Events` is flagged as orphaned.
 ```mermaid
 graph LR
   subgraph Emitters
@@ -130,6 +148,9 @@ graph LR
 
 ### Wave Execution Plan
 If `.planning/STATE.md` has wave grouping, generate a Gantt-style diagram:
+- Wave grouping is read from lines beginning with `## Waves:` in `.planning/STATE.md`.
+  Each wave entry lists the plugin names for that wave separated by commas.
+  If no `## Waves:` field exists in STATE.md, skip this diagram and note "No wave data in STATE.md."
 ```mermaid
 gantt
   title Build Wave Execution
@@ -151,8 +172,13 @@ If `$ARGUMENTS` contains "self-test", skip project checks and instead validate t
 1. Verify all agent `.md` files exist in `${CLAUDE_PLUGIN_ROOT}/agents/` and have valid YAML frontmatter (name, description, model, tools). Count them dynamically — do not hardcode an expected number.
 2. Verify all skill directories exist with SKILL.md files in `${CLAUDE_PLUGIN_ROOT}/skills/`
 3. Verify `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` parses as valid JSON
-4. Verify all referenced hook scripts exist and are executable
-5. Verify all reference files mentioned in skills/commands exist
+4. Verify all referenced hook scripts exist and are executable.
+   Check executability using `test -x <absolute-path>` in Bash for each script path found in
+   `hooks.json`. Report the exact path of any script that fails the test.
+5. Verify all reference files mentioned in skills/commands exist.
+   Extract referenced paths by grepping skill `SKILL.md` files and command `.md` files for patterns
+   matching `` `references/ `` or `references/*.md`. Resolve each path relative to
+   `${CLAUDE_PLUGIN_ROOT}` and check that the file exists with `Read` or `Bash test -f`.
 6. Verify `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` parses correctly
 7. Verify version in `plugin.json` matches version in `marketplace.json` (prevents version drift regression)
 8. Report PASS/FAIL for each check
@@ -200,8 +226,13 @@ If `$ARGUMENTS` contains "plugin" followed by a plugin name, run targeted valida
 If `$ARGUMENTS` contains "diff" followed by a plugin name, compare the spec against the implementation:
 
 1. Find the spec file in `.planning/specs/*-<name>.md`
+   - Spec sections are identified by H2 headers (`## `) with these exact names: `Config`, `State`,
+     `API`, `Events`, `Dependencies`, `Hooks`. Any other headers in the spec file are ignored.
+   - If no spec file matching `*-<name>.md` is found in `.planning/specs/`, stop and output:
+     `No spec found for plugin "<name>". Expected: .planning/specs/*-<name>.md`
 2. Read the spec's Config, State, API, Events, Dependencies, and Hooks sections
-3. Read the built plugin files (`types.ts`, `api.ts`, `state.ts`, `index.ts`)
+3. Read the implementation from these files in `src/plugins/<name>/`:
+   `types.ts`, `api.ts`, `state.ts`, `index.ts` — read each that exists; treat absent files as empty.
 4. Compare each spec section against the implementation:
 
 ```
