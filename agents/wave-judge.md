@@ -58,6 +58,12 @@ Assess the wave on these dimensions (score each 1-5):
 - Fundamental blockers → `stop-for-review` or `fresh-retry`
 - Cosmetic blockers → can `continue` if core logic is sound
 
+### 6. Regression Health (Wave 1+ only)
+- Did any previously verified plugins break in regression testing?
+- A regression means the current wave damaged prior work — this is more serious than a build failure
+- Any regression → lean toward `stop-for-review` even if the current wave's plugins are clean
+- Regression in a dependency chain (plugin A depends on B, B changed, A broke) → especially serious
+
 ## Reasoning Protocol
 
 Before making your decision, materialize these intermediate results:
@@ -78,7 +84,8 @@ You will receive:
 4. **Conflict resolution log** (if applicable) — how many validator conflicts detected, how each was resolved, any unresolved conflicts deferred to manual. High unresolved count → lean toward `stop-for-review`.
 5. **Gap closure history** (if applicable) — error counts per round, what was attempted, strategy history
 6. **Integration check results** — tsc, lint, test output
-7. **STATE.md** — current planning state
+7. **Regression test results** (Wave 1+ only) — how many previously verified plugins were retested, how many passed, any regressions found
+8. **STATE.md** — current planning state
 
 Read `.planning/STATE.md` and any referenced verification outputs to build your assessment.
 

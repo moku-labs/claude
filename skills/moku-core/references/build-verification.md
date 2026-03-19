@@ -65,6 +65,65 @@ Then run integration checks in the target workspace:
 
 **Loop until clean**: If any check still fails after fixes, re-run the full sequence. All checks must pass with zero errors and zero warnings before proceeding.
 
+## Step 4b2: Spec Regression Testing
+
+After integration checks pass, re-verify ALL previously verified plugins — not just the current wave. New code (framework file updates, dependency changes, barrel modifications) can break previously passing plugins.
+
+### When to Run
+
+- **Skip for Wave 0**: No prior plugins exist to regress.
+- **Run for Wave 1+**: Every wave after Wave 0 runs regression testing.
+- **Skip when hash matches**: Use content hashes from STATE.md (Step 4d2). If a previously verified plugin's hash hasn't changed AND the integration checks pass, skip its regression test. But if `src/config.ts`, `src/plugins/index.ts`, or `src/index.ts` changed in this wave, re-test ALL previously verified plugins regardless of hash (framework file changes can break any plugin).
+
+### Regression Test Procedure
+
+1. **Identify regression scope**: Read STATE.md plugins table. Collect all plugins with status `verified` from previous waves (NOT the current wave — those were just verified in Step 4a).
+
+2. **Check framework file changes**: Did this wave modify `src/config.ts`, `src/plugins/index.ts`, or `src/index.ts`?
+   - **Yes** → run regression on ALL previously verified plugins
+   - **No** → run regression only on previously verified plugins whose dependencies include a plugin from the current wave (transitive dependencies count)
+
+3. **Run targeted tests**: For each plugin in regression scope:
+   ```bash
+   bun test src/plugins/{name}/
+   ```
+   This runs the plugin's unit + integration tests. No need to re-run the full verifier — tests are the fastest regression signal.
+
+4. **Check results**:
+   - **All pass** → proceed to Step 4c (gap closure) or Step 4c3 (wave judge)
+   - **Any fail** → this is a regression. Classify:
+     - **Type error** (tsc fails on previously passing code) → the current wave broke a type contract
+     - **Test failure** (tests fail that previously passed) → the current wave broke behavior
+     - **Import error** (module not found, missing export) → barrel or wiring issue
+
+5. **Route regressions**:
+   - If regression is caused by a framework file change (config.ts, index.ts, barrel) → fix the framework file, not the regressed plugin
+   - If regression is caused by a dependency plugin's API change → flag as a BLOCKER: "Wave [N] plugin [X] changed its API, breaking Wave [M] plugin [Y]. Fix [X]'s API to be backward-compatible or update [Y]'s usage."
+   - Route all regressions through gap closure (Step 4c) with category `regression` — the error-diagnostician should know this is a regression, not a build failure
+
+### Regression Output
+
+Add a `regression` field to the wave's verification record in STATE.md:
+
+```markdown
+## Wave [N] Regression
+- Scope: [count] previously verified plugins tested
+- Result: PASS | [count] regressions found
+- Details: [plugin]: [test file] — [failure description]
+```
+
+### Performance Optimization
+
+For large projects (> 10 previously verified plugins), batch the regression tests:
+```bash
+# Run all previously verified plugin tests in one command
+bun test src/plugins/router/ src/plugins/auth/ src/plugins/cache/ ...
+```
+
+This is much faster than spawning per-plugin test runs.
+
+---
+
 ## Step 4c: Gap Closure
 
 When verification finds issues (plugins with status `verify-failed`):

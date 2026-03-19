@@ -1,7 +1,7 @@
 {
   "name": "moku",
-  "version": "0.18.0",
-  "description": "Development toolkit for Moku Core \u2014 scaffolding, framework planning, plugin building, migration, and specification enforcement for the micro-kernel plugin framework. Features TDD build waves (Red \u2192 Green \u2192 Refactor), interactive findings triage, steering pre-phase, agent conflict resolution with trade-off analysis, stuck-loop detection with alternative strategy forcing, decision knowledge graph, wave-based parallel execution, 19-agent validation pipeline with structured output contracts, validation coordinator, error diagnostician, post-wave code reviewer, command self-auditing with iterative improvement and severity calibration, hooks validation, mermaid diagram generation, task DAG progress tracking, plan mode integration, and cross-session state tracking.",
+  "version": "0.19.0",
+  "description": "Development toolkit for Moku Core \u2014 scaffolding, framework planning, plugin building, migration, and specification enforcement for the micro-kernel plugin framework. Features TDD build waves (Red \u2192 Green \u2192 Refactor), multi-pass focused code review (correctness \u2192 security \u2192 perf \u2192 maintainability), spec regression testing across waves, interactive findings triage, steering pre-phase, agent conflict resolution with trade-off analysis, stuck-loop detection with alternative strategy forcing, decision knowledge graph, wave-based parallel execution, 19-agent validation pipeline with structured output contracts, validation coordinator, error diagnostician, post-wave code reviewer, command self-auditing with iterative improvement and severity calibration, hooks validation, mermaid diagram generation, task DAG progress tracking, plan mode integration, and cross-session state tracking.",
   "author": {
     "name": "Oleksandr Kucherenko",
     "email": "moku-labs@users.noreply.github.com"

@@ -230,8 +230,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 **Step sequence per invocation:**
 1. Read specs → Wave analysis → **STOP** (present wave plan). **On resume:** if STATE.md already contains a stored wave plan (detect by looking for `| Wave |` in the plugins table header row AND all plugin rows have a numeric value in the Wave column), skip wave analysis and proceed directly to executing the next incomplete wave.
 2. Build Wave 0 (core plugins) → verify → integrate → tick spec checkboxes → **STOP**
-3. Build Wave 1 → verify → integrate → tick spec checkboxes → **STOP**
-4. Build Wave N → ... → **STOP** (one wave per invocation until all waves done)
+3. Build Wave 1 → verify → integrate → **regression test** → tick spec checkboxes → **STOP**
+4. Build Wave N → ... → **regression test** → ... → **STOP** (one wave per invocation until all waves done)
 5. Final framework verification → **STOP**
 6. README wave (parallel sub-agents for all plugin READMEs) → **STOP**
 7. Post-build validation pipeline → report → **DONE**
