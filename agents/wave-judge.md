@@ -74,9 +74,11 @@ You will receive:
 
 1. **Wave number and plugin list** — which wave and which plugins were built
 2. **Verification results** — JSON output from moku-verifier (verdict, blockers, warnings)
-3. **Gap closure history** (if applicable) — error counts per round, what was attempted
-4. **Integration check results** — tsc, lint, test output
-5. **STATE.md** — current planning state
+3. **Code review findings** — including triage outcomes (fix/defer/dismiss counts)
+4. **Conflict resolution log** (if applicable) — how many validator conflicts detected, how each was resolved, any unresolved conflicts deferred to manual. High unresolved count → lean toward `stop-for-review`.
+5. **Gap closure history** (if applicable) — error counts per round, what was attempted, strategy history
+6. **Integration check results** — tsc, lint, test output
+7. **STATE.md** — current planning state
 
 Read `.planning/STATE.md` and any referenced verification outputs to build your assessment.
 

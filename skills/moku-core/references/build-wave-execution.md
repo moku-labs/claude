@@ -80,6 +80,11 @@ You are building a Moku plugin using TDD. Follow the moku-plugin skill strictly.
 ## Dependency Plugin Interfaces
 [For each dependency: contents of src/plugins/dep-name/index.ts]
 
+## Design Decisions (DO NOT CONTRADICT)
+[Relevant entries from .planning/decision-log.md matching this plugin name.
+If no entries exist, omit this section.
+These are intentional trade-off decisions — follow them, do not override.]
+
 ## Build Rules
 - Follow complexity tier [tier] file structure exactly
 - No explicit generics on createPlugin or createCorePlugin — all types inferred

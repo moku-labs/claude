@@ -30,15 +30,29 @@ Spawn these 3 agents simultaneously:
 
 Wait for all 3 to complete. Parse their output contract JSON blocks.
 
+### Intra-Group Conflict Resolution
+
+After each group completes, run **conflict detection** across all output contracts in the group. Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-conflict-resolution.md` for the protocol.
+
+1. Build a per-file findings matrix from all validators in the group
+2. Detect conflicts: verdict disagreements, severity disagreements, contradictory fixes (same file, line ±5)
+3. Resolve conflicts before building the cross-group summary:
+   - **Information gap** → re-run the less-informed validator with the other's findings
+   - **Genuine trade-off** → present to user via AskUserQuestion, record decision in `.planning/decision-log.md`
+   - **False positive** → dismiss with explanation
+   - **Scope mismatch** → not a conflict, keep both findings
+4. Add resolved conflict decisions to the cross-group summary so downstream validators see consistent findings
+
 ### Cross-Group Findings Injection
 
-After Group A completes, extract a "Prior Findings Summary" from Group A results to inform Group B and the architecture validator. This helps downstream validators focus on problematic areas.
+After Group A completes and intra-group conflicts are resolved, extract a "Prior Findings Summary" from Group A results to inform Group B and the architecture validator. This helps downstream validators focus on problematic areas.
 
 Build the summary (~20-30 lines max):
 1. List all BLOCKERs from Group A with file paths and rule references
 2. List plugins flagged for domain merge by plugin-spec-validator
 3. List plugins with lifecycle concerns from spec-validator
 4. List plugins with low JSDoc coverage from jsdoc-validator
+5. List resolved conflicts and their outcomes (so downstream validators don't re-flag resolved issues)
 
 Inject this summary as a `## Prior Findings (from Group A)` section in the prompts for Group B agents and the architecture-validator.
 

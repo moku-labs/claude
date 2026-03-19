@@ -33,6 +33,18 @@ After verification passes (all target plugins are `verified`), spawn the **moku-
 
 **Code review findings (including triage decisions) feed into the wave judge** — the judge receives verifier results, code review findings, AND triage outcomes (fix/defer/dismiss counts) for its evaluation.
 
+## Step 4a3: Conflict Resolution
+
+After both verifier (Step 4a) and code reviewer (Step 4a2) return, check for conflicts between their findings. Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-conflict-resolution.md` for the full protocol.
+
+1. Build the per-file findings matrix from both output contracts
+2. Detect verdict, severity, or contradictory-fix conflicts (same file, line ±5)
+3. Resolve each conflict: information gap → re-run, genuine trade-off → ask user, false positive → dismiss
+4. Record trade-off decisions in `.planning/decision-log.md` (see Decision Knowledge Graph)
+5. Only resolved findings proceed to gap closure or wave judge
+
+**Skip conflict resolution** when both validators agree (both PASS, or findings are on different files with no overlap).
+
 ---
 
 ## Step 4b: Update Framework Files + Integration Checks
@@ -69,11 +81,34 @@ When verification finds issues (plugins with status `verify-failed`):
 5. After the targeted validator passes, re-run the **moku-verifier** agent on affected plugins for final confirmation
 6. **Integration re-check**: Re-run the integration check suite (`bun run format`, `bun run lint`, `bunx tsc --noEmit`) to ensure the fix didn't introduce new integration-level issues. If integration fails, route back through the diagnostician (this counts toward the circuit breaker).
 7. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
-8. **Stalemate Detection:** Before each gap closure round, record the error state. After applying fixes, compare:
+8. **Stalemate Detection + Alternative Strategy:** Before each gap closure round, record the error state AND the strategy used. After applying fixes, compare:
    - **Error count increased**: STALEMATE — fixes are making things worse
    - **Error signatures identical**: For `tsc` errors, two errors are the same signature if they share the same file path, the same error code (e.g., `TS2345`), and a line number within ±3 lines of each other. For test failures, same test name (exact match). For lint errors, same rule + same file. Hash `(file, errorCode, lineRange)` per error for comparison between rounds.
    - **Diagnostician proposed identical fix** to a previous round: STALEMATE — fixation detected
-   - On stalemate: skip remaining gap closure rounds, enter Fresh-Context Retry immediately (Step 4c2). Log: `[STALEMATE] Wave N, plugin X: same errors after round Y`
+
+   **On stalemate — force Alternative Strategy before fresh-context retry:**
+
+   a. **Record what was tried** — append to `.planning/strategy-log.md`:
+      ```markdown
+      ## Wave [N], Plugin [name], Round [R]
+      - Strategy: [brief description of the approach — e.g., "added explicit type annotation to api.ts:42"]
+      - Error: [error signature]
+      - Result: STALEMATE — same error persists
+      ```
+
+   b. **Generate alternative strategies** — the error-diagnostician MUST propose a fundamentally different approach. Provide it with the strategy log so it can see what was already tried. "Fundamentally different" means:
+      - If the previous strategy modified the implementation → try modifying the types instead
+      - If the previous strategy added code → try removing/simplifying code instead
+      - If the previous strategy worked around the issue → try fixing the root cause directly
+      - If the previous strategy changed one file → try changing a different file in the dependency chain
+      - If all local strategies are exhausted → propose restructuring (e.g., split a Standard plugin into two Micro plugins, change the dependency direction, merge with a related plugin)
+
+   c. **Apply the alternative strategy** — this counts as the next gap closure round (not a free extra attempt)
+
+   d. **If alternative strategy also fails (second stalemate on same error)** → skip to Fresh-Context Retry (Step 4c2) with both strategies recorded in the `## Fresh Retry Context`. Log: `[STUCK-LOOP] Wave N, plugin X: 2 strategies failed for same error after round Y`
+
+   e. **Strategy diversity check**: Before the diagnostician proposes a fix, compare it against `.planning/strategy-log.md`. If the proposed fix has >80% text similarity to a previously attempted fix for the same error, REJECT it immediately and demand an alternative. This prevents the "same fix with slightly different wording" loop.
+
 9. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist after all rounds (and no stalemate detected earlier), enter **Fresh-Context Retry** (Step 4c2).
 
 ## Step 4c2: Fresh-Context Retry (Ralph Wiggum Loop)
@@ -86,6 +121,7 @@ When gap closure exhausts its rounds and plugins still have `verify-failed` stat
    - Plugin name and tier
    - The specific errors (tsc output, test failures, lint errors)
    - What fixes were attempted and why they didn't work
+   - **Strategy history** from `.planning/strategy-log.md` — what approaches were tried and why they failed
    - The relevant spec section (`## Verification` from `.planning/specs/0N-name.md`)
 
 2. **Save to STATE.md** — Add a `## Fresh Retry Context` section:
@@ -94,8 +130,11 @@ When gap closure exhausts its rounds and plugins still have `verify-failed` stat
    Plugins needing fresh-context retry: [plugin-list]
    Error summary:
    - [plugin]: [tsc error TS2345 in api.ts:42 — attempted fix X, still fails because Y]
-   Attempted fixes: [brief list of what was tried]
+   Attempted strategies (DO NOT RETRY THESE):
+   - Strategy 1: [description] — Result: [why it failed]
+   - Strategy 2: [description] — Result: [why it failed]
    Gap closure rounds exhausted: [N]
+   Constraint: The fresh-context agent MUST try a fundamentally different approach from the listed strategies.
    ```
 
 3. **Set status** — Mark affected plugins as `retry-pending` in the plugins table. Set:
@@ -110,10 +149,12 @@ When gap closure exhausts its rounds and plugins still have `verify-failed` stat
 
 5. **On resume** — When `/moku:build resume` detects `retry-pending` plugins:
    - Read the `## Fresh Retry Context` section from STATE.md
+   - Read `.planning/strategy-log.md` for full strategy history
    - Spawn the **moku-error-diagnostician** agent with ONLY:
      - The error summary (not the full conversation history)
      - The plugin spec
      - The current source files on disk
+     - **The strategy history with explicit instruction: "These strategies were already tried and failed. You MUST propose a fundamentally different approach."**
    - Apply the diagnostician's fixes
    - Re-run verification (Step 4a)
    - If verification passes → mark as `verified`, remove `## Fresh Retry Context`

@@ -56,6 +56,17 @@ Using the **moku-core** and **moku-plugin** skills, for each identified regular 
 5. **Has Events** — Whether it declares its own events
 6. **Needs start/stop** — ONLY if it manages actual resources (servers, connections, listeners). Most plugins do NOT need start/stop.
 
+#### Record Key Decisions
+
+During plugin identification, record non-obvious decisions to `.planning/decision-log.md` (see `decision-knowledge-graph.md`). Specifically:
+- Why a concept became a standalone plugin vs. a sub-module of another plugin
+- Why a specific complexity tier was chosen (especially when borderline between tiers)
+- Why two related domains were merged or kept separate
+- Why a dependency direction was chosen (A depends on B, not B depends on A)
+- Steering boundary violations — if a potential plugin was rejected due to stated scope boundaries
+
+Create `.planning/decision-log.md` if it doesn't exist (use template from `plan-templates.md`).
+
 #### Structure Constraints
 
 Enforce these constraints on the proposed structure:
@@ -259,6 +270,14 @@ Route based on selection:
 **On entry**: Read `.planning/STATE.md`, confirm Stage 1 is approved. Load plugin table, wave grouping, and dependency graph.
 
 ### Framework Target
+
+#### Record Spec Decisions
+
+While creating specifications, record non-obvious design decisions to `.planning/decision-log.md`:
+- API shape choices (why this signature over alternatives)
+- Event structure decisions (why events are structured this way)
+- State design trade-offs (why mutable Map vs immutable array, etc.)
+- Risk mitigations (especially for the risk identified in steering)
 
 #### Create Plugin Specifications
 

@@ -582,6 +582,20 @@ Used by the Steering Pre-Phase in `plan-verb-create.md`. Saved to `.planning/ste
 
 ---
 
+## Decision Log Template
+
+Used by the Decision Knowledge Graph. Saved to `.planning/decision-log.md`. See `decision-knowledge-graph.md` for full protocol.
+
+```markdown
+# Decision Log
+
+Structured record of trade-off decisions. Agents consult this before making changes.
+
+<!-- Newest entries at the top -->
+```
+
+---
+
 ## Migration decisions.md Template
 
 Used by Step 0.3 of `/plan` when saving migration analysis context. The `## Migration Type` header signals to Step 0.5 that migration context is present and the discussion phase should be skipped.
