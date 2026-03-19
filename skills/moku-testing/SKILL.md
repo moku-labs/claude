@@ -1,16 +1,22 @@
 ---
 name: moku-testing
 description: >
-  Moku testing patterns: mock context factories, integration test scaffolds,
-  type-level test patterns, and test organization conventions.
+  Moku testing patterns: TDD protocol for build waves, mock context factories,
+  integration test scaffolds, type-level test patterns, and test organization conventions.
   Triggers on: "moku test pattern", "moku mock context", "moku integration test",
   "moku type test", "plugin test structure", "vitest moku", "test a moku plugin",
-  or writing tests for moku plugins.
+  "TDD", "test-driven", "red green refactor", or writing tests for moku plugins.
 ---
 
 # Moku Testing Patterns
 
 This skill provides testing patterns for Moku plugins. Use it when writing unit tests, integration tests, or type-level tests for plugins.
+
+## TDD Protocol (Build Waves)
+
+Builder sub-agents follow **Red → Green → Refactor** when constructing plugins during build waves. Tests are derived from the spec and written BEFORE implementation.
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md` for the full TDD protocol: four phases (Types → Red → Green → Refactor), output contract extensions, core plugin adaptations, and edge cases.
 
 ## Context Tiers
 

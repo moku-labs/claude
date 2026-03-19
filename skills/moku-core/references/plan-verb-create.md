@@ -2,6 +2,78 @@
 
 **This flow runs for `create` (and for `migrate` after migration analysis).**
 
+## Steering Pre-Phase
+
+**This phase runs ALWAYS for the `create` verb** — before discussion, before research, before Stage 1. It catches wrong assumptions at the source with 3–5 pointed questions. Takes < 2 minutes.
+
+**Skip this phase when:**
+- VERB is `migrate` and migration analysis has already run (`.planning/decisions.md` contains `## Migration Type`)
+- `.planning/steering.md` already exists (steering was done in a previous session) — log: "Steering already captured. Skipping." and proceed.
+
+**Steering questions — ask ALL of these using `AskUserQuestion`:**
+
+1. **Scope boundary** — use `AskUserQuestion`:
+   - Question: "What should this project explicitly NOT do? (This prevents scope creep in the plan)"
+   - Header: "Boundaries"
+   - Options: Generate 3–4 contextual anti-scope options based on REQUIREMENTS (e.g., for a static site generator: "No client-side routing" / "No database layer" / "No user authentication" / "No build-time bundling"). Always include a custom "Other — I'll describe" option.
+   - multiSelect: true
+
+2. **Primary user** — use `AskUserQuestion`:
+   - Question: "Who is the primary user of this project?"
+   - Header: "Audience"
+   - Options: "Developers (library/framework consumers)" / "End users (direct interaction)" / "Both developers and end users" / "Internal team only"
+   - multiSelect: false
+
+3. **MVP scope** — use `AskUserQuestion`:
+   - Question: "If you could only ship 3 capabilities, which would they be?"
+   - Header: "MVP priorities"
+   - Options: Generate 5–6 contextual capability options derived from REQUIREMENTS (e.g., for a game engine: "Rendering pipeline" / "Input handling" / "Physics simulation" / "Audio system" / "Asset loading" / "Networking"). Always include a custom "Other" option.
+   - multiSelect: true (user picks exactly 3)
+
+4. **Mental model** — use `AskUserQuestion`:
+   - Question: "What existing tool or project is closest to what you want? (Helps align expectations)"
+   - Header: "Reference point"
+   - Options: Generate 3–4 contextual reference projects based on REQUIREMENTS and TYPE (e.g., for a static site generator: "Astro" / "Eleventy" / "Hugo" / "None — this is novel"). Always include "None — this is novel".
+   - multiSelect: false
+
+5. **Risk** — use `AskUserQuestion`:
+   - Question: "What's the biggest technical risk or uncertainty in this project?"
+   - Header: "Risks"
+   - Options: "Type safety across plugin boundaries" / "Performance at scale" / "Complex async coordination" / "Third-party integration reliability" / "I'm not sure yet"
+   - multiSelect: false
+
+**Record steering results:** Write to `.planning/steering.md`:
+
+```markdown
+# Steering
+
+## Boundaries (NOT in scope)
+- [boundary 1]
+- [boundary 2]
+
+## Primary User
+[audience]
+
+## MVP Priorities (top 3)
+1. [capability 1]
+2. [capability 2]
+3. [capability 3]
+
+## Reference Point
+[closest existing project, or "Novel — no close reference"]
+
+## Biggest Risk
+[risk description]
+```
+
+**How steering feeds forward:**
+- **Boundaries** → Stage 1 uses these to REJECT plugins that fall outside scope. If analysis identifies a plugin that conflicts with a stated boundary, flag it and ask.
+- **MVP Priorities** → Stage 1 marks the top-3 capabilities as `priority: high` in the plugin table. These plugins get Wave 1 assignment when possible.
+- **Reference Point** → Stage 1 uses this to calibrate complexity expectations (e.g., "like Astro" implies SSG patterns, island architecture).
+- **Risk** → Stage 2 adds explicit mitigation to the spec of the plugin most related to the stated risk.
+
+---
+
 ## Optional Discussion Phase
 
 **Migration context check:** If `.planning/decisions.md` exists and contains a `## Migration Type` header, skip the discussion phase entirely — migration analysis has already captured all necessary context. Log: "Migration context detected ([flow type]). Skipping discussion — using migration analysis."

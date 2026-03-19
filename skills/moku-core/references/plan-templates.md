@@ -554,6 +554,34 @@ After all skeleton files are created, verify in order:
 
 ---
 
+## Steering Template
+
+Used by the Steering Pre-Phase in `plan-verb-create.md`. Saved to `.planning/steering.md`.
+
+```markdown
+# Steering
+
+## Boundaries (NOT in scope)
+- [boundary 1]
+- [boundary 2]
+
+## Primary User
+[audience description]
+
+## MVP Priorities (top 3)
+1. [capability 1]
+2. [capability 2]
+3. [capability 3]
+
+## Reference Point
+[closest existing project, or "Novel — no close reference"]
+
+## Biggest Risk
+[risk description]
+```
+
+---
+
 ## Migration decisions.md Template
 
 Used by Step 0.3 of `/plan` when saving migration analysis context. The `## Migration Type` header signals to Step 0.5 that migration context is present and the discussion phase should be skipped.

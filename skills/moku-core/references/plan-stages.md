@@ -6,7 +6,7 @@ This file contains the detailed per-target instructions for Stages 1, 2, and 3 o
 
 ## Stage 1: Analysis + Structure
 
-**On entry**: Read `.planning/STATE.md` if it exists. Load any decisions from Step 0.5 and research from Step 0.6.
+**On entry**: Read `.planning/STATE.md` if it exists. Load any decisions from Step 0.5, research from Step 0.6, and steering from `.planning/steering.md` (if it exists).
 
 ### Framework Target
 
@@ -15,6 +15,11 @@ This file contains the detailed per-target instructions for Stages 1, 2, and 3 o
 - Identify the target use case (web app, CLI, game, build tool, etc.)
 - Determine what plugins are needed
 - If research was performed (Step 0.6), incorporate ecosystem findings into plugin identification
+- **If steering exists** (`.planning/steering.md`):
+  - **Boundaries**: Reject any plugin that falls outside stated scope. If a potential plugin conflicts with a boundary, flag it to the user before including.
+  - **MVP Priorities**: Mark the top-3 capabilities as `priority: high` in the plugin table. Assign these to Wave 1 when dependency constraints allow.
+  - **Reference Point**: Use the stated reference project to calibrate complexity — match the reference's scope, not exceed it.
+  - **Risk**: Note which plugin is most exposed to the stated risk. Stage 2 will add explicit mitigation.
 
 #### If given existing code:
 - Read and analyze the codebase thoroughly
@@ -217,8 +222,9 @@ Stage 1 is largely pre-answered for updates — the existing plugin provides the
 - Dependency graph correctness (acyclic, order-satisfiable)
 - Plugin identification completeness
 - Event naming conventions
+- **Steering alignment** (if `.planning/steering.md` exists): verify no plugin violates stated boundaries, MVP priorities are reflected in wave assignments
 
-If the plan-checker finds BLOCKER issues, fix them before presenting to the user. WARNINGs are included in the presentation for transparency.
+If the plan-checker finds BLOCKER issues, **use Interactive Triage** (read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-findings-triage.md`) to present each BLOCKER one-by-one via `AskUserQuestion`. The user decides: fix now, fix later, or dismiss. Fix all "Fix now" items before presenting the plan. WARNINGs are included in the presentation for transparency (no triage needed for WARNINGs).
 
 ### State Update (all targets)
 

@@ -65,11 +65,11 @@ For each wave, build all plugins in the wave. Within a wave, **spawn parallel su
 
 ### Per-Plugin Executor (Sub-Agent)
 
-Each plugin in a wave is built by a dedicated sub-agent. The sub-agent receives minimal context for fresh, focused execution:
+Each plugin in a wave is built by a dedicated sub-agent using **Test-Driven Development (TDD)**. The sub-agent writes failing tests FIRST (derived from the spec), then implements code to make them pass. This catches spec-implementation divergence at the source rather than during post-wave verification.
 
 **Agent prompt structure:**
 ```
-You are building a Moku plugin. Follow the moku-plugin skill strictly.
+You are building a Moku plugin using TDD. Follow the moku-plugin skill strictly.
 
 ## Specification
 [Full contents of .planning/specs/0N-name.md]
@@ -85,15 +85,23 @@ You are building a Moku plugin. Follow the moku-plugin skill strictly.
 - No explicit generics on createPlugin or createCorePlugin — all types inferred
 - For core plugins: use createCorePlugin, NOT createPlugin. No depends/events/hooks.
 - Full JSDoc on all exports with @param, @returns, @example
-- Write unit tests for each domain file + integration test
 - Use import type for type-only imports
 - Only include onStart/onStop if spec justifies resource management
 - Write all tests inside the plugin directory: `__tests__/unit/` and `__tests__/integration/`
 - Do NOT create tests in root `tests/` — that directory is for framework-level tests only
-- After writing all source files (before tests), run `bunx tsc --noEmit` and fix any type errors
+
+## TDD Protocol — RED → GREEN → REFACTOR
+Follow the full TDD protocol from the moku-testing skill:
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md`
+
+Summary of the four phases:
+1. **TYPES**: Write types.ts + skeleton index.ts (stubs only, enough for test imports)
+2. **RED**: Write all unit + integration tests FIRST. Run tests — they MUST fail. If any pass on stubs, strengthen them.
+3. **GREEN**: Implement state.ts, api.ts, handlers.ts. Update index.ts. Run tsc. Run tests — they MUST all pass. Fix implementation, not tests.
+4. **REFACTOR**: Clean up index.ts (~30 lines), write README.md placeholder.
 
 ## Files to Create
-[List from tier: index.ts, types.ts, state.ts, api.ts, handlers.ts, README.md, tests]
+[List from tier: types.ts, index.ts (skeleton), tests, state.ts, api.ts, handlers.ts, index.ts (final), README.md]
 
 ## Verification Criteria
 [Contents of the ## Verification section from the spec]
@@ -105,29 +113,36 @@ When you are done, end your response with a fenced `json` code block:
   "agent": "builder",
   "plugin": "[plugin-name]",
   "verdict": "PASS | FAIL | PARTIAL",
-  "filesCreated": ["index.ts", "types.ts", "api.ts", "..."],
+  "tdd": {
+    "redPhaseTests": 12,
+    "redPhaseFailing": 12,
+    "greenPhaseTests": 12,
+    "greenPhasePassing": 12
+  },
+  "filesCreated": ["types.ts", "api.test.ts", "state.test.ts", "api.ts", "state.ts", "index.ts", "..."],
   "testsPass": true,
   "lintPass": true,
   "issues": [{"file": "path", "message": "description"}]
 }
 ```
 - `verdict`: PASS (all files created, tests pass, lint clean), FAIL (critical files missing or unresolvable errors), PARTIAL (some files created but hit turn limit or unresolved issues)
+- `tdd`: TDD metrics — `redPhaseTests`/`redPhaseFailing` (how many tests existed and failed after Phase 2), `greenPhaseTests`/`greenPhasePassing` (how many tests existed and passed after Phase 3). If red == failing and green == passing, TDD was followed correctly.
 - `issues`: list any problems encountered (test failures, lint errors, type errors). Empty array if none.
 ```
 
 ### Agent Turn Limits
 
-Set appropriate turn limits based on plugin complexity tier when spawning builder sub-agents:
+Set appropriate turn limits based on plugin complexity tier when spawning builder sub-agents. TDD adds ~30% more turns (writing tests first, running them twice):
 
 | Tier | maxTurns | Rationale |
 |------|----------|-----------|
-| Nano | 20 | 1-2 files, minimal logic |
-| Micro | 30 | 2-4 files, simple logic |
-| Standard | 40 | 5-8 files, domain separation |
-| Complex | 50 | 8-12 files, sub-modules |
-| VeryComplex | 60 | 12+ files, multiple sub-domains |
+| Nano | 25 | 1-2 files + tests, minimal logic |
+| Micro | 40 | 2-4 files + tests, simple logic |
+| Standard | 55 | 5-8 files + tests, domain separation |
+| Complex | 70 | 8-12 files + tests, sub-modules |
+| VeryComplex | 80 | 12+ files + tests, multiple sub-domains |
 
-If the agent approaches its turn limit with incomplete files, it should prioritize: index.ts > types.ts > api.ts > state.ts > handlers.ts > tests > README.md (core wiring first, docs last).
+If the agent approaches its turn limit with incomplete files, it should prioritize completing the **GREEN phase** (making existing tests pass). Priority order: types.ts > index.ts (skeleton) > tests > state.ts > api.ts > handlers.ts > index.ts (final) > README.md. Tests come before implementation because failing tests still provide value as a spec — incomplete implementation with good tests is better than complete implementation with no tests.
 
 **Parallel execution within waves:**
 - Wave 1 plugins have no dependencies on each other — spawn all agents simultaneously
@@ -135,22 +150,21 @@ If the agent approaches its turn limit with incomplete files, it should prioriti
 - For waves with < 4 plugins: all parallel
 - For waves with 4+ plugins: batch into groups of `maxParallelAgents` (default: 3) parallel agents
 
-### Plugin Implementation Order (per sub-agent)
+### Plugin Implementation Order (per sub-agent) — TDD
 
-Each sub-agent builds its plugin following this order:
+Each sub-agent builds its plugin using **Test-Driven Development** in four phases. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md` for the full protocol.
 
-1. **Create the plugin directory** following the specified complexity tier
-2. **Write types.ts** — Config, State, API, Events types (for Standard+)
-3. **Write state.ts** — `createState` factory (for Standard+)
-4. **Write api.ts** — API factory (for Standard+)
-5. **Write handlers.ts** — Event handlers (if hooks exist, Standard+)
-6. **Write index.ts** — Plugin wiring (~30 lines, imports from domain files)
-   - **Verify no explicit generics** — The `createPlugin(` call must NOT have type parameters.
-   - **Verify lifecycle necessity** — Only include `onStart`/`onStop` if the spec explicitly states a resource.
-7. **Incremental tsc checkpoint** — Run `bunx tsc --noEmit` after all source files are written (before tests/README). Fix any type errors immediately. This catches inference failures, import issues, and config shape mismatches early — before investing turns in tests that would fail anyway.
-8. **Write README.md** — Minimal placeholder only (plugin name + tier + one-line description). Full README is written later in the dedicated README wave (Step 5.5).
-9. **Write unit tests** — For each domain file
-10. **Write integration test** — For the full plugin wiring
+| Phase | Steps | Key Output |
+|-------|-------|------------|
+| **1. TYPES** | Create dir → types.ts → index.ts (skeleton with stubs) | Type foundation, imports resolve |
+| **2. RED** | Unit tests → integration test → run tests (must FAIL) | Executable spec, all tests failing |
+| **3. GREEN** | state.ts → api.ts → handlers.ts → update index.ts → tsc → run tests (must PASS) | Real implementation, all tests passing |
+| **4. REFACTOR** | Review index.ts (~30 lines) → README.md placeholder | Clean structure |
+
+**Critical rules:**
+- Phase 2 tests MUST fail on stubs. If they pass, strengthen the tests.
+- Phase 3 fixes the *implementation*, never the tests — tests encode the spec.
+- No explicit generics on `createPlugin(`. Verify lifecycle necessity (`onStart`/`onStop` only if spec justifies).
 
 ### Per-Plugin Tracking
 

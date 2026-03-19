@@ -14,7 +14,7 @@ Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`
 3. If ALL verified plugins pass → proceed to Step 4b
 4. If ANY plugin is `verify-failed` → enter Gap Closure (Step 4c)
 
-## Step 4a2: Post-Wave Code Review
+## Step 4a2: Post-Wave Code Review + Interactive Triage
 
 After verification passes (all target plugins are `verified`), spawn the **moku-code-reviewer** agent to review the wave's code changes:
 
@@ -22,15 +22,16 @@ After verification passes (all target plugins are `verified`), spawn the **moku-
    - The git diff for this wave: `git diff <pre-wave-checkpoint>..HEAD`
    - Plugin specifications from `.planning/specs/` for all plugins in this wave
    - The wave number and plugin list
-2. Parse the output contract:
-   - `verdict: PASS` → proceed to Step 4b
-   - `verdict: ISSUES` (HIGH findings, no BLOCKERs) → log findings for wave judge, proceed to Step 4b
-   - `verdict: BLOCKER` → route BLOCKER findings to Gap Closure (Step 4c) before proceeding
-3. For BLOCKER findings from code review, treat them like verification failures — the gap closure process applies fixes and re-verifies
+2. **Route findings through Interactive Triage** — read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-findings-triage.md` and follow the triage flow:
+   - `verdict: PASS` → skip triage, proceed to Step 4b
+   - `verdict: ISSUES` or `verdict: BLOCKER` → present findings interactively via the triage flow
+   - Triage decisions determine what enters gap closure ("Fix now"), what is deferred ("Fix later"), and what is dismissed ("Not an issue")
+   - Only "Fix now" findings route to Gap Closure (Step 4c)
+3. Before triage, check `.planning/deferred-findings.md` for carry-forward findings from previous waves that affect files modified in this wave — re-surface them in the triage.
 
 **Skip code review for Wave 0** if it contains only Nano/Micro core plugins (low complexity, minimal logic to review).
 
-**Code review findings feed into the wave judge** — the judge receives both verifier results AND code review findings for its evaluation.
+**Code review findings (including triage decisions) feed into the wave judge** — the judge receives verifier results, code review findings, AND triage outcomes (fix/defer/dismiss counts) for its evaluation.
 
 ---
 

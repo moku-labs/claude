@@ -15,6 +15,7 @@ Use configuration values above if present. Validate before using — ignore inva
 | `maxParallelAgents` | integer | 1–5 | 3 |
 | `gapClosureMaxRounds` | integer | 0–5 | 2 |
 | `skipValidation` | boolean | true/false | false |
+| `skipTriage` | boolean | true/false | false |
 
 Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
@@ -260,6 +261,7 @@ During gap closure, track fix effectiveness between rounds. If the same errors p
 
 ### Quality Requirements
 
+- **TDD build order**: Tests are written BEFORE implementation (Red → Green → Refactor). See moku-testing skill's `tdd-protocol.md`.
 - Full JSDoc on ALL source files (functions, types, interfaces)
 - `import type` for type-only imports
 - Plugin index.ts must be ~30 lines of wiring
