@@ -58,16 +58,26 @@ Before spawning any builder sub-agents, run a pre-flight check to catch systemic
 For each wave, build all plugins in the wave. Within a wave, **spawn parallel sub-agents** for independent plugins using the Agent tool.
 
 **Progress updates — tell the user at these checkpoints:**
+
+Normal mode:
 1. Before spawning agents: `"Wave [N]: Building [plugin list] ([count] plugins in parallel)..."`
 2. After each agent completes: `"[plugin] built ([status]). [remaining] plugins remaining in wave."`
 3. After verification: `"Wave [N] verification: [pass/fail count]. [gap closure status if applicable]"`
 4. After integration checks: `"Integration checks [pass/fail]. [details if failed]"`
 
+Lean mode (single line per wave, details only on failure):
+- Success: `"W[N]: [plugin-list] → PASS. Verified. Integration OK."`
+- Failure: `"W[N]: [plugin-list] → [pass-count]/[total] PASS, [fail-list] FAIL. [error summary]."`
+
 ### Per-Plugin Executor (Sub-Agent)
 
 Each plugin in a wave is built by a dedicated sub-agent using **Test-Driven Development (TDD)**. The sub-agent writes failing tests FIRST (derived from the spec), then implements code to make them pass. This catches spec-implementation divergence at the source rather than during post-wave verification.
 
-**Agent prompt structure:**
+**Agent prompt — select based on lean mode:**
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-lean-mode.md` for lean mode details. When lean mode is active, use the lean prompt. Otherwise use the normal prompt.
+
+#### Normal prompt (default):
 ```
 You are building a Moku plugin using TDD. Follow the moku-plugin skill strictly.
 
@@ -110,7 +120,31 @@ Summary of the four phases:
 
 ## Verification Criteria
 [Contents of the ## Verification section from the spec]
+```
 
+#### Lean prompt (~56% smaller):
+```
+Build Moku plugin [name] ([tier]). TDD: types→red→green→refactor. No explicit generics. import type. JSDoc. Tests in __tests/.
+
+## Spec
+[Overview paragraph from spec]
+Config: [## Config section content]
+API: [## API section content]
+Events: [## Events section content, or "None"]
+Depends: [## Dependencies plugin names, or "None"]
+
+## Types Context
+[Only export type Config and export type Events blocks from src/config.ts]
+
+## Dep Interfaces
+[Only export type Api from each dependency's types.ts]
+
+## Decisions
+[Relevant decision-log entries, or omit section entirely]
+```
+
+#### Output contract (same for both modes):
+```
 ## Output Contract
 When you are done, end your response with a fenced `json` code block:
 ```json

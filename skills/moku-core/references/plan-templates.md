@@ -246,6 +246,8 @@ Build Status values: `not started` | `building` | `built` | `pipeline-built` | `
 ## Verification Results
 [Populated after skeleton build verification — format/lint/tsc/build pass status and issues resolved]
 
+## LeanMode: [true | false | auto]
+
 ## Pipeline Status
 [Only present during active pipelining. Removed after reconciliation.]
 - Wave [N]: verifying

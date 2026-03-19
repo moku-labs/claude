@@ -17,6 +17,7 @@ Use configuration values above if present. Validate before using — ignore inva
 | `skipValidation` | boolean | true/false | false |
 | `skipTriage` | boolean | true/false | false |
 | `enablePipelining` | boolean | true/false | true |
+| `leanMode` | boolean / "auto" | true/false/"auto" | "auto" |
 
 Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
@@ -46,7 +47,8 @@ Parse `$ARGUMENTS`:
      - **Plugin waves:** `| Wave | Plugins | Tiers | Dependencies |` table with one row per wave.
      - Report total: [N] skeleton waves, [M] plugin waves, [P] plugins total.
    - Exit.
-1b. If `--continue` is present anywhere in the arguments, enter **continuous mode**: auto-advance through all remaining waves without stopping between them. Git checkpoint commits still happen per wave for rollback safety. The ONLY stopping trigger is approaching context exhaustion (if you sense compaction is imminent, stop after the current wave and tell the user to run `/moku:build resume --continue` to pick up). Default behavior (without `--continue`) is unchanged — one wave per invocation.
+1b. If `--lean` is present anywhere in the arguments, activate **lean execution mode** (`leanMode: true`). See `build-lean-mode.md`. Strips verbose context from agent prompts (~40-60% context savings). Persisted as `## LeanMode: true` in STATE.md.
+1c. If `--continue` is present anywhere in the arguments, enter **continuous mode**: auto-advance through all remaining waves without stopping between them. Git checkpoint commits still happen per wave for rollback safety. The ONLY stopping trigger is approaching context exhaustion (if you sense compaction is imminent, stop after the current wave and tell the user to run `/moku:build resume --continue` to pick up). Default behavior (without `--continue`) is unchanged — one wave per invocation.
 2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
 2b. If the first word is `fix` — route directly to **Error Recovery** below. Do NOT enter Skeleton Detection. (The Error Recovery section itself enforces the skeleton-committed prerequisite.)
 3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
@@ -257,6 +259,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 **Continuous mode (`--continue`):** When active, skip the stop-and-wait between waves. After completing a wave, immediately proceed to the next. Still commit git checkpoints per wave. If you sense context is getting large (many waves completed, approaching compaction), stop after the current wave: `"Pausing continuous build after Wave [N] to preserve context. Run /moku:build resume --continue to continue."`
 
 **Wave pipelining (`--continue` + ≥ 3 waves):** When continuous mode is active and the project has 3+ waves, wave N+1 builders start while wave N is being verified (~30-50% throughput gain). See `build-wave-execution.md` Wave Pipelining section. Disable with `enablePipelining: false` in project config.
+
+**Lean execution mode (`--lean` or `leanMode: "auto"`):** Strips verbose context from agent prompts during builds (~40-60% context savings). Auto-activates after 3+ waves in a session. See `build-lean-mode.md`. Combines well with pipelining — lean mode halves agent context cost while pipelining doubles agent throughput.
 
 **`#wave:N` syntax:** `/moku:build #wave:2` jumps directly to wave 2 (useful for re-running a specific wave after manual fixes).
 
