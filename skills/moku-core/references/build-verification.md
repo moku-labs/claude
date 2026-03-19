@@ -264,6 +264,14 @@ After gap closure completes (or if verification passed with no gap closure neede
 
 **Wave judge decisions are not persisted in STATE.md.** On resume, the wave judge does NOT re-run for previously completed waves — the previous wave is considered complete (its completion state was saved in STATE.md). The judge evaluates only the CURRENT wave being built, never previous waves.
 
+### Pipeline-Aware Decisions
+
+When wave pipelining is active (wave N+1 is already building while wave N is being judged):
+
+- **`continue`**: Proceed to Step 4b (integration) for wave N. After integration, run pipeline reconciliation (see `build-wave-execution.md` Wave Pipelining). If reconciliation succeeds, wave N+1 enters verification immediately.
+- **`stop-for-review`**: Pipeline stops. Wave N+1 build results are **preserved** with status `pipeline-built` in STATE.md. On resume, reconciliation runs first (wave N may have changed during user review), then wave N+1 proceeds.
+- **`fresh-retry`**: Pipeline stops. Wave N+1 build results are **discarded** — the session is ending for fresh context. On resume, wave N retries first, then wave N+1 rebuilds from scratch.
+
 **Skip the judge for trivial waves** — if the wave has only 1 Nano/Micro plugin and verification passed with zero warnings, proceed directly to Step 4d.
 
 ## Step 4d: Spec Verification Ticking

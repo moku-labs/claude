@@ -16,6 +16,7 @@ Use configuration values above if present. Validate before using — ignore inva
 | `gapClosureMaxRounds` | integer | 0–5 | 2 |
 | `skipValidation` | boolean | true/false | false |
 | `skipTriage` | boolean | true/false | false |
+| `enablePipelining` | boolean | true/false | true |
 
 Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
@@ -118,6 +119,7 @@ Before starting:
       ```
     - Warn: "STATE.md regenerated with inferred values. Verify the target before continuing."
   - **Retry-Pending Check:** Before wave analysis, scan the plugins table for any plugins with status `retry-pending`. If found, route directly to `build-verification.md` Step 4c2 (Fresh-Context Retry on resume). Skip wave analysis and normal build flow — the retry context is already saved in `## Fresh Retry Context` in STATE.md.
+  - **Pipeline-Built Check:** Before wave analysis, scan the plugins table for any plugins with status `pipeline-built`. If found, run **pipeline reconciliation** (see `build-wave-execution.md` Wave Pipelining): compare interface file hashes from `## Pipeline Status` against current hashes on disk. If interfaces unchanged → promote to `built` and proceed to verification. If interfaces changed → reset affected `pipeline-built` plugins to `building` and re-spawn their builders. Remove `## Pipeline Status` after reconciliation.
   - **Completed build check:** If all plugins in the plugins table have status `complete` (or `verified`) AND the build phase is `complete`, tell the user:
     > "This build is already complete. To re-run validation or generate the README, use `/moku:build resume` which will route to the post-build steps. To rebuild from scratch, delete `.planning/STATE.md` and re-run."
     Stop.
@@ -232,6 +234,11 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 2. Build Wave 0 (core plugins) → verify → integrate → tick spec checkboxes → **STOP**
 3. Build Wave 1 → verify → integrate → **regression test** → tick spec checkboxes → **STOP**
 4. Build Wave N → ... → **regression test** → ... → **STOP** (one wave per invocation until all waves done)
+
+**With pipelining (`--continue` + ≥ 3 waves):**
+2. Build Wave 0 → verify → integrate → **CONTINUE**
+3. Build Wave 1 + **verify Wave 0** (pipelined) → reconcile → integrate → **CONTINUE**
+4. Build Wave N+1 + **verify Wave N** (pipelined) → reconcile → integrate → **CONTINUE**
 5. Final framework verification → **STOP**
 6. README wave (parallel sub-agents for all plugin READMEs) → **STOP**
 7. Post-build validation pipeline → report → **DONE**
@@ -248,6 +255,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 **Do NOT attempt multiple waves in one invocation** unless `--continue` mode is active. Each wave gets fresh sub-agents and an explicit user checkpoint. This prevents context exhaustion and gives the user control over pacing.
 
 **Continuous mode (`--continue`):** When active, skip the stop-and-wait between waves. After completing a wave, immediately proceed to the next. Still commit git checkpoints per wave. If you sense context is getting large (many waves completed, approaching compaction), stop after the current wave: `"Pausing continuous build after Wave [N] to preserve context. Run /moku:build resume --continue to continue."`
+
+**Wave pipelining (`--continue` + ≥ 3 waves):** When continuous mode is active and the project has 3+ waves, wave N+1 builders start while wave N is being verified (~30-50% throughput gain). See `build-wave-execution.md` Wave Pipelining section. Disable with `enablePipelining: false` in project config.
 
 **`#wave:N` syntax:** `/moku:build #wave:2` jumps directly to wave 2 (useful for re-running a specific wave after manual fixes).
 

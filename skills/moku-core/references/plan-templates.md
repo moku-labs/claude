@@ -215,7 +215,7 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 | 3 | 1 | router | Standard | none | .planning/specs/03-router.md | not started |
 | 4 | 2 | auth | Standard | router | .planning/specs/04-auth.md | not started |
 
-Build Status values: `not started` | `building` | `built` | `agent-incomplete` | `agent-failed` | `verified` | `verify-failed` | `needs-manual` | `done`
+Build Status values: `not started` | `building` | `built` | `pipeline-built` | `agent-incomplete` | `agent-failed` | `verified` | `verify-failed` | `needs-manual` | `done`
 
 ## Wave Grouping
 - Wave 0 (core): log, env — built first, no inter-dependencies
@@ -245,6 +245,14 @@ Build Status values: `not started` | `building` | `built` | `agent-incomplete` |
 
 ## Verification Results
 [Populated after skeleton build verification — format/lint/tsc/build pass status and issues resolved]
+
+## Pipeline Status
+[Only present during active pipelining. Removed after reconciliation.]
+- Wave [N]: verifying
+- Wave [N+1]: building (pipelined)
+- Interface hashes at pipeline start:
+  - src/plugins/[name]/types.ts: [hash]
+  - src/plugins/[name]/index.ts: [hash]
 
 ## Next Action
 Run `/moku:build resume` — skeleton build will run first (skeleton not-started)

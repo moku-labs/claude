@@ -198,6 +198,126 @@ For `agent-incomplete` or `agent-failed` plugins:
 - If re-spawn also fails, mark as `needs-manual` and continue with other plugins in the wave
 - `needs-manual` plugins are excluded from verification and reported to the user at the end
 
+### Wave Pipelining (Build N+1 While Verifying N)
+
+When `--continue` mode is active and the project has ≥ 3 waves, overlap building wave N+1 with verifying wave N. This yields ~30-50% throughput improvement on multi-wave builds.
+
+#### Why Pipelining Works
+
+Wave N+1 builder agents need these from wave N:
+- **types.ts** — type definitions for dependency plugin interfaces
+- **index.ts** — the plugin export (for `import { dep } from "../dep"`)
+
+Both of these files are written during wave N's **build phase** (Step 3) and are available on disk before verification starts. Verification (Step 4a–4c) rarely modifies these files — it fixes implementation bugs in state.ts, api.ts, handlers.ts. So wave N+1 builders can safely read wave N's interfaces while wave N is being verified.
+
+#### When Pipelining Activates
+
+All of these must be true:
+1. `--continue` mode is active (pipelining requires uninterrupted execution)
+2. Total waves ≥ 3 (2-wave projects don't save enough to justify the complexity)
+3. Wave N build completed with ALL plugins `built` (no `agent-failed` or `agent-incomplete` — those would leave incomplete interfaces on disk)
+4. Wave N+1 exists (not the last wave)
+5. Current context usage is < 60% (pipelining doubles the active agent count — don't pipeline if context is getting large)
+
+If ANY condition is false, fall back to sequential: finish wave N verification → start wave N+1 build.
+
+#### Pipeline Execution Flow
+
+```
+Sequential (default):
+  Build N → Verify N → Integrate N → Build N+1 → Verify N+1 → ...
+
+Pipelined:
+  Build N → [Verify N ─────────────] → Integrate N → ...
+              [Build N+1 ──────────] ↗ Verify N+1 → ...
+                                    Wait point
+```
+
+**Steps:**
+
+1. **Wave N build completes** — all plugins `built`. Create git checkpoint.
+2. **Start pipeline** — spawn two concurrent groups:
+   - **Group V**: Wave N verification (verifier + code reviewer in parallel, per Step 4a)
+   - **Group B**: Wave N+1 builders (per-plugin sub-agents, per Step 3)
+3. **Wait for both groups** — collect output contracts from all agents
+4. **Pipeline reconciliation** (see below):
+   - Check if wave N gap closure modified any interfaces that wave N+1 depends on
+   - If safe → proceed with wave N+1 verification
+   - If invalidated → re-spawn affected wave N+1 builders
+
+#### Pipeline State Tracking
+
+Update STATE.md during pipelining:
+
+```markdown
+## Pipeline Status
+- Wave [N]: verifying (build complete, verification in progress)
+- Wave [N+1]: building (pipelined start, pending verification)
+- Interface files at pipeline start: [list of wave N types.ts/index.ts hashes]
+```
+
+After reconciliation, remove the `## Pipeline Status` section and update plugin statuses normally.
+
+#### Pipeline Reconciliation
+
+After both Group V and Group B complete:
+
+1. **Check wave N verification result**:
+   - **PASS (no gap closure needed)**: Wave N interfaces are unchanged. Wave N+1 builds are valid. Proceed to wave N integration (Step 4b), then wave N+1 verification.
+   - **Gap closure needed but interfaces unchanged**: Check if gap closure modified any `types.ts` or `index.ts` file in wave N plugins. If NOT modified → wave N+1 builds are valid.
+   - **Gap closure modified interfaces**: Identify which wave N plugins had their `types.ts` or `index.ts` changed. Find wave N+1 plugins that depend on those modified plugins. **Invalidate and re-build** only the affected wave N+1 plugins. Unaffected wave N+1 plugins keep their build results.
+
+2. **Interface change detection**:
+   ```bash
+   # Compare interface file hashes before and after gap closure
+   # Hashes were recorded in ## Pipeline Status at pipeline start
+   shasum src/plugins/{wave-N-plugin}/types.ts src/plugins/{wave-N-plugin}/index.ts
+   ```
+   If any hash differs from the recorded value → that plugin's interface changed.
+
+3. **Invalidation is surgical**: Only re-build wave N+1 plugins whose DIRECT dependencies had interface changes. Transitive dependencies don't matter (wave N+1 plugins import from direct deps only).
+
+4. **If invalidation affects > 50% of wave N+1 plugins**: Discard ALL wave N+1 builds and restart wave N+1 from scratch. Partial rebuilds when most code is invalid waste more context than a clean restart.
+
+#### Pipeline + Auto-Throttle
+
+When pipelining is active, the effective parallelism is split between Group V and Group B:
+- Group V gets `ceil(maxParallelAgents / 2)` slots (verification needs fewer agents)
+- Group B gets `floor(maxParallelAgents / 2)` slots (builders are the bottleneck)
+- Total active agents never exceeds `maxParallelAgents`
+
+Example with `maxParallelAgents: 5`:
+- Group V: 3 slots (verifier + code reviewer + 1 spare)
+- Group B: 2 builder agents (remaining wave N+1 plugins queue)
+
+#### Pipeline + Gap Closure Interaction
+
+If wave N enters gap closure (Step 4c):
+- **Wave N+1 builders continue running** — gap closure is a wave N concern
+- After gap closure completes, run reconciliation as described above
+- If gap closure triggers **fresh-context retry** (Step 4c2): pipeline stops. Wave N+1 builds are DISCARDED (the session is stopping anyway). On resume, wave N retries first, then wave N+1 rebuilds normally.
+- If gap closure triggers **wave judge stop-for-review**: pipeline stops. Wave N+1 build results are PRESERVED in STATE.md with status `pipeline-built` (not yet verified). On resume, reconciliation runs first to check if wave N changes invalidated any wave N+1 builds.
+
+#### New Plugin Status: `pipeline-built`
+
+Add a new status value for plugins built during pipelining but not yet verified:
+
+```
+pipeline-built → built (after reconciliation confirms interfaces valid)
+pipeline-built → building (after reconciliation invalidates — re-build needed)
+```
+
+On resume, treat `pipeline-built` as: "built during a previous pipeline, needs reconciliation before verification."
+
+#### When NOT to Pipeline
+
+Even when conditions are met, skip pipelining if:
+- Wave N has any `needs-manual` plugins (manual intervention likely changes interfaces)
+- Wave N is the skeleton build (skeleton verification must complete before any plugin build)
+- Wave N+1 has a single plugin with VeryComplex tier (one large agent is harder to invalidate/restart than several small ones)
+
+---
+
 ### Resume with Fresh-Context Retry
 
 When `/moku:build resume` detects plugins with status `retry-pending` in STATE.md:
