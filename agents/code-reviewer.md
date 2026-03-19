@@ -24,6 +24,11 @@ You receive:
 - A git diff or list of changed files to review
 - Plugin specifications (from `.planning/specs/`)
 - The wave number and plugin list
+- **Builder intent summaries** (from builder output contracts) — per-file descriptions of what the builder INTENDED each file to do. Compare these against the spec:
+  - Intent matches spec AND code matches intent → likely correct
+  - Intent matches spec BUT code doesn't match intent → implementation bug
+  - Intent DOESN'T match spec → the builder misunderstood the spec (high-confidence bug)
+  - This 3-way comparison (spec ↔ intent ↔ code) catches bugs that neither code-only nor spec-only review would find
 
 ## Multi-Pass Review Protocol
 
@@ -36,7 +41,9 @@ Run 4 sequential passes. Each pass focuses on ONE concern:
 2. **Read specs** — For each plugin in the wave, read its spec from `.planning/specs/`
 3. **Cross-plugin check** — Note inconsistencies between plugins in the same wave
 
-### Pass 1: Correctness (spec fidelity + logic bugs)
+### Pass 1: Correctness (spec fidelity + intent alignment + logic bugs)
+- **Intent-vs-spec check**: For each file, compare builder's stated intent against the spec. Flag mismatches as high-confidence BLOCKER (the builder misunderstood the spec).
+- **Intent-vs-code check**: Does the code actually do what the builder says it does? If not → implementation bug.
 - All API methods present with correct signatures and return types?
 - Config/state shapes match spec exactly?
 - Events emitted at correct points with correct payloads?

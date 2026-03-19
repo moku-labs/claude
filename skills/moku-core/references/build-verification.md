@@ -2,27 +2,38 @@
 
 After per-plugin tracking is complete, run verification on successfully built plugins.
 
-## Step 4a: Plugin Verification
+## Step 4a: Plugin Verification + Code Review (Parallel)
 
 Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`, and `needs-manual` plugins.
 
-1. Spawn the **moku-verifier** agent on all `built` plugins in the wave
-   - Level 1: All tier files exist
-   - Level 2: Files contain real implementations (not stubs)
-   - Level 3: Plugins wired correctly, lint passes, tests pass
-2. Update status: `built` → `verified` (pass) or `built` → `verify-failed` (fail)
-3. If ALL verified plugins pass → proceed to Step 4b
-4. If ANY plugin is `verify-failed` → enter Gap Closure (Step 4c)
+### Lazy Validation (Hash-Based Skip)
 
-## Step 4a2: Post-Wave Code Review + Interactive Triage
+Before spawning validators, check if any `built` plugins are unchanged since a prior successful verification (e.g., on resume after a crash mid-verification):
 
-After verification passes (all target plugins are `verified`), spawn the **moku-code-reviewer** agent to review the wave's code changes:
+1. Compute current hash for each `built` plugin: `find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1`
+2. Compare against the `Hash` column in STATE.md's plugins table
+3. If hash matches AND the plugin was previously `verified` (now set back to `built` due to crash recovery) → skip verification, restore `verified` status. Log: `"Lazy skip: {name} unchanged since last verification (hash: {short})"`
+4. If hash doesn't match OR no prior hash exists → verify normally
 
-1. Provide the code reviewer with:
-   - The git diff for this wave: `git diff <pre-wave-checkpoint>..HEAD`
-   - Plugin specifications from `.planning/specs/` for all plugins in this wave
-   - The wave number and plugin list
-2. **Route findings through Interactive Triage** — read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-findings-triage.md` and follow the triage flow:
+This saves 50-70% on resume builds where most plugins haven't changed. Only newly built or modified plugins go through the full verification pipeline.
+
+**Spawn both agents simultaneously** — the verifier and code reviewer read the same files independently. Running them in parallel saves ~15-20% per wave compared to sequential execution.
+
+1. **In parallel**, spawn:
+   - **moku-verifier** agent on all `built` plugins in the wave (Level 1: files exist, Level 2: real implementations, Level 3: wired correctly + lint + tests)
+   - **moku-code-reviewer** agent with the wave's git diff, specs, plugin list, and builder intent summaries
+2. Wait for BOTH to complete
+3. Parse verifier results: update status `built` → `verified` (pass) or `built` → `verify-failed` (fail)
+4. If ANY plugin is `verify-failed` → enter Gap Closure (Step 4c). Code review findings are DEFERRED until after gap closure resolves verification failures (reviewing code that will be rewritten is wasted effort). After gap closure succeeds, check if the code-reviewer already ran — if yes, filter its findings to exclude files that were modified during gap closure and re-review only those modified files.
+5. If ALL verified → proceed to Step 4a2 (triage of code review findings)
+
+## Step 4a2: Code Review Triage
+
+Process the **moku-code-reviewer** findings (already completed in parallel above):
+
+The code reviewer was already spawned in parallel with the verifier (Step 4a). Its output is now ready.
+
+1. **Route findings through Interactive Triage** — read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-findings-triage.md` and follow the triage flow:
    - `verdict: PASS` → skip triage, proceed to Step 4b
    - `verdict: ISSUES` or `verdict: BLOCKER` → present findings interactively via the triage flow
    - Triage decisions determine what enters gap closure ("Fix now"), what is deferred ("Fix later"), and what is dismissed ("Not an issue")
@@ -73,7 +84,11 @@ After integration checks pass, re-verify ALL previously verified plugins — not
 
 - **Skip for Wave 0**: No prior plugins exist to regress.
 - **Run for Wave 1+**: Every wave after Wave 0 runs regression testing.
-- **Skip when hash matches**: Use content hashes from STATE.md (Step 4d2). If a previously verified plugin's hash hasn't changed AND the integration checks pass, skip its regression test. But if `src/config.ts`, `src/plugins/index.ts`, or `src/index.ts` changed in this wave, re-test ALL previously verified plugins regardless of hash (framework file changes can break any plugin).
+- **Lazy skip (hash-based)**: Use content hashes from STATE.md (Step 4d2). Skip regression tests for a previously verified plugin if ALL of these are true:
+  1. The plugin's own hash hasn't changed
+  2. None of its dependency plugins were modified in the current wave
+  3. Framework files (`src/config.ts`, `src/plugins/index.ts`, `src/index.ts`) were NOT modified in this wave
+- **If ANY framework file changed**: re-test ALL previously verified plugins regardless of hash (framework file changes can break any plugin).
 
 ### Regression Test Procedure
 

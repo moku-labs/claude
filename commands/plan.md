@@ -12,7 +12,7 @@ Use configuration values above if present. Validate before using — ignore inva
 
 | Setting | Type | Range | Default |
 |---------|------|-------|---------|
-| `maxParallelAgents` | integer | 1–5 | 3 |
+| `maxParallelAgents` | integer | 1–8 | 5 |
 | `gapClosureMaxRounds` | integer | 0–5 | 2 |
 | `skipValidation` | boolean | true/false | false |
 

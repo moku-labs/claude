@@ -124,6 +124,12 @@ When you are done, end your response with a fenced `json` code block:
     "greenPhaseTests": 12,
     "greenPhasePassing": 12
   },
+  "intent": {
+    "types.ts": "Defines Config with basePath/trailingSlash, State with routes Map and currentPath, Api with navigate/current/back methods, Events with router:navigated payload",
+    "state.ts": "Creates initial state: empty routes Map, currentPath from config.basePath. No mutations in factory — all mutations happen in api.ts",
+    "api.ts": "navigate() updates currentPath, pushes old path to history, emits router:navigated. current() returns currentPath. back() pops history.",
+    "index.ts": "Wires createState + createApi + createHandlers. Depends on [dep]. No onStart/onStop — no resources to manage."
+  },
   "filesCreated": ["types.ts", "api.test.ts", "state.test.ts", "api.ts", "state.ts", "index.ts", "..."],
   "testsPass": true,
   "lintPass": true,
@@ -132,6 +138,7 @@ When you are done, end your response with a fenced `json` code block:
 ```
 - `verdict`: PASS (all files created, tests pass, lint clean), FAIL (critical files missing or unresolvable errors), PARTIAL (some files created but hit turn limit or unresolved issues)
 - `tdd`: TDD metrics — `redPhaseTests`/`redPhaseFailing` (how many tests existed and failed after Phase 2), `greenPhaseTests`/`greenPhasePassing` (how many tests existed and passed after Phase 3). If red == failing and green == passing, TDD was followed correctly.
+- `intent`: **"Explain Your Code" — per-file intent summary.** One sentence per source file (not test files) explaining WHAT the code does and WHY it's structured this way. The code reviewer compares these intent statements against the spec — mismatches between stated intent and spec expectations are high-confidence bugs.
 - `issues`: list any problems encountered (test failures, lint errors, type errors). Empty array if none.
 ```
 
@@ -152,8 +159,10 @@ If the agent approaches its turn limit with incomplete files, it should prioriti
 **Parallel execution within waves:**
 - Wave 1 plugins have no dependencies on each other — spawn all agents simultaneously
 - Wave 2 plugins may share Wave 1 dependencies but not each other — spawn all simultaneously
-- For waves with < 4 plugins: all parallel
-- For waves with 4+ plugins: batch into groups of `maxParallelAgents` (default: 3) parallel agents
+- For waves with ≤ `maxParallelAgents` plugins: all parallel
+- For waves with more plugins: batch into groups of `maxParallelAgents` (default: 5) parallel agents
+
+**Auto-throttle:** If the current wave is Wave 3+ and `--continue` mode is active, reduce effective parallelism to `min(maxParallelAgents, 3)` to conserve context window. Long continuous builds accumulate context from multiple waves — throttling prevents context exhaustion in later waves.
 
 ### Plugin Implementation Order (per sub-agent) — TDD
 

@@ -56,18 +56,18 @@ Build the summary (~20-30 lines max):
 
 Inject this summary as a `## Prior Findings (from Group A)` section in the prompts for Group B agents and the architecture-validator.
 
-### Group B (parallel — quality + types)
-Spawn these 2 agents simultaneously, including the Prior Findings Summary:
+### Group B + Architecture (parallel — quality + types + speculative arch)
+Spawn these 3 agents simultaneously, including the Prior Findings Summary:
 1. **moku-test-validator** — test quality per plugin
 2. **moku-type-validator** — TypeScript type correctness (whole project)
+3. **moku-architecture-validator** — cross-plugin architecture (whole framework) — **speculative start**
 
-Wait for both to complete. Parse their output contract JSON blocks.
+The architecture-validator now runs alongside Group B instead of after it (~10-15% total pipeline savings). It receives Group A's Prior Findings but not Group B's (those aren't available yet). This is a speculative optimization:
+- **If Group B finds no BLOCKERs**: the architecture-validator's results are final. No re-run needed.
+- **If Group B finds BLOCKERs that affect cross-plugin architecture** (e.g., type-validator finds a broken type export used by multiple plugins, or test-validator reveals a missing integration test for a cross-plugin flow): re-run the architecture-validator with Group B findings injected. This re-run is the cost of speculation — but it only happens when Group B finds architectural BLOCKERs, which is rare.
+- **Decision logic after all 3 complete**: Check Group B blockers. If any have category `missing-export`, `dependency`, `event-type`, or `cross-plugin` → discard arch-validator results and re-run with Group B findings. Otherwise → keep speculative results.
 
-### Sequential (after A + B)
-Spawn 1 agent, including Prior Findings from both Group A and Group B:
-1. **moku-architecture-validator** — cross-plugin architecture (whole framework)
-
-Wait for completion.
+Wait for all 3 to complete. Parse their output contract JSON blocks.
 
 ## Agent Spawning
 
@@ -92,15 +92,16 @@ Before spawning validators, assess project complexity to choose appropriate mode
 
 This optimizes cost for simple projects and quality for complex ones. Pass the model override when spawning the Agent tool.
 
-### Incremental Validation (Hash-Based Caching)
+### Lazy Validation (Hash-Based Caching — Default Behavior)
 
-Before spawning per-plugin validators, check `.planning/STATE.md` for content hashes:
+**This is the default path.** Before spawning per-plugin validators, check `.planning/STATE.md` for content hashes. Unchanged plugins are skipped entirely — saving 50-70% on resume builds.
 
 1. For each plugin in scope, compute current hash: `find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1`
 2. Compare against the `Hash` column in STATE.md's plugins table
-3. If a plugin's hash matches AND its status is `verified`, skip it from per-plugin validators with note: `"Skipping {name} — unchanged since last validation (hash: {short})"`
+3. If a plugin's hash matches AND its status is `verified`, skip it from per-plugin validators with note: `"Lazy skip: {name} unchanged since last validation (hash: {short})"`
 4. Include skipped plugins in the report with `CACHED` verdict
 5. **Always run architecture-validator on the full framework** — cross-plugin concerns cannot be cached per-plugin
+6. **Force full validation** when `skipValidation: false` is explicitly set (this is the default — lazy validation skips UNCHANGED plugins, not validation itself) or when the user runs `/moku:build fix --all` (fix mode always runs full validation)
 
 ## Result Aggregation
 
