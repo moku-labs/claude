@@ -42,6 +42,8 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
 ## Step 0: Detect Target
 
+**Rules 1–1e are evaluated in order. If a rule stops execution (e.g., mutual exclusivity check), subsequent rules are not evaluated.**
+
 Parse `$ARGUMENTS`:
 1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files.
    - **Dry-run + skeleton routing:** If `## Skeleton:` is `not-started` or `in-progress`, report what each remaining skeleton wave would create (file list from `.planning/skeleton-spec.md`) instead of creating them. Read the `## Skeleton Build Waves` section of skeleton-spec.md. The skeleton-spec.md format uses two conventions for file paths:
@@ -54,11 +56,23 @@ Parse `$ARGUMENTS`:
      - **Plugin waves:** `| Wave | Plugins | Tiers | Dependencies |` table with one row per wave.
      - Report total: [N] skeleton waves, [M] plugin waves, [P] plugins total.
    - Exit.
-1b. If `--lean` is present anywhere in the arguments, activate **lean execution mode** (`leanMode: true`). See `build-lean-mode.md`. Strips verbose context from agent prompts (~40-60% context savings). Persisted as `## LeanMode: true` in STATE.md.
-1c. If `--continue` is present anywhere in the arguments, enter **continuous mode**: auto-advance through all remaining waves without stopping between them. Git checkpoint commits still happen per wave for rollback safety. The ONLY stopping trigger is approaching context exhaustion (if you sense compaction is imminent, stop after the current wave and tell the user to run `/moku:build resume --continue` to pick up). Default behavior (without `--continue`) is unchanged — one wave per invocation.
-2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position. Skip to the appropriate build step.
+1b. **Mutual exclusivity check:** If both `--dry-run` and `--continue` are present, report: "`--dry-run` (report mode) and `--continue` (auto-advance mode) are mutually exclusive. Use one or the other." Stop.
+1c. If `--lean` is present anywhere in the arguments, activate **lean execution mode** (`leanMode: true`). See `build-lean-mode.md`. Strips verbose context from agent prompts (~40-60% context savings). **If `--dry-run` is also active:** lean mode applies to the dry-run output format only (terse/compact output) — do NOT write `## LeanMode: true` to STATE.md. Lean mode can be persisted on the next non-dry-run invocation by passing `--lean` again. For non-dry-run invocations, persisted as `## LeanMode: true` in STATE.md.
+1d. If `--continue` is present anywhere in the arguments, enter **continuous mode**: auto-advance through all remaining waves without stopping between them. Git checkpoint commits still happen per wave for rollback safety. The ONLY stopping trigger is approaching context exhaustion (if you sense compaction is imminent, stop after the current wave and tell the user to run `/moku:build resume --continue` to pick up). Default behavior (without `--continue`) is unchanged — one wave per invocation.
+1e. **`#wave:N` syntax:** If any argument matches the pattern `#wave:N`:
+   - Extract N. Validate it is a non-negative integer. If not (e.g., `#wave:abc`, `#wave:-1`, `#wave:`), report: "Invalid wave number — `#wave:N` requires a non-negative integer (e.g., `#wave:2`)." Stop.
+   - Store the wave number as `waveOverride = N`. **Immediate bounds validation:** If `.planning/STATE.md` exists and contains a wave plan (detected by a `| Wave |` header row with plugin entries having numeric wave values), validate N against the maximum wave number now. If N exceeds the maximum wave number, report: "`#wave:N` is out of range — this project has [M] waves (0–[M-1]). Use a number within that range." Stop. If no wave plan exists yet (first build or wave analysis not yet run), defer bounds validation to Step 3 where wave analysis completes.
+   - This flag is held and applied after skeleton is committed (see Skeleton Detection).
+2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position.
+   - Check `## Verb:` in STATE.md. If `## Verb: fix`, route directly to **Error Recovery** below — a previous fix session was interrupted. Tell the user: "Resuming interrupted fix session. Targeting remaining plugins with `needs-manual` or `verify-failed` status."
+   - Check `## LeanMode:` in STATE.md. If `## LeanMode: true`, activate lean mode for this session.
+   - Check `## Mode:` in STATE.md. If `## Mode: plugins-only`, restore the `plugins-only` sub-mode for this session (build only plugin waves, skip config). If `## Mode: config-only`, restore the `config-only` sub-mode for this session (build only config.ts + index.ts).
+   - Skip to the appropriate build step.
 2b. If the first word is `fix` — route directly to **Error Recovery** below. Do NOT enter Skeleton Detection. (The Error Recovery section itself enforces the skeleton-committed prerequisite.)
 3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
+   - **`framework` sub-modes:** If the first word is `framework` and the second word is exactly `config` or `plugins`:
+     - `config`: build only `config.ts` + `index.ts` from specs. Set sub-mode `config-only`. Track as `## Mode: config-only` in STATE.md.
+     - `plugins`: build only plugin waves (skip config build). Set sub-mode `plugins-only`. Track as `## Mode: plugins-only` in STATE.md. **Precondition:** `src/config.ts` must exist. If it does not, report: "Config must be built first. Run `/moku:build framework config` to build config.ts and index.ts, then retry `framework plugins`." Stop.
 4. If no explicit target keyword, auto-detect:
    a. Both `.planning/specs/*.md` AND `.planning/app-spec.md` exist → use `AskUserQuestion`:
       - Question: "Both framework specs and app spec found. What would you like to build?"
@@ -128,8 +142,10 @@ Before starting:
       ```
     - Warn: "STATE.md regenerated with inferred values. Verify the target before continuing."
   - **Retry-Pending Check:** Before wave analysis, scan the plugins table for any plugins with status `retry-pending`. If found, route directly to `build-verification.md` Step 4c2 (Fresh-Context Retry on resume). Skip wave analysis and normal build flow — the retry context is already saved in `## Fresh Retry Context` in STATE.md.
-  - **Pipeline-Built Check:** Before wave analysis, scan the plugins table for any plugins with status `pipeline-built`. If found, run **pipeline reconciliation** (see `build-wave-execution.md` Wave Pipelining): compare interface file hashes from `## Pipeline Status` against current hashes on disk. If interfaces unchanged → promote to `built` and proceed to verification. If interfaces changed → reset affected `pipeline-built` plugins to `building` and re-spawn their builders. Remove `## Pipeline Status` after reconciliation.
-  - **Completed build check:** If all plugins in the plugins table have status `complete` (or `verified`) AND the build phase is `complete`, tell the user:
+  - **Pipeline-Built Check:** Before wave analysis, scan the plugins table for any plugins with status `pipeline-built`. If found:
+    - **Freshness check:** Compare the timestamp of `## Pipeline Status` against the most recent `## Git Checkpoint`. If `## Pipeline Status` predates the most recent `## Git Checkpoint`, discard it as stale, reset all affected `pipeline-built` plugins to `building`, and remove `## Pipeline Status` before proceeding.
+    - If `## Pipeline Status` is fresh, run **pipeline reconciliation** (see `build-wave-execution.md` Wave Pipelining): compare interface file hashes from `## Pipeline Status` against current hashes on disk. If interfaces unchanged → promote to `built` and proceed to verification. If interfaces changed → reset affected `pipeline-built` plugins to `building` and re-spawn their builders. Remove `## Pipeline Status` after reconciliation.
+  - **Completed build check:** If `#wave:N` was passed as an argument, skip this check — wave re-execution is intentional. Before proceeding to wave execution, reset all plugins assigned to wave N from status `complete` (or `verified`) back to `building` in STATE.md, so wave N can be re-executed cleanly. Otherwise: if all plugins in the plugins table have status `complete` (or `verified`) AND the build phase is `complete`, tell the user:
     > "This build is already complete. To re-run validation or generate the README, use `/moku:build resume` which will route to the post-build steps. To rebuild from scratch, delete `.planning/STATE.md` and re-run."
     Stop.
   - Skip plugins/waves that are already marked as complete
@@ -165,15 +181,16 @@ Run this at wave execution start (Step 3), before spawning builder agents:
 ### State Write Protocol
 
 When updating `.planning/STATE.md`:
-1. Back up current state: copy to `.planning/STATE.md.bak` before overwriting
+
+**Concurrency guard (pre-condition):** Before step 1, check if `.planning/STATE.md.tmp` already exists. If it does, another process may be writing. Warn: "STATE.md.tmp already exists — another build may be in progress." To determine if it is stale: check the file's modification time. If it is older than 5 minutes and no build process is actively running, it is safe to delete manually. Stop and wait for the user to resolve this before proceeding.
+
+1. Back up current state: copy to `.planning/STATE.md.bak` before overwriting. If `.planning/STATE.md.bak` already exists, it will be overwritten — the `.bak` file is a single-depth undo (most recent state only), not an accumulating backup history.
 2. Write new content to `.planning/STATE.md.tmp` first (not directly to STATE.md)
 3. Validate that the tmp file contains required headers (`## Phase:`, `## Target:`, `## Next Action:`) before renaming
 4. If validation passes, rename `.planning/STATE.md.tmp` to `.planning/STATE.md` (atomic replace)
 5. If validation fails, delete the tmp file and stop: "STATE.md write failed validation — the `.bak` is intact."
 6. If in a git repo, record the current commit SHA in the state file as `## Git Checkpoint: <sha>`
 7. This enables rollback if a wave introduces regressions
-
-**Concurrency guard:** Only one build command should write STATE.md at a time. If you detect a `.planning/STATE.md.tmp` file already exists when attempting a write, another process may be writing. Warn: "STATE.md.tmp already exists — another build may be in progress. Remove it manually if stale, or wait for the other build to finish."
 
 ---
 
@@ -189,8 +206,8 @@ Read `## Skeleton:` from STATE.md:
 |--------|--------|
 | field absent | Old STATE.md format — assume skeleton committed, proceed to normal build routing |
 | `not-started` | Read `.planning/skeleton-spec.md` → route to `build-skeleton.md` Step S1 |
-| `in-progress` | Read skeleton-spec.md, find last completed skeleton wave → resume from next wave |
-| `verified` | Re-present skeleton report — read `.planning/skeleton-report.md` (if file is missing, route to `build-skeleton.md` Step S3 to regenerate it first). Use `AskUserQuestion`: "Skeleton verified. Approve and commit?" — Options: "Approve and commit (Recommended)" / "Review changes first" / "Adjust skeleton" |
+| `in-progress` | Read skeleton-spec.md, find last completed skeleton wave → resume from next wave. (Any held `#wave:N` or `--continue` will be re-applied after skeleton is committed.) |
+| `verified` | Re-present skeleton report — read `.planning/skeleton-report.md` (if file is missing, route to `build-skeleton.md` Step S3 to regenerate it first). Use `AskUserQuestion`: "Skeleton verified. How would you like to proceed?" — Options: "Approve and commit (Recommended)" / "Adjust skeleton" / "Show details". **Note:** `--continue` does not bypass the skeleton approval gate. Continuous mode applies only to plugin waves after skeleton is committed. After approval and commit, `--continue` mode resumes automatically for subsequent plugin waves. |
 | `committed` | Skeleton complete — proceed to Framework/App/Plugin build routing below |
 
 **Skeleton always takes priority.** Any argument (`resume`, `framework #wave:2`, `--continue`) is held until skeleton is `committed`. The skeleton MUST be committed before any plugin build wave begins. If the user passes `resume` or `--continue` but skeleton is not committed, tell the user: "Skeleton build is not yet committed. Completing skeleton first — your `[argument]` will apply after skeleton is committed." Then proceed with skeleton build. After skeleton is committed, re-apply the held arguments (e.g., `--continue` mode resumes, `#wave:N` routes to the specified wave).
@@ -273,17 +290,22 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 
 **Wave pipelining (`--continue` + ≥ 3 waves):** When continuous mode is active and the project has 3+ waves, wave N+1 builders start while wave N is being verified (~30-50% throughput gain). See `build-wave-execution.md` Wave Pipelining section. Disable with `enablePipelining: false` in project config.
 
-**Lean execution mode (`--lean` or `leanMode: "auto"`):** Strips verbose context from agent prompts during builds (~40-60% context savings). Auto-activates after 3+ waves in a session. See `build-lean-mode.md`. Combines well with pipelining — lean mode halves agent context cost while pipelining doubles agent throughput.
+**Lean execution mode (`--lean` or `leanMode: "auto"`):** Strips verbose context from agent prompts during builds (~40-60% context savings). **A "session" is a single `--continue` invocation.** Auto-lean activates at the start of wave 3+ within a `--continue` run. For non-continue (one-wave-per-invocation) mode, auto-lean does not trigger — use `--lean` explicitly or set `leanMode: true` in config. Combines well with pipelining — lean mode halves agent context cost while pipelining doubles agent throughput.
 
-**`#wave:N` syntax:** `/moku:build #wave:2` jumps directly to wave 2 (useful for re-running a specific wave after manual fixes).
+**`#wave:N` syntax:** `/moku:build #wave:2` jumps directly to wave 2 (useful for re-running a specific wave after manual fixes). See Step 0 rule 1e for parsing and validation.
 
 ### Post-Wave Code Review
 
 After each wave's verification passes (Step 4a in build-verification.md), spawn the **moku-code-reviewer** agent to review the wave's code changes. The code reviewer catches logic errors, spec deviations, and security issues that automated tools miss. See build-verification.md Step 4a2 for integration details.
 
+Key triage behaviors (inline summary):
+- If `skipTriage: true` in project config, auto-defer all findings without prompting.
+- BLOCKER findings block wave completion — they must be resolved before the wave is considered done.
+- "Fix now" routes to gap closure in the current session; "Fix later" defers the finding to the next resume.
+
 ### Stalemate Detection
 
-During gap closure, track fix effectiveness between rounds. If the same errors persist or error count increases after applying fixes, skip remaining gap closure rounds and escalate to Fresh-Context Retry immediately. See build-verification.md Step 4c for details.
+During gap closure, track fix effectiveness between rounds. If the same errors persist or error count increases after applying fixes, skip remaining gap closure rounds and escalate to Fresh-Context Retry immediately. See `build-verification.md` Step 4c for the error signature hashing algorithm and stalemate detection details.
 
 ### Quality Requirements
 
@@ -331,16 +353,22 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-plugin.md` for det
 
 ## Error Recovery (`fix`)
 
-If `$ARGUMENTS` starts with `fix`, enter error recovery mode. This targets failed or partially built plugins.
+This section is entered when: (a) `$ARGUMENTS` starts with `fix`, OR (b) `resume` was invoked and `## Verb: fix` was detected in STATE.md (an interrupted fix session is being continued). This targets failed or partially built plugins.
 
-**Prerequisite:** Fix mode requires skeleton to be `committed` in STATE.md. If `## Skeleton:` is `not-started` or `in-progress`, tell the user: "Fix mode requires the skeleton to be committed first. Complete the skeleton build with `/moku:build resume`, then re-run fix." If `## Skeleton:` is `verified`, tell the user: "Skeleton is built but not yet committed. Run `/moku:build resume` to approve and commit it, then re-run fix."
+**Prerequisite checks run in order:**
+
+**(1) Skeleton prerequisite:** Fix mode requires skeleton to be `committed` in STATE.md. If `## Skeleton:` is `not-started` or `in-progress`, tell the user: "Fix mode requires the skeleton to be committed first. Complete the skeleton build with `/moku:build resume`, then re-run fix." If `## Skeleton:` is `verified`, tell the user: "Skeleton is built but not yet committed. Run `/moku:build resume` to approve and commit it, then re-run fix."
 
 **Syntax:**
 - `fix auth` — fix a specific plugin by name
 - `fix #3` — fix a specific plugin by number
 - `fix --all` — fix all plugins with `needs-manual` or `verify-failed` status
 
-When multiple plugins need fixing, use `AskUserQuestion`:
+**Reserved word guard:** If a plugin name argument (`fix <name>`) matches a reserved keyword (`resume`, `framework`, `app`, `plugin`, `fix`), report: "Cannot fix a plugin named `{name}` — that is a reserved command keyword. Use `fix #N` or `fix --all` instead." Stop.
+
+**(2) Zero-match guard for `fix --all`:** Before proceeding, scan STATE.md for plugins with `needs-manual` or `verify-failed` status. If none are found, tell the user: "No plugins need fixing — all plugins are verified or complete." Stop.
+
+**(3) Multi-plugin prompt:** When multiple plugins need fixing, use `AskUserQuestion`:
 - Question: "[N] plugins need fixing. Fix all or select specific ones?"
 - Header: "Fix scope"
 - Options: "Fix all (Recommended)" / "Let me choose which ones" / "Show errors first"

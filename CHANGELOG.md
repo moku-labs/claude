@@ -2,6 +2,37 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.23.1 (2026-03-20)
+
+### Fixed
+- **`#wave:N` parsing and validation** — added explicit rule 1e in Step 0 with integer validation, immediate bounds checking (catches `#wave:abc`, `#wave:-1`, `#wave:`, and out-of-range values before dry-run exits), and `waveOverride` storage.
+- **`#wave:N` + completed build check** — `#wave:N` now bypasses the "build already complete" guard, enabling intentional wave re-execution with automatic plugin status reset.
+- **`framework config`/`plugins` sub-modes** — added routing logic in Step 0 rule 3 with `## Mode:` STATE.md field, config.ts precondition guard for plugins-only mode, and mode restoration on resume.
+- **`--dry-run` + `--continue` conflict** — mutual exclusivity check (rule 1b) now rejects contradictory flags.
+- **`--lean` + `--dry-run` state mutation** — lean mode is output-format-only when dry-run is active; does not write `## LeanMode: true` to STATE.md.
+- **Auto-lean "session" definition** — explicitly defined as a single `--continue` invocation; auto-lean does not trigger in default one-wave-per-invocation mode.
+- **Concurrency guard overhaul** — moved to pre-condition block with 5-minute staleness guidance and explicit "Stop" outcome.
+- **Resume `## Verb: fix` routing** — resume now reads `## Verb:` from STATE.md and routes interrupted fix sessions to Error Recovery automatically.
+- **Resume `## Mode:` restoration** — resume now reads `## Mode:` from STATE.md to restore plugins-only/config-only sub-modes.
+- **Resume `## LeanMode:` restoration** — resume now explicitly reads and reactivates lean mode from STATE.md.
+- **Skeleton option label alignment** — `verified` row options now match `build-skeleton.md` Step S5 (Approve and commit / Adjust skeleton / Show details).
+- **`--continue` skeleton gate clarification** — verified row now explicitly states --continue does not bypass approval and resumes automatically after commit.
+- **Held flags note in skeleton in-progress** — `#wave:N` and `--continue` re-application after skeleton commit now documented inline.
+- **`fix --all` zero-match guard** — stops with informational message when no plugins need fixing.
+- **`fix` reserved word guard** — `fix resume`, `fix framework`, etc. now rejected with clear error instead of searching for nonexistent plugin.
+- **Error Recovery dual entry points** — section opening now documents both `fix` argument and `resume` → `## Verb: fix` entry paths.
+- **Error Recovery prerequisite ordering** — checks now explicitly ordered: (1) skeleton prerequisite, (2) zero-match guard, (3) multi-plugin prompt.
+- **Pipeline Status freshness check** — stale `## Pipeline Status` (predating last `## Git Checkpoint`) is discarded before reconciliation.
+- **State Write Protocol `.bak` semantics** — documented as single-depth undo (not accumulating backup).
+- **Post-wave code review triage** — added inline summary of key triage behaviors (skipTriage, BLOCKER blocking, Fix now / Fix later routing).
+- **Stalemate detection cross-reference** — explicit pointer to `build-verification.md` Step 4c for error signature hashing algorithm.
+- **Step 0 rule evaluation order** — explicit statement that rules 1–1e are evaluated in order with short-circuit.
+- **`#wave:` empty N** — added to error message examples for completeness.
+- **Plugin status reset** — documented how `#wave:N` resets wave plugins from `complete` to `building`.
+
+### Changed
+- Version bumped to 0.23.1 in plugin.json and marketplace.json.
+
 ## 0.23.0 (2026-03-20)
 
 ### Added

@@ -1,6 +1,6 @@
 {
   "name": "moku",
-  "version": "0.23.0",
+  "version": "0.23.1",
   "description": "Development toolkit for Moku Core \u2014 scaffolding, framework planning, plugin building, migration, and specification enforcement for the micro-kernel plugin framework. Features lean execution mode (Taskmaster \u2014 ~40-60% context savings), wave pipelining (build N+1 while verifying N), TDD build waves (Red \u2192 Green \u2192 Refactor), builder intent verification (explain-your-code), multi-pass focused code review, spec regression testing, parallel verify+review, speculative arch validation, lazy hash-based validation, interactive findings triage, steering pre-phase, agent conflict resolution, stuck-loop alt-strategy forcing, decision knowledge graph, wave-based parallel execution (default 5 agents, auto-throttle), 19-agent validation pipeline with structured output contracts, validation coordinator, error diagnostician, post-wave code reviewer, command self-auditing, hooks validation, task DAG progress tracking, plan mode integration, and cross-session state tracking.",
   "author": {
     "name": "Oleksandr Kucherenko",
