@@ -4,16 +4,18 @@ Development toolkit for [Moku Core](https://github.com/moku-labs/core) — the m
 
 ## What This Plugin Does
 
-Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 10-agent validation pipeline, and a self-auditing system that finds gaps in commands and hooks then proposes improvements.
+Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 19-agent validation pipeline, lean execution mode (~40-60% context savings), wave pipelining, and a self-auditing system that finds gaps in commands and hooks then proposes improvements.
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
+| `/moku:next [--dry-run]` | Auto-detect project state and run the next logical step |
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
 | `/moku:plan [verb] [type] [args]` | Plan a project: create, update, add plugin, or migrate. 3-stage gated workflow with validation. |
-| `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`. |
+| `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`, `fix`. |
 | `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
+| `/moku:status [--full\|diagnostics]` | Show consolidated project dashboard — phase, wave progress, agent activity |
 | `/moku:audit <command\|hooks\|all>` | Audit a command or the hooks system — simulate scenarios, find gaps, propose an improved version. |
 
 ### Plan Targets
@@ -64,9 +66,9 @@ Type synonyms: `tool`/`engine`/`library` → framework, `application`/`service`/
 
 Skills include dynamic context injection to auto-detect project state and planning phase.
 
-## Agents (15 total)
+## Agents (19 total)
 
-### Structural Validators
+### Structural Validators (4)
 
 | Agent | Purpose |
 |-------|---------|
@@ -75,7 +77,7 @@ Skills include dynamic context injection to auto-detect project state and planni
 | **moku-jsdoc-validator** | Validates JSDoc documentation quality, examples, completeness |
 | **moku-web-validator** | Validates web patterns: data-* attributes, @scope, @layer, islands, tokens |
 
-### Quality Validators
+### Quality Validators (5)
 
 | Agent | Purpose |
 |-------|---------|
@@ -84,9 +86,23 @@ Skills include dynamic context injection to auto-detect project state and planni
 | **moku-test-validator** | Validates test quality: mock context correctness, edge cases, type-level tests |
 | **moku-type-validator** | TypeScript type correctness: `tsc --noEmit`, `as any` audit, inference chain |
 | **moku-architecture-validator** | Cross-plugin analysis: dependency graph, event flow, API consistency |
+
+### Review & Judgment (3)
+
+| Agent | Purpose |
+|-------|---------|
+| **moku-code-reviewer** | Post-wave code review: logic errors, spec deviations, security, performance |
+| **moku-wave-judge** | Evaluates wave quality, decides continue/stop-for-review/fresh-retry |
+| **moku-error-diagnostician** | Diagnoses build errors, classifies root cause, proposes targeted fixes |
+
+### Supporting (2)
+
+| Agent | Purpose |
+|-------|---------|
+| **moku-validation-coordinator** | Orchestrates full validation pipeline (Group A → Group B → architecture) |
 | **moku-researcher** | Pre-implementation research: npm ecosystem, TypeScript patterns |
 
-### Audit Agents
+### Audit Agents (5)
 
 | Agent | Purpose |
 |-------|---------|

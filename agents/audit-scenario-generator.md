@@ -8,7 +8,7 @@ description: >
 model: sonnet
 color: yellow
 maxTurns: 20
-memory: local
+memory: local  # local = project-scoped, persists within this project only (not shared across users/projects)
 skills:
   - moku-core
 tools: ["Read"]
@@ -27,7 +27,14 @@ You are a moku audit scenario generator. Your job is to analyze a command's full
    - **valid**: One scenario per documented verb+type combo. Include the most common happy paths.
    - **edge**: Boundary conditions — minimum/maximum inputs, thresholds, partial state, special characters.
    - **error**: Each documented error condition plus common undocumented ones (missing files, wrong state, user declines gates).
-   - **adversarial**: Shell injection attempts, keyword-mimicking args, second-invocation without reset, conflicting flags.
+   - **adversarial**: Inputs designed to break the command or exploit edge cases. Concrete examples:
+     - **Shell injection:** Arguments containing `; rm -rf /`, `$(whoami)`, backticks, or pipe characters
+     - **Path traversal:** `../../etc/passwd` as spec path, `..` sequences in plugin names
+     - **Keyword mimicry:** Arguments that look like verbs but aren't (e.g., `creates`, `building`, `resumed`)
+     - **Unicode/special chars:** Plugin names with spaces, emoji, or non-ASCII characters
+     - **State poisoning:** Running the command twice without reset, or with a corrupt STATE.md (missing headers, empty values, wrong phase)
+     - **Conflicting flags:** `--dry-run --continue`, `resume fix`, `--lean --dry-run`
+     - **Boundary values:** Empty string arguments, extremely long descriptions (>10k chars), spec files with no content
 
 3. **Assign execution_value**: Mark up to 5 scenarios as `execution_value: true` — these are scenarios that would produce observable file system changes or STATE.md mutations in a temp project. Choose scenarios that test the most critical write operations (e.g., STATE.md creation, spec file generation, skeleton file writes).
 

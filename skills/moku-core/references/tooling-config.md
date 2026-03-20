@@ -147,6 +147,9 @@ export default [
   eslintPluginUnicorn.configs.recommended,
 
   // 4. SonarJS recommended
+  // NOTE: The `!` non-null assertion is required because sonarjs types mark `configs` as
+  // potentially undefined, but the `recommended` preset always exists at runtime.
+  // If this causes type errors in future sonarjs versions, use: `sonarjs.configs?.recommended ?? {}`
   // biome-ignore lint/style/noNonNullAssertion: sonarjs types mark configs as possibly undefined but it exists at runtime
   sonarjs.configs!.recommended,
 

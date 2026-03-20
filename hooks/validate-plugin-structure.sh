@@ -16,6 +16,7 @@ if command -v jq &>/dev/null; then
 elif command -v python3 &>/dev/null; then
   FILE_PATH=$(python3 -c "import sys,json; print(json.loads(sys.stdin.read()).get('tool_input',{}).get('file_path',''))" <<< "$INPUT" 2>/dev/null)
 else
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"WARNING: Plugin structure check skipped — neither jq nor python3 available. Install one for Moku hook support."}}'
   exit 0
 fi
 

@@ -7,7 +7,7 @@ description: >
   <example>Context: Specs modified. user: "Check if the dependency graph has cycles" assistant: launches moku-plan-checker</example>
 model: sonnet
 color: yellow
-memory: user
+memory: user  # user = persists across projects for this user (learns common spec mistakes across different Moku projects)
 maxTurns: 30
 skills:
   - moku-core
@@ -40,6 +40,8 @@ You have persistent memory across sessions. Use it to:
 ### 1. Requirement Coverage
 
 If `.planning/decisions.md` exists, verify every recorded decision/requirement maps to at least one plugin or config setting. Report gaps where requirements have no corresponding plugin.
+
+**Expected decisions.md format:** The file uses H2 headers for sections. Requirements are found under `## Requirements` or `## Key Decisions` as markdown list items (lines starting with `- ` or `* `). Each list item is one decision/requirement. Lines that are headers, blank, or continuation text (not starting with a list marker) are not requirements. If the file has no recognizable H2 sections or list items, report: "decisions.md has non-standard format — requirement coverage check skipped. Expected H2 sections with markdown list items."
 
 ### 2. Dependency Graph Correctness
 

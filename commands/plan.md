@@ -16,6 +16,8 @@ Use configuration values above if present. Validate before using — ignore inva
 | `gapClosureMaxRounds` | integer | 0–5 | 2 |
 | `skipValidation` | boolean | true/false | false |
 
+See `/moku:build` for the complete configuration schema covering all Moku commands.
+
 Create a specification plan for a Moku project. The input (`$ARGUMENTS`) uses a verb-first pattern:
 
 - `create framework "A static site generator"` — new framework from description
@@ -48,7 +50,11 @@ The `add` verb always runs in quick mode regardless of this flag.
 
 Parse `$ARGUMENTS` into five components: **VERB**, **TYPE**, **PATH_OR_LINK**, **REQUIREMENTS**, **QUICK_MODE**.
 
-- **Filesystem guard:** Before any write to `.planning/` in this session, ensure the directory exists: run `mkdir -p .planning/`. This must execute before creating decisions.md, research.md, or STATE.md. On fresh projects the directory may not exist.
+**Filesystem guard (mandatory):** Before any other action in this command, ensure the planning directory exists:
+```bash
+mkdir -p .planning/
+```
+This MUST execute before creating decisions.md, research.md, STATE.md, or any spec files. On fresh projects the directory does not exist and writes will fail without this guard.
 
 If `$ARGUMENTS` is empty and no VERB can be determined, stop with: "Usage: `/moku:plan [create|update|add|migrate|resume] [type] {description} [--quick]`"
 

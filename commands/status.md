@@ -70,6 +70,7 @@ STOP-BLOCK (N):  [summary of stop blocks]
 ── Quick Actions ──────────────────────────────────
 → [contextual suggestion based on state, e.g. "/moku:build resume"]
 → [secondary suggestion if applicable]
+→ Tip: Run `/moku:next` to auto-detect and run the next step
 ```
 
 ## Quick Action Logic

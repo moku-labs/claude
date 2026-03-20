@@ -44,6 +44,30 @@ Write analysis results to `.planning/decisions.md` using the Migration decisions
 
 Log to user: "Migration analysis complete. Saved to `.planning/decisions.md`. Proceeding to the create flow."
 
+## App Migration (TYPE = app)
+
+When migrating to a consumer app (TYPE is `app`), the analysis differs:
+
+1. **Framework Identification**: Identify which Moku framework the app will consume. Check if one exists in the workspace or ask the user:
+   - Use `AskUserQuestion`: "Which Moku framework should this app consume?"
+   - Options: list detected framework packages from the source project's dependencies, plus "New framework (will plan both)"
+2. **Route Mapping**: Map existing entry points and routes to Moku `createApp` composition
+3. **Custom Plugin Detection**: Identify app-specific logic that should become custom consumer-side plugins (e.g., app-specific middleware, custom UI components, authentication wrappers)
+4. **Import Rewriting**: Map existing imports to framework package imports (consumer code NEVER imports from `@moku-labs/core`)
+
+Write app migration analysis to `.planning/decisions.md` with `## Migration Type: app-from-existing`.
+
+## Error Handling
+
+If the source project cannot be analyzed (e.g., no recognizable structure, binary files only, unsupported language):
+- Tell the user: "Cannot analyze source at [path] — no recognizable TypeScript/JavaScript project structure found. Moku migration requires a Node.js/Bun project with package.json."
+- Stop.
+
+If the source project has circular dependencies that prevent clean plugin mapping:
+- Document all cycles in the Gap Analysis section of decisions.md
+- Flag each cycle as a "MIGRATION BLOCKER — requires manual restructuring"
+- Continue with the rest of the analysis (partial results are still valuable)
+
 ## Next
 
 After migration analysis, proceed with the **create flow**: Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-verb-create.md` and follow from the discussion phase onward. The migration analysis provides context that will cause the discussion phase to be auto-skipped and the research phase to be auto-skipped (since both were already performed during migration).

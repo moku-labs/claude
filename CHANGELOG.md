@@ -2,6 +2,124 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.23.0 (2026-03-20)
+
+### Added
+- **`/moku:next` command** — auto-detects project state from STATE.md and routes to the next logical step. Supports `--dry-run` to preview without executing. Resolves the most common UX gap identified in competitive analysis (GSD, Taskmaster, and Compound Eng all have auto-advance).
+- **Explicit scoring rubrics for wave-judge** — all 5 evaluation dimensions (verification health, code quality trajectory, test coverage, integration stability, blocker severity) now have concrete 1-5 rubric tables with specific criteria per score.
+- **Adversarial scenario examples** — audit-scenario-generator now includes 7 concrete categories: shell injection, path traversal, keyword mimicry, unicode/special chars, state poisoning, conflicting flags, boundary values.
+- **App migration flow** — plan-verb-migrate.md now covers app-to-Moku migration (framework identification, route mapping, custom plugin detection, import rewriting) in addition to the existing framework migration.
+- **Error handling for migration** — circular dependency detection with `MIGRATION BLOCKER` flags, unrecognizable project structure handling.
+- **Complete configuration schema** — build.md now documents ALL config keys with `Used By` column: `maxParallelAgents`, `gapClosureMaxRounds`, `skipValidation`, `skipTriage`, `enablePipelining`, `leanMode`, `auditMaxScenarios`, `auditIterateLimit`.
+
+### Fixed
+- **README agent count** — corrected from "15 total" to "19 total" with proper categorization: 4 structural, 5 quality, 3 review/judgment, 2 supporting, 5 audit.
+- **Build argument hints** — frontmatter now includes `resume`, `fix`, and `--lean` (previously missing from discoverability).
+- **Skeleton routing ambiguity** — build.md now explicitly states that held arguments (`resume`, `--continue`, `#wave:N`) are communicated to the user and re-applied after skeleton is committed.
+- **STATE.md write race condition** — build.md now uses atomic tmp→rename protocol (matching plan.md) with concurrency guard that detects stale `.tmp` files.
+- **SHA-1 hash in lazy validation** — validation-coordinator changed from `shasum` to `shasum -a 256` for hash-based caching.
+- **Plan checker decisions.md format** — now specifies expected H2 + list-item format with graceful fallback for non-standard files.
+- **Hook silent failures** — validate-plugin-structure.sh and validate-plugin-index.sh now emit JSON context warning when neither jq nor python3 is available (instead of silent exit 0).
+- **Dry-run skeleton-spec format** — build.md now documents both file path conventions (H3 sub-headers and code-block first-line comments).
+- **Fragile sonarjs assertion** — tooling-config.md now has explanatory comment and fallback guidance for the `!` non-null assertion.
+- **.planning/ directory guard** — plan.md now has a mandatory `mkdir -p .planning/` as the first action (previously buried in prose at Step 0).
+
+### Changed
+- **Agent memory semantics documented** — `memory: local` (project-scoped) and `memory: user` (cross-project) now have inline documentation in agent frontmatter.
+- **Model tiers per validator documented** — validation-coordinator now has a full table showing default model, role, and estimated tokens per agent, plus complexity-based override rules.
+- **Config schema centralized** — plan.md references build.md as the authoritative source for all configuration keys. No more fragmented documentation.
+- **Status dashboard** — quick actions section now suggests `/moku:next` as a tip.
+- Version bumped to 0.23.0 in plugin.json and marketplace.json.
+
+## 0.22.0 (2026-03-19)
+
+### Added
+- **Lean execution mode** — `--lean` flag and `leanMode: "auto"` config strip verbose context from agent prompts during builds (~40-60% context savings). Auto-activates after 3+ waves in a session. New reference `build-lean-mode.md` with stripped prompt templates and context budget guidelines.
+- **Lean mode persistence** — `## LeanMode:` field in STATE.md carries across sessions.
+
+### Changed
+- **Build command** — added `--lean` flag parsing, lean mode integration with wave pipelining (halves context cost while pipelining doubles throughput), auto-activation threshold (3+ waves).
+- **Builder prompts** — lean mode strips framework config, dependency interfaces, and design decisions sections when plugin has no cross-plugin dependencies.
+
+## 0.21.0 (2026-03-19)
+
+### Added
+- **Wave pipelining** — when `--continue` is active and project has 3+ waves, Wave N+1 builders start while Wave N is being verified (~30-50% throughput gain). New section in `build-wave-execution.md` covers pipeline reconciliation: interface hash comparison, `pipeline-built` status, and hash-changed rebuilds. Disable with `enablePipelining: false`.
+- **Pipeline reconciliation** — after pipelined build completes, interface file hashes from `## Pipeline Status` in STATE.md are compared against current hashes on disk. Unchanged → promote to `built`; changed → reset and re-spawn.
+- **Pipeline-Built Check** — STATE.md `pipeline-built` status handled on resume.
+
+### Changed
+- **STATE.md template** — added `## Pipeline Status:` section for interface hashes.
+- **Build command** — added pipeline reconciliation step to State Check.
+
+## 0.20.0 (2026-03-19)
+
+### Changed
+- **Validation documentation** — updated validator references and verification steps for consistency across all agents.
+- Version bumped to 0.20.0 in plugin.json and marketplace.json.
+
+## 0.19.0 (2026-03-18)
+
+### Added
+- **Multi-pass code review** — new `build-multi-pass-review.md` reference. Post-wave code reviewer now runs 4 focused passes: correctness, security, performance, maintainability. Each pass produces prioritized findings (P1–P3). Integrated into build-verification as Step 4a2.
+- **Regression testing** — after each wave (Wave 1+), all previously verified plugins are retested (`bunx tsc --noEmit` + `bun run test`). Catches cross-plugin regressions introduced by the current wave. New section in `build-verification.md`.
+
+### Changed
+- **Build command** — framework build flow now includes `regression test` step after Wave 1+.
+- **Code reviewer agent** — expanded from single-pass to multi-pass protocol.
+
+## 0.18.0 (2026-03-18)
+
+### Added
+- **Conflict resolution protocol** — new `build-conflict-resolution.md` reference. When validators in the same group produce contradictory findings (verdict disagreements, severity disagreements, contradictory fixes on same file ±5 lines), the coordinator classifies them as information gap, genuine trade-off, false positive, or scope mismatch — and resolves accordingly.
+- **Decision knowledge graph** — new `decision-knowledge-graph.md` reference. Records architectural trade-off decisions from conflict resolution and user approvals in `.planning/decision-log.md`. Builder agents receive relevant decisions as "DO NOT CONTRADICT" context.
+- **Steering pre-phase** — plan-verb-create.md now includes an optional discussion phase (2–5 questions) and research phase (moku-researcher spawn) before Stage 1 analysis. Discussion results saved to `.planning/decisions.md`, research to `.planning/research.md`.
+
+### Changed
+- **Validation coordinator** — added intra-group conflict detection and resolution steps between Group A and Group B.
+- **Wave judge** — added conflict resolution log as input (high unresolved count → lean toward `stop-for-review`).
+- **Error diagnostician** — reads decision-log.md to avoid proposing fixes that contradict recorded decisions.
+- **STATE.md template** — added `## Decisions:` and `## Research:` field tracking.
+
+## 0.17.0 (2026-03-18)
+
+### Added
+- **TDD protocol reference** — new `tdd-protocol.md` in moku-testing skill with four phases (Types → Red → Green → Refactor), output contract extensions for builder agents, core plugin adaptations, and edge case handling.
+- **Interactive findings triage** — new `build-findings-triage.md` reference. After validation, blockers and warnings are presented to the user via `AskUserQuestion` for interactive disposition: fix (enter gap closure), defer (mark as known issue), or dismiss (false positive). Deferred items recorded in decision-log.md.
+- **Builder intent verification** — builder prompts now include TDD protocol summary requiring tests-before-implementation ordering.
+
+### Changed
+- **Build command** — added `skipTriage: true` config option to bypass interactive triage.
+- **moku-testing SKILL.md** — expanded with TDD protocol summary and reference to the full protocol file.
+- **Wave execution** — builder sub-agent prompts now include design decisions from `.planning/decision-log.md`.
+- **Plan stages** — discussion phase questions refined for better decision capture.
+
+## 0.16.2 (2026-03-18)
+
+### Changed
+- **Full command audit** — 43 fixes across all 5 commands (`plan`, `build`, `check`, `status`, `init`) in 8 iterative self-audit passes. Key improvements: stricter argument validation, better error messages, edge case handling for missing/corrupt state.
+
+## 0.16.1 (2026-03-18)
+
+### Changed
+- **Build command audit** — 33 fixes from 3-pass iterative audit. Key improvements: dry-run skeleton reporting, plugin spec resolution hardening, error recovery prerequisite checks, continuous mode context exhaustion detection.
+
+## 0.16.0 (2026-03-18)
+
+### Added
+- **`moku-code-reviewer` agent** — post-wave code review agent (116 lines) catching logic errors, spec deviations, security vulnerabilities, and Moku anti-patterns. Runs after verification passes in build-verification Step 4a2.
+- **Output styles** — `moku-building.md` (terse, progress-focused) and `moku-planning.md` (verbose, analytical) for context-appropriate formatting.
+- **Task DAG progress tracking** — build command uses `TaskCreate`/`TaskUpdate` for live progress UI during wave execution (parent task per wave, child per plugin).
+- **Audit self-learning** — audit command now saves severity calibration and scenario effectiveness data to `.planning/audit-learning.md` for improved future audits.
+- **Plan mode integration** — plan command uses `EnterPlanMode`/`ExitPlanMode` during Stage 1 analysis for read-only exploration.
+
+### Changed
+- **AskUserQuestion UX** — all user-facing questions across plan, build, and audit commands now use structured `AskUserQuestion` with labeled options, descriptions, and multiSelect control instead of freeform prompts.
+- **Build verification** — post-wave code review spawned after verification passes.
+- **Audit command** — enhanced with self-learning persistence, cross-audit correlation for `all` target, severity calibration from past audit data.
+- **Plan command** — discussion and research phases use `AskUserQuestion` for better interaction.
+- **Init command** — multiple robustness improvements from audit feedback.
+
 ## 0.15.1 (2026-03-18)
 
 ### Changed

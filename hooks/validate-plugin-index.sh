@@ -20,6 +20,7 @@ elif command -v python3 &>/dev/null; then
   CONTENT=$(python3 -c "import sys,json; ti=json.loads(sys.stdin.read()).get('tool_input',{}); print(ti.get('content','') or ti.get('new_string',''))" <<< "$INPUT" 2>/dev/null)
   IS_WRITE=$(python3 -c "import sys,json; print('yes' if json.loads(sys.stdin.read()).get('tool_input',{}).get('content') is not None else 'no')" <<< "$INPUT" 2>/dev/null)
 else
+  echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","additionalContext":"WARNING: Plugin index validation skipped — neither jq nor python3 available. Install one for Moku hook support."}}'
   exit 0
 fi
 

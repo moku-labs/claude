@@ -79,16 +79,26 @@ Use `maxParallelAgents` from project config (default: 3) to limit concurrent age
 
 ### Adaptive Model Selection
 
-Before spawning validators, assess project complexity to choose appropriate model tiers:
+Before spawning validators, assess project complexity to choose appropriate model tiers.
 
-1. Count plugins in scope and identify the maximum complexity tier
-2. Apply these rules:
+**Default model assignments per agent (from agent frontmatter):**
+
+| Agent | Default Model | Role | Estimated Tokens |
+|-------|--------------|------|-----------------|
+| moku-spec-validator | sonnet | Spec compliance per plugin | ~3-5k per plugin |
+| moku-jsdoc-validator | sonnet | JSDoc quality per plugin | ~2-4k per plugin |
+| moku-plugin-spec-validator | sonnet | Structure compliance per plugin | ~3-5k per plugin |
+| moku-test-validator | sonnet | Test quality per plugin | ~3-5k per plugin |
+| moku-type-validator | sonnet | TypeScript correctness (whole project) | ~5-10k total |
+| moku-architecture-validator | sonnet | Cross-plugin architecture (whole project) | ~8-15k total |
+
+**Complexity-based overrides:**
 
 | Project Complexity | Criteria | Model Overrides |
 |---|---|---|
-| **Small** | < 5 plugins AND no Complex/VeryComplex tiers | architecture-validator: `sonnet` (instead of opus) |
+| **Small** | < 5 plugins AND no Complex/VeryComplex tiers | architecture-validator: `haiku` (lighter, sufficient for simple graphs) |
 | **Standard** | 5–15 plugins OR at least one Complex tier | Use default models (no overrides) |
-| **Large** | 15+ plugins OR any VeryComplex tier | jsdoc-validator: `sonnet` (instead of haiku) |
+| **Large** | 15+ plugins OR any VeryComplex tier | architecture-validator: `opus` (complex cross-plugin analysis benefits from deeper reasoning) |
 
 This optimizes cost for simple projects and quality for complex ones. Pass the model override when spawning the Agent tool.
 
@@ -96,7 +106,7 @@ This optimizes cost for simple projects and quality for complex ones. Pass the m
 
 **This is the default path.** Before spawning per-plugin validators, check `.planning/STATE.md` for content hashes. Unchanged plugins are skipped entirely — saving 50-70% on resume builds.
 
-1. For each plugin in scope, compute current hash: `find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1`
+1. For each plugin in scope, compute current hash: `find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum -a 256 | shasum -a 256 | cut -d' ' -f1`
 2. Compare against the `Hash` column in STATE.md's plugins table
 3. If a plugin's hash matches AND its status is `verified`, skip it from per-plugin validators with note: `"Lazy skip: {name} unchanged since last validation (hash: {short})"`
 4. Include skipped plugins in the report with `CACHED` verdict

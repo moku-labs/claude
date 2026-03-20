@@ -38,25 +38,70 @@ Assess the wave on these dimensions (score each 1-5):
 - Are failures isolated (one plugin) or systemic (multiple plugins with same error)?
 - Did gap closure resolve issues or just shuffle them?
 
+**Scoring rubric:**
+| Score | Criteria |
+|-------|----------|
+| 5 | 100% plugins pass verification |
+| 4 | 90-99% pass, failures are isolated to one plugin |
+| 3 | 70-89% pass, or multiple plugins fail but with different errors |
+| 2 | 50-69% pass, or systemic failure pattern (same error across plugins) |
+| 1 | <50% pass, or gap closure made no progress |
+
 ### 2. Code Quality Trajectory
 - Is the error count going down across gap closure rounds, or staying flat / oscillating?
 - Flat or oscillating error counts signal fixation — recommend `fresh-retry`
 - Decreasing error counts signal progress — allow more rounds or `continue`
+
+**Scoring rubric:**
+| Score | Criteria |
+|-------|----------|
+| 5 | Error count reached 0, or no gap closure was needed |
+| 4 | Error count strictly decreasing each round, now < 3 remaining |
+| 3 | Error count mostly decreasing but with 3+ remaining |
+| 2 | Error count flat (same ±1 across rounds) — stalled |
+| 1 | Error count increasing or oscillating — fixation detected |
 
 ### 3. Test Coverage
 - Do all plugins have tests? Do tests pass?
 - Are there plugins with PARTIAL verdict (some files missing)?
 - Are tests substantive (real assertions) or superficial (just checking existence)?
 
+**Scoring rubric:**
+| Score | Criteria |
+|-------|----------|
+| 5 | All plugins have unit + integration tests, all pass, substantive assertions |
+| 4 | All plugins have tests, all pass, but some tests are shallow |
+| 3 | Most plugins have tests, minor failures or missing integration tests |
+| 2 | Some plugins missing tests entirely, or multiple test failures |
+| 1 | Most plugins have no tests or tests mostly fail |
+
 ### 4. Integration Stability
 - Does `bunx tsc --noEmit` pass cleanly?
 - Does `bun run lint` pass cleanly?
 - Are there warnings that aren't blockers but signal future problems?
 
+**Scoring rubric:**
+| Score | Criteria |
+|-------|----------|
+| 5 | tsc clean, lint clean, zero warnings |
+| 4 | tsc clean, lint clean, 1-3 non-blocking warnings |
+| 3 | tsc clean, lint has 4+ warnings but no errors |
+| 2 | tsc has errors in 1-2 files, or lint has errors |
+| 1 | tsc fails across multiple files, or both tsc and lint fail |
+
 ### 5. Blocker Severity
 - Are remaining blockers fundamental (wrong architecture, missing types) or cosmetic (formatting, docs)?
 - Fundamental blockers → `stop-for-review` or `fresh-retry`
 - Cosmetic blockers → can `continue` if core logic is sound
+
+**Scoring rubric:**
+| Score | Criteria |
+|-------|----------|
+| 5 | Zero blockers remaining |
+| 4 | Only cosmetic blockers (formatting, JSDoc gaps, naming) |
+| 3 | Minor structural blockers (missing file, wrong tier) — fixable in next wave |
+| 2 | Moderate blockers (broken type exports, missing API methods) |
+| 1 | Fundamental blockers (wrong architecture, circular deps, broken inference chain) |
 
 ### 6. Regression Health (Wave 1+ only)
 - Did any previously verified plugins break in regression testing?

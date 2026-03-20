@@ -1,7 +1,7 @@
 ---
 description: Build a framework, consumer app, or plugin from a specification
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet
-argument-hint: [framework|app|plugin] [spec-path-or-name] [--dry-run] [--continue]
+argument-hint: [framework|app|plugin|resume|fix] [spec-path-or-name] [--dry-run] [--continue] [--lean]
 disable-model-invocation: true
 ---
 
@@ -10,14 +10,18 @@ disable-model-invocation: true
 
 Use configuration values above if present. Validate before using — ignore invalid values and use defaults:
 
-| Setting | Type | Range | Default |
-|---------|------|-------|---------|
-| `maxParallelAgents` | integer | 1–8 | 5 |
-| `gapClosureMaxRounds` | integer | 0–5 | 2 |
-| `skipValidation` | boolean | true/false | false |
-| `skipTriage` | boolean | true/false | false |
-| `enablePipelining` | boolean | true/false | true |
-| `leanMode` | boolean / "auto" | true/false/"auto" | "auto" |
+| Setting | Type | Range | Default | Used By |
+|---------|------|-------|---------|---------|
+| `maxParallelAgents` | integer | 1–8 | 5 | build, plan (validation), audit |
+| `gapClosureMaxRounds` | integer | 0–5 | 2 | build (gap closure in verification) |
+| `skipValidation` | boolean | true/false | false | build (skip validation pipeline) |
+| `skipTriage` | boolean | true/false | false | build (skip interactive findings triage) |
+| `enablePipelining` | boolean | true/false | true | build (wave pipelining) |
+| `leanMode` | boolean / "auto" | true/false/"auto" | "auto" | build (context savings) |
+| `auditMaxScenarios` | integer | 5–50 | 20 | audit (scenario cap) |
+| `auditIterateLimit` | integer | 1–5 | 3 | audit (max re-audit passes) |
+
+This is the **complete configuration schema** for all Moku commands. All settings are read from `.claude/moku.local.md` YAML frontmatter. Commands only read settings from this table — unknown keys are ignored.
 
 Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
@@ -40,7 +44,10 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
 Parse `$ARGUMENTS`:
 1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files.
-   - **Dry-run + skeleton routing:** If `## Skeleton:` is `not-started` or `in-progress`, report what each remaining skeleton wave would create (file list from `.planning/skeleton-spec.md`) instead of creating them. Read the `## Skeleton Build Waves` section of skeleton-spec.md. For each wave, list all file paths that appear as markdown sub-headers (`### path/to/file.ts`) or as the first comment line in code blocks (`// path/to/file.ts`). Present as: "Skeleton Wave N would create: [file list]". Then report the framework/app/plugin wave plan as normal. Skeleton routing is suspended — no files are created.
+   - **Dry-run + skeleton routing:** If `## Skeleton:` is `not-started` or `in-progress`, report what each remaining skeleton wave would create (file list from `.planning/skeleton-spec.md`) instead of creating them. Read the `## Skeleton Build Waves` section of skeleton-spec.md. The skeleton-spec.md format uses two conventions for file paths:
+     - **H3 sub-headers:** `### path/to/file.ts` — each H3 header names a file to create
+     - **Code block first-line comments:** `// path/to/file.ts` — the first line of a fenced code block names the target file
+     For each wave, extract all file paths using both conventions. Present as: "Skeleton Wave N would create: [file list]". Then report the framework/app/plugin wave plan as normal. Skeleton routing is suspended — no files are created.
    - Before presenting the plan, validate that all referenced spec files exist and are non-empty. If any spec file is missing or empty, report: "Dry-run warning: spec [path] is missing or empty — this wave would fail during a real build." List all such issues before the plan.
    - Present the plan in this format:
      - **Skeleton waves** (if skeleton not committed): Skeleton Wave N: creates [file list from skeleton-spec.md]
@@ -159,8 +166,14 @@ Run this at wave execution start (Step 3), before spawning builder agents:
 
 When updating `.planning/STATE.md`:
 1. Back up current state: copy to `.planning/STATE.md.bak` before overwriting
-2. If in a git repo, record the current commit SHA in the state file as `## Git Checkpoint: <sha>`
-3. This enables rollback if a wave introduces regressions
+2. Write new content to `.planning/STATE.md.tmp` first (not directly to STATE.md)
+3. Validate that the tmp file contains required headers (`## Phase:`, `## Target:`, `## Next Action:`) before renaming
+4. If validation passes, rename `.planning/STATE.md.tmp` to `.planning/STATE.md` (atomic replace)
+5. If validation fails, delete the tmp file and stop: "STATE.md write failed validation — the `.bak` is intact."
+6. If in a git repo, record the current commit SHA in the state file as `## Git Checkpoint: <sha>`
+7. This enables rollback if a wave introduces regressions
+
+**Concurrency guard:** Only one build command should write STATE.md at a time. If you detect a `.planning/STATE.md.tmp` file already exists when attempting a write, another process may be writing. Warn: "STATE.md.tmp already exists — another build may be in progress. Remove it manually if stale, or wait for the other build to finish."
 
 ---
 
@@ -180,7 +193,7 @@ Read `## Skeleton:` from STATE.md:
 | `verified` | Re-present skeleton report — read `.planning/skeleton-report.md` (if file is missing, route to `build-skeleton.md` Step S3 to regenerate it first). Use `AskUserQuestion`: "Skeleton verified. Approve and commit?" — Options: "Approve and commit (Recommended)" / "Review changes first" / "Adjust skeleton" |
 | `committed` | Skeleton complete — proceed to Framework/App/Plugin build routing below |
 
-**Skeleton always takes priority.** Any argument (`resume`, `framework #wave:2`, `--continue`) is held until skeleton is `committed`. The skeleton MUST be committed before any plugin build wave begins.
+**Skeleton always takes priority.** Any argument (`resume`, `framework #wave:2`, `--continue`) is held until skeleton is `committed`. The skeleton MUST be committed before any plugin build wave begins. If the user passes `resume` or `--continue` but skeleton is not committed, tell the user: "Skeleton build is not yet committed. Completing skeleton first — your `[argument]` will apply after skeleton is committed." Then proceed with skeleton build. After skeleton is committed, re-apply the held arguments (e.g., `--continue` mode resumes, `#wave:N` routes to the specified wave).
 
 **This applies to ALL build targets** — `framework`, `app`, and `plugin` builds all require skeleton committed. If skeleton is not `committed` when targeting `app` or `plugin`, route to skeleton build first before the app/plugin build.
 
