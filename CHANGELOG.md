@@ -2,6 +2,29 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.23.2 (2026-03-20)
+
+### Fixed
+- **Plan command audit — 15 fixes across 1 pass (20 scenarios)**
+  - **BLOCKER**: migrate `PATH_OR_LINK` now retries on empty AskUserQuestion response (2 attempts, then stop with error)
+  - **HIGH**: Startup sequence explicitly numbered (1. filesystem guard → 2. empty-args check) resolving ordering ambiguity
+  - **HIGH**: Path traversal resolution specified as `realpath -e` with fallback for non-existent paths
+  - **MEDIUM**: `add plugin` PLUGIN_NAME extraction added as new step 5 in Token Extraction
+  - **MEDIUM**: `--quick` auto-suggest placement specified ("after plugin table assembly, before Stage 1 approval gate")
+  - **MEDIUM**: File preservation contradiction resolved — "Start fresh" now preserves `decisions.md` and `research.md` (aligned with jump table behavior)
+  - **MEDIUM**: Phase reset value after `complete`+`update` explicitly set to `## Phase: none`
+  - **MEDIUM**: Suggestion construction rule for invalid verb-type combos (fix TYPE first, then VERB)
+  - **MEDIUM**: Header inline-colon format documented; `## Skeleton:` added as 8th required header in validation set
+  - **MEDIUM**: Path verification mechanism specified (`test -d && test -r`)
+  - **MEDIUM**: Token pointer on unrecognized first word — "do not advance, leave stream intact"
+  - **MEDIUM**: REQUIREMENTS after auto-detect clarified — remaining unparsed tokens become REQUIREMENTS
+  - **MEDIUM**: Phase=none guard skips unnecessary resume prompt on fresh projects
+  - **MEDIUM**: QUICK_MODE persisted on first STATE.md write (not deferred to stage exit) — prevents session-drop data loss
+  - **MEDIUM**: Plan Mode quick mode transition documented (ExitPlanMode → immediate Stage 2)
+
+### Changed
+- Version bumped to 0.23.2 in plugin.json and marketplace.json.
+
 ## 0.23.1 (2026-03-20)
 
 ### Fixed
