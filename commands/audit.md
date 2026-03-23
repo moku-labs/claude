@@ -1,7 +1,7 @@
 ---
-description: Audit a moku command or the hooks system — simulate scenarios, find gaps, propose improvements
+description: Audit a moku command, the hooks system, or run a full end-to-end workflow cycle — simulate scenarios, find gaps, propose improvements
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-argument-hint: <command-name|hooks|all> [--sim-only] [--iterate] [--max-scenarios N]
+argument-hint: <command-name|hooks|all|full-cycle> [--sim-only] [--iterate] [--max-scenarios N]
 disable-model-invocation: true
 ---
 
@@ -25,6 +25,7 @@ Usage:
 - `build` → audit commands/build.md
 - `hooks` → audit hooks.json + all hook scripts
 - `all` → audit all commands + hooks sequentially
+- `full-cycle` → run init → brainstorm → plan → build → next → status end-to-end in a real temp project
 
 Flags:
 - `--sim-only` — skip real execution phase (faster, no temp project)
@@ -46,7 +47,10 @@ Parse `$ARGUMENTS` into TARGET and FLAGS.
 - `plan`, `build`, `check`, `status`, `init` → command audit mode for that file
 - `hooks` → hooks audit mode
 - `all` → audit all 5 commands + hooks sequentially (prompt user between each)
-- Anything else → stop and say: "Unknown target '{value}'. Valid targets: plan, build, check, status, init, hooks, all"
+- `full-cycle` → full end-to-end workflow audit in real temp project
+- Anything else → stop and say: "Unknown target '{value}'. Valid targets: plan, build, check, status, init, hooks, all, full-cycle"
+
+**Note:** `--sim-only`, `--iterate`, and `--max-scenarios` flags do not apply to `full-cycle` mode. If present when TARGET is `full-cycle`, ignore them and warn: "Flags `--sim-only`/`--iterate`/`--max-scenarios` do not apply to full-cycle mode — real execution is required."
 
 **Validate in command mode:**
 !`ls ${CLAUDE_PLUGIN_ROOT}/commands/*.md 2>/dev/null | xargs -I{} basename {} .md | sort`
@@ -59,9 +63,11 @@ If TARGET is a command name, verify `${CLAUDE_PLUGIN_ROOT}/commands/{TARGET}.md`
 
 ## Step 1: Route by Mode
 
+If TARGET is `full-cycle` → jump to **Full-Cycle Mode** (Step FC1).
+
 If TARGET is `hooks` → jump to **Hooks Audit Mode** (Step H1).
 
-If TARGET is `all` → run command audit for each of `plan`, `build`, `check`, `status`, `init` in sequence (prompt user between each), then run hooks audit. Skip to Step 2 for the first command.
+If TARGET is `all` → run command audit for each of `plan`, `build`, `check`, `status`, `init` in sequence (prompt user between each), then run hooks audit. Skip to Step 2 for the first command. Note: `all` does NOT include `full-cycle` (they are fundamentally different audit types).
 
 Otherwise → proceed to **Command Audit Mode** (Step 2).
 
@@ -403,4 +409,226 @@ Cross-Audit Correlation ({N} systemic patterns)
 3. [HOOK-GAP] prompt hook blocks non-plugin writes — affects: build, audit
    Pattern: Commands that write to hooks/ or output-styles/ get blocked
    Root fix: Update approve-planning-writes.sh allowlist
+```
+
+---
+
+## Full-Cycle Mode
+
+End-to-end workflow audit: drives the complete moku lifecycle (init → brainstorm → plan → build → next → status) in a real temp project. A driver agent applies each command's steps manually, auto-answering all user gates. Two reviewer agents then analyze the results for UX gaps, integration bugs, hook issues, and output quality.
+
+### Step FC1: Generate Random Project Idea
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/audit-full-cycle.md` for the Project Idea Pool.
+
+Read `.planning/audit-full-cycle-history.md` (create if absent with just the header row).
+
+Pick the first unused idea from the pool (not appearing in the history file's Project column). If all 30 are used, archive the history as `.planning/audit-full-cycle-history-{YYYY-MM-DD}.md` and start fresh.
+
+Set PROJECT_NAME, PROJECT_TYPE, PROJECT_DESC, and BRAINSTORM_DESC from the selected row.
+
+Show:
+```
+Full-Cycle Audit
+════════════════
+Project:     {PROJECT_NAME}
+Type:        {PROJECT_TYPE}
+Description: {PROJECT_DESC}
+```
+
+---
+
+### Step FC2: Set Up Temp Project
+
+Create the temp directory:
+```bash
+CYCLE_TMP=$(mktemp -d /tmp/moku-full-cycle-$(date +%s)-XXXXXX)
+echo "Temp project: $CYCLE_TMP"
+```
+
+The temp project starts nearly empty — the driver will run the init command to scaffold it:
+```bash
+mkdir -p "$CYCLE_TMP"
+cd "$CYCLE_TMP" && git init -q && git config user.email "cycle@test.local" && git config user.name "Cycle"
+```
+
+**Hook monitoring setup** — write a bracket marker to the working project's diagnostics log. Inline the literal project name (shell variables don't persist between Bash tool calls):
+```bash
+CYCLE_START_TIME=$(date '+%H:%M:%S')
+mkdir -p .planning
+echo "=== FULL-CYCLE-START $CYCLE_START_TIME [{PROJECT_NAME literal}] ===" >> .planning/diagnostics.log
+```
+Replace `{PROJECT_NAME literal}` with the actual project name string (e.g., `task-scheduler`). Do the same for all subsequent bash blocks that reference PROJECT_NAME.
+
+**STATE.md warning**: If `.planning/STATE.md` does not exist in the current working directory, warn: "Note: No STATE.md in current project — hook diagnostics logging may be incomplete during the cycle."
+
+---
+
+### Step FC3: Spawn Full-Cycle Driver
+
+Read all six command files:
+```bash
+cat "${CLAUDE_PLUGIN_ROOT}/commands/init.md"
+cat "${CLAUDE_PLUGIN_ROOT}/commands/brainstorm.md"
+cat "${CLAUDE_PLUGIN_ROOT}/commands/plan.md"
+cat "${CLAUDE_PLUGIN_ROOT}/commands/build.md"
+cat "${CLAUDE_PLUGIN_ROOT}/commands/next.md"
+cat "${CLAUDE_PLUGIN_ROOT}/commands/status.md"
+```
+
+Spawn **moku-full-cycle-driver** with:
+- The full content of all six command files
+- The project idea: `{ name: PROJECT_NAME, type: PROJECT_TYPE, description: PROJECT_DESC, brainstorm_description: BRAINSTORM_DESC }`
+- `CYCLE_TMP` path
+- `PLUGIN_ROOT` = `${CLAUDE_PLUGIN_ROOT}`
+
+Print: "Driver started — executing full workflow in temp project. This may take 15-20 minutes."
+
+Wait for the driver to complete. Parse its output contract.
+
+If `workflow_completed: false`:
+→ Print: "Driver stopped at: {failure_point}. Proceeding with partial cycle review."
+
+If `observation_log_written: false`:
+→ Print: "WARNING: Observation log not written. Reviewers will have limited data."
+
+---
+
+### Step FC4: Capture Hook Monitoring Data
+
+Write the end bracket marker:
+```bash
+CYCLE_END_TIME=$(date '+%H:%M:%S')
+echo "=== FULL-CYCLE-END $CYCLE_END_TIME [$PROJECT_NAME] ===" >> .planning/diagnostics.log
+```
+
+Extract cycle-specific diagnostics:
+```bash
+awk "/=== FULL-CYCLE-START.*\[$PROJECT_NAME\] ===/,/=== FULL-CYCLE-END.*\[$PROJECT_NAME\] ===/" .planning/diagnostics.log > "$CYCLE_TMP/.planning/cycle-diagnostics.log" 2>/dev/null || true
+```
+
+Report entry count:
+```bash
+DIAG_COUNT=$(wc -l < "$CYCLE_TMP/.planning/cycle-diagnostics.log" 2>/dev/null || echo 0)
+echo "Hook diagnostics captured: $DIAG_COUNT entries during cycle"
+```
+
+---
+
+### Step FC5: Spawn Reviewers in Parallel
+
+Read the observation log and diagnostics log for passing to reviewers:
+```bash
+cat "$CYCLE_TMP/.planning/cycle-observations.md" 2>/dev/null || echo "(no observation log)"
+cat "$CYCLE_TMP/.planning/cycle-diagnostics.log" 2>/dev/null || echo "(no diagnostics)"
+```
+
+Spawn TWO **moku-full-cycle-reviewer** instances concurrently:
+
+**Instance A** — focus: `ux-and-integration`
+- Observation log content
+- Cycle diagnostics log content
+- Driver output contract (for `/moku:next` check results)
+- Project idea object
+- `CYCLE_TMP` path
+- Focus: "ux-and-integration"
+
+**Instance B** — focus: `hooks-and-quality`
+- Observation log content
+- Cycle diagnostics log content
+- Driver output contract
+- Project idea object
+- `CYCLE_TMP` path
+- Focus: "hooks-and-quality"
+
+Wait for BOTH to complete.
+
+If one reviewer fails: use the other's output alone. Note which focus was skipped in the synthesis.
+
+---
+
+### Step FC6: Synthesize and Present
+
+The orchestrating command synthesizes both reviewer outputs inline (no agent needed):
+
+1. **Collect findings** from both reviewer output contracts (the `findings` arrays)
+2. **Deduplicate**: If both reviewers flagged the same issue (matching command + similar description), merge into one finding using the higher severity
+3. **Hook analysis**: Use the `hook_analysis` data from the Focus B (hooks-and-quality) reviewer only — Focus A's `hook_analysis` fields are zeroed placeholders
+4. **Next routing**: Merge `next_routing_summary` from both reviewers (Focus A has the primary routing analysis)
+5. **Group by command**: Organize findings by which command they relate to
+6. **Count**: Total findings, blockers, warnings, infos
+
+Display the synthesis:
+
+```
+Full-Cycle Audit Report: {PROJECT_NAME}
+═══════════════════════════════════════
+
+Workflow: {completed|partial (stopped at {command})}
+Commands tested: init → brainstorm → plan → build → next → status
+/moku:next checks: {correct}/{total} correct
+
+── Findings by Command ────────────────────────
+
+### init ({N} findings)
+- [BLOCKER] FC-A01: {description}
+- [WARNING] FC-B03: {description}
+
+### brainstorm ({N} findings)
+...
+
+### plan ({N} findings)
+...
+
+### build ({N} findings)
+...
+
+### next ({N} findings)
+...
+
+### status ({N} findings)
+...
+
+### hooks ({N} findings)
+...
+
+── Summary ────────────────────────────────────
+Total: {N} findings ({B} critical, {W} notable, {I} informational)
+```
+
+Then use `AskUserQuestion`:
+- Question: "Full-cycle audit complete. {N} issues found ({B} critical, {W} notable). How to proceed?"
+- Header: "Full-Cycle Results"
+- Options:
+  1. label: "Export report (Recommended)", description: "Write full report to .planning/audit-full-cycle-{date}.md"
+  2. label: "Show details", description: "Display evidence and fix suggestions for all findings"
+  3. label: "Critical only", description: "Show only the {B} critical issues with fixes"
+  4. label: "Dismiss", description: "No action — findings noted"
+- multiSelect: false
+
+**If Export report:**
+Write the full synthesis report (including evidence and fixes from both reviewers) to `.planning/audit-full-cycle-{YYYY-MM-DD}.md`.
+Print: "Report exported to `.planning/audit-full-cycle-{date}.md`"
+
+**If Show details:**
+For each finding, display:
+- ID, command, severity, type
+- Description and evidence
+- Suggested fix (which file to modify and how)
+
+**If Critical only:**
+Show only BLOCKER findings with their evidence and fixes.
+
+**If Dismiss:**
+Print: "Findings noted. No action taken."
+
+**After displaying results** (all display branches complete first), run safety cleanup:
+```bash
+rm -rf "$CYCLE_TMP"
+ls /tmp/moku-full-cycle-* 2>/dev/null && rm -rf /tmp/moku-full-cycle-* || true
+```
+
+**Record to history** — append a row to `.planning/audit-full-cycle-history.md`:
+```markdown
+| {YYYY-MM-DD} | {PROJECT_NAME} | {PROJECT_TYPE} | {PROJECT_DESC (truncated to 50 chars)} | {B}B/{W}W | {yes|partial|no} |
 ```

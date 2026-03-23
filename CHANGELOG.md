@@ -2,6 +2,25 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.0 (2026-03-23)
+
+### Added
+- **Full-cycle audit mode** (`/moku:audit full-cycle`) — end-to-end workflow audit that drives init → brainstorm → plan → build → next → status in a real temp project
+  - Driver agent (`moku-full-cycle-driver`) applies all command steps manually, auto-answering all AskUserQuestion gates via decision table
+  - Two reviewer agents (`moku-full-cycle-reviewer`) run in parallel: Focus A (UX + integration) and Focus B (hooks + quality)
+  - 30-item project idea pool with history tracking — each run uses a novel, never-tried project
+  - `/moku:next` routing validation between every command and twice after build
+  - Hook monitoring via diagnostics.log bracket markers — flags false-positives during the cycle
+  - Findings grouped by command with severity, evidence, and fix suggestions
+  - Export report to `.planning/audit-full-cycle-{date}.md`
+- **2 new agents** (full-cycle-driver, full-cycle-reviewer) — 24 agents total
+- **New reference file** `audit-full-cycle.md` — auto-answer decision table, observation log schema, hook monitoring protocol, finding type taxonomy
+
+### Changed
+- Version bumped to 0.25.0 in plugin.json and marketplace.json
+- Plugin description updated to reflect 24-agent count and full-cycle audit capability
+- `audit.md` extended with `full-cycle` target in Step 0 dispatch, Step 1 routing, and Steps FC1–FC6
+
 ## 0.24.0 (2026-03-23)
 
 ### Added
