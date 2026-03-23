@@ -61,6 +61,8 @@ If Phase is `complete` and Skeleton is `committed`, check plugin build progress:
 ### 1e. .planning/ exists but no STATE.md
 
 If `.planning/` exists but `STATE.md` does not:
+- **Brainstorm-in-progress check:** If `.planning/brainstorm-*-answers.md` or `.planning/brainstorm-*-research.md` files exist, a brainstorm session is in progress. Extract the NAME from the filename pattern. Tell user: "A brainstorm session for `{NAME}` is in progress. Run `/moku:brainstorm {category} {NAME}` to resume." Stop.
+- **Completed brainstorm check:** If `.planning/context-*.md` files exist but no `STATE.md`, a brainstorm completed but planning hasn't started. Extract the NAME from the filename. Tell user: "Brainstorm context found for `{NAME}`. Run `/moku:plan create [type] \"{NAME}\" --context context-{NAME}.md` to start planning." Stop.
 - Check if `.planning/specs/` has spec files:
   - If yes: "Spec files found but no STATE.md. Run `/moku:plan resume` to regenerate state, or `/moku:build framework` to start building."
   - If no: "Planning directory exists but is empty. Run `/moku:plan create [type] \"description\"` to start."

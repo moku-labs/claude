@@ -2,6 +2,28 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.24.0 (2026-03-23)
+
+### Added
+- **Brainstorm command** (`/moku:brainstorm`) — structured pre-planning workflow with adaptive discovery, parallel research, and debate-driven context generation
+  - 4 categories mirroring plan verbs: `create`, `modify`, `feature`, `migrate`
+  - Adaptive depth: 4 discovery questions score complexity (0–9) → auto-routes to quick (1 agent, 1 debate round), standard (2 agents, 2 rounds), or deep (3 agents, 3 rounds); override with `--deep`/`--quick`
+  - Present → Challenge → Decide debate loop with convergence detection
+  - Outputs standardized `.planning/context-{NAME}.md` consumed by `/moku:plan ... --context`
+- **3 new agents** (brainstorm-researcher, brainstorm-challenger, brainstorm-synthesizer) — 22 agents total
+  - `brainstorm-researcher`: domain research with web access, 3 focus modes (ecosystem, technical-patterns, category-specific), runs 1–3 in parallel
+  - `brainstorm-challenger`: read-only devil's advocate, 3 angles per review (technical feasibility, scope/cost, wrong assumptions)
+  - `brainstorm-synthesizer`: two modes — position mode (iterative during debate) and final mode (context file assembly)
+- **3 new reference files** — brainstorm-flow.md (questions, scoring, research orchestration), brainstorm-debate.md (debate loop mechanics, cleanup), brainstorm-templates.md (context file template, position doc schema)
+- **Plan command `--context` flag** — `/moku:plan create ... --context context-{NAME}.md` skips steering, discussion, and research phases; synthesizes steering.md from brainstorm context; injects plugin hints into Stage 1 and risk mitigations into Stage 2
+- **Next command brainstorm detection** — `/moku:next` now detects in-progress brainstorm sessions and completed context files, routing users correctly
+
+### Changed
+- Version bumped to 0.24.0 in plugin.json and marketplace.json
+- Plugin description updated to include brainstorm command and 22-agent count
+- `plan.md` argument parsing extended with `--context {file}` extraction, STATE.md persistence of CONTEXT_FILE, and verb-specific support warnings
+- `plan-verb-create.md` extended with Context Injection Pre-Phase before Steering Pre-Phase
+
 ## 0.23.3 (2026-03-23)
 
 ### Fixed

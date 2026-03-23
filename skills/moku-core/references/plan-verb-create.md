@@ -2,11 +2,43 @@
 
 **This flow runs for `create` (and for `migrate` after migration analysis).**
 
+## Context Injection Pre-Phase
+
+**This phase runs BEFORE the Steering Pre-Phase when CONTEXT_FILE is set** (i.e., the user provided `--context` from a `/moku:brainstorm` session).
+
+If CONTEXT_FILE is not `(none)`:
+1. Read `{CONTEXT_FILE}`
+2. Extract and store context variables:
+   - CONTEXT_SUMMARY: contents of `## Summary` section
+   - CONTEXT_ASSUMPTIONS: contents of `## Key Assumptions` subsection within `## Proposed Approach`
+   - CONTEXT_NON_GOALS: contents of `## Explicit Non-Goals` subsection
+   - CONTEXT_DECISIONS: contents of `## Decisions Made` table
+   - CONTEXT_RISKS: contents of `## Risks Requiring Spec Attention` section
+   - CONTEXT_PLUGINS_HINT: contents of the `### Suggested Plugins (Preliminary)` subsection under `## Recommended Plan Approach` (may be empty or "deferred")
+3. **Skip the Steering Pre-Phase entirely.** The brainstorm session has already captured equivalent information. Log: "Brainstorm context detected at `{CONTEXT_FILE}`. Skipping Steering Pre-Phase."
+4. Synthesize a `steering.md` from the context file so downstream stages find their expected input:
+   - `## Boundaries (NOT in scope)` ← from CONTEXT_NON_GOALS
+   - `## Primary User` ← from `## Discovery Answers` section (scope/audience answer)
+   - `## MVP Priorities` ← from CONTEXT_PLUGINS_HINT (top 3 if available) or first 3 key capabilities from CONTEXT_SUMMARY
+   - `## Reference Point` ← from `## Research Findings > Ecosystem Landscape` (first reference project mentioned)
+   - `## Biggest Risk` ← first item from CONTEXT_RISKS
+   Write this synthesized `steering.md` to `.planning/steering.md`.
+5. **Feed-forward into later stages:**
+   - **Discussion phase**: If triggered, pre-populate with CONTEXT_DECISIONS so the user confirms rather than re-derives. If CONTEXT_DECISIONS covers the domain sufficiently, skip the discussion phase: log "Context file provides sufficient discussion context. Skipping Discussion Phase."
+   - **Research phase**: If CONTEXT_FILE `## Research Findings` section exists and is non-empty, skip the research phase: log "Context file includes research findings. Skipping Research Phase." Write the research findings to `.planning/research.md` so Stage 1 can reference them.
+   - **Stage 1**: CONTEXT_PLUGINS_HINT is treated as a starting plugin inventory suggestion — validate against Moku constraints but do not re-derive from scratch. Show the user the suggested plugins and ask for confirmation/additions.
+   - **Stage 2**: CONTEXT_RISKS are injected into spec writing — the plugin closest to each risk gets an explicit risk mitigation note in its spec.
+
+If CONTEXT_FILE is `(none)`: proceed normally to the Steering Pre-Phase below.
+
+---
+
 ## Steering Pre-Phase
 
 **This phase runs ALWAYS for the `create` verb** — before discussion, before research, before Stage 1. It catches wrong assumptions at the source with 3–5 pointed questions. Takes < 2 minutes.
 
 **Skip this phase when:**
+- CONTEXT_FILE is set (brainstorm context was injected above — steering is synthesized from it)
 - VERB is `migrate` and migration analysis has already run (`.planning/decisions.md` contains `## Migration Type`)
 - `.planning/steering.md` already exists (steering was done in a previous session) — log: "Steering already captured. Skipping." and proceed.
 

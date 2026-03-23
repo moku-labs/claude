@@ -1,7 +1,7 @@
 ---
 description: Plan a Moku project — create, update, add plugins, or migrate existing code (3-stage gated workflow)
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, EnterPlanMode, ExitPlanMode
-argument-hint: [create|update|add|migrate|resume] [type] ({path/link/github}) {requirements} [--quick]
+argument-hint: [create|update|add|migrate|resume] [type] ({path/link/github}) {requirements} [--quick] [--context {file}]
 disable-model-invocation: true
 ---
 
@@ -48,7 +48,7 @@ The `add` verb always runs in quick mode regardless of this flag.
 
 ## Step 0: Parse Arguments
 
-Parse `$ARGUMENTS` into five components: **VERB**, **TYPE**, **PATH_OR_LINK**, **REQUIREMENTS**, **QUICK_MODE**.
+Parse `$ARGUMENTS` into six components: **VERB**, **TYPE**, **PATH_OR_LINK**, **REQUIREMENTS**, **QUICK_MODE**, **CONTEXT_FILE**.
 
 **Ordered startup sequence (run in this exact order):**
 
@@ -61,6 +61,12 @@ Parse `$ARGUMENTS` into five components: **VERB**, **TYPE**, **PATH_OR_LINK**, *
 2. **Empty-arguments check:** If `$ARGUMENTS` is empty and no VERB can be determined, stop with: "Usage: `/moku:plan [create|update|add|migrate|resume] [type] {description} [--quick]`"
 
 (The filesystem guard in step 1 runs unconditionally — even if step 2 would stop early. The empty directory is harmless.)
+
+If `--context {filename}` is present anywhere in `$ARGUMENTS`, extract the token following `--context` as the context filename, set CONTEXT_FILE=`.planning/{filename}` (if the value does not already start with `.planning/`, prepend it), and strip `--context {filename}` from `$ARGUMENTS`. Verify: `test -f '{CONTEXT_FILE}'` — if file does not exist, tell user: "Context file `{CONTEXT_FILE}` not found. Run `/moku:brainstorm` first or check the path." and stop. If `--context` is absent, set CONTEXT_FILE=(none).
+
+**`--context` verb support:** The `--context` flag is fully supported for the `create` verb (Context Injection Pre-Phase in `plan-verb-create.md` consumes the file). For `update` and `migrate` verbs, log a warning: "Note: `--context` provides supplementary context for the `{VERB}` workflow but does not skip any phases. The full {VERB} workflow will run." Pass CONTEXT_FILE through to the verb reference file — it can read the file for additional context but no phases are skipped automatically. For `add` verb: `--context` is not applicable — warn: "`--context` is ignored for the `add` verb." and set CONTEXT_FILE=(none).
+
+**Write CONTEXT_FILE to STATE.md:** On the first STATE.md write of this invocation, include `## ContextFile: {CONTEXT_FILE}` if CONTEXT_FILE is not `(none)`, else `## ContextFile: (none)`. On resume, load CONTEXT_FILE from STATE.md's `## ContextFile:` field. **Precedence:** If `--context` is explicitly passed at invocation time, it overrides the stored value.
 
 If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip **all occurrences** of `--quick` before further parsing. Otherwise QUICK_MODE=false.
 
@@ -278,7 +284,7 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 
 **IMPORTANT:** Load only the one reference file matching the verb. Do not load all of them.
 
-**Context handoff:** All values parsed in Step 0 — VERB, TYPE, PATH_OR_LINK, REQUIREMENTS, PLUGIN_NAME, and QUICK_MODE — are available as context variables in the routed reference file. The reference file does not need to re-parse `$ARGUMENTS`.
+**Context handoff:** All values parsed in Step 0 — VERB, TYPE, PATH_OR_LINK, REQUIREMENTS, PLUGIN_NAME, QUICK_MODE, and CONTEXT_FILE — are available as context variables in the routed reference file. The reference file does not need to re-parse `$ARGUMENTS`.
 
 **Quick mode:** QUICK_MODE is persisted in STATE.md via the `## QuickMode:` header. When `--quick` is passed, write `## QuickMode: true` to STATE.md on the first write of this invocation (before routing — see Step 0 startup sequence). On resume without `--quick`, read QUICK_MODE from STATE.md's `## QuickMode:` field. This allows quick mode to carry across sessions.
 - **Precedence:** If `--quick` is explicitly passed at invocation time, it overrides the stored `## QuickMode:` value — set QUICK_MODE=true regardless of what STATE.md contains, and update `## QuickMode: true` in STATE.md on the next write.
