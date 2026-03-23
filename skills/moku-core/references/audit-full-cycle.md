@@ -217,7 +217,7 @@ awk "/=== FULL-CYCLE-START.*\[${PROJECT_NAME}\] ===/,/=== FULL-CYCLE-END.*\[${PR
 
 1. **STATE.md dependency:** Hook diagnostics require `.planning/STATE.md` to exist in the working project (the project from which `/moku:audit full-cycle` is run). If run from a directory without STATE.md, hook logging may be incomplete. The orchestrator should warn if no STATE.md exists.
 
-2. **No hook coverage in temp project:** The full-cycle driver operates in a temp directory (`/tmp/moku-full-cycle-*/`) that has no `.claude/settings.local.json` and no hook configuration. This means **zero hook events fire during the cycle** — anti-pattern violations (wrong field names, missing events, incorrect imports) in generated code are not caught by the hook system. Reviewers must manually inspect generated code for structural violations that hooks would normally catch in a real project environment.
+2. **No hook coverage in temp project:** The full-cycle driver operates in a temp directory (`/tmp/moku-full-cycle-*/`) that has no `.claude/settings.local.json` and no hook configuration. This means **zero hook events fire during the cycle** — anti-pattern violations (wrong field names, missing events, incorrect imports) in generated code are not caught by the hook system. Reviewers must manually inspect generated code for structural violations that hooks would normally catch in a real project environment. **Reviewers should report zero hook entries as expected** when the cycle runs in a fresh temp project — do not treat it as an anomaly requiring investigation. Set `hook_analysis.notes` to "Expected — temp project has no hook config (limitation #2)".
 
 ---
 

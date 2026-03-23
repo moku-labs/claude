@@ -137,7 +137,7 @@ import tseslint from "typescript-eslint";
 export default [
   // 1. Global ignores
   {
-    ignores: ["dist/**", "coverage/**", "bun.lock", ".claude/**", ".planning/**", "node_modules/**"]
+    ignores: ["dist/**", "coverage/**", "bun.lock", ".claude/**", ".planning/**", "node_modules/**", "declarations.d.ts"]
   },
 
   // 2. TypeScript parser for all TS files

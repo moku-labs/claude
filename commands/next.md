@@ -65,7 +65,16 @@ If `.planning/` exists but `STATE.md` does not:
 - **Completed brainstorm check:** If `.planning/context-*.md` files exist but no `STATE.md`, a brainstorm completed but planning hasn't started. Extract the NAME from the filename. Tell user: "Brainstorm context found for `{NAME}`. Run `/moku:plan create [type] \"{NAME}\" --context context-{NAME}.md` to start planning." Stop.
 - Check if `.planning/specs/` has spec files:
   - If yes: "Spec files found but no STATE.md. Run `/moku:plan resume` to regenerate state, or `/moku:build framework` to start building."
-  - If no: "Planning directory exists but is empty. Run `/moku:plan create [type] \"description\"` to start."
+  - If no: Use `AskUserQuestion`:
+    - Question: "Planning directory exists but is empty. How would you like to start?"
+    - Header: "Start"
+    - Options:
+      1. label: "Brainstorm first (Recommended)", description: "Discover architecture, plugin structure, and risks before planning"
+      2. label: "Go straight to plan", description: "Skip brainstorm and start planning directly with /moku:plan create"
+    - multiSelect: false
+    - If brainstorm: invoke Skill `moku:brainstorm` (let user provide args)
+    - If plan: invoke Skill `moku:plan` with args `create`
+    - If `--dry-run`: report both options without invoking AskUserQuestion: "Next step: `/moku:brainstorm` (recommended) or `/moku:plan create [type] \"description\"` — planning directory is empty."
 - Stop.
 
 ## Step 2: Execute or Report

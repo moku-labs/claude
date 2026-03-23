@@ -192,8 +192,9 @@ After user approval:
 
 1. Update STATE.md:
    - `## Skeleton: committed`
-   - `## Phase: skeleton/committed`
+   - `## Phase: complete` (preserve the plan's Phase value — the `## Skeleton: committed` field signals skeleton completion; do NOT write `Phase: skeleton/committed` as next.md has no routing row for that value)
    - Mark `Skeleton commit` row as `done` in Wave Progress
+   - Populate `## Verification Results` with the summary table from skeleton-report.md (Format/Lint/TypeScript/Build pass status + issue counts) — do not leave the placeholder text
    - Set `## Next Action: Run /moku:build resume to build Wave 0 (core plugins)`
 2. Tell the user:
    > "Skeleton committed ([short sha]). Run `/moku:build resume` to begin Wave analysis and build Wave 0 (core plugins)."
@@ -213,4 +214,8 @@ These invariants apply to ALL skeleton files:
 - **`createCorePlugin` calls** — no `depends`, `events`, or `hooks` fields
 - **`onStart`/`onStop`** — include ONLY for plugins approved in Stage 1 for lifecycle management (servers, connections, listeners)
 - **JSDoc** — minimal `@file` tag on each file: `/** @file [plugin name] — [Tier] skeleton */`. Use `@file`, NOT `@fileoverview` (ESLint jsdoc/check-tag-names rejects `@fileoverview`). Do NOT use `@module` in plugin files (flagged as redundant). Common abbreviations (`ctx`, `fn`, `cb`) are whitelisted in the ESLint unicorn config
+- **JSDoc on spec object methods** — ESLint `jsdoc/require-jsdoc` fires on all `ArrowFunctionExpression` nodes in `src/**/*.ts`, including those nested inside `createPlugin`/`createCorePlugin` spec objects (`createState`, `api`). Each inline method requires multi-line JSDoc with `@param` and `@example`. For structural callbacks like `events: register => (...)`, use `/* eslint-disable-next-line jsdoc/require-jsdoc */`.
+- **@param names must match underscore prefix** — Unused stub parameters use `_` prefix (e.g., `_ctx`). All `@param` tags must match the actual parameter name including the underscore: `@param _ctx`, not `@param ctx`. For destructured object parameters, list each property as a separate entry: `@param _ctx.global`, `@param _ctx.config`.
+- **No @returns on throw-only stubs** — Functions whose body contains only `throw new Error("not implemented")` must NOT include `@returns` JSDoc tags. ESLint's `jsdoc/require-returns-check` rejects `@returns` on non-returning functions.
+- **Subscribe-style stubs** — API methods that return an unsubscribe arrow function (e.g., `subscribe` returning `() => void`) require `// eslint-disable-next-line unicorn/consistent-function-scoping` before the inner return. The empty `() => {}` triggers `unicorn/consistent-function-scoping` because it doesn't close over any stub variables.
 - **No business logic** — no real algorithms, no data manipulation, no conditional logic beyond structural stubs

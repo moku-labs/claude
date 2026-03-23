@@ -26,7 +26,7 @@ If CONTEXT_FILE is not `(none)`:
 5. **Feed-forward into later stages:**
    - **Discussion phase**: If triggered, pre-populate with CONTEXT_DECISIONS so the user confirms rather than re-derives. If CONTEXT_DECISIONS covers the domain sufficiently, skip the discussion phase: log "Context file provides sufficient discussion context. Skipping Discussion Phase."
    - **Research phase**: If CONTEXT_FILE `## Research Findings` section exists and is non-empty, skip the research phase: log "Context file includes research findings. Skipping Research Phase." Write the research findings to `.planning/research.md` so Stage 1 can reference them.
-   - **Stage 1**: CONTEXT_PLUGINS_HINT is treated as a starting plugin inventory suggestion — validate against Moku constraints but do not re-derive from scratch. Show the user the suggested plugins and ask for confirmation/additions.
+   - **Stage 1**: CONTEXT_PLUGINS_HINT is treated as a starting plugin inventory suggestion — validate against Moku constraints but do not re-derive from scratch. Show the user the suggested plugins and ask for confirmation/additions. **When reordering plugins from CONTEXT_PLUGINS_HINT to reflect wave assignments**, log the reordering decision: "Reordered [plugin-a] before [plugin-b] to group Wave 0 plugins together." This makes the ordering change visible rather than silent (context files and spec files may otherwise have confusingly different numbering).
    - **Stage 2**: CONTEXT_RISKS are injected into spec writing — the plugin closest to each risk gets an explicit risk mitigation note in its spec.
 
 If CONTEXT_FILE is `(none)`: proceed normally to the Steering Pre-Phase below.

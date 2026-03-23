@@ -185,7 +185,7 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 ```markdown
 # Project State
 
-## Phase: [stage1/approved | stage2/approved | stage3/approved | plan/complete | skeleton/building | skeleton/verified | skeleton/committed | build/complete]
+## Phase: [stage1/approved | stage2/approved | stage3/approved | complete | building | build/wave-N | build/complete]
 ## Verb: [create|update|add|migrate]
 ## Target: [framework/app/plugin]
 ## Last Updated: [ISO timestamp]
@@ -317,6 +317,8 @@ Save to `.planning/skeleton-spec.md`.
 
 ## File Structure
 
+Only list files that skeleton waves will CREATE. Do not list files that already exist from `/moku:init` (e.g., `tests/unit/setup.test.ts`, `tests/integration/setup.test.ts`). The skeleton replaces the init stubs for `src/config.ts` and `src/index.ts`, so those appear below, but pre-existing root test files should not be listed as skeleton outputs.
+
 ~~~
 src/
   config.ts                    # Framework config: Config + Events types, createCoreConfig call
@@ -392,9 +394,27 @@ Create in this order (framework files depend on core plugins existing):
 import { createCorePlugin } from "@moku-labs/core";
 
 export const [coreName] = createCorePlugin("[core-name]", {
+  /**
+   * Creates initial core plugin state.
+   *
+   * @param _ctx - Core plugin context (unused in skeleton).
+   * @example
+   * ```ts
+   * const state = createState(ctx);
+   * ```
+   */
   createState(_ctx) {
     return {};
   },
+  /**
+   * Creates the core plugin API surface.
+   *
+   * @param _ctx - Core plugin context (unused in skeleton).
+   * @example
+   * ```ts
+   * const api = coreApi(ctx);
+   * ```
+   */
   api(_ctx) {
     return {};
   },
@@ -410,9 +430,17 @@ import { createCoreConfig } from "@moku-labs/core";
 import { [corePlugin1] } from "./plugins/[core1]";
 import { [corePlugin2] } from "./plugins/[core2]";
 
+/**
+ * Global configuration shape for the framework.
+ * Replace with actual config fields during build.
+ */
 // biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined config
 export type Config = {};
 
+/**
+ * Event contract for the framework.
+ * Replace with actual event types during build.
+ */
 // biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined events
 export type Events = {};
 
@@ -499,6 +527,17 @@ export type Api = {
  */
 import type { Config, State } from "./types";
 
+/**
+ * Creates initial [name] plugin state.
+ *
+ * @param _ctx - Minimal context with global and config.
+ * @param _ctx.global - Global plugin registry.
+ * @param _ctx.config - Resolved plugin configuration.
+ * @example
+ * ```ts
+ * const state = createState({ global: {}, config: {} });
+ * ```
+ */
 export function createState(_ctx: {
   readonly global: Readonly<Record<string, unknown>>;
   readonly config: Readonly<Config>;
@@ -507,6 +546,10 @@ export function createState(_ctx: {
 }
 ~~~
 
+**Note:** Stub functions whose body is only `throw new Error("not implemented")` must NOT include `@returns` JSDoc tags — `jsdoc/require-returns-check` rejects `@returns` on non-returning functions. Only add `@returns` when the implementation actually returns a value.
+
+**Note:** The `@param` names must match the actual parameter names including the underscore prefix (e.g., `@param _ctx`, not `@param ctx`). For destructured object parameters, list each property separately (`@param _ctx.global`, `@param _ctx.config`).
+
 `src/plugins/[name]/api.ts`:
 ~~~typescript
 /**
@@ -514,7 +557,16 @@ export function createState(_ctx: {
  */
 import type { Api } from "./types";
 
-export function createApi(ctx: unknown): Api {
+/**
+ * Creates the [name] plugin API surface.
+ *
+ * @param _ctx - Plugin context (unused in skeleton).
+ * @example
+ * ```ts
+ * const api = createApi(ctx);
+ * ```
+ */
+export function createApi(_ctx: unknown): Api {
   throw new Error("not implemented");
 }
 ~~~

@@ -18,7 +18,7 @@ Before reading any data source:
 
 ## Data Sources
 
-1. **`.planning/STATE.md`** — phase, verb, target, plugin table, wave progress, next action
+1. **`.planning/STATE.md`** — phase, verb, target, skeleton status, plugin table, wave progress, next action
 2. **`.planning/agent-log.md`** — recent agent activity (last 10 entries); if file is absent or empty, show `"No agent activity recorded."` in the Recent Activity section
 3. **`.planning/notifications.log`** — recent notifications (last 5 entries)
 4. **`.planning/diagnostics.log`** — hook denials, tool failures, permission blocks (last 10 entries)
@@ -43,6 +43,7 @@ Moku Project Dashboard
 Phase:       [phase from STATE.md or "No active plan"]
 Verb:        [create|update|add|migrate]
 Target:      [framework|app|plugin]
+Skeleton:    [not-started | in-progress | verified | committed | —]
 Next Action: [next action from STATE.md]
 
 ── Wave Progress ──────────────────────────────────

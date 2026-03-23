@@ -2,6 +2,27 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.3 (2026-03-24)
+
+### Fixed
+- **Full-cycle audit findings** — 13 fixes from third full-cycle audit run (event-bridge project)
+  - **[BLOCKER]** build-skeleton.md S7: Phase value changed from `skeleton/committed` to `complete` — the old value had no routing row in next.md, leaving users stuck after skeleton commit
+  - Skeleton template: added JSDoc with `@param` and `@example` to inline `createState`/`api` arrow functions in `createPlugin`/`createCorePlugin` spec objects (fixes `jsdoc/require-jsdoc` on nested arrow functions)
+  - Skeleton template: removed `@returns` from throw-only stub functions — `jsdoc/require-returns-check` rejects `@returns` on non-returning bodies
+  - Skeleton template: documented `unicorn/consistent-function-scoping` pattern for subscribe-style stubs returning inner arrow functions
+  - Skeleton template: fixed `biome-ignore` comment ordering — must be after JSDoc, immediately before the declaration it suppresses
+  - Skeleton template: added `@param _ctx` with destructured `@param _ctx.global` and `@param _ctx.config` entries for state factory stubs
+  - build-skeleton.md S7: added instruction to populate `## Verification Results` in STATE.md from skeleton-report.md (was left as placeholder)
+  - plan-templates.md: `skeleton/building`, `skeleton/verified`, `skeleton/committed` removed from Phase enum (not valid Phase values — skeleton state tracked via `## Skeleton:` field)
+  - plan-templates.md: File Structure section now notes only skeleton-created files should be listed (not init-created test files)
+  - next.md: empty `.planning/` now presents `AskUserQuestion` with brainstorm and plan options instead of only suggesting plan create
+  - status.md: added `Skeleton:` field to dashboard header template
+  - plan-verb-create.md: plugin reordering from context file now logs the reorder decision
+  - tooling-config.md: added `declarations.d.ts` to ESLint ignores list (eliminates "file ignored" warning in pre-commit hook)
+
+### Changed
+- Version bumped to 0.25.3 in plugin.json and marketplace.json
+
 ## 0.25.2 (2026-03-23)
 
 ### Fixed
