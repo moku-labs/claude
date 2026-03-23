@@ -67,7 +67,7 @@ Run in sequence:
 3. **TypeScript** — `bunx tsc --noEmit`
    - Fix all type errors in skeleton files
    - Common skeleton type errors:
-     - `return {} as State` — add `// placeholder` comment if the linter flags it
+     - Empty function bodies — use `throw new Error("not implemented")` for complex return types (avoids R6 violation of `{} as X`)
      - Empty type bodies — add a placeholder field: `_placeholder?: never`
      - Import path errors — verify the file exists at the expected path (if not, the spec has a mistake; fix the import path)
    - Record each type error and the fix applied
@@ -205,10 +205,10 @@ The next `/moku:build resume` invocation will detect `## Skeleton: committed` an
 These invariants apply to ALL skeleton files:
 
 - **`import type`** for all type-only imports
-- **Empty function bodies** — use `return {} as ReturnType` for complex return types; `return` for void
+- **Empty function bodies** — use `throw new Error("not implemented")` for complex return types (avoids R6 `{} as X` violation); `return` for void
 - **Placeholder types** — correct field names with `unknown` or minimally assignable types; add `_placeholder?: never` if the body is completely empty and TypeScript requires a non-empty type
 - **`createPlugin` calls** — no explicit type parameters; all inference
 - **`createCorePlugin` calls** — no `depends`, `events`, or `hooks` fields
 - **`onStart`/`onStop`** — include ONLY for plugins approved in Stage 1 for lifecycle management (servers, connections, listeners)
-- **JSDoc** — minimal fileoverview on each file: `/** @fileoverview [plugin name] — [Tier] skeleton */`
+- **JSDoc** — minimal `@file` tag on each file: `/** @file [plugin name] — [Tier] skeleton */`. Use `@file`, NOT `@fileoverview` (ESLint jsdoc/check-tag-names rejects `@fileoverview`). Do NOT use `@module` in plugin files (flagged as redundant). Common abbreviations (`ctx`, `fn`, `cb`) are whitelisted in the ESLint unicorn config
 - **No business logic** — no real algorithms, no data manipulation, no conditional logic beyond structural stubs

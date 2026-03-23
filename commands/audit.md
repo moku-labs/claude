@@ -622,11 +622,25 @@ Show only BLOCKER findings with their evidence and fixes.
 **If Dismiss:**
 Print: "Findings noted. No action taken."
 
-**After displaying results** (all display branches complete first), run safety cleanup:
+**After displaying results**, ask about the temp project:
+
+Use `AskUserQuestion`:
+- Question: "Temp project at `{CYCLE_TMP}`. Keep it for manual inspection?"
+- Header: "Temp project"
+- Options:
+  1. label: "Delete (Recommended)", description: "Clean up the temp project directory"
+  2. label: "Keep for inspection", description: "Leave {CYCLE_TMP} on disk — you can explore it manually"
+- multiSelect: false
+
+**If Delete:**
 ```bash
 rm -rf "$CYCLE_TMP"
 ls /tmp/moku-full-cycle-* 2>/dev/null && rm -rf /tmp/moku-full-cycle-* || true
 ```
+Print: "Temp project cleaned up."
+
+**If Keep for inspection:**
+Print: "Temp project preserved at `{CYCLE_TMP}`. Delete manually when done: `rm -rf {CYCLE_TMP}`"
 
 **Record to history** — append a row to `.planning/audit-full-cycle-history.md`:
 ```markdown

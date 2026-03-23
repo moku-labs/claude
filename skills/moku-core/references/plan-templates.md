@@ -353,7 +353,7 @@ src/
 | `src/plugins/index.ts` | `./[name]` | `[name]` |
 | `src/index.ts` | `./config` | `coreConfig`, `createCore` |
 | `src/index.ts` | `./plugins` | all plugin instances |
-| `src/plugins/[name]/index.ts` | `@moku-labs/core` | `createPlugin` |
+| `src/plugins/[name]/index.ts` | `../../config` | `createPlugin` |
 | `src/plugins/[name]/index.ts` | `./types` | `Config`, `State`, `Api`, `Events` |
 | `src/plugins/[name]/index.ts` | `./state` | `createState` |
 | `src/plugins/[name]/index.ts` | `./api` | `createApi` |
@@ -370,8 +370,9 @@ Events union: `FrameworkEvents extends Plugin1Events & Plugin2Events & ...`
 `src/plugins/index.ts` exports in two sections:
 - **Plugin Instances**: `export { [name] } from "./[name]"` for every planned plugin, alphabetical.
   Helpers (builders, factories) are **NEVER** exported here — they go in `src/index.ts`.
-- **Plugin Types**: `export type * from "./[name]/types"` for each plugin that has `types.ts`, alphabetical.
-  Exception: plugins with no `types.ts` use explicit `export type { Foo } from "./[plugin]"`.
+- **Plugin Types**: `export * as [PascalCaseName] from "./[name]/types"` for each plugin that has `types.ts`, alphabetical.
+  This creates namespace-style access: consumers use `PluginName.Config`, `PluginName.Api`, etc.
+  **Never use `export type *`** — all plugins define types named `Config`, `State`, `Api` which collide.
   Thin plugins with no public types (Nano/Micro) have no entry.
 
 ## Skeleton Build Waves
@@ -385,8 +386,7 @@ Create in this order (framework files depend on core plugins existing):
 `src/plugins/[core-name]/index.ts`:
 ~~~typescript
 /**
- * @fileoverview [core-name] — Core Plugin skeleton
- * @module
+ * @file [core-name] — Core Plugin skeleton
  */
 import { createCorePlugin } from "@moku-labs/core";
 
@@ -403,8 +403,7 @@ export const [coreName] = createCorePlugin("[core-name]", {
 **`src/config.ts`** (after core plugins exist):
 ~~~typescript
 /**
- * Framework configuration — Config + Events types, core plugin registration.
- * @module
+ * @file Framework configuration — Config + Events types, core plugin registration.
  */
 import { createCoreConfig, createPlugin, createCore } from "@moku-labs/core";
 import { [corePlugin1] } from "./plugins/[core1]";
@@ -437,15 +436,15 @@ export { [plugin1] } from "./[plugin1]";
 export { [plugin2] } from "./[plugin2]";
 // [all planned plugins listed here — even if not yet built, alphabetical]
 
-// ─── Plugin Types ─────────────────────────────────────────────
-// (populated during build — export type * from "./[plugin]/types" per Standard+ plugin, alphabetical)
+// ─── Plugin Types (namespace re-exports) ─────────────────────
+// (populated during build — export * as [PascalCase] from "./[plugin]/types" per Standard+ plugin, alphabetical)
+// Consumers access types as: PluginName.Config, PluginName.Api, etc.
 ~~~
 
 **`src/index.ts`** (after plugins/index.ts exists):
 ~~~typescript
 /**
- * [Framework name] — [brief description].
- * @module
+ * @file [Framework name] — [brief description].
  */
 import { coreConfig, createCore } from "./config";
 import { [plugin1], [plugin2] } from "./plugins";
@@ -461,6 +460,7 @@ const framework = createCore(coreConfig, {
 });
 
 // ─── Plugins + Types ──────────────────────────────────────────
+// NOTE: Do not re-export createPlugin from src/plugins/index.ts — it is exported below.
 export * from "./plugins";
 
 // ─── Framework API + Plugin Helpers ──────────────────────────
@@ -474,7 +474,9 @@ For each Standard+ plugin in this wave:
 
 `src/plugins/[name]/types.ts`:
 ~~~typescript
-/** @fileoverview [name] plugin — type definitions skeleton */
+/**
+ * @file [name] plugin — type definitions skeleton
+ */
 export type Config = {
   // placeholder fields per spec
 };
@@ -488,38 +490,74 @@ export type Api = {
 
 `src/plugins/[name]/state.ts`:
 ~~~typescript
-/** @fileoverview [name] plugin — state factory skeleton */
+/**
+ * @file [name] plugin — state factory skeleton
+ */
 import type { Config, State } from "./types";
 
 export function createState({ global }: { global: Config }): State {
-  return {} as State;
+  throw new Error("not implemented");
 }
 ~~~
 
 `src/plugins/[name]/api.ts`:
 ~~~typescript
-/** @fileoverview [name] plugin — API factory skeleton */
+/**
+ * @file [name] plugin — API factory skeleton
+ */
 import type { Api } from "./types";
 
 export function createApi(ctx: unknown): Api {
-  return {} as Api;
+  throw new Error("not implemented");
 }
 ~~~
 
 `src/plugins/[name]/index.ts`:
 ~~~typescript
 /**
- * @fileoverview [name] — [Tier] Plugin skeleton
+ * @file [name] — [Tier] Plugin skeleton.
  * @see README.md
- * @module
  */
-import { createPlugin } from "@moku-labs/core";
+import { createPlugin } from "../../config";
 import { createState } from "./state";
 import { createApi } from "./api";
 
 export const [name] = createPlugin("[name]", {
   createState,
   createApi,
+});
+~~~
+
+`src/plugins/[name]/README.md`:
+~~~markdown
+# [name]
+
+> [Tier] plugin — [brief description from spec]
+
+## API
+
+<!-- Populated during build -->
+
+## Configuration
+
+<!-- Populated during build -->
+~~~
+
+`src/plugins/[name]/__tests__/unit/[name].test.ts`:
+~~~typescript
+import { describe, it, expect } from "vitest";
+
+describe("[name]", () => {
+  it.todo("should be implemented during build");
+});
+~~~
+
+`src/plugins/[name]/__tests__/integration/[name].test.ts`:
+~~~typescript
+import { describe, it, expect } from "vitest";
+
+describe("[name] integration", () => {
+  it.todo("should be implemented during build");
 });
 ~~~
 
@@ -532,11 +570,10 @@ Same pattern as Wave 1, with `depends` array added:
 `src/plugins/[name]/index.ts`:
 ~~~typescript
 /**
- * @fileoverview [name] — [Tier] Plugin skeleton
+ * @file [name] — [Tier] Plugin skeleton.
  * @see README.md
- * @module
  */
-import { createPlugin } from "@moku-labs/core";
+import { createPlugin } from "../../config";
 import { [dep] } from "../[dep]";
 import { createState } from "./state";
 import { createApi } from "./api";
@@ -547,6 +584,8 @@ export const [name] = createPlugin("[name]", {
   createApi,
 });
 ~~~
+
+Include the same `README.md`, `__tests__/unit/[name].test.ts`, and `__tests__/integration/[name].test.ts` placeholders as Wave 1 for each plugin.
 
 ## Verification Checklist
 
@@ -560,6 +599,9 @@ After all skeleton files are created, verify in order:
 - [ ] No explicit generics on `createPlugin` or `createCorePlugin`
 - [ ] Core plugins have no `depends`, `events`, or `hooks` fields
 - [ ] `src/plugins/index.ts` lists ALL planned plugins (including not-yet-built ones)
+- [ ] Every plugin has `README.md` placeholder
+- [ ] Every plugin has `__tests__/unit/[name].test.ts` placeholder
+- [ ] Every plugin has `__tests__/integration/[name].test.ts` placeholder
 ~~~
 
 ---

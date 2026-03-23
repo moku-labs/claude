@@ -101,7 +101,7 @@ Then configure all tooling files (these are **identical across all project types
 
 ### Step 4: Create Directory Structure and Template Files
 
-Structure and templates vary by project type. **All project types** must include a placeholder test file at `tests/unit/setup.test.ts` to prevent vitest from exiting with code 1 on an empty test suite. Create this file in every project type:
+Structure and templates vary by project type. **All project types** must include placeholder test files at `tests/unit/setup.test.ts` AND `tests/integration/setup.test.ts` to prevent vitest from exiting with code 1 on empty test suites. Create both files in every project type:
 
 ```typescript
 import { describe, expect, it } from "vitest";

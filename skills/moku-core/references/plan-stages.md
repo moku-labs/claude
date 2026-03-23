@@ -402,6 +402,14 @@ Save to `.planning/skeleton-spec.md`. Use the Skeleton Specification Template fr
 4. **Skeleton Build Waves** — same wave grouping as build waves; each wave contains ready-to-paste code blocks for every file (correct imports/exports, empty types, empty function bodies with correct signatures, JSDoc headers); Wave 0 must include core plugin skeletons + `src/config.ts` + `src/plugins/index.ts` + `src/index.ts`
 5. **Verification Checklist** — checkboxes for format/lint/tsc/build + structural checks
 
+**Skeleton Code Block Correctness Constraints:**
+- Plugin `index.ts` files MUST import `createPlugin` from `../../config` (the framework's config.ts), NOT from `@moku-labs/core`. `@moku-labs/core` only exports `createCoreConfig` and `createCorePlugin`. The `createPlugin` factory comes from destructuring `createCoreConfig`'s return value.
+- The plugin barrel (`src/plugins/index.ts`) MUST use namespace re-exports: `export * as [PascalCase] from "./[name]/types"` — NEVER `export type *` (causes ambiguous re-export when plugins share type names like Config/State/Api). Consumers access types as `PluginName.Config`, `PluginName.Api`, etc.
+- Use `@file` tag, NOT `@fileoverview` (ESLint jsdoc/check-tag-names rejects `@fileoverview`). Do NOT use `@module` in plugin files (flagged as redundant outside ambient context).
+- Common abbreviations (`ctx`, `fn`, `cb`) are allowed — they are whitelisted in the ESLint unicorn config. Unused stub parameters should still have an underscore prefix (e.g., `_ctx`).
+- Skeleton stub bodies must use `throw new Error("not implemented")` for complex return types — NEVER `return {} as X` (violates R6: no inline type assertions).
+- For plugins with `handlers.ts`, the plugin `index.ts` MUST import `createHandlers` and include a `hooks: createHandlers` field — do not create dead handler files.
+
 **Do NOT create actual source files** — this is a specification document only.
 
 ---

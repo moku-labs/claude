@@ -2,6 +2,24 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.1 (2026-03-23)
+
+### Fixed
+- **Full-cycle audit findings** — 13 fixes from first full-cycle audit run (task-scheduler project)
+  - Skeleton spec template: `createPlugin` import path corrected from `@moku-labs/core` to `../../config`
+  - Skeleton barrel: `export type *` replaced with `export * as [PascalCase]` namespace re-exports (avoids type name collisions)
+  - JSDoc tags: `@fileoverview` → `@file`, removed redundant `@module` from plugin index.ts templates, all comments converted to multi-line format
+  - Skeleton stubs: `return {} as Api` replaced with `throw new Error("not implemented")` (R6 compliance)
+  - Skeleton completeness: added README.md and `__tests__/` placeholder files per plugin
+  - Handlers wiring: plugins with `handlers.ts` now must import and wire `createHandlers` in skeleton index.ts
+  - Init: added `tests/integration/setup.test.ts` placeholder (prevents vitest empty-suite failure on first commit)
+- **ESLint unicorn config** — added `ctx`, `fn`, `cb` to `unicorn/prevent-abbreviations` allowList in tooling-config.md
+- **Full-cycle audit UX** — added "Keep for inspection" option before temp project cleanup
+- **Full-cycle project pool** — all 30 project ideas now specify mixed complexity tiers (Nano→Complex) per project
+
+### Changed
+- Version bumped to 0.25.1 in plugin.json and marketplace.json
+
 ## 0.25.0 (2026-03-23)
 
 ### Added

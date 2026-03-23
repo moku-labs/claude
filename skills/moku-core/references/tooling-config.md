@@ -143,8 +143,15 @@ export default [
   // 2. TypeScript parser for all TS files
   tseslint.configs.base,
 
-  // 3. Unicorn recommended
+  // 3. Unicorn recommended + abbreviation allowlist
   eslintPluginUnicorn.configs.recommended,
+  {
+    rules: {
+      "unicorn/prevent-abbreviations": ["error", {
+        allowList: { ctx: true, fn: true, cb: true }
+      }]
+    }
+  },
 
   // 4. SonarJS recommended
   // NOTE: The `!` non-null assertion is required because sonarjs types mark `configs` as
