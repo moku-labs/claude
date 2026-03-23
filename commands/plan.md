@@ -36,7 +36,7 @@ This command runs as a **3-stage gated workflow** with optional discussion, opti
 
 The `add` verb is special — it runs a quick single-pass flow (plan + build + wire + verify) instead of the 3-stage workflow.
 
-**`--quick` mode:** If `--quick` is present in arguments, collapse the 3-stage workflow into a single pass — analysis, specs, and skeleton in one invocation with one approval at the end instead of three. Auto-suggested when Stage 1 finds ≤ 4 plugins — the auto-suggest check runs after the plugin table is assembled, before the Stage 1 approval gate. Use `AskUserQuestion` to offer the choice:
+**`--quick` mode:** If `--quick` is present in arguments, collapse the 3-stage workflow into a single pass — analysis, specs, and skeleton in one invocation with one approval at the end instead of three. Auto-suggested when Stage 1 finds ≤ 4 plugins — the auto-suggest check runs after the plugin table is assembled, before the Stage 1 approval gate, **and only when QUICK_MODE is not already true** (if `--quick` was passed explicitly, the user has already chosen quick mode — do not offer the choice again). Use `AskUserQuestion` to offer the choice:
 - Question: "Only [N] plugins detected. Switch to quick mode?"
 - Header: "Quick mode"
 - Options: "Continue with 3-stage workflow" / "Switch to --quick (Recommended)" with descriptions
@@ -62,11 +62,13 @@ Parse `$ARGUMENTS` into five components: **VERB**, **TYPE**, **PATH_OR_LINK**, *
 
 (The filesystem guard in step 1 runs unconditionally — even if step 2 would stop early. The empty directory is harmless.)
 
-If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip it before further parsing. Otherwise QUICK_MODE=false.
+If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip **all occurrences** of `--quick` before further parsing. Otherwise QUICK_MODE=false.
 
 **Write QUICK_MODE to STATE.md immediately:** On the first STATE.md write of this invocation (either the initial creation or the first update), include `## QuickMode: true` if QUICK_MODE=true, else `## QuickMode: false`. Do not wait until stage exit to persist this value — a session drop during Stage 1 must be able to recover QUICK_MODE from STATE.md.
 
 ### Token Extraction
+
+**Tokenization:** Follow shell-like semantics — text enclosed in matching single or double quotes is treated as a single token (quotes stripped). This allows paths and descriptions with spaces: `create framework "my static site"`.
 
 **Guard — resume verb:** If the first token (after stripping `--quick`) is `resume`, set VERB=`resume` and skip all remaining Token Extraction steps. Proceed directly to Step 0.1.
 
@@ -74,7 +76,7 @@ If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip 
    - `create`, `update`, `add`, `migrate`, `resume` → use as VERB, advance to next token
    - If first word is a TYPE keyword (see normalization table) → set VERB=`create` (backward compat). Set TYPE to this word (normalize via table below). Advance token pointer to the word after this one. Continue to step 3 (PATH_OR_LINK extraction).
    - If first word looks like a path (contains `/`, starts with `.`, `~`, or `http`) → set VERB=`migrate`, set PATH_OR_LINK to this token, set TYPE=`framework` (migrate default), skip steps 2 and 3 (TYPE and PATH_OR_LINK are already set), advance token pointer past this token, continue to REQUIREMENTS extraction (step 4).
-   - If no recognized word → auto-detect (see below). Do not advance the token pointer on the unrecognized word — leave the full token stream intact for auto-detection to evaluate.
+   - If no recognized word → auto-detect (see below). Do not advance the token pointer on the unrecognized word — leave the full token stream intact for auto-detection to evaluate. When TYPE is resolved via auto-detect (conditions a–d) and no VERB was set during token extraction, set VERB=`create`. **Note:** because the token pointer is not advanced on an unrecognized first word, that word will remain in the token stream and be included in REQUIREMENTS after TYPE resolution. This is intentional — unrecognized words may carry useful context for the planning workflow.
 
 2. **Extract TYPE** from next token:
    - Guard: if the TYPE token matches a VERB keyword (`create`, `update`, `add`, `migrate`, `resume`), do not normalize — tell user: "The verb `{token}` cannot be used as a type. Did you mean `/moku:plan {token} [type] [description]`?" and stop.
@@ -96,7 +98,9 @@ If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip 
 
 4. **Remaining tokens** → REQUIREMENTS (free text). After TYPE is resolved (including via auto-detect AskUserQuestion — see below), all tokens not consumed during VERB/TYPE/PATH_OR_LINK extraction become REQUIREMENTS.
 
-5. **For `add plugin`:** After TYPE is confirmed as `plugin`, extract PLUGIN_NAME from the next token if it is present and is not a path/link token (i.e., does not contain `/` and does not start with `.`, `~`, or `http`). Store as PLUGIN_NAME. Remaining tokens after PLUGIN_NAME become REQUIREMENTS.
+5. **PLUGIN_NAME extraction (`add` verb only):** After TYPE is confirmed as `plugin`, extract PLUGIN_NAME from the next token if it is present and is not a path/link token (i.e., does not contain `/` and does not start with `.`, `~`, or `http`). Store as PLUGIN_NAME. Remaining tokens after PLUGIN_NAME become REQUIREMENTS.
+
+   > **NOTE for `update plugin`:** PLUGIN_NAME extraction is handled in `plan-verb-update.md` (it treats the first token of REQUIREMENTS as the plugin name). No extraction is needed here — this step 5 applies to `add` only.
 
 ### Type Normalization Table
 
@@ -110,7 +114,7 @@ If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip 
 
 If no TYPE keyword is found, evaluate conditions a–d in order; use the first condition that matches (first-match-wins). Stop evaluating once a match is found:
   a. `src/config.ts` exists AND contains `createCoreConfig` → **framework**
-  b. `package.json` depends on a Moku framework package (not `@moku-labs/core` directly) → **app**
+  b. `package.json` `dependencies` or `devDependencies` contains a package matching `@moku-labs/*` other than `@moku-labs/core` itself → **app**
   c. Argument looks like a plugin name or spec reference → **plugin**
   d. If still unclear — use `AskUserQuestion`:
      - Question: "What type of project are you planning?"
@@ -134,6 +138,8 @@ After all tokens are parsed: if REQUIREMENTS is empty and VERB is `create` or `u
   4. label: "Other", description: "Describe in your own words"
 - multiSelect: false
 Treat the user's selection or custom text as REQUIREMENTS and continue.
+
+**Sentinel collision guard:** After REQUIREMENTS is set (whether from arguments or the AskUserQuestion above), trim it and check whether the trimmed value equals `(none)`. If it does, treat REQUIREMENTS as empty and prompt again via `AskUserQuestion` using the same question/options above — the string `(none)` is reserved for internal STATE.md placeholder use and must not be stored as a real description.
 
 For `migrate`: REQUIREMENTS is optional — PATH_OR_LINK is the primary input. The PATH_OR_LINK prompt at step 3 above ensures PATH_OR_LINK is always set before routing, so REQUIREMENTS may remain empty for migrate.
 
@@ -160,7 +166,7 @@ If invalid combination → tell user: "The `{verb}` verb doesn't support the `{t
 If VERB is `resume`:
 - Read `.planning/STATE.md` — if it doesn't exist, tell user: "No planning state found. Start with `/moku:plan create [type] [description]`."
 - Validate that the file contains all required headers (see State Persistence Protocol below) AND that each header has a non-empty value (not missing, not blank, and not whitespace-only — trim the value before checking). If any header is missing or empty, tell user: "`.planning/STATE.md` is malformed — missing or empty: {list}. Repair it manually or delete it and run `/moku:plan create [type] [description]` to restart."
-- Load VERB, TYPE, phase, plugin table, wave grouping, and QUICK_MODE from state
+- Load VERB, TYPE, phase, plugin table, wave grouping, and QUICK_MODE from state. **Precedence:** If `--quick` was explicitly passed at invocation time (QUICK_MODE was already set to true in Step 0), do not overwrite it with the stored `## QuickMode:` value — the invocation-time flag takes precedence.
 - Use the Phase-to-Stage Jump Table below to determine which stage to resume at
 
 If VERB is NOT `resume` but `.planning/STATE.md` exists:
@@ -177,6 +183,9 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
   - multiSelect: false
   - If user chooses **Resume**: use the Phase-to-Stage Jump Table to determine the resume point.
   - If user chooses **Start fresh**: back up `.planning/STATE.md` to `.planning/STATE.md.bak`, delete all `.planning/specs/*.md` files (preserve `decisions.md` and `research.md` if present), then proceed as if no state existed.
+    Immediately after the backup and delete, write a minimal `.planning/STATE.md` with the following headers so that a session drop during the next stage exit is recoverable:
+    `## Phase: none` / `## Verb: {VERB}` / `## Target: {REQUIREMENTS if non-empty, else (none)}` / `## Skeleton: not-started` / `## QuickMode: {QUICK_MODE}` / `## PluginTable: (none)` / `## WaveGrouping: (none)` / `## Next Action: Run /moku:plan {VERB} to begin.`
+    Guard: Phase `none` means no work has been done — any subsequent resume will skip the resume prompt and proceed as a fresh run (per the Jump Table `none` row).
   - If user chooses **Cancel**: stop.
   - If user chose **Resume** and also provided new REQUIREMENTS in the command args, use `AskUserQuestion`:
     - Question: "You provided a new description. Update the target description?"
@@ -194,8 +203,9 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
 | `stage2` or `stage2/pending-approval` | Re-run Stage 2 (Specifications) |
 | `stage2/approved` | Start Stage 3 (Skeleton Specification) |
 | `stage3` or `stage3/pending-approval` | Re-run Stage 3 (Skeleton Specification) |
+| `stage3/approved` | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
 | `complete` (VERB is `resume` or `create`) | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
-| `complete` (VERB is `update` or `add`) | Back up `.planning/STATE.md` to `.planning/STATE.md.bak`. Delete `.planning/specs/*.md` files (preserve decisions.md and research.md). Set `## Phase: none` before routing. Proceed as a new planning cycle for the given verb. |
+| `complete` (VERB is `update` or `add`) | Back up `.planning/STATE.md` to `.planning/STATE.md.bak`. Delete `.planning/specs/*.md` files (preserve decisions.md and research.md). In the existing STATE.md, change only `## Phase:` to `none` — preserve all other headers unchanged. Do not rewrite the full file. Proceed as a new planning cycle for the given verb. |
 
 **Pending-approval resume note:** When resuming from a phase ending in `/pending-approval`, the stage re-executes its own work and re-presents the approval gate. The stage entry guard (which requires the previous stage to be `/approved`) is bypassed in this case — the stage owns this phase and is resuming mid-run.
 
@@ -225,6 +235,8 @@ All headers use **inline-colon format**: `## HeaderName: value` — the header n
 4. When user approves at the gate, update `## Phase:` to `stage{N}/approved` before advancing to the next stage.
 5. Validation happens in step 1 (on the tmp file, before rename). The required headers are: `## Phase:`, `## Verb:`, `## Target:`, `## Next Action:`, `## PluginTable:`, `## WaveGrouping:`, `## QuickMode:`, `## Skeleton:`. If any header is missing, the tmp file is deleted and STATE.md remains untouched.
 
+   **Skeleton initial value:** At every stage exit (Stage 1, Stage 2, and Stage 3), preserve the current `## Skeleton:` value from STATE.md if the build command has already advanced it beyond `not-started` (i.e., the current value is `in-progress`, `verified`, or `committed`). If the current value is `not-started` or the field is absent, write `## Skeleton: not-started`. The skeleton field is only advanced by the build command — the plan command must never regress a build-advanced value.
+
 ---
 
 ## Plan Mode for Analysis
@@ -250,6 +262,10 @@ If the project has output styles configured (`.claude/output-styles/`), suggest 
 
 ## Route to Workflow
 
+**Guard — unrecognized VERB:** Before routing, verify that VERB (loaded from STATE.md on resume, or parsed from arguments on fresh invocation) is one of: `create`, `update`, `add`, `migrate`. If VERB is any other value:
+- **Special case — VERB is `resume`:** Tell user: "`.planning/STATE.md` contains `## Verb: resume`. The `resume` verb is for invocation only and must not be stored. The stored verb should be the original verb used to start this plan (`create`, `update`, `add`, or `migrate`). Edit `## Verb:` to the correct value, or delete `.planning/STATE.md` and run `/moku:plan create [type] [description]` to restart." Stop.
+- **All other unrecognized values:** Tell user: "STATE.md contains an unrecognized verb `{VERB}`. Repair `.planning/STATE.md` manually (set `## Verb:` to a valid verb) or delete it and run `/moku:plan create [type] [description]` to restart." Stop.
+
 Based on parsed VERB and TYPE, load and follow the appropriate verb-specific reference:
 
 | VERB | Action |
@@ -262,7 +278,10 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 
 **IMPORTANT:** Load only the one reference file matching the verb. Do not load all of them.
 
+**Context handoff:** All values parsed in Step 0 — VERB, TYPE, PATH_OR_LINK, REQUIREMENTS, PLUGIN_NAME, and QUICK_MODE — are available as context variables in the routed reference file. The reference file does not need to re-parse `$ARGUMENTS`.
+
 **Quick mode:** QUICK_MODE is persisted in STATE.md via the `## QuickMode:` header. When `--quick` is passed, write `## QuickMode: true` to STATE.md on the first write of this invocation (before routing — see Step 0 startup sequence). On resume without `--quick`, read QUICK_MODE from STATE.md's `## QuickMode:` field. This allows quick mode to carry across sessions.
+- **Precedence:** If `--quick` is explicitly passed at invocation time, it overrides the stored `## QuickMode:` value — set QUICK_MODE=true regardless of what STATE.md contains, and update `## QuickMode: true` in STATE.md on the next write.
 - If QUICK_MODE=true and VERB is `create` or `update`: collapse Stages 1+2+3 into a single pass — run all three sequentially without stopping for approval between them. Present one combined summary at the end for a single approval gate. The verb reference files describe the individual stages — in quick mode, just run them back-to-back.
 - If QUICK_MODE=true and VERB is `resume`: apply quick mode to the **remaining** stages from the resumed position — run all remaining stages back-to-back with one combined approval gate at the end. QUICK_MODE is read from STATE.md if `--quick` was not explicitly passed.
 - If QUICK_MODE=true and VERB is `migrate`: QUICK_MODE is passed through to the reference file. Migrate is already a single-pass workflow; no collapse is needed.

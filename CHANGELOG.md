@@ -2,6 +2,36 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.23.3 (2026-03-23)
+
+### Fixed
+- **Plan command audit — 21 fixes across 3 iterative passes (60 scenarios)**
+  - **BLOCKER**: Jump Table missing `stage3/approved` row — resume after Stage 3 approval told user to start over, destroying completed work
+  - **BLOCKER**: `## Skeleton:` required non-empty at Stage 1 exit but no initial value specified — validation deadlock prevented STATE.md persistence
+  - **BLOCKER**: Start-fresh backed up STATE.md without writing replacement — session drop between Start-fresh and next stage exit lost VERB/TYPE/REQUIREMENTS
+  - **BLOCKER**: Unrecognized VERB loaded from STATE.md had no error handler — Route to Workflow failed silently
+  - **BLOCKER**: Start-fresh template wrote empty `PluginTable`/`WaveGrouping` values (trailing space) — resume validation rejected as malformed, creating unresumable state
+  - **BLOCKER**: plan-stages.md Stage 3 unconditionally wrote `Skeleton: not-started`, contradicting plan.md's preservation rule — regressed build-advanced skeleton values
+  - **HIGH**: `resume --quick` with stored `QuickMode: false` had undefined precedence — explicit invocation flag now overrides stored value
+  - **HIGH**: Auto-detect resolved TYPE but VERB was never set — now defaults to `create`
+  - **HIGH**: Token Extraction had no quote-handling semantics — added shell-like tokenization (quoted strings = single tokens)
+  - **HIGH**: Auto-detect condition (b) "Moku framework package" was unimplementable — replaced with concrete `@moku-labs/*` pattern
+  - **WARNING**: `update plugin` PLUGIN_NAME extraction undocumented in plan.md — added cross-reference to plan-verb-update.md; Step 5 retitled "add verb only"
+  - **WARNING**: `--quick` strip said "strip it" (singular) but "anywhere" (plural) — changed to "strip all occurrences"
+  - **WARNING**: Skeleton rule only protected Stage 1/2 exits — extended to all stage exits with "never regress build-advanced value" rule
+  - **WARNING**: Step 0.1 "Load QUICK_MODE from state" could overwrite invocation-time flag — added precedence note
+  - **WARNING**: VERB=resume stored in STATE.md got confusing "unrecognized" error — added special-case message explaining resume is invocation-only
+  - **WARNING**: Auto-suggest fired even when `--quick` explicitly passed — now skipped when QUICK_MODE already true
+  - **WARNING**: Unrecognized first word silently polluted REQUIREMENTS — documented as intentional (useful context)
+  - **WARNING**: Jump Table complete+update "Set Phase: none" was ambiguous (in-place vs full rewrite) — clarified as in-place edit preserving all other headers
+  - **WARNING**: User REQUIREMENTS "(none)" collided with internal sentinel — added guard to re-prompt
+  - **WARNING**: Route to Workflow context handoff undocumented — added note that all Step 0 parsed values are available in routed reference files
+  - **INFO**: PluginTable/WaveGrouping format for multi-plugin tables (deferred — works in practice)
+
+### Changed
+- Version bumped to 0.23.3 in plugin.json and marketplace.json.
+- plan-stages.md Stage 3 State Update updated with Skeleton preservation rule (cross-file consistency fix).
+
 ## 0.23.2 (2026-03-20)
 
 ### Fixed

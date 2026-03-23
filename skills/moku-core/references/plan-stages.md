@@ -422,7 +422,7 @@ Produce `.planning/skeleton-spec.md` covering: tier-appropriate file structure, 
 
 **On exit**: Update `.planning/STATE.md`:
 - Phase: `stage3/pending-approval`
-- `## Skeleton: not-started`
+- `## Skeleton:` — preserve the current value if it is `in-progress`, `verified`, or `committed` (do not regress a build-advanced value); write `not-started` only if the field is currently absent or already `not-started`
 - Add skeleton spec path to Artifacts section: `Skeleton spec: .planning/skeleton-spec.md`
 - Add skeleton wave rows to Wave Progress table (one row per skeleton wave + verification + commit), all with Status `not started`
 - Set `Next Action: Run /moku:build resume (skeleton build will run first)`
