@@ -69,7 +69,8 @@ When the driver encounters an `AskUserQuestion` gate in a command's text, apply 
 | init | Non-empty directory confirmation | Confirm/continue | CYCLE_TMP may have bootstrap files |
 | brainstorm | "Existing context guard" | "Start fresh" (option 2) | Ensure clean brainstorm |
 | brainstorm | "What kind of brainstorm?" | "Create" (option 1) | Matches framework creation |
-| brainstorm | Discovery questions (scored) | Pick option with highest implied complexity | Gives brainstorm more material to work with |
+| brainstorm | Discovery questions (scored, single-select) | Pick option with highest implied complexity | Gives brainstorm more material to work with |
+| brainstorm | Discovery questions (scored, multiselect) | Select the subset consistent with the project description — do not select options that contradict the domain solely to maximize complexity | Domain-appropriate answers produce better brainstorm output than artificially inflated scores |
 | plan | Quick-mode offer (`--quick` suggestion) | Accept quick mode | Keeps cycle faster without losing coverage |
 | plan | Stage approval gates | Approve (option 1) | Always advance |
 | plan | Plan checker findings gate | Proceed (option 1) | Don't block on validation — accept findings as-is for cycle speed |
@@ -212,9 +213,11 @@ awk "/=== FULL-CYCLE-START.*\[${PROJECT_NAME}\] ===/,/=== FULL-CYCLE-END.*\[${PR
 | STOP-BLOCK | Should not occur (driver has no Stop hook) | Flag as anomaly |
 | STRUCTURE | Expected during build | Verify it matched a real structural issue |
 
-### Limitation
+### Limitations
 
-Hook diagnostics require `.planning/STATE.md` to exist in the working project (the project from which `/moku:audit full-cycle` is run). If run from a directory without STATE.md, hook logging may be incomplete. The orchestrator should warn if no STATE.md exists.
+1. **STATE.md dependency:** Hook diagnostics require `.planning/STATE.md` to exist in the working project (the project from which `/moku:audit full-cycle` is run). If run from a directory without STATE.md, hook logging may be incomplete. The orchestrator should warn if no STATE.md exists.
+
+2. **No hook coverage in temp project:** The full-cycle driver operates in a temp directory (`/tmp/moku-full-cycle-*/`) that has no `.claude/settings.local.json` and no hook configuration. This means **zero hook events fire during the cycle** — anti-pattern violations (wrong field names, missing events, incorrect imports) in generated code are not caught by the hook system. Reviewers must manually inspect generated code for structural violations that hooks would normally catch in a real project environment.
 
 ---
 

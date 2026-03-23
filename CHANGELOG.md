@@ -2,6 +2,31 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.2 (2026-03-23)
+
+### Fixed
+- **Full-cycle audit findings** — 17 fixes from second full-cycle audit run (color-pipeline project)
+  - Skeleton config.ts template: `createPlugin`/`createCore` now destructured from `createCoreConfig()` return instead of imported directly from `@moku-labs/core`
+  - Skeleton plugin templates: `createApi` field renamed to `api` in all 3 template blocks (core, regular, regular+deps)
+  - Skeleton `createCoreConfig` call: added required `id` string argument and `config` field in options
+  - Skeleton `createState` parameter: fixed from `{ global: Config }` to correct MinimalContext shape with `readonly global` and `readonly config`
+  - Skeleton import map: updated to show `createCoreConfig` as only `@moku-labs/core` import, `createPlugin`/`createCore` as self-exports
+  - Skeleton events: added stub guidance and verification checklist item for plugins with events in their spec
+  - Skeleton types.ts: added note to use concrete types from spec, not `unknown`
+  - Build skeleton Step S6: removed `.planning/skeleton-spec.md` from `git add` (`.planning/` is gitignored)
+  - Build skeleton Step S2: added barrel file grouping instruction (instances then types)
+  - Brainstorm: added closing CTA with next command suggestion after context file is written
+  - Init Step 5d: output-styles copy now prints message instead of silent `|| true` no-op
+  - Init: `bunfig.toml` must be written before `bun install` for exact version pinning
+  - Plan quick mode: STATE.md now written at each stage boundary for session recovery
+  - Status dashboard: added `queued` wave status to distinguish build-not-started from build-in-progress
+  - Status Quick Actions: contextual "start plugin build" label when no build has started
+  - Audit full-cycle: documented hook coverage gap in temp project environment
+  - Audit full-cycle: split brainstorm auto-answer rule for single-select vs multiselect discovery questions
+
+### Changed
+- Version bumped to 0.25.2 in plugin.json and marketplace.json
+
 ## 0.25.1 (2026-03-23)
 
 ### Fixed

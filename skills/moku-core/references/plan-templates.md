@@ -348,7 +348,8 @@ src/
 
 | File | Imports From | Symbols |
 |------|-------------|---------|
-| `src/config.ts` | `@moku-labs/core` | `createCoreConfig`, `createPlugin`, `createCore` |
+| `src/config.ts` | `@moku-labs/core` | `createCoreConfig` |
+| `src/config.ts` | (self — destructured from coreConfig) | `createPlugin`, `createCore` |
 | `src/config.ts` | `./plugins/[core]` | `[core]` (for createCoreConfig plugins array) |
 | `src/plugins/index.ts` | `./[name]` | `[name]` |
 | `src/index.ts` | `./config` | `coreConfig`, `createCore` |
@@ -391,10 +392,10 @@ Create in this order (framework files depend on core plugins existing):
 import { createCorePlugin } from "@moku-labs/core";
 
 export const [coreName] = createCorePlugin("[core-name]", {
-  createState({ global }) {
+  createState(_ctx) {
     return {};
   },
-  createApi(ctx) {
+  api(_ctx) {
     return {};
   },
 });
@@ -405,23 +406,22 @@ export const [coreName] = createCorePlugin("[core-name]", {
 /**
  * @file Framework configuration — Config + Events types, core plugin registration.
  */
-import { createCoreConfig, createPlugin, createCore } from "@moku-labs/core";
+import { createCoreConfig } from "@moku-labs/core";
 import { [corePlugin1] } from "./plugins/[core1]";
 import { [corePlugin2] } from "./plugins/[core2]";
 
-export type Config = {
-  // placeholder — field types added during build
-};
+// biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined config
+export type Config = {};
 
-export type Events = {
-  // placeholder — event types added during build
-};
+// biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined events
+export type Events = {};
 
-export const coreConfig = createCoreConfig({
-  plugins: [[corePlugin1], [corePlugin2]],
+export const coreConfig = createCoreConfig("[framework-name]", {
+  config: {} as Config,
+  plugins: [[corePlugin1], [corePlugin2]] as const,
 });
 
-export { createPlugin, createCore };
+export const { createPlugin, createCore } = coreConfig;
 ~~~
 
 **`src/plugins/index.ts`** (after config.ts exists):
@@ -484,9 +484,13 @@ export type State = {
   // placeholder fields per spec
 };
 export type Api = {
+  // Use concrete method signatures from the plugin spec — not unknown.
+  // Example: methodName(arg: ConcreteType): ReturnType;
   // placeholder method signatures per spec
 };
 ~~~
+
+**Note:** When generating skeleton-spec.md in Stage 3, populate `types.ts` with the actual method signatures and parameter types from the plugin's spec `## API` section. Use concrete types (e.g., `PixelData[]`, `FilterResult`) rather than `unknown` or `unknown[]`. The skeleton should be type-correct even before implementation — stubs in `api.ts` use `throw new Error("not implemented")` but the type signatures must match the spec.
 
 `src/plugins/[name]/state.ts`:
 ~~~typescript
@@ -495,7 +499,10 @@ export type Api = {
  */
 import type { Config, State } from "./types";
 
-export function createState({ global }: { global: Config }): State {
+export function createState(_ctx: {
+  readonly global: Readonly<Record<string, unknown>>;
+  readonly config: Readonly<Config>;
+}): State {
   throw new Error("not implemented");
 }
 ~~~
@@ -524,7 +531,11 @@ import { createApi } from "./api";
 
 export const [name] = createPlugin("[name]", {
   createState,
-  createApi,
+  api: createApi,
+  // If this plugin has events in its spec, include stubbed events:
+  // events: register => ({
+  //   "[name]:event-name": register("description from spec"),
+  // }),
 });
 ~~~
 
@@ -581,7 +592,7 @@ import { createApi } from "./api";
 export const [name] = createPlugin("[name]", {
   depends: [[dep]],
   createState,
-  createApi,
+  api: createApi,
 });
 ~~~
 
@@ -598,6 +609,7 @@ After all skeleton files are created, verify in order:
 - [ ] No implementation logic in any file (only empty types, empty function bodies, JSDoc headers)
 - [ ] No explicit generics on `createPlugin` or `createCorePlugin`
 - [ ] Core plugins have no `depends`, `events`, or `hooks` fields
+- [ ] Plugins with events in their spec include stubbed `events` field: `events: register => ({ "event:name": register("description") })`
 - [ ] `src/plugins/index.ts` lists ALL planned plugins (including not-yet-built ones)
 - [ ] Every plugin has `README.md` placeholder
 - [ ] Every plugin has `__tests__/unit/[name].test.ts` placeholder

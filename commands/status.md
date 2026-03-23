@@ -34,6 +34,7 @@ Wave Progress rows are derived from STATE.md as follows:
   - `done` — all plugins in the wave have `status: verified` or `status: committed` in the plugin table
   - `building` — current `## Phase:` value matches `build/wave-{N}` for this wave's index N
   - `pending` — wave index is greater than the wave index embedded in `## Phase:`
+  - `queued` — use instead of `pending` when `## Skeleton: committed` but no plugin build has started yet (all plugins have status `not started`). This distinguishes "scaffolding ready, build not begun" from "build in progress, this wave is next".
 
 ```
 Moku Project Dashboard
@@ -84,6 +85,7 @@ Suggest the most likely next command based on the current state:
 | Phase: stage1/* | `/moku:plan resume` |
 | Phase: stage2/* | `/moku:plan resume` |
 | Phase: stage3/* | `/moku:plan resume` |
+| Phase: complete, Skeleton: committed, all plugins `not started` | `/moku:build resume` — label as "(start plugin build — Wave 0)" |
 | Phase: build/wave-N | `/moku:build resume` (or `/moku:build resume --continue`) |
 | Phase: build/complete | `/moku:check verbose` |
 | Plugins with `needs-manual` | `/moku:build fix [plugin-name]` |

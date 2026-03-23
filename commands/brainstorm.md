@@ -115,3 +115,5 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG.
 - Each `AskUserQuestion` presents contextual options generated from the DESCRIPTION and CATEGORY, not hardcoded generic options
 - The debate loop converges when the user is satisfied OR max iterations reached — never force iterations
 - Context file must be complete enough that `/moku:plan` can skip its steering and discussion phases entirely
+- After writing the context file, always print a closing next-step suggestion:
+  > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] "{NAME}" --context context-{NAME}.md` to begin planning."

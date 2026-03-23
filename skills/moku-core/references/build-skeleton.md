@@ -39,6 +39,8 @@ For each file listed in the wave's code blocks in the skeleton spec:
 
 **Important:** Do not interpret or improve the skeleton code blocks. Copy them as-is. The spec was designed to be type-correct as written.
 
+**Barrel file (`src/plugins/index.ts`):** Must group ALL plugin instance exports in one block first, then ALL type namespace re-exports in a second block, separated by section comments. Follow the exact two-section layout from the skeleton spec template — do not interleave instance and type exports.
+
 Mark the wave `done` in STATE.md.
 
 **If more skeleton waves remain (check Wave Progress table):**
@@ -167,9 +169,9 @@ Use `AskUserQuestion`:
 
 After user approval:
 
-1. Stage skeleton files and the skeleton spec:
+1. Stage skeleton files (`.planning/` is gitignored — do NOT stage planning files):
    ```
-   git add src/ .planning/skeleton-spec.md
+   git add src/
    ```
 2. Create the commit:
    ```

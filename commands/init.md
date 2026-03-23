@@ -84,7 +84,7 @@ Then configure all tooling files (these are **identical across all project types
 
 10. **.editorconfig** — UTF-8, LF, 2-space indent.
 
-11. **bunfig.toml** — `exact = true`
+11. **bunfig.toml** — `exact = true`. **Write this before running `bun install` in Step 5** to ensure exact version pinning applies from the first install. (It is listed here for documentation order, but must exist on disk before any `bun install` or `bun add` calls.)
 
 12. **.bun-version** — `1.3.8`
 
@@ -236,11 +236,16 @@ Run `cd "$ABSOLUTE_PROJECT_PATH" && bun run format` to normalize all generated f
 If the Moku plugin has output styles available at `${CLAUDE_PLUGIN_ROOT}/output-styles/`, copy them to the project:
 
 ```bash
-mkdir -p "$ABSOLUTE_PROJECT_PATH/.claude/output-styles"
-cp "${CLAUDE_PLUGIN_ROOT}/output-styles/"*.md "$ABSOLUTE_PROJECT_PATH/.claude/output-styles/" 2>/dev/null || true
+if [ -d "${CLAUDE_PLUGIN_ROOT}/output-styles" ]; then
+  mkdir -p "$ABSOLUTE_PROJECT_PATH/.claude/output-styles"
+  cp "${CLAUDE_PLUGIN_ROOT}/output-styles/"*.md "$ABSOLUTE_PROJECT_PATH/.claude/output-styles/" 2>/dev/null || true
+  echo "Output styles installed."
+else
+  echo "Note: output-styles not found in plugin cache — skipping."
+fi
 ```
 
-This installs:
+This installs (when available):
 - `moku-planning.md` — Verbose, analytical formatting for planning phases
 - `moku-building.md` — Terse, progress-focused formatting for build phases
 
