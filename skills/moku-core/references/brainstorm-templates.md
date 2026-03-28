@@ -20,19 +20,24 @@ Saved to `.planning/context-{name}.md`. This is the primary output of `/moku:bra
 ## Summary
 {1–2 paragraph executive summary: what is being built, why, and the recommended approach}
 
-## Discovery Answers
+## Analysis Summary
 
-### Domain / Change Type
-{answer to domain novelty or change scope question}
+### Auto-Detected Context
+{project context discovered during Phase 1a: domain assessment, workspace state, existing plugins/code, dependency landscape, novelty evaluation}
 
-### Scope
-{answer to scope/capability count question}
+### Scope Assessment
+{estimated scope: capabilities, plugins, integrations — all auto-detected from DESCRIPTION and project analysis}
 
-### Integrations & Complexity
-{answer to external integrations and type complexity questions}
+### Architectural Decisions
+{decisions made during collaborative discussion in Phase 1b, with chosen approach, rejected alternatives, and rationale. If 0 decisions were needed: "No architectural decisions required — context was clear from analysis."}
 
-### Constraints
-{answer to timeline/quality/breaking-change question}
+## Migration Source (migrate only — omit for other categories)
+- Path: {MIGRATE_PATH}
+- Tech stack: {framework, runtime, build tool, test framework}
+- Architecture: {detected pattern}
+- Size: {file count, ~LOC}
+- State patterns: {detected patterns}
+- Key challenges: {obstacles for Moku migration}
 
 ## Research Findings
 
@@ -120,7 +125,8 @@ The context file maps to plan-verb-create.md's steering inputs:
 | Context File Section | Steering Equivalent |
 |---|---|
 | `## Explicit Non-Goals` | `## Boundaries (NOT in scope)` |
-| `## Discovery Answers` → scope/audience | `## Primary User` |
+| `## Analysis Summary` → scope assessment | `## Primary User` |
 | `### Suggested Plugins (Preliminary)` (top 3) | `## MVP Priorities` |
 | `### Ecosystem Landscape` (first reference) | `## Reference Point` |
 | `## Risks Requiring Spec Attention` (first) | `## Biggest Risk` |
+| `## Migration Source` → Path (migrate only) | `MIGRATE_PATH` (skips "Where is the code?" question in plan migrate) |

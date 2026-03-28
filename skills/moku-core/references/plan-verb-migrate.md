@@ -4,7 +4,12 @@
 
 ## Resolve Source
 
-MIGRATE_PATH is set from PATH_OR_LINK:
+**Check brainstorm context first:** If CONTEXT_FILE is set and contains a `## Migration Source` section with a non-empty `Path:` field:
+- Extract MIGRATE_PATH from the context file's `## Migration Source > Path` value
+- Log: "Migration source detected from brainstorm context: `{MIGRATE_PATH}`"
+- Skip the source question below — proceed directly to Prerequisites
+
+**Otherwise**, set MIGRATE_PATH from PATH_OR_LINK:
 - If PATH_OR_LINK was not provided, use `AskUserQuestion`:
   - Question: "Where is the code to migrate?"
   - Header: "Source"

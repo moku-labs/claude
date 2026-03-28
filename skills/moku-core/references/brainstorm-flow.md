@@ -4,123 +4,255 @@ Main flow coordinator for `/moku:brainstorm`. Receives context variables from th
 
 ---
 
-## Phase 1: Discovery Questions
+## Phase 1: Collaborative Analysis
 
-Load the appropriate question set based on CATEGORY, ask all questions using `AskUserQuestion`, and compute the complexity score.
+Replace passive surveys with active analysis. Auto-detect everything possible, present findings proactively, and only ask the user about genuine architectural decisions that require human judgment.
 
-### Question Set: `create`
+**Principle:** You are a senior colleague brainstorming together — analyze, propose, demonstrate with code, give opinions. Never ask a question you can answer yourself.
 
-**Q1 — Domain novelty** (Header: "Novelty", multiSelect: false)
-- Question: "How novel is the domain you're building in?"
-- Options:
-  1. "Well-understood domain" — description: "Established patterns exist (e.g., auth, routing, CRUD, CMS)" → score: 0
-  2. "Known domain, unusual twist" — description: "Standard domain but with non-standard constraints or requirements" → score: 1
-  3. "Domain new to Moku" — description: "No existing Moku framework covers this space" → score: 2
-  4. "Genuinely novel problem" — description: "Few existing solutions, significant design exploration needed" → score: 3
+### Phase 1a: Context Gathering & Auto-Analysis
 
-**Q2 — Capability count** (Header: "Scope", multiSelect: false)
-- Question: "How many distinct user-facing capabilities does this need?"
-- Options:
-  1. "1–3 focused capabilities" — description: "Small, well-scoped project" → score: 0
-  2. "4–6 capabilities" — description: "Moderate scope, clear boundaries" → score: 1
-  3. "7–10 capabilities" — description: "Broad scope, will need wave-based parallelism" → score: 2
-  4. "10+ or unsure" — description: "Large scope or still undefined — needs deep exploration" → score: 3
+**Goal:** Understand the problem space by reading code and context — not by asking the user questions an AI can answer.
 
-**Q3 — External integrations** (Header: "Integrations", multiSelect: true)
-- Question: "What external integrations or complex domains are involved?"
-- Options:
-  1. "Third-party APIs" — description: "REST/GraphQL/gRPC services"
-  2. "Database or storage" — description: "SQL, KV stores, file systems"
-  3. "Auth providers" — description: "OAuth, JWT, SAML, session management"
-  4. "Real-time / WebSocket" — description: "Bidirectional or streaming communication"
-- Score: count of selections (0–4), capped at 3
+#### For `create`:
 
-**Q4 — Quality bar** (Header: "Quality", multiSelect: false)
-- Question: "What's the quality bar for this project?"
-- Options:
-  1. "Prototype / POC" — description: "Exploring feasibility, disposable code is fine" → score: 0
-  2. "Internal tool" — description: "Quality matters but consumer surface is small" → score: 1
-  3. "Production use" — description: "External consumers, needs stability and docs" → score: 2
-  4. "Public API / framework" — description: "Must be stable, well-typed, and documented from day one" → score: 3
+1. **Parse DESCRIPTION** for:
+   - Domain keywords (routing, auth, caching, rendering, etc.)
+   - Capability mentions (count distinct capabilities → scope signal)
+   - Integration keywords (API, database, WebSocket, OAuth, etc. → integration signal)
+   - Quality indicators (prototype, production, public API, library → quality signal)
 
-### Question Set: `modify` / `feature`
+2. **Scan workspace context:**
+   - If `src/plugins/` exists: read plugin names, events, APIs — understand the existing ecosystem
+   - If `src/config.ts` exists: read Config and Events types — understand the framework shape
+   - If `.planning/` exists: check for prior context files or specs that relate to DESCRIPTION
+   - If `package.json` exists: read dependencies for existing integration patterns
 
-**Q1 — Change surface area** (Header: "Scope", multiSelect: false)
-- Question: "How broad is this change?"
-- Options:
-  1. "Single plugin, isolated change" — description: "Touches one plugin, no dependencies affected" → score: 0
-  2. "One plugin + its dependents" — description: "Primary change in one plugin, ripple effects in 1–2 others" → score: 1
-  3. "Cross-cutting, multiple plugins" — description: "Touches 3+ plugins or a shared interface" → score: 2
-  4. "Architecture-level change" — description: "New patterns, tiers, or structural changes across the framework" → score: 3
+3. **Assess domain novelty:**
+   - Use Grep/Glob to check if the workspace has plugins covering similar domains
+   - Check if DESCRIPTION maps to well-understood Moku patterns (CRUD, middleware, event bus) vs novel territory
 
-**Q2 — Breaking change risk** (Header: "Risk", multiSelect: false)
-- Question: "What's the breaking change risk?"
-- Options:
-  1. "No API changes" — description: "Internal refactor only, no consumer-facing changes" → score: 0
-  2. "Additive changes" — description: "New APIs/features, nothing removed or renamed" → score: 1
-  3. "Minor breaking changes" — description: "Some API signatures change, migration is straightforward" → score: 2
-  4. "Major breaking changes" — description: "Removes/renames existing consumer APIs, needs migration guide" → score: 3
+4. **Compute complexity signals** (internal — not shown as raw numbers to user):
+   - `domain_signal` (0–3): 0 = well-understood + existing precedent, 3 = genuinely novel
+   - `scope_signal` (0–3): 0 = 1–3 capabilities, 1 = 4–6, 2 = 7–10, 3 = 10+
+   - `integration_signal` (0–3): count of distinct integration types detected, capped at 3
+   - `risk_signal` (0–3): 0 = standard patterns, 1 = some unknowns, 2 = complex type challenges, 3 = architectural uncertainty
 
-**Q3 — Technical uncertainty** (Header: "Uncertainty", multiSelect: false)
-- Question: "How well-understood is the technical approach?"
-- Options:
-  1. "Clear path" — description: "Known patterns, just need to implement" → score: 0
-  2. "Some unknowns" — description: "General approach clear, specifics need research" → score: 1
-  3. "Significant unknowns" — description: "Multiple competing approaches, need to evaluate" → score: 2
-  4. "Exploratory" — description: "Not sure if it's even feasible within Moku's architecture" → score: 3
+#### For `modify` / `feature`:
 
-**Q4 — Test confidence** (Header: "Tests", multiSelect: false)
-- Question: "What's the test coverage situation?"
-- Options:
-  1. "Full coverage exists" — description: "Affected code has comprehensive tests" → score: 0
-  2. "Partial coverage" — description: "Some tests exist, will add more" → score: 1
-  3. "Minimal coverage" — description: "Few tests, changes may break unknown paths" → score: 2
-  4. "No tests" — description: "Affected areas have no test coverage" → score: 3
+1. **Read affected code:**
+   - Identify which plugins DESCRIPTION refers to (Grep for name matches in `src/plugins/`)
+   - Read each affected plugin: index.ts, types.ts, api.ts, handlers.ts
+   - Read plugin dependencies (which other plugins depend on the affected ones?)
+   - Read plugin events (which events might be affected?)
 
-### Question Set: `migrate`
+2. **Assess change scope:**
+   - Count affected plugins (1 = isolated, 2–3 = cross-cutting, 4+ = architectural)
+   - Check if public API signatures would change (breaking change risk)
+   - Check test coverage: do affected plugins have `__tests__/` directories?
 
-**Q1 — Source codebase size** (Header: "Size", multiSelect: false)
-- Question: "How large is the codebase being migrated?"
-- Options:
-  1. "Small (< 500 LOC)" — description: "Quick to analyze and map" → score: 0
-  2. "Medium (500–2000 LOC)" — description: "Manageable, clear module boundaries" → score: 1
-  3. "Large (2000–10000 LOC)" — description: "Significant analysis needed" → score: 2
-  4. "Very large (10000+ LOC)" — description: "Deep analysis required, likely incremental migration" → score: 3
+3. **Compute complexity signals:**
+   - `scope_signal` (0–3): based on affected plugin count and dependency depth
+   - `breaking_signal` (0–3): 0 = internal only, 1 = additive, 2 = minor breaks, 3 = major breaks
+   - `uncertainty_signal` (0–3): based on how well the DESCRIPTION maps to existing code patterns
+   - `coverage_signal` (0–3): 3 = no tests, 2 = minimal, 1 = partial, 0 = full coverage
 
-**Q2 — Architectural distance** (Header: "Gap", multiSelect: false)
-- Question: "How different is the source architecture from Moku's plugin model?"
-- Options:
-  1. "Already plugin-based" — description: "Event-driven or modular — close to Moku patterns" → score: 0
-  2. "Well-separated modules" — description: "Monolithic but clear module boundaries" → score: 1
-  3. "Tightly coupled" — description: "Monolithic, shared state, mixed concerns" → score: 2
-  4. "Framework-specific patterns" — description: "Next.js pages, Rails controllers, Django views — needs conceptual remapping" → score: 3
+#### For `migrate`:
 
-**Q3 — State patterns** (Header: "State", multiSelect: true)
-- Question: "What state management patterns does the source use?"
-- Options:
-  1. "Global singletons" — description: "module-level state, service locator"
-  2. "Shared mutable state" — description: "Objects passed by reference, mutated in place"
-  3. "State library patterns" — description: "Redux, Zustand, Pinia, MobX"
-  4. "Database as state" — description: "DB is primary state, application layer is thin"
-- Score: count of selections, capped at 3
+1. **Get source path** — this is the ONE question that genuinely requires user input:
 
-**Q4 — Timeline pressure** (Header: "Timeline", multiSelect: false)
-- Question: "What's the migration timeline?"
-- Options:
-  1. "No deadline" — description: "Exploratory, can take as long as needed" → score: 0
-  2. "Weeks" — description: "Need a working migration in 2–4 weeks" → score: 1
-  3. "Days" — description: "Urgent, need a plan quickly" → score: 2
-  4. "Parallel systems" — description: "Old and new must coexist during transition" → score: 3
+   Use `AskUserQuestion`:
+   - Question: "Where is the code to migrate?"
+   - Header: "Source"
+   - Options:
+     1. label: "Local path", description: "Enter a local directory path (e.g., ~/Projects/legacy-app)"
+     2. label: "GitHub URL", description: "Enter a GitHub repository URL to clone"
+   - multiSelect: false
+
+   Resolve the path:
+   - If URL: `git clone --depth 1 <URL> /tmp/moku-migrate-<hash>`, set MIGRATE_PATH to clone path
+   - If local: verify it exists and contains `package.json`
+   - Store MIGRATE_PATH for context file
+
+2. **Lightweight source scan** (NOT the full 5-step plan analysis — just enough for complexity scoring and architectural discussion):
+   - Read `package.json`: dependencies, scripts, entry points
+   - Count source files and LOC (use `find` + `wc -l`)
+   - Detect architecture pattern: look for directory structure (routes/, controllers/, middleware/, models/, etc.)
+   - Detect state patterns: grep for Redux/Zustand/MobX imports, global singletons, mutable module state
+   - Detect communication patterns: grep for EventEmitter, pub/sub, WebSocket, message bus patterns
+   - Identify tech stack: framework, runtime, build tool, test framework
+
+3. **Compute complexity signals:**
+   - `size_signal` (0–3): 0 = <500 LOC, 1 = 500–2000, 2 = 2000–10000, 3 = 10000+
+   - `gap_signal` (0–3): 0 = already plugin-based/modular, 1 = well-separated modules, 2 = tightly coupled, 3 = framework-specific patterns needing conceptual remapping
+   - `state_signal` (0–3): count of distinct state management patterns detected, capped at 3
+   - `risk_signal` (0–3): based on circular dependencies, god modules, side-effect imports detected
+
+### Phase 1b: Present Assessment & Collaborative Discussion
+
+**Goal:** Share your analysis like a colleague, then discuss only the decisions that genuinely need human judgment.
+
+#### Step 1: Present Preliminary Assessment
+
+Display a structured assessment to the user. This is NOT a question — it is you sharing your findings:
+
+```
+## Preliminary Assessment: {NAME}
+
+**Category:** {CATEGORY}
+**Domain:** {detected domain and context — e.g., "URL routing for a Moku web framework — established patterns exist (Express, Hono, Fastify), but Moku's plugin model requires a specific approach to route registration"}
+
+**Scope:** {estimated scope — e.g., "~4–5 plugins needed: router-core, route-matching, middleware, guards, history"}
+
+**Complexity signals:**
+- {signal 1 with explanation — e.g., "Route matching involves complex TypeScript generics for type-safe path parameters"}
+- {signal 2 — e.g., "Integration with browser History API adds platform-specific concerns"}
+- {signal 3 — e.g., "Existing Moku event system maps well to route change notifications"}
+
+**Initial approach direction:**
+{1–2 sentences — your preliminary recommendation based on analysis}
+```
+
+For `migrate`, also include the source scan results:
+```
+**Source analysis:**
+- Path: {MIGRATE_PATH}
+- Tech stack: {framework, runtime, build tool}
+- Size: {N files, ~N LOC}
+- Architecture: {detected pattern — e.g., "Express middleware chain with 4 route files"}
+- State: {detected patterns — e.g., "Module-level singletons for DB and cache connections"}
+- Key challenge: {biggest migration obstacle — e.g., "Tightly coupled auth middleware needs splitting into separate auth and session plugins"}
+```
+
+#### Step 2: Identify Architectural Decisions
+
+From your analysis, identify genuine architectural decisions — trade-offs where:
+1. There is no obviously correct answer
+2. The choice significantly affects the architecture
+3. The answer cannot be auto-detected from the project
+4. Different choices lead to meaningfully different code
+
+**What is NOT a genuine architectural decision (never ask these):**
+- "How large is your codebase?" — you already measured it
+- "What's your timeline?" — irrelevant to architecture
+- "What integrations do you need?" — you already detected them from DESCRIPTION
+- "What's your quality bar?" — doesn't affect architectural choices
+- "How novel is this domain?" — you already assessed it
+- "How many capabilities?" — you already counted from DESCRIPTION
+- Anything where one option is clearly superior for this specific project
+- Anything the AI can answer by reading the code or DESCRIPTION
+
+**If 0 decisions are identified:** This is fine and expected for well-understood domains or clear descriptions. Log: "No architectural ambiguities detected — the approach direction is clear from context." Skip directly to saving the analysis.
+
+#### Step 3: Discuss Each Decision
+
+For each identified decision, present it as a collaborative discussion. Every decision MUST include all of these elements — no exceptions:
+
+1. **The trade-off framed clearly** — what is the tension?
+2. **2–3 concrete approaches with TypeScript code examples** — show how each would look in Moku plugin code (5–15 lines each)
+3. **Your recommendation with reasoning** — take a clear position, do not be neutral
+4. **Concerns about each alternative** — what could go wrong with each choice?
+
+**Format:** Present the full discussion context as a text message, then follow with `AskUserQuestion`:
+
+````markdown
+### Decision {N}: {title}
+
+{1–2 sentences framing the trade-off}
+
+**Option A: {name} (Recommended)**
+```typescript
+// Concrete code showing this approach in Moku context
+{code example — 5–15 lines showing the API, usage pattern, or architecture}
+```
+- Why: {concrete benefit for THIS project}
+- Concern: {specific risk or limitation}
+
+**Option B: {name}**
+```typescript
+// Same scenario, different approach
+{code example}
+```
+- Why: {when this would be the better choice}
+- Concern: {specific risk or limitation}
+
+**I recommend Option A** because {specific reasoning tied to THIS project's context, not generic advice}. If we go with Option B, the main risk is {consequence}.
+````
+
+Then use `AskUserQuestion`:
+- Question: "{decision title}"
+- Header: "Decision {N}"
+- Options: one per approach, the recommended one first and marked "(Recommended)". Add a final option: "Neither — let me explain" with description "I have a different approach in mind"
+- multiSelect: false
+
+If user selects "Neither — let me explain": incorporate their approach as the chosen direction.
+
+**Examples of GOOD decisions to surface:**
+
+For a `create` router framework:
+- "Should route handlers receive the full Moku context or a scoped subset?" (affects plugin boundary design)
+- "File-based routing vs config-based routing vs code-based registration?" (affects developer experience fundamentally)
+
+For a `modify` adding caching:
+- "Cache invalidation: TTL-based, event-driven, or manual?" (each produces different plugin dependency shapes)
+- "Should the cache plugin own its storage or delegate to a storage plugin?" (affects coupling)
+
+For a `migrate` Express app:
+- "Should Express middleware be mapped 1:1 to Moku plugins, or consolidated by domain?" (affects plugin count and granularity)
+- "How should the shared request context object be decomposed into plugin state?" (affects state isolation)
+
+### Save Analysis
+
+After Phase 1 completes, save the full analysis to `.planning/brainstorm-{NAME}-analysis.md`:
+
+```markdown
+# Brainstorm Analysis: {NAME}
+
+## Category
+{CATEGORY}
+
+## Description
+{DESCRIPTION}
+
+## Auto-Detected Context
+{summary of Phase 1a findings — domain, workspace context, novelty assessment}
+
+## Complexity Signals
+- Signal 1: {name} — {description} ({score}/3)
+- Signal 2: {name} — {description} ({score}/3)
+- Signal 3: {name} — {description} ({score}/3)
+- Signal 4: {name} — {description} ({score}/3)
+- Raw sum: {N}/12
+
+## Architectural Decisions
+{for each decision made in Phase 1b:}
+### {Decision title}
+- Chosen: {option name}
+- Rejected: {alternative names}
+- Rationale: {why, including user's input}
+- Code direction: {brief summary of what the chosen approach means for implementation}
+
+{if 0 decisions: "No architectural decisions required — context was clear from analysis."}
+
+## Migration Source (migrate only)
+- Path: {MIGRATE_PATH}
+- Tech stack: {framework, runtime, build tool, test framework}
+- Architecture: {detected pattern}
+- Size: {file count, LOC}
+- State patterns: {detected patterns}
+- Communication patterns: {detected patterns}
+- Key challenges: {obstacles for Moku migration}
+```
 
 ---
 
 ## Phase 2: Complexity Scoring
 
-After all questions are answered, compute the complexity score:
+The complexity score is computed from the auto-detected signals in Phase 1a — the user is NOT asked to self-report complexity.
 
 ```
-raw_sum = sum of all question scores
-raw_max = 3 * question_count  (always 4 questions × 3 max = 12)
+raw_sum = sum of all 4 complexity signal scores (each 0–3)
+raw_max = 12
 COMPLEXITY_SCORE = round((raw_sum / raw_max) * 9)
 ```
 
@@ -132,7 +264,7 @@ Apply DEPTH_FLAG override:
   - Score 4–6: EFFECTIVE_DEPTH = `standard`
   - Score 7–9: EFFECTIVE_DEPTH = `deep`
 
-Report to user: "Complexity score: {COMPLEXITY_SCORE}/9 → **{EFFECTIVE_DEPTH}** mode."
+Report to user: "Complexity score: {COMPLEXITY_SCORE}/9 → **{EFFECTIVE_DEPTH}** mode. {cite the specific signals that drove the score — e.g., 'High domain novelty and multiple integration points pushed this into deep mode.'}."
 
 Briefly explain the depth:
 - `quick`: "Quick research pass, 1 debate round. Good for well-understood domains."
@@ -155,8 +287,6 @@ Set EFFECTIVE_DEPTH based on user's choice.
 
 ## Phase 3: Research
 
-Save discovery answers to `.planning/brainstorm-{NAME}-answers.md` (a flat markdown file with Q&A pairs — scratch file, cleaned up after context assembly).
-
 ### Agent Configuration by Depth
 
 | Depth | Researcher count | Research focuses |
@@ -178,7 +308,7 @@ Each researcher prompt must include:
 1. The FOCUS parameter (ecosystem / technical-patterns / category-specific)
 2. The DESCRIPTION
 3. The CATEGORY
-4. The discovery answers (from `.planning/brainstorm-{NAME}-answers.md`)
+4. The analysis summary (from `.planning/brainstorm-{NAME}-analysis.md`) — this provides richer context including auto-detected signals and architectural decisions made with the user
 5. The output path: `.planning/brainstorm-{NAME}-research-{focus-slug}.md`
 
 ### Merging Research

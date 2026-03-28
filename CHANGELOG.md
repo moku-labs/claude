@@ -2,6 +2,22 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.4 (2026-03-28)
+
+### Changed
+- **Brainstorm command rewrite** — collaborative analysis replaces passive survey
+  - Phase 1 now auto-detects complexity from project context (code, DESCRIPTION, workspace) instead of asking 4 fixed-option scoring questions
+  - Architectural decisions presented with TypeScript code examples, clear recommendations, and concerns about each alternative
+  - 0 questions asked when context is clear — no more forcing users through irrelevant surveys
+  - For `migrate` category: source path gathered during brainstorm, carried through context file to plan command (skips "Where is the code?" re-ask)
+  - Scratch file renamed from `brainstorm-{NAME}-answers.md` to `brainstorm-{NAME}-analysis.md` to reflect new content
+  - Context file template: "Discovery Answers" section replaced with "Analysis Summary" (auto-detected context, scope assessment, architectural decisions)
+  - Context file template: added `## Migration Source` section for migrate category (path, tech stack, architecture, LOC, patterns)
+- **Init command** — added `/moku:brainstorm` as suggested next step for Framework and Consumer App projects (between init and plan)
+- **Plan migrate verb** — checks context file for `## Migration Source > Path` before asking user for source location
+- **Next command** — fixed brainstorm-in-progress detection glob pattern (`answers` → `analysis`)
+- Version bumped to 0.25.4 in plugin.json and marketplace.json
+
 ## 0.25.3 (2026-03-24)
 
 ### Fixed

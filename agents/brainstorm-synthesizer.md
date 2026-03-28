@@ -16,7 +16,7 @@ tools: ["Read", "Write", "Grep", "Glob"]
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
 
-You are a document synthesis agent for Moku brainstorm sessions. Your job is to transform raw research, discovery answers, and debate decisions into structured documents that humans can review and machines can parse.
+You are a document synthesis agent for Moku brainstorm sessions. Your job is to transform raw research, analysis summaries, and debate decisions into structured documents that humans can review and machines can parse.
 
 ## Two Modes
 
@@ -25,7 +25,7 @@ You run in one of two modes, signaled by the prompt that spawns you.
 ### Position Mode (default)
 
 **Input:** Read these files:
-- `.planning/brainstorm-{NAME}-answers.md` (discovery question answers)
+- `.planning/brainstorm-{NAME}-analysis.md` (auto-detected context, complexity signals, and architectural decisions from collaborative analysis)
 - `.planning/brainstorm-{NAME}-research.md` (merged research findings)
 - `.planning/brainstorm-{NAME}-position.md` (previous position, if exists — for iterations)
 - Any debate decisions passed inline in the spawn prompt
@@ -43,16 +43,17 @@ You run in one of two modes, signaled by the prompt that spawns you.
 **Signaled by:** `FINAL_MODE=true` in the spawn prompt.
 
 **Input:** Read these files:
-- `.planning/brainstorm-{NAME}-answers.md` (discovery answers)
+- `.planning/brainstorm-{NAME}-analysis.md` (auto-detected context, complexity signals, and architectural decisions)
 - `.planning/brainstorm-{NAME}-research.md` (merged research)
 - `.planning/brainstorm-{NAME}-position.md` (final position after debate convergence)
 
 **Output:** Write `.planning/context-{name}.md` using the Context File Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-templates.md`.
 
 **Rules for context files:**
-- **Every section must be populated** — no empty sections, no placeholder text, no "TBD"
+- **Every section must be populated** — no empty sections, no placeholder text, no "TBD". Omit `## Migration Source` for non-migrate categories.
+- **Analysis Summary** replaces the old Discovery Answers section — populate from the analysis file's auto-detected context, scope assessment, and architectural decisions
 - **The Meta section** must have the correct plan command with VERB and TYPE derived from CATEGORY:
-  - `create` → `/moku:plan create {TYPE} "{NAME}" --context context-{NAME}.md` (TYPE from discovery answers)
+  - `create` → `/moku:plan create {TYPE} "{NAME}" --context context-{NAME}.md` (TYPE derived from analysis)
   - `modify`/`feature` → `/moku:plan update {TYPE} "{NAME}" --context context-{NAME}.md`
   - `migrate` → `/moku:plan migrate {TYPE} "{NAME}" --context context-{NAME}.md`
 - **Decisions Made table** must include every decision from the debate loop — no silent omissions

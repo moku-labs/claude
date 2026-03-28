@@ -1,5 +1,5 @@
 ---
-description: Brainstorm a Moku project idea — structured discovery, adaptive research, and debate-driven context generation before planning
+description: Brainstorm a Moku project idea — collaborative analysis, adaptive research, and debate-driven context generation before planning
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: [create|modify|migrate|feature] {name} "description" [--deep|--quick]
 disable-model-invocation: true
@@ -11,7 +11,7 @@ disable-model-invocation: true
 Explore and contextualize a Moku project idea before planning. The output is a `.planning/context-{name}.md` file consumed by `/moku:plan ... --context`.
 
 This command runs an adaptive workflow:
-1. **Discovery questions** — 4 targeted questions that score project complexity
+1. **Collaborative analysis** — auto-detect complexity from project context, discuss only genuine architectural decisions with code examples and recommendations
 2. **Research** — 1–3 parallel researcher agents based on detected depth
 3. **Debate** — Present → Challenge → Decide loop to stress-test the approach
 4. **Context file** — structured output for the plan command
@@ -89,9 +89,9 @@ If `.planning/context-{NAME}.md` already exists, use `AskUserQuestion`:
 - multiSelect: false
 
 If "Resume": check if scratch files exist (`.planning/brainstorm-{NAME}-*.md`).
-  - If `.planning/brainstorm-{NAME}-answers.md` exists: re-run Phase 2 (Complexity Scoring) from the saved answers to restore EFFECTIVE_DEPTH, then check for research files.
+  - If `.planning/brainstorm-{NAME}-analysis.md` exists: re-run Phase 2 (Complexity Scoring) from the saved analysis to restore EFFECTIVE_DEPTH, then check for research files.
   - If research files also exist (`.planning/brainstorm-{NAME}-research.md`): skip Phase 3, go straight to the debate loop.
-  - If no research files: skip Phase 1 (discovery questions already answered), re-run Phase 3 (research) with restored EFFECTIVE_DEPTH.
+  - If no research files: skip Phase 1 (analysis already done), re-run Phase 3 (research) with restored EFFECTIVE_DEPTH.
   - If no scratch files at all: run from Phase 1.
 If "Start fresh": delete `.planning/context-{NAME}.md` and all `.planning/brainstorm-{NAME}-*.md` scratch files.
 If "Cancel": stop.
@@ -112,7 +112,9 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG.
 - All scratch files use the `.planning/brainstorm-{NAME}-*` prefix for clean isolation
 - The final output is always `.planning/context-{NAME}.md` — one file, standardized schema
 - Spawn researcher agents in parallel where depth allows — use multiple Agent tool calls in the same response
-- Each `AskUserQuestion` presents contextual options generated from the DESCRIPTION and CATEGORY, not hardcoded generic options
+- Auto-detect complexity from project context — never ask the user to self-report what the AI can observe
+- Every architectural question MUST include TypeScript code examples showing each approach, a clear recommendation with reasoning, and concerns about each alternative. Be an opinionated colleague, not a passive interviewer
+- Ask 0 questions if the context is clear — more questions is not better, only genuine architectural trade-offs deserve discussion
 - The debate loop converges when the user is satisfied OR max iterations reached — never force iterations
 - Context file must be complete enough that `/moku:plan` can skip its steering and discussion phases entirely
 - After writing the context file, always print a closing next-step suggestion:

@@ -18,7 +18,7 @@ If CONTEXT_FILE is not `(none)`:
 3. **Skip the Steering Pre-Phase entirely.** The brainstorm session has already captured equivalent information. Log: "Brainstorm context detected at `{CONTEXT_FILE}`. Skipping Steering Pre-Phase."
 4. Synthesize a `steering.md` from the context file so downstream stages find their expected input:
    - `## Boundaries (NOT in scope)` ← from CONTEXT_NON_GOALS
-   - `## Primary User` ← from `## Discovery Answers` section (scope/audience answer)
+   - `## Primary User` ← from `## Analysis Summary` section (scope assessment)
    - `## MVP Priorities` ← from CONTEXT_PLUGINS_HINT (top 3 if available) or first 3 key capabilities from CONTEXT_SUMMARY
    - `## Reference Point` ← from `## Research Findings > Ecosystem Landscape` (first reference project mentioned)
    - `## Biggest Risk` ← first item from CONTEXT_RISKS

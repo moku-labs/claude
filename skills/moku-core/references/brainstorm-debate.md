@@ -20,7 +20,7 @@ Spawn `brainstorm-synthesizer` agent in **position mode** to produce the initial
 
 Prompt must include:
 - `CATEGORY`, `NAME`, `DESCRIPTION`
-- Path to answers: `.planning/brainstorm-{NAME}-answers.md`
+- Path to analysis: `.planning/brainstorm-{NAME}-analysis.md`
 - Path to research: `.planning/brainstorm-{NAME}-research.md`
 - Output path: `.planning/brainstorm-{NAME}-position.md`
 - Iteration: 1
@@ -70,7 +70,7 @@ Prompt must include:
 - `NAME`, iteration number
 - Path to position: `.planning/brainstorm-{NAME}-position.md`
 - Path to research: `.planning/brainstorm-{NAME}-research.md`
-- Path to answers: `.planning/brainstorm-{NAME}-answers.md`
+- Path to analysis: `.planning/brainstorm-{NAME}-analysis.md`
 
 After challenger completes, read its output. Present the challenges to the user using `AskUserQuestion`:
 
@@ -119,7 +119,7 @@ For each challenge the user selected, ask a focused resolution question using `A
 After all selected challenges are resolved, collect the decisions and spawn `brainstorm-synthesizer` in **position mode** with the new decisions:
 
 Prompt must include:
-- All previous context (answers, research)
+- All previous context (analysis, research)
 - Path to current position: `.planning/brainstorm-{NAME}-position.md`
 - The list of decisions made this round (challenge text + user's chosen resolution + rationale)
 - Instruction: "Update the position document to reflect these decisions. Preserve decisions from prior iterations."
@@ -143,7 +143,7 @@ After the loop exits, spawn `brainstorm-synthesizer` in **final mode**.
 Prompt must include:
 - `FINAL_MODE=true`
 - `CATEGORY`, `NAME`, `DESCRIPTION`, `EFFECTIVE_DEPTH`, `COMPLEXITY_SCORE`
-- Path to answers: `.planning/brainstorm-{NAME}-answers.md`
+- Path to analysis: `.planning/brainstorm-{NAME}-analysis.md`
 - Path to research: `.planning/brainstorm-{NAME}-research.md`
 - Path to final position: `.planning/brainstorm-{NAME}-position.md`
 - Template reference: `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-templates.md`
@@ -160,7 +160,7 @@ After synthesizer completes with PASS verdict, verify the file exists and has co
 Read `.planning/context-{NAME}.md` and present a summary to the user.
 
 Determine the correct plan command based on CATEGORY:
-- `create` → `/moku:plan create {TYPE} "{NAME}" --context context-{NAME}.md` (TYPE determined from discovery answers — framework, app, or plugin)
+- `create` → `/moku:plan create {TYPE} "{NAME}" --context context-{NAME}.md` (TYPE derived from analysis — framework, app, or plugin)
 - `modify`/`feature` → `/moku:plan update {TYPE} "{NAME}" --context context-{NAME}.md`
 - `migrate` → `/moku:plan migrate {TYPE} "{NAME}" --context context-{NAME}.md`
 
@@ -186,7 +186,7 @@ If user chooses "Refine further": do NOT clean up scratch files. Set `iteration 
 **Runs only after the user chooses "Proceed to planning" or "Review context file" in the Final User Gate.** Never runs if "Refine further" is chosen.
 
 Delete scratch files:
-- `.planning/brainstorm-{NAME}-answers.md`
+- `.planning/brainstorm-{NAME}-analysis.md`
 - `.planning/brainstorm-{NAME}-research.md`
 - `.planning/brainstorm-{NAME}-research-*.md` (per-focus research files)
 - `.planning/brainstorm-{NAME}-position.md`

@@ -278,13 +278,14 @@ Tell the user what was created, show the verification checklist results, and pro
 
 **Framework:**
 - Edit `src/config.ts` to define Config and Events types
-- Create plugins in `src/plugins/`
-- Use `/moku:plan framework` to plan a complete framework
-- Use `/moku:build plugin` to create individual plugins
+- Use `/moku:brainstorm create framework "description"` to explore architecture decisions before planning (optional — recommended for novel or complex domains)
+- Use `/moku:plan create framework` to plan a complete framework
+- Use `/moku:build` to build from a plan
 
 **Consumer App:**
-- Use `/moku:plan app` to plan the application
-- Use `/moku:build app` to build from a plan
+- Use `/moku:brainstorm create app "description"` to explore architecture decisions before planning (optional)
+- Use `/moku:plan create app` to plan the application
+- Use `/moku:build` to build from a plan
 
 **Tools/Library:**
 - Start adding source files to `src/`
