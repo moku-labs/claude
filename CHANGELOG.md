@@ -2,6 +2,17 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.6 (2026-03-28)
+
+### Added
+- **Learning maintenance/refresh** — Phase 1a auto-validates learnings against current codebase before surfacing them. Stale entries (referencing deleted plugins/files) are moved to a `## Stale` section instead of deleted, preserving data for manual review.
+- **Hook-based brainstorm write enforcement** — new `brainstorm-guard.sh` hook blocks Write/Edit outside `.planning/` during active brainstorm sessions. Uses `.brainstorm-active` marker file with 4-hour stale timeout. SessionEnd hook auto-cleans marker on session close.
+- **Proactive ideation** — "Explore fresh directions" option in debate Turn 2. Spawns 2 researcher agents with Inversion and Adjacent Possible lenses to generate out-of-box ideas with TypeScript code sketches. Runs at most once per session (checked via ideation file existence).
+- Brainstorm scratch files (`brainstorm-*.md`, `context-*.md`, `learnings.md`, `.brainstorm-active`, `steering.md`, `deferred-findings.md`, `dismissed-findings.md`) added to `approve-planning-writes.sh` auto-approve list
+
+### Changed
+- Version bumped to 0.25.6 in plugin.json and marketplace.json
+
 ## 0.25.5 (2026-03-28)
 
 ### Added

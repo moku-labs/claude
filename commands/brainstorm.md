@@ -29,6 +29,7 @@ This command runs an adaptive workflow:
 **Ordered startup sequence:**
 
 1. **Filesystem guard:** `mkdir -p .planning/`
+   **Brainstorm session marker:** `touch .planning/.brainstorm-active` — this activates the brainstorm-guard hook which prevents writes outside `.planning/`.
 
 2. **Empty-arguments check:** If `$ARGUMENTS` is empty, show usage and stop:
    "Usage: `/moku:brainstorm [create|modify|migrate|feature] {name} \"description\"  [--deep|--quick]`"
@@ -94,7 +95,7 @@ If "Resume": check if scratch files exist (`.planning/brainstorm-{NAME}-*.md`).
   - If no research files: skip Phase 1 (analysis already done), re-run Phase 3 (research) with restored EFFECTIVE_DEPTH.
   - If no scratch files at all: run from Phase 1.
 If "Start fresh": delete `.planning/context-{NAME}.md` and all `.planning/brainstorm-{NAME}-*.md` scratch files.
-If "Cancel": stop.
+If "Cancel": delete `.planning/.brainstorm-active` and stop.
 
 ---
 

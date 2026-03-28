@@ -90,10 +90,60 @@ Present the challenges to the user using `AskUserQuestion`:
   1. label: "{short title of challenge 1}", description: "{challenger's reasoning — 1 sentence}"
   2. label: "{short title of challenge 2}", description: "{reasoning}"
   3. label: "{short title of challenge 3}", description: "{reasoning}"
-  4. label: "None — position looks good", description: "Skip remaining challenges, lock in the current approach"
+  4. label: "Explore fresh directions", description: "Break out of current framing — scan for unexpected angles, adjacent possibilities, and out-of-box ideas"
+  5. label: "None — position looks good", description: "Skip remaining challenges, lock in the current approach"
 - multiSelect: true
 
 **If user selects "None — position looks good"**: set CONVERGED=true, skip Turn 3, exit loop.
+
+**If user selects "Explore fresh directions"**: run the Proactive Ideation step (see below) before Turn 3. The ideation results are presented as additional approaches. Any challenges the user also selected are resolved in Turn 3 alongside the ideation output.
+
+### Proactive Ideation
+
+Triggers when the user selects "Explore fresh directions" during Turn 2. This breaks out of the current DESCRIPTION framing to find unexpected angles.
+
+**Step 1: Spawn ideation agents.** Spawn 2 `brainstorm-researcher` agents **in parallel** with ideation-specific lenses:
+
+| Agent | Lens | Guiding prompt |
+|---|---|---|
+| 1 | **Inversion** | "What if we did the opposite of the current approach? What if the main constraint was inverted? What would this look like if we optimized for the OPPOSITE quality (e.g., simplicity instead of flexibility, speed instead of correctness)?" |
+| 2 | **Adjacent Possible** | "What recently became feasible that changes the solution space? What patterns from DIFFERENT domains (games, compilers, databases, ML pipelines) solve a structurally similar problem? What would a solution look like if this wasn't a {CATEGORY} problem at all?" |
+
+Each agent prompt must also include:
+- The current position document (`.planning/brainstorm-{NAME}-position.md`)
+- The DESCRIPTION
+- Instruction: "Generate 3–5 fresh ideas that break out of the current framing. Each idea must include: a one-line description, why it's worth considering, and a brief TypeScript code sketch (3–10 lines) showing the API or pattern. Be bold — the value is in the unexpected."
+- Output path: `.planning/brainstorm-{NAME}-ideation-{lens}.md`
+
+**Step 2: Present ideas.** After both agents complete, read their outputs and present a combined list to the user:
+
+```
+## Fresh Directions
+
+### From Inversion Lens
+1. **{idea}** — {why it's worth considering}
+   ```typescript
+   {code sketch}
+   ```
+2. ...
+
+### From Adjacent Possible Lens
+1. **{idea}** — {why it's worth considering}
+   ```typescript
+   {code sketch}
+   ```
+2. ...
+```
+
+Then use `AskUserQuestion`:
+- Question: "Which fresh ideas should influence the approach?"
+- Header: "Ideation"
+- Options: one per idea, plus "None — stay the course"
+- multiSelect: true
+
+**Step 3: Incorporate.** Selected ideas are passed to the synthesizer in the next position update as additional input: "Incorporate these fresh ideas into the position: {list}. Adjust the approach direction if they reveal a better path." The ideation scratch files (`.planning/brainstorm-{NAME}-ideation-*.md`) are added to the cleanup list.
+
+**Ideation runs at most once per brainstorm session.** Before offering the "Explore fresh directions" option in Turn 2, check if `.planning/brainstorm-{NAME}-ideation-*.md` files already exist. If they do, ideation has already run — replace the option with: label: "Fresh directions (already explored)", description: "Ideas from iteration {N} are incorporated in the current position". Make this option non-functional (if selected, show the previous ideation summary instead of re-spawning agents).
 
 ### Turn 3 — Decide
 
@@ -200,8 +250,10 @@ Delete scratch files:
 - `.planning/brainstorm-{NAME}-research.md`
 - `.planning/brainstorm-{NAME}-research-*.md` (per-focus research files)
 - `.planning/brainstorm-{NAME}-position.md`
+- `.planning/brainstorm-{NAME}-ideation-*.md` (ideation scratch files, if any)
+- `.planning/.brainstorm-active` (session marker — deactivates the brainstorm-guard hook)
 
-Keep only the final output: `.planning/context-{NAME}.md`.
+Keep only the final output: `.planning/context-{NAME}.md` and `.planning/learnings.md`.
 
 ## Compound Learning Extraction
 

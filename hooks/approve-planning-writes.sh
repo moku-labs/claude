@@ -52,6 +52,18 @@ case "$REL_PATH" in
     ;;
   .planning/diagnostics.log|*/.planning/diagnostics.log)
     ;;
+  .planning/brainstorm-*.md|*/.planning/brainstorm-*.md)
+    ;;
+  .planning/context-*.md|*/.planning/context-*.md)
+    ;;
+  .planning/learnings.md|*/.planning/learnings.md)
+    ;;
+  .planning/.brainstorm-active|*/.planning/.brainstorm-active)
+    ;;
+  .planning/steering.md|*/.planning/steering.md)
+    ;;
+  .planning/deferred-findings.md|.planning/dismissed-findings.md|*/.planning/deferred-findings.md|*/.planning/dismissed-findings.md)
+    ;;
   *)
     # Not a known .planning/ file — don't auto-approve, let normal flow handle it
     exit 0

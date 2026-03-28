@@ -14,13 +14,21 @@ Replace passive surveys with active analysis. Auto-detect everything possible, p
 
 **Goal:** Understand the problem space by reading code and context — not by asking the user questions an AI can answer.
 
-#### Prior Learnings (all categories)
+#### Prior Learnings with Auto-Refresh (all categories)
 
 Before category-specific analysis, check for `.planning/learnings.md`. If it exists:
-1. Read it and identify entries relevant to DESCRIPTION or CATEGORY
-2. Surface relevant learnings in the Preliminary Assessment (Step 1 of Phase 1b) under a **Prior learnings** section
-3. Use past learnings to inform complexity signals — e.g., if a past brainstorm learned "event bus O(n²) at 15+ plugins", factor that into risk_signal for similar domains
-4. If no relevant learnings found, skip silently — do not mention the learnings system to the user
+
+**Step 1 — Refresh:** Validate each entry against the current codebase before using it:
+- If an entry references a specific plugin name (e.g., "the router plugin..."): Glob for `src/plugins/{name}/`. If the plugin no longer exists, the entry may be stale.
+- If an entry references a specific file or pattern (e.g., "in config.ts..."): Glob/Grep to verify it still exists. If not found, the entry may be stale.
+- If an entry is domain-level knowledge with no file/plugin references (e.g., "event bus O(n²) at 15+ plugins"): keep it — domain knowledge doesn't go stale.
+- **Never auto-delete learnings.** Instead, move stale entries to a `## Stale` section at the bottom of `.planning/learnings.md` with a note: `*(stale: src/plugins/{name}/ not found — {date})*`. This preserves information for manual review and avoids permanent data loss from incorrect staleness detection.
+- If entries were moved, log: "Refreshed learnings: moved {N} entries to Stale section (referenced plugins/files no longer exist)."
+
+**Step 2 — Surface:** From the validated entries, identify those relevant to DESCRIPTION or CATEGORY:
+1. Surface relevant learnings in the Preliminary Assessment (Step 1 of Phase 1b) under a **Prior learnings** section
+2. Use past learnings to inform complexity signals — e.g., if a past brainstorm learned "event bus O(n²) at 15+ plugins", factor that into risk_signal for similar domains
+3. If no relevant learnings found, skip silently — do not mention the learnings system to the user
 
 #### For `create`:
 

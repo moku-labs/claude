@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # SessionEnd hook: clean up temporary files and log session end.
-# Only acts if an active planning state exists.
+
+# Clean up brainstorm session marker if present (prevents stale guard between sessions)
+rm -f .planning/.brainstorm-active 2>/dev/null
 
 [ -f .planning/STATE.md ] || exit 0
 
