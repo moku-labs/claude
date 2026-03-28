@@ -2,6 +2,23 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.7 (2026-03-28)
+
+### Fixed
+- **AskUserQuestion text-blocking** — all architectural decisions and challenge presentations now use two-turn pattern: code examples and reasoning in one response, AskUserQuestion in the NEXT response. Prevents dialog overlay from obscuring the content users need to read.
+- **Broken heading hierarchy** — replaced all `##` headings in brainstorm output with `**BOLD CAPS**` formatting. Terminal renders all heading levels identically; bold-caps creates actual visual hierarchy.
+- **Stale label references** — "Explore fresh directions" handler matched old label, Final User Gate handlers referenced old "Proceed to planning" / "Review context file" labels. All updated to match tightened labels.
+- **Duplicate "Other" option** — removed manual "Neither — let me explain" and "None — stay the course" options. System auto-appends free-text "Other" — manual versions wasted an option slot.
+
+### Changed
+- **AskUserQuestion descriptions made self-contained** — each option description now includes the full trade-off summary so users can decide even if preceding text scrolled away
+- **Labels tightened** to 2-5 words: "Resume (Recommended)", "Accept position", "Fresh directions", "Plan (Recommended)", "Review first"
+- **Progress markers** added to each major phase: `Brainstorm: {name} | Phase N/4: {phase} | {depth} mode`
+- **`---` horizontal rules** separate information sections from decision sections
+- **Key-value metadata** format (`**Category:** create | **Depth:** standard`) replaces bullet lists for metadata
+- **moku-planning output style** updated with terminal rendering rules: reliable vs broken GFM features, two-turn AskUserQuestion pattern, formatting hierarchy
+- Version bumped to 0.25.7 in plugin.json and marketplace.json
+
 ## 0.25.6 (2026-03-28)
 
 ### Added

@@ -43,24 +43,32 @@ while iteration <= MAX_ITERATIONS:
 
 ### Turn 1 — Present
 
-Read `.planning/brainstorm-{NAME}-position.md` and display to the user as a formatted summary:
+Read `.planning/brainstorm-{NAME}-position.md` and display to the user as a formatted summary. Use `**BOLD CAPS**` for section titles (NOT `##` headings — they render without hierarchy in the terminal):
 
 ```
-## Brainstorm Position — Iteration {iteration}/{MAX_ITERATIONS}
+Brainstorm: {NAME} | Phase 4/4: Debate | Iteration {iteration}/{MAX_ITERATIONS} | {EFFECTIVE_DEPTH} mode
 
-**Proposed approach:** {from position doc}
+**BRAINSTORM POSITION — Iteration {iteration}/{MAX_ITERATIONS}**
 
-**Key assumptions:**
-{bulleted list from position doc}
+**Proposed approach:** {from position doc — keep this to 1–2 sentences}
 
-**Identified risks:**
-{bulleted list from position doc}
+---
 
-**Open questions:**
-{bulleted list from position doc}
+**Key assumptions**
+1. {assumption 1}
+2. {assumption 2}
+
+**Identified risks**
+- {risk 1}
+- {risk 2}
+
+**Open questions**
+- {question 1}
 ```
 
-If this is iteration > 1, also show: "Changes from previous iteration: {summary of what changed based on last round's decisions}."
+Use numbered lists for assumptions (users reference them by number in decisions) and bullet lists for risks/questions.
+
+If this is iteration > 1, also show after the progress marker: "Changes from previous iteration: {summary of what changed based on last round's decisions}."
 
 ### Turn 2 — Challenge
 
@@ -82,25 +90,43 @@ If EITHER deficiency is detected, construct a single re-spawn prompt addressing 
 
 Re-spawn at most ONCE — if the second attempt still produces weak challenges, proceed with what you have. Do not loop.
 
-Present the challenges to the user using `AskUserQuestion`:
+Present the challenge findings as text output first, then call `AskUserQuestion` in the NEXT response turn (do NOT include AskUserQuestion in the same response as the challenge findings — the dialog overlay obscures the text above it):
 
-- Question: "The challenger raised these concerns. Which do you want to address?"
+**Text output (Turn 2a):** Display the full challenge report with details:
+```
+**CHALLENGER FINDINGS — Iteration {iteration}**
+
+**1. {challenge title}** ({severity})
+{full reasoning — cite specific position text, explain the concern, propose mitigation}
+
+**2. {challenge title}** ({severity})
+{full reasoning}
+
+**3. {challenge title}** ({severity})
+{full reasoning}
+
+---
+```
+
+**AskUserQuestion (Turn 2b — next response):**
+
+- Question: "Which challenges do you want to address?"
 - Header: "Challenges"
-- Options: Generate one option per challenge finding:
-  1. label: "{short title of challenge 1}", description: "{challenger's reasoning — 1 sentence}"
-  2. label: "{short title of challenge 2}", description: "{reasoning}"
-  3. label: "{short title of challenge 3}", description: "{reasoning}"
-  4. label: "Explore fresh directions", description: "Break out of current framing — scan for unexpected angles, adjacent possibilities, and out-of-box ideas"
-  5. label: "None — position looks good", description: "Skip remaining challenges, lock in the current approach"
+- Options: Generate one option per challenge finding. Each `description` must be **self-contained** — include the problem AND the proposed mitigation so the user can decide without scrolling back.
+  1. label: "{2-5 word title}", description: "{problem summary} — {mitigation direction}"
+  2. label: "{2-5 word title}", description: "{problem} — {mitigation}"
+  3. label: "{2-5 word title}", description: "{problem} — {mitigation}"
+  4. label: "Fresh directions", description: "Scan codebase for unexpected angles and out-of-box ideas"
+  5. label: "Accept position", description: "No changes needed — lock in the current approach"
 - multiSelect: true
 
-**If user selects "None — position looks good"**: set CONVERGED=true, skip Turn 3, exit loop.
+**If user selects "Accept position"**: set CONVERGED=true, skip Turn 3, exit loop.
 
-**If user selects "Explore fresh directions"**: run the Proactive Ideation step (see below) before Turn 3. The ideation results are presented as additional approaches. Any challenges the user also selected are resolved in Turn 3 alongside the ideation output.
+**If user selects "Fresh directions"**: run the Proactive Ideation step (see below) before Turn 3. The ideation results are presented as additional approaches. Any challenges the user also selected are resolved in Turn 3 alongside the ideation output.
 
 ### Proactive Ideation
 
-Triggers when the user selects "Explore fresh directions" during Turn 2. This breaks out of the current DESCRIPTION framing to find unexpected angles.
+Triggers when the user selects "Fresh directions" during Turn 2. This breaks out of the current DESCRIPTION framing to find unexpected angles.
 
 **Step 1: Spawn ideation agents.** Spawn 2 `brainstorm-researcher` agents **in parallel** with ideation-specific lenses:
 
@@ -138,7 +164,7 @@ Each agent prompt must also include:
 Then use `AskUserQuestion`:
 - Question: "Which fresh ideas should influence the approach?"
 - Header: "Ideation"
-- Options: one per idea, plus "None — stay the course"
+- Options: one per idea (do NOT add a manual "None" option — the system auto-appends "Other"). If user submits empty selection or "Other" with no text: stay the course, no ideas incorporated.
 - multiSelect: true
 
 **Step 3: Incorporate.** Selected ideas are passed to the synthesizer in the next position update as additional input: "Incorporate these fresh ideas into the position: {list}. Adjust the approach direction if they reveal a better path." The ideation scratch files (`.planning/brainstorm-{NAME}-ideation-*.md`) are added to the cleanup list.
@@ -191,7 +217,7 @@ Prompt must include:
 ## Convergence
 
 The loop exits when:
-1. User selects "None — position looks good" during challenge review, OR
+1. User selects "Accept position" during challenge review, OR
 2. MAX_ITERATIONS is exhausted
 
 ---
@@ -225,17 +251,17 @@ Determine the correct plan command based on CATEGORY:
 - `migrate` → `/moku:plan migrate {TYPE} "{NAME}" --context context-{NAME}.md`
 
 Use `AskUserQuestion`:
-- Question: "Context file saved to `.planning/context-{NAME}.md`. What would you like to do?"
+- Question: "Context file saved. What next?"
 - Header: "Complete"
 - Options:
-  1. "Proceed to planning (Recommended)" — description: "Run `{plan command}` to start the 3-stage planning workflow"
-  2. "Review context file" — description: "I'll review the file and run the plan command manually"
-  3. "Refine further" — description: "Run one more debate iteration to tighten the approach"
+  1. label: "Plan (Recommended)", description: "Run `{plan command}` to start the 3-stage planning workflow"
+  2. label: "Review first", description: "Review .planning/context-{NAME}.md before running the plan command"
+  3. label: "Refine further", description: "Run one more debate iteration to stress-test the approach"
 - multiSelect: false
 
-If user chooses "Proceed to planning": clean up scratch files (see Cleanup below), then tell the user "Run: `{plan command}` to start planning." Do NOT invoke the plan command directly — the user should start a fresh context window for planning.
+If user chooses "Plan (Recommended)": clean up scratch files (see Cleanup below), then tell the user "Run: `{plan command}` to start planning." Do NOT invoke the plan command directly — the user should start a fresh context window for planning.
 
-If user chooses "Review context file": clean up scratch files (see Cleanup below).
+If user chooses "Review first": clean up scratch files (see Cleanup below).
 
 If user chooses "Refine further": do NOT clean up scratch files. Set `iteration = MAX_ITERATIONS`, increment `MAX_ITERATIONS` by 1, and re-enter the debate loop at Turn 2 (Challenge) for iteration `MAX_ITERATIONS`. Do NOT re-run research.
 
@@ -243,7 +269,7 @@ If user chooses "Refine further": do NOT clean up scratch files. Set `iteration 
 
 ## Cleanup
 
-**Runs only after the user chooses "Proceed to planning" or "Review context file" in the Final User Gate.** Never runs if "Refine further" is chosen.
+**Runs only after the user chooses "Plan (Recommended)" or "Review first" in the Final User Gate.** Never runs if "Refine further" is chosen.
 
 Delete scratch files:
 - `.planning/brainstorm-{NAME}-analysis.md`

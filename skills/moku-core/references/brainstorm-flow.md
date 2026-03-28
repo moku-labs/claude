@@ -110,34 +110,53 @@ Before category-specific analysis, check for `.planning/learnings.md`. If it exi
 
 #### Step 1: Present Preliminary Assessment
 
-Display a structured assessment to the user. This is NOT a question — it is you sharing your findings:
+Display a structured assessment to the user. This is NOT a question — it is you sharing your findings.
+
+**Formatting rules for terminal rendering:**
+- Use `**BOLD CAPS**` for top-level section titles (NOT `##` headings — all heading levels render identically in the terminal)
+- Use `**Bold Mixed Case**` for sub-sections
+- Use `---` horizontal rules to separate major sections
+- Use `**key:** value` pairs for metadata (not bullet lists)
+- Use bullet lists only for actual list items
+- Add a progress marker as the first line of each major phase output
 
 ```
-## Preliminary Assessment: {NAME}
+Brainstorm: {NAME} | Phase 1/4: Analysis | {CATEGORY}
 
-**Category:** {CATEGORY}
+**PRELIMINARY ASSESSMENT: {NAME}**
+
+**Category:** {CATEGORY} | **Depth:** pending analysis
 **Domain:** {detected domain and context — e.g., "URL routing for a Moku web framework — established patterns exist (Express, Hono, Fastify), but Moku's plugin model requires a specific approach to route registration"}
-
 **Scope:** {estimated scope — e.g., "~4–5 plugins needed: router-core, route-matching, middleware, guards, history"}
 
-**Complexity signals:**
+**Complexity signals**
 - {signal 1 with explanation — e.g., "Route matching involves complex TypeScript generics for type-safe path parameters"}
 - {signal 2 — e.g., "Integration with browser History API adds platform-specific concerns"}
 - {signal 3 — e.g., "Existing Moku event system maps well to route change notifications"}
 
-**Initial approach direction:**
+**Initial approach direction**
 {1–2 sentences — your preliminary recommendation based on analysis}
 ```
 
 For `migrate`, also include the source scan results:
 ```
-**Source analysis:**
-- Path: {MIGRATE_PATH}
-- Tech stack: {framework, runtime, build tool}
-- Size: {N files, ~N LOC}
-- Architecture: {detected pattern — e.g., "Express middleware chain with 4 route files"}
-- State: {detected patterns — e.g., "Module-level singletons for DB and cache connections"}
-- Key challenge: {biggest migration obstacle — e.g., "Tightly coupled auth middleware needs splitting into separate auth and session plugins"}
+---
+
+**SOURCE ANALYSIS**
+
+**Path:** {MIGRATE_PATH}
+**Tech stack:** {framework, runtime, build tool}
+**Size:** {N files, ~N LOC}
+**Architecture:** {detected pattern — e.g., "Express middleware chain with 4 route files"}
+**State:** {detected patterns — e.g., "Module-level singletons for DB and cache connections"}
+**Key challenge:** {biggest migration obstacle — e.g., "Tightly coupled auth middleware needs splitting into separate auth and session plugins"}
+```
+
+If prior learnings are relevant, include:
+```
+**Prior learnings** (from previous brainstorm sessions)
+- {relevant learning 1}
+- {relevant learning 2}
 ```
 
 #### Step 2: Identify Architectural Decisions
@@ -176,7 +195,7 @@ From your analysis, identify genuine architectural decisions — trade-offs wher
 
 **Target:** 0–3 questions for a typical brainstorm. More than 3 is a strong signal you're asking unnecessary questions. More than 5 is never acceptable.
 
-#### Step 3: Discuss Each Decision
+#### Step 3: Discuss Each Decision (Two-Turn Pattern)
 
 For each identified decision that passed the Question Validation Protocol, present it as a collaborative discussion. Every decision MUST include all of these elements — no exceptions:
 
@@ -185,10 +204,12 @@ For each identified decision that passed the Question Validation Protocol, prese
 3. **Your recommendation with reasoning** — take a clear position, do not be neutral
 4. **Concerns about each alternative** — what could go wrong with each choice?
 
-**Format:** Present the full discussion context as a text message, then follow with `AskUserQuestion`:
+**IMPORTANT — Two-turn pattern to prevent text blocking:** The AskUserQuestion dialog can obscure text output above it. To ensure the user can read the code examples and reasoning, split each decision into TWO response turns:
+
+**Turn A — Present the full discussion (text only, NO AskUserQuestion in this turn):**
 
 ````markdown
-### Decision {N}: {title}
+**DECISION {N}: {title}**
 
 {1–2 sentences framing the trade-off}
 
@@ -209,15 +230,20 @@ For each identified decision that passed the Question Validation Protocol, prese
 - Concern: {specific risk or limitation}
 
 **I recommend Option A** because {specific reasoning tied to THIS project's context, not generic advice}. If we go with Option B, the main risk is {consequence}.
+
+---
 ````
 
-Then use `AskUserQuestion`:
+**Turn B — Ask the question (in the NEXT response, after the user has seen the code):**
+
+Use `AskUserQuestion`:
 - Question: "{decision title}"
 - Header: "Decision {N}"
-- Options: one per approach, the recommended one first and marked "(Recommended)". Add a final option: "Neither — let me explain" with description "I have a different approach in mind"
+- Options: one per approach, the recommended one first and marked "(Recommended)". Do NOT add a "Neither" or "Other" option — the system auto-appends a free-text "Other" option.
+- Each option's `description` must be **self-contained** — summarize the trade-off in one clause so the user can decide even if the text above scrolled away. Example: `"Type-safe, explicit deps — more boilerplate but catches errors at compile time"` not just `"The first approach"`
 - multiSelect: false
 
-If user selects "Neither — let me explain": incorporate their approach as the chosen direction.
+If the user types a custom response via the system's "Other" option: incorporate their approach as the chosen direction.
 
 **Examples of GOOD decisions to surface:**
 

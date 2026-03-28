@@ -84,9 +84,9 @@ If `.planning/context-{NAME}.md` already exists, use `AskUserQuestion`:
 - Question: "Context file for `{NAME}` already exists. How do you want to proceed?"
 - Header: "Existing"
 - Options:
-  1. "Resume brainstorm (Recommended)" — description: "Continue from where you left off — preserves previous research and decisions"
-  2. "Start fresh" — description: "Delete existing context and scratch files, brainstorm from scratch"
-  3. "Cancel" — description: "Don't proceed — leave existing context as-is"
+  1. label: "Resume (Recommended)", description: "Continues from saved analysis and research — won't re-run completed phases"
+  2. label: "Start fresh", description: "Deletes all .planning/brainstorm-{NAME}-* files and starts over"
+  3. label: "Cancel", description: "Leave existing context as-is, do nothing"
 - multiSelect: false
 
 If "Resume": check if scratch files exist (`.planning/brainstorm-{NAME}-*.md`).
