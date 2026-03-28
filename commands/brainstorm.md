@@ -108,9 +108,11 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG.
 
 ## Rules
 
+- **Write protection:** During brainstorm, Write and Edit may ONLY target files in `.planning/`. Never create, modify, or delete source code files (`src/`, `tests/`, project root configs). Brainstorm is for exploration and decision-making — code changes happen during `/moku:build`
 - Never write to `.planning/STATE.md` — brainstorm state is separate from plan state
 - All scratch files use the `.planning/brainstorm-{NAME}-*` prefix for clean isolation
 - The final output is always `.planning/context-{NAME}.md` — one file, standardized schema
+- `.planning/learnings.md` persists across brainstorm sessions — never delete it during cleanup
 - Spawn researcher agents in parallel where depth allows — use multiple Agent tool calls in the same response
 - Auto-detect complexity from project context — never ask the user to self-report what the AI can observe
 - Every architectural question MUST include TypeScript code examples showing each approach, a clear recommendation with reasoning, and concerns about each alternative. Be an opinionated colleague, not a passive interviewer

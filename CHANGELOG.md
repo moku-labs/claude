@@ -2,6 +2,19 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.25.5 (2026-03-28)
+
+### Added
+- **Question Validation Protocol** — 5-criteria gate before asking any brainstorm question (auto-detect, architecture impact, obvious answer, code demonstrable, senior-colleague test). Self-audit step with >60% confidence threshold. Target 0–3 questions, hard cap at 5.
+- **Compound Learning** — brainstorm sessions extract 3–5 reusable learnings to `.planning/learnings.md` after completion. Future brainstorms auto-surface relevant past learnings during Phase 1a analysis.
+- **Cognitive Lenses** — each researcher agent receives a perspective lens (DX & Maintainability, Security & Robustness, Performance & Scalability) to ensure research covers different angles rather than converging.
+- **Anti-rubber-stamp** — quality check after challenger returns; if all challenges are LOW severity or generic (no specific position text cited), re-spawn once with combined feedback. Challenger agent now requires at least one MEDIUM or HIGH challenge.
+- **Cross-model review** — challenger agent no longer hardcodes `model: sonnet`; inherits parent model for natural diversity with the sonnet-based synthesizer.
+- **Write protection** — brainstorm command restricts Write/Edit to `.planning/` directory only, preventing premature code changes during exploration.
+
+### Changed
+- Version bumped to 0.25.5 in plugin.json and marketplace.json
+
 ## 0.25.4 (2026-03-28)
 
 ### Changed

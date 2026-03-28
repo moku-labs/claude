@@ -72,7 +72,17 @@ Prompt must include:
 - Path to research: `.planning/brainstorm-{NAME}-research.md`
 - Path to analysis: `.planning/brainstorm-{NAME}-analysis.md`
 
-After challenger completes, read its output. Present the challenges to the user using `AskUserQuestion`:
+After challenger completes, read its output.
+
+**Anti-rubber-stamp check:** Before presenting challenges to the user, evaluate the challenger's output quality. Check for BOTH of these deficiencies in a single pass:
+- **All-LOW:** ALL three challenges have severity LOW — the challenger may be rubber-stamping
+- **Generic:** Any challenge uses vague phrases ("might not scale", "could be complex", "consider performance") without citing specific text from the position document
+
+If EITHER deficiency is detected, construct a single re-spawn prompt addressing ALL issues found: "Re-run your challenge. Issues with previous attempt: {list each deficiency — e.g., 'all challenges were LOW severity' and/or 'challenge #2 was generic'}. Requirements: at least one challenge must be MEDIUM or HIGH severity, and every challenge must cite specific text from the position document with a concrete alternative. Look for: hidden TypeScript complexity, dependency graph issues, event system bottlenecks, or architectural assumptions that break at scale."
+
+Re-spawn at most ONCE — if the second attempt still produces weak challenges, proceed with what you have. Do not loop.
+
+Present the challenges to the user using `AskUserQuestion`:
 
 - Question: "The challenger raised these concerns. Which do you want to address?"
 - Header: "Challenges"
@@ -192,3 +202,25 @@ Delete scratch files:
 - `.planning/brainstorm-{NAME}-position.md`
 
 Keep only the final output: `.planning/context-{NAME}.md`.
+
+## Compound Learning Extraction
+
+**Runs after cleanup, before the closing next-step suggestion.** This step extracts reusable learnings from the brainstorm session so future brainstorms benefit from accumulated experience.
+
+1. Review the context file (`.planning/context-{NAME}.md`) and identify 3–5 key learnings:
+   - **Surprising findings** from research that contradicted assumptions
+   - **Validated patterns** — approaches confirmed through debate as strong fits for Moku
+   - **Mistakes to avoid** — assumptions that were challenged and abandoned
+   - **Useful references** — specific packages, patterns, or resources discovered during research
+   - **Decision rationale** — why a non-obvious choice was made (helps future brainstorms in similar domains)
+
+2. Append entries to `.planning/learnings.md` (create the file if it doesn't exist). Format:
+
+```markdown
+### {NAME} ({CATEGORY}) — {ISO date}
+- {learning 1}
+- {learning 2}
+- {learning 3}
+```
+
+3. Do NOT extract trivial or project-specific learnings. Only extract insights that would help someone brainstorming a DIFFERENT project in a similar domain. If no learnings are genuinely reusable, skip this step silently.

@@ -14,6 +14,14 @@ Replace passive surveys with active analysis. Auto-detect everything possible, p
 
 **Goal:** Understand the problem space by reading code and context — not by asking the user questions an AI can answer.
 
+#### Prior Learnings (all categories)
+
+Before category-specific analysis, check for `.planning/learnings.md`. If it exists:
+1. Read it and identify entries relevant to DESCRIPTION or CATEGORY
+2. Surface relevant learnings in the Preliminary Assessment (Step 1 of Phase 1b) under a **Prior learnings** section
+3. Use past learnings to inform complexity signals — e.g., if a past brainstorm learned "event bus O(n²) at 15+ plugins", factor that into risk_signal for similar domains
+4. If no relevant learnings found, skip silently — do not mention the learnings system to the user
+
 #### For `create`:
 
 1. **Parse DESCRIPTION** for:
@@ -144,9 +152,25 @@ From your analysis, identify genuine architectural decisions — trade-offs wher
 
 **If 0 decisions are identified:** This is fine and expected for well-understood domains or clear descriptions. Log: "No architectural ambiguities detected — the approach direction is clear from context." Skip directly to saving the analysis.
 
+#### Question Validation Protocol
+
+**Before asking ANY question**, evaluate it against ALL five criteria. Only ask if every check passes — the bar is HIGH. When in doubt, don't ask. Make the decision yourself and explain your reasoning in the assessment instead.
+
+| # | Check | Pass condition | If fails |
+|---|---|---|---|
+| 1 | **Can I auto-detect the answer?** | No — the answer is not observable from code, DESCRIPTION, workspace, or prior learnings | Use the auto-detected answer silently |
+| 2 | **Does it significantly affect architecture?** | Yes — different answers produce meaningfully different plugin structures, APIs, or dependency graphs | Skip it — the choice is cosmetic or minor |
+| 3 | **Is there an obviously correct answer?** | No — at least 2 options have genuine, non-trivial trade-offs for THIS specific project | Use the obviously correct answer and explain why in the assessment |
+| 4 | **Can I demonstrate the trade-off with code?** | Yes — each option produces visibly different TypeScript code (5+ lines each) | The question is too abstract to be architectural — skip it |
+| 5 | **Would a senior colleague find this valuable?** | Yes — a senior engineer brainstorming this project would genuinely debate this | It's busywork — skip it |
+
+**Self-audit:** After identifying your list of decisions, review the full list one more time. Remove any decision where you have even moderate confidence (>60%) that you know the right answer. For those, state your choice in the assessment with a one-line rationale. The user can always push back if they disagree — but don't burden them with questions you can answer.
+
+**Target:** 0–3 questions for a typical brainstorm. More than 3 is a strong signal you're asking unnecessary questions. More than 5 is never acceptable.
+
 #### Step 3: Discuss Each Decision
 
-For each identified decision, present it as a collaborative discussion. Every decision MUST include all of these elements — no exceptions:
+For each identified decision that passed the Question Validation Protocol, present it as a collaborative discussion. Every decision MUST include all of these elements — no exceptions:
 
 1. **The trade-off framed clearly** — what is the tension?
 2. **2–3 concrete approaches with TypeScript code examples** — show how each would look in Moku plugin code (5–15 lines each)
@@ -300,16 +324,30 @@ Set EFFECTIVE_DEPTH based on user's choice.
 - `modify`/`feature` → "feature integration patterns, cross-plugin impact, and regression risk for {DESCRIPTION}"
 - `migrate` → "migration strategy patterns and common failure modes for the source architecture"
 
+### Cognitive Lenses
+
+Each researcher agent receives a **cognitive lens** that shapes its perspective. This ensures research covers different angles rather than converging on the same viewpoint.
+
+| Depth | Researcher | Lens |
+|---|---|---|
+| `quick` | 1 (full survey) | **Balanced** — equal weight to all concerns |
+| `standard` | 1 (ecosystem) | **DX & Maintainability** — how will developers use this? What makes the API intuitive or confusing? |
+| `standard` | 2 (technical) | **Security & Robustness** — what can break? What are the failure modes? What needs validation? |
+| `deep` | 1 (ecosystem) | **DX & Maintainability** |
+| `deep` | 2 (technical) | **Security & Robustness** |
+| `deep` | 3 (category-specific) | **Performance & Scalability** — what happens at scale? Where are the O(n²) traps? What needs benchmarking? |
+
 ### Spawning Researchers
 
 Spawn brainstorm-researcher agents using the `Agent` tool. For standard and deep modes, spawn all agents **in parallel** (multiple Agent tool calls in the same response).
 
 Each researcher prompt must include:
 1. The FOCUS parameter (ecosystem / technical-patterns / category-specific)
-2. The DESCRIPTION
-3. The CATEGORY
-4. The analysis summary (from `.planning/brainstorm-{NAME}-analysis.md`) — this provides richer context including auto-detected signals and architectural decisions made with the user
-5. The output path: `.planning/brainstorm-{NAME}-research-{focus-slug}.md`
+2. The **cognitive lens** for this researcher — include the lens name and its guiding question (from the table above). Instruct the researcher: "Apply the {lens} lens throughout your research — weight your findings, approach evaluations, and risk assessments through this perspective."
+3. The DESCRIPTION
+4. The CATEGORY
+5. The analysis summary (from `.planning/brainstorm-{NAME}-analysis.md`) — this provides richer context including auto-detected signals and architectural decisions made with the user
+6. The output path: `.planning/brainstorm-{NAME}-research-{focus-slug}.md`
 
 ### Merging Research
 
