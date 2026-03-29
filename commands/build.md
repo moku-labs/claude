@@ -1,7 +1,7 @@
 ---
-description: Build a framework, consumer app, or plugin from a specification
+description: Build a framework, consumer app, or plugin from a specification. No args = auto-resume. Accepts free-form natural language.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet
-argument-hint: [framework|app|plugin|add|resume|fix] [spec-path-or-name] [--dry-run] [--continue] [--lean]
+argument-hint: (empty to auto-resume) or [framework|app|plugin|add|resume|fix] [spec-path-or-name] [--dry-run] [--continue] [--lean]
 disable-model-invocation: true
 ---
 
@@ -37,6 +37,44 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 - `plugin #3,#5,#7` — build specific plugins by number
 - `plugin .planning/specs/03-auth.md` — build from explicit spec file
 - `resume` — continue from `.planning/STATE.md`
+
+---
+
+## Intent Normalization (Pre-Parse)
+
+Before strict argument parsing, normalize free-form input. Build is the simplest command — most invocations are just `resume`.
+
+**Skip when:** `$ARGUMENTS` starts with a recognized keyword (`resume`, `fix`, `add`, `framework`, `app`, `plugin`) or a flag (`--dry-run`, `--continue`, `--lean`, `#wave:`). Proceed directly to Step 0.
+
+**When to normalize:** If `$ARGUMENTS` is empty or contains only free-form text:
+
+1. **Empty arguments (most common case):** If `$ARGUMENTS` is empty:
+   - If `.planning/STATE.md` exists → treat as `resume`. Log: "No arguments — auto-resuming from STATE.md."
+   - If no STATE.md but `.planning/specs/` exists → treat as `framework`. Log: "No arguments — specs found, building framework."
+   - If nothing exists → Tell user: "No specifications found. Run `/moku:plan` first to create a plan." Stop.
+
+2. **Wrong-command detection:**
+   - Keywords suggesting plan intent (`plan`, `create`, `design`, `spec`, `specification`, `add plugin`, `new plugin`) → Tell user: "It sounds like you want to plan. Run: `/moku:plan {rest of text}`" and stop.
+   - Keywords suggesting brainstorm intent (`brainstorm`, `explore`, `think about`, `discuss`) → Tell user: "It sounds like you want to brainstorm. Run: `/moku:brainstorm {rest of text}`" and stop.
+
+3. **Free-form intent extraction:**
+   - "continue", "keep going", "next wave", "pick up where we left off" → `resume`
+   - "add {name}" → `add {name}`
+   - "fix", "repair", "broken", "failing" → `fix`
+   - "what would it build", "show plan", "dry run" → `--dry-run`
+   - Everything else with STATE.md present → `resume` (safest default)
+
+4. **Log and proceed:** "Normalized → {structured args}"
+
+**Examples:**
+| User types | Normalized to |
+|---|---|
+| *(empty)* | `resume` (if STATE.md exists) |
+| `keep building` | `resume` |
+| `continue with --continue` | `resume --continue` |
+| `add auth` | `add auth` |
+| `what would the next wave do` | `framework --dry-run` |
+| `fix the broken tests` | `fix` |
 
 ---
 

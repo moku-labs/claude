@@ -1,7 +1,7 @@
 ---
-description: Brainstorm a Moku project idea — collaborative analysis, adaptive research, and debate-driven context generation before planning
+description: Brainstorm a Moku project idea — collaborative analysis, adaptive research, and debate-driven context generation before planning. Accepts free-form natural language.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-argument-hint: [create|modify|migrate|feature] {name} "description" [--deep [N]|--quick]
+argument-hint: {free-form description} or [create|modify|migrate|feature] {name} "description" [--deep [N]|--quick]
 disable-model-invocation: true
 ---
 
@@ -24,6 +24,36 @@ This command runs an adaptive workflow:
 
 ---
 
+## Intent Normalization (Pre-Parse)
+
+Before strict argument parsing, normalize free-form input to structured format.
+
+**Skip when:** `$ARGUMENTS` is empty, OR the first token (after stripping `--deep`/`--quick`) is a recognized CATEGORY keyword (`create`, `new`, `build`, `modify`, `update`, `change`, `feature`, `add`, `extend`, `migrate`, `port`, `convert`). Proceed directly to Step 0.
+
+**When to normalize:** If the first non-flag token is NOT a recognized keyword:
+
+1. **Strip flags first:** Extract `--deep [N]`, `--quick` from anywhere.
+
+2. **Wrong-command detection:**
+   - Keywords suggesting plan intent (`plan`, `create spec`, `write spec`, `design the architecture`) → Tell user: "It sounds like you want to plan. Run: `/moku:plan {rest of text}`" and stop.
+   - Keywords suggesting build intent (`build`, `implement`, `compile`, `continue building`, `resume`) → Tell user: "It sounds like you want to build. Run: `/moku:build resume`" and stop.
+
+3. **Extract intent:**
+   - **CATEGORY:** "new", "from scratch", "greenfield" → `create`. "change", "improve", "refactor" → `modify`. "add capability", "extend", "new feature" → `feature`. "port", "convert", "migrate" → `migrate`. Default: `create`.
+   - **NAME:** Look for a short identifier (1-2 words, no spaces) that appears to name the project. If not found, derive from description.
+   - **DESCRIPTION:** Everything else.
+
+4. **Log and proceed:** "Normalized → CATEGORY={cat}, NAME={name}, DESCRIPTION=\"{desc}\""
+
+**Examples:**
+| User types | Normalized to |
+|---|---|
+| `let's explore a caching system` | `create caching "a caching system"` |
+| `I want to think about adding search` | `feature search "adding search"` |
+| `what if we migrated the legacy API` | `migrate legacy-api "the legacy API"` |
+
+---
+
 ## Step 0: Parse Arguments
 
 **Ordered startup sequence:**
@@ -31,8 +61,16 @@ This command runs an adaptive workflow:
 1. **Filesystem guard:** `mkdir -p .planning/build/`
    **Brainstorm session marker:** `touch .planning/.brainstorm-active` — this activates the brainstorm-guard hook which prevents writes outside `.planning/`.
 
-2. **Empty-arguments check:** If `$ARGUMENTS` is empty, show usage and stop:
-   "Usage: `/moku:brainstorm [create|modify|migrate|feature] {name} \"description\"  [--deep [N]|--quick]`"
+2. **Empty-arguments smart prompt:** If `$ARGUMENTS` is empty, use `AskUserQuestion` instead of showing raw usage:
+   - Question: "What do you want to brainstorm?"
+   - Header: "Brainstorm"
+   - Options:
+     1. "New project" — description: "Explore a new framework, app, or tool from scratch"
+     2. "Modify existing" — description: "Rethink an existing plugin or framework design"
+     3. "New feature" — description: "Explore adding a new capability"
+     4. "Migration" — description: "Explore migrating existing code to Moku"
+   - multiSelect: false
+   Set CATEGORY from selection. Then ask for NAME and DESCRIPTION via follow-up `AskUserQuestion` calls. Proceed to Step 0 flag extraction (step 3).
 
 3. **Depth flag extraction:** If `--deep` is present anywhere in `$ARGUMENTS`:
    - Check if the token immediately following `--deep` is an integer.

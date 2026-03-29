@@ -1,7 +1,7 @@
 ---
-description: Plan a Moku project — create, update, add plugins, or migrate existing code (3-stage gated workflow)
+description: Plan a Moku project — create, update, add plugins, or migrate existing code (3-stage gated workflow). Accepts free-form natural language — no need to memorize exact syntax.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, EnterPlanMode, ExitPlanMode
-argument-hint: [create|update|add|migrate|resume] [type] ({path/link/github}) {requirements} [--quick] [--context {file}]
+argument-hint: {free-form description} or [create|update|add|migrate|resume] [type] {requirements} [--quick] [--context {file}]
 disable-model-invocation: true
 ---
 
@@ -46,6 +46,50 @@ The `add` verb always runs in quick mode regardless of this flag.
 
 ---
 
+## Intent Normalization (Pre-Parse)
+
+Before strict argument parsing, normalize `$ARGUMENTS` from free-form natural language to structured format. This allows users to type informal descriptions instead of memorizing exact syntax.
+
+**Skip normalization when:** `$ARGUMENTS` is empty, OR the first token (after stripping flags like `--quick`, `--context`) is a recognized VERB keyword (`create`, `update`, `add`, `migrate`, `resume`) or TYPE keyword (see normalization table below). In these cases, arguments are already structured — proceed directly to Step 0.
+
+**When to normalize:** If the first non-flag token is NOT a recognized keyword, treat the entire input as free-form natural language and extract structured arguments:
+
+1. **Strip flags first:** Extract `--quick`, `--deep`, `--context {file}` from anywhere in the text. These are unambiguous and can be detected before intent parsing.
+
+2. **Wrong-command detection:** Check if the user's intent belongs to a different command:
+   - Keywords suggesting build intent (`build`, `implement`, `compile`, `continue building`, `run build`, `resume build`, `execute`) → Tell user: "It sounds like you want to build. Run: `/moku:build resume`" and stop.
+   - Keywords suggesting brainstorm intent (`brainstorm`, `explore ideas`, `let's think about`, `discuss options`) → Tell user: "It sounds like you want to brainstorm. Run: `/moku:brainstorm {rest of text}`" and stop.
+   - If unsure, continue with normalization — don't block on ambiguity.
+
+3. **Extract intent from natural language:**
+   - **VERB detection:**
+     - "new", "create", "make", "start", "build a new" → `create`
+     - "change", "update", "modify", "refactor", "improve" → `update`
+     - "add", "include", "add a plugin", "new plugin" → `add`
+     - "migrate", "convert", "port", "move to moku" → `migrate`
+     - "continue", "resume", "pick up", "where was I" → `resume`
+     - If unclear → default to `create` for new projects, `update` for existing ones (check if `.planning/STATE.md` exists)
+   - **TYPE detection:**
+     - "framework", "library", "tool", "engine", "toolkit" → `framework`
+     - "app", "application", "site", "game", "service", "server" → `app`
+     - "plugin" → `plugin`
+     - If not mentioned → auto-detect (existing Step 0 logic handles this)
+   - **NAME/DESCRIPTION:** Everything not consumed by VERB, TYPE, or flag extraction becomes the REQUIREMENTS/DESCRIPTION text.
+
+4. **Reconstruct and log:** Assemble the extracted components into structured format. Log: "Normalized free-form input → VERB={verb}, TYPE={type}, REQUIREMENTS=\"{desc}\"". Proceed to Step 0 with the structured arguments.
+
+**Examples:**
+| User types | Normalized to |
+|---|---|
+| `I want to make a static site generator` | `create framework "a static site generator"` |
+| `add auth plugin with JWT support` | `add plugin auth "JWT support"` |
+| `update the router to support nested routes` | `update plugin router "support nested routes"` |
+| `migrate my express app from ~/Projects/legacy` | `migrate app ~/Projects/legacy` |
+| `continue from where we left off` | `resume` |
+| `a caching framework with LRU and TTL` | `create framework "a caching framework with LRU and TTL"` |
+
+---
+
 ## Step 0: Parse Arguments
 
 Parse `$ARGUMENTS` into six components: **VERB**, **TYPE**, **PATH_OR_LINK**, **REQUIREMENTS**, **QUICK_MODE**, **CONTEXT_FILE**.
@@ -59,7 +103,13 @@ Parse `$ARGUMENTS` into six components: **VERB**, **TYPE**, **PATH_OR_LINK**, **
    (This also creates `.planning/` if it doesn't exist.)
    This MUST execute before creating decisions.md, STATE.md, or any spec files. Also creates `.planning/build/` for ephemeral build artifacts. On fresh projects the directory does not exist and writes will fail without this guard.
 
-2. **Empty-arguments check:** If `$ARGUMENTS` is empty and no VERB can be determined, stop with: "Usage: `/moku:plan [create|update|add|migrate|resume] [type] {description} [--quick]`"
+2. **Empty-arguments smart prompt:** If `$ARGUMENTS` is empty, check project state before showing usage:
+   - If `.planning/STATE.md` exists → read `## Phase:` and `## Next Action:`. Use `AskUserQuestion`: Question: "What would you like to do?" / Header: "Plan" / Options based on state:
+     - If phase is `ready` or `build/complete` → "Add a plugin", "Update existing plugin", "Update framework", "Start fresh project"
+     - If phase is `stage{N}` → "Resume planning (Recommended)", "Start fresh"
+     - Always include: "Other — describe what you need"
+   - If no STATE.md exists → Use `AskUserQuestion`: Question: "What would you like to plan?" / Header: "New project" / Options: "New framework", "New app", "Migrate existing project", "Add plugin to existing framework"
+   - Set VERB, TYPE from the user's selection and proceed to Step 0 parsing. Do NOT show raw usage syntax.
 
 (The filesystem guard in step 1 runs unconditionally — even if step 2 would stop early. The empty directory is harmless.)
 

@@ -2,6 +2,17 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.2 (2026-03-29)
+
+### Added
+- **Intent Normalization** — all three commands (`/moku:plan`, `/moku:brainstorm`, `/moku:build`) now accept free-form natural language instead of strict structured arguments. "I want to make a static site generator" normalizes to `create framework "a static site generator"`. Structured syntax still works unchanged.
+- **Cross-command detection** — each command detects when the user meant a different command and suggests the right one (e.g., `/moku:plan build it` → "Run `/moku:build resume`").
+- **Empty-args smart prompts** — `/moku:plan` and `/moku:brainstorm` show contextual `AskUserQuestion` menus instead of raw usage syntax when invoked with no arguments. `/moku:build` with no args auto-resumes from STATE.md.
+
+### Changed
+- Command `description` and `argument-hint` frontmatter updated to advertise free-form input support
+- Version bumped to 0.26.2 in plugin.json and marketplace.json
+
 ## 0.26.1 (2026-03-29)
 
 ### Changed
