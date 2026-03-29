@@ -190,6 +190,8 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 ## Target: [framework/app/plugin]
 ## Last Updated: [ISO timestamp]
 ## Skeleton: [not-started | in-progress | verified | committed]
+## QuickMode: [true | false — read by plan command on resume to restore quick mode]
+## Cycle: [1 | 2 | ... — incremented after each build/complete → archive cycle]
 
 ## Decisions
 [Summary from .planning/decisions.md, or inline if no discuss phase]
@@ -236,7 +238,13 @@ Build Status values: `not started` | `building` | `built` | `pipeline-built` | `
 | Wave 2 | not started | auth |
 | Final verification | not started | |
 | README wave | not started | |
+| Root docs + LLM docs | not started | |
+| Documentation validation | not started | |
+| Integration tests | not started | |
+| Coverage verification | not started | |
+| CI/CD generation | not started | |
 | Post-build validation | not started | |
+| Cycle archive | not started | |
 
 ## Artifacts
 - Spec files: [list after Stage 2]

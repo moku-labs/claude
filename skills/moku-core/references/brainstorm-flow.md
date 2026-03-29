@@ -324,10 +324,11 @@ Apply DEPTH_FLAG override:
 
 Report to user: "Complexity score: {COMPLEXITY_SCORE}/9 → **{EFFECTIVE_DEPTH}** mode. {cite the specific signals that drove the score — e.g., 'High domain novelty and multiple integration points pushed this into deep mode.'}."
 
-Briefly explain the depth:
+Briefly explain the depth (if CUSTOM_ITERATIONS is set, show the custom count instead of the default):
 - `quick`: "Quick research pass, 1 debate round. Good for well-understood domains."
 - `standard`: "Moderate research with 2 angles, 2 debate rounds. Balances speed and thoroughness."
-- `deep`: "Parallel deep research from 3 angles, 3 debate rounds. For novel or high-risk projects."
+- `deep` (no CUSTOM_ITERATIONS): "Parallel deep research from 3 angles, 3 debate rounds. For novel or high-risk projects."
+- `deep` (CUSTOM_ITERATIONS=N): "Parallel deep research from 3 angles, {N} debate rounds. Extended depth requested via --deep {N}."
 
 If DEPTH_FLAG was `auto` (no override), ask the user to confirm:
 `AskUserQuestion`:
@@ -400,4 +401,4 @@ After all researcher agents complete:
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-debate.md` and follow it.
 
-Context carried forward: CATEGORY, NAME, DESCRIPTION, EFFECTIVE_DEPTH, COMPLEXITY_SCORE, all `.planning/brainstorm-{NAME}-*` files.
+Context carried forward: CATEGORY, NAME, DESCRIPTION, EFFECTIVE_DEPTH, CUSTOM_ITERATIONS, COMPLEXITY_SCORE, all `.planning/brainstorm-{NAME}-*` files.

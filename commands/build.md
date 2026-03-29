@@ -1,7 +1,7 @@
 ---
 description: Build a framework, consumer app, or plugin from a specification
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet
-argument-hint: [framework|app|plugin|resume|fix] [spec-path-or-name] [--dry-run] [--continue] [--lean]
+argument-hint: [framework|app|plugin|add|resume|fix] [spec-path-or-name] [--dry-run] [--continue] [--lean]
 disable-model-invocation: true
 ---
 
@@ -65,10 +65,23 @@ Parse `$ARGUMENTS`:
    - This flag is held and applied after skeleton is committed (see Skeleton Detection).
 2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position.
    - Check `## Verb:` in STATE.md. If `## Verb: fix`, route directly to **Error Recovery** below — a previous fix session was interrupted. Tell the user: "Resuming interrupted fix session. Targeting remaining plugins with `needs-manual` or `verify-failed` status."
+   - Check `## Verb:` in STATE.md. If `## Verb: update`, mark this session as a **delta build** — after the normal build wave completes for the updated plugins, run Step 8 (Delta Updates) from `build-final.md` to update documentation, LLM docs, integration tests, coverage, and CI/CD.
    - Check `## LeanMode:` in STATE.md. If `## LeanMode: true`, activate lean mode for this session.
    - Check `## Mode:` in STATE.md. If `## Mode: plugins-only`, restore the `plugins-only` sub-mode for this session (build only plugin waves, skip config). If `## Mode: config-only`, restore the `config-only` sub-mode for this session (build only config.ts + index.ts).
    - Skip to the appropriate build step.
 2b. If the first word is `fix` — route directly to **Error Recovery** below. Do NOT enter Skeleton Detection. (The Error Recovery section itself enforces the skeleton-committed prerequisite.)
+2c. If the first word is `add` — **single-plugin add mode**. The second word is the plugin name. This mode builds a plugin whose spec was created by `/moku:plan add`.
+   - Resolve the plugin name to a spec file: search `.planning/specs/*-{name}.md`. If not found, stop: "No spec found for plugin `{name}`. Run `/moku:plan add plugin {name}` first to create the spec."
+   - Verify `src/config.ts` exists and skeleton is committed — if not, stop: "Framework skeleton must be built first. Run `/moku:build resume`."
+   - Route to the standard plugin build flow from `build-plugin.md`: build the plugin, wire into framework (`src/config.ts`, `src/index.ts`), run verification chain (format, lint, tsc, test), spawn moku-verifier, run targeted validators (plugin-spec-validator, type-validator, jsdoc-validator).
+   - **After successful build:** run delta updates (see Step 8: Delta Updates in `build-final.md`):
+     - Update root README with the new plugin
+     - Regenerate `llms.txt` and `llms-full.txt`
+     - Add integration test scenarios for the new plugin
+     - Re-run coverage verification
+     - Update CI workflows if new dependencies were added
+   - Report results and update STATE.md.
+   - Exit after completion — do NOT enter Skeleton Detection or wave analysis.
 3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
    - **`framework` sub-modes:** If the first word is `framework` and the second word is exactly `config` or `plugins`:
      - `config`: build only `config.ts` + `index.ts` from specs. Set sub-mode `config-only`. Track as `## Mode: config-only` in STATE.md.

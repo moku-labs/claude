@@ -54,3 +54,5 @@
 After the update analysis, proceed to **Stage 2** (Specifications) and then **Stage 3** (Skeleton + Verification). Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for detailed instructions. Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` for templates.
 
 Update `.planning/STATE.md` at each stage exit. Use `AskUserQuestion` at each gate (the stage gates in `plan-stages.md` define the exact options).
+
+**IMPORTANT — Plan never builds:** After all stages are approved, set `## Next Action:` to recommend the appropriate build command. Do NOT invoke any build steps. The plan command only creates/updates specs — the user runs `/moku:build resume` in a fresh context to execute the build. This ensures clean separation between planning and building, and gives the user full control over when building starts.

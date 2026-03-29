@@ -20,6 +20,7 @@ This file contains the detailed per-target instructions for Stages 1, 2, and 3 o
   - **MVP Priorities**: Mark the top-3 capabilities as `priority: high` in the plugin table. Assign these to Wave 1 when dependency constraints allow.
   - **Reference Point**: Use the stated reference project to calibrate complexity — match the reference's scope, not exceed it.
   - **Risk**: Note which plugin is most exposed to the stated risk. Stage 2 will add explicit mitigation.
+  - **CI/CD**: No action in Stage 1 — Build Step 5.10 reads `## CI/CD` from steering.md to generate workflows. Include the selected CI/CD options in the Stage 3 skeleton spec's verification checklist so the user knows they will be generated at build time.
 
 #### If given existing code:
 - Read and analyze the codebase thoroughly

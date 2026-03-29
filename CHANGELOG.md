@@ -2,6 +2,34 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.0 (2026-03-29)
+
+### Added
+- **Deliberative steering loop** — Steering Pre-Phase now walks users through one decision at a time with WHY/EXAMPLE/RECOMMENDATION context, "Help me decide" option for discussion, relevance checks to skip redundant questions, and incremental save for session-drop recovery. 6 questions (added CI/CD).
+- **`--deep [N]` brainstorm iterations** — optional numeric argument for `--deep` flag (e.g., `--deep 7`). Custom iteration count decoupled from researcher count. Error on `--deep 0` or negative values. No upper cap.
+- **Root documentation wave** (Build Step 5.6) — generates comprehensive root README and LLM documentation (`llms.txt` + `llms-full.txt`) for AI-friendly framework consumption.
+- **Documentation validation** (Build Step 5.7) — validates completeness, accuracy, usability, and cross-references of all generated documentation.
+- **Integration test wave** (Build Step 5.8) — auto-generates comprehensive root-level integration tests. Scenario count driven by plugin count and complexity tiers. Covers core, cross-plugin, user journey, and edge case categories.
+- **Coverage verification** (Build Step 5.9) — quantitative test coverage measurement with 80% build gate, per-plugin breakdown, gap closure for low coverage, coverage report generation.
+- **CI/CD wave** (Build Step 5.10) — generates GitHub Actions workflows based on user steering choices: PR validation, coverage gate, npm publish, GitHub Releases, container build. Workflows adapted to actual project structure.
+- **Cycle archive** (Build Step 7.5) — archives completed build state to `.planning/archive/cycle-{N}/`, resets STATE.md for next development cycle with preserved plugin context.
+- **Delta updates** (Build Step 8) — subsequent builds (`add`, `update`) automatically update READMEs, LLM docs, integration tests, coverage, and CI/CD workflows for changed plugins.
+- **`/moku:build add {name}`** — new entry point for building a single plugin from a spec created by `/moku:plan add`.
+- **CI/CD steering question** — Question 6 in Steering Pre-Phase asks users what CI/CD and distribution they need. Contextual recommendations based on project type. Feeds into Build Step 5.10.
+
+### Changed
+- **Plan never builds** — `plan add` now creates a spec only and recommends `/moku:build add {name}`. All verbs end with a build command recommendation, never invoke build steps directly.
+- **Migration path parsing** — fallback probe for tokens that don't match path sigils: checks local path first, then `.planning/context-{token}.md`, with disambiguation dialog on conflict.
+- Build framework quick reference expanded with all new steps (5.6–7.5 + Step 8)
+- STATE.md template updated with QuickMode, Cycle fields and new wave progress rows
+- Version bumped to 0.26.0 in plugin.json and marketplace.json
+
+### Fixed
+- Stale `add` verb descriptions in plan.md, README.md, and tooling-config.md updated to reflect spec-only behavior
+- CI/CD integrated into plan-stages.md Stage 1 steering consumption block
+- Context injection CI/CD question now uses two-turn pattern
+- `update` verb resume path in build.md now routes to delta updates
+
 ## 0.25.7 (2026-03-28)
 
 ### Fixed

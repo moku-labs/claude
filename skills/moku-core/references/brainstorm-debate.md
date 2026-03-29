@@ -1,16 +1,20 @@
 # Brainstorm Debate Loop
 
-Implements the Present → Challenge → Decide cycle. Receives context from brainstorm-flow.md: CATEGORY, NAME, DESCRIPTION, EFFECTIVE_DEPTH.
+Implements the Present → Challenge → Decide cycle. Receives context from brainstorm-flow.md: CATEGORY, NAME, DESCRIPTION, EFFECTIVE_DEPTH, CUSTOM_ITERATIONS.
 
 ---
 
 ## Iteration Limits
+
+**Default iterations by depth:**
 
 | Depth | MAX_ITERATIONS |
 |---|---|
 | `quick` | 1 |
 | `standard` | 2 |
 | `deep` | 3 |
+
+**CUSTOM_ITERATIONS override:** If CUSTOM_ITERATIONS is set (from `--deep N`), use it as MAX_ITERATIONS regardless of the depth table above. The depth tier still determines research agent count (1/2/3) — only the iteration limit is overridden. Examples: `--deep 5` → MAX_ITERATIONS=5 with 3 researchers. `--deep 1` → MAX_ITERATIONS=1 with 3 researchers.
 
 ---
 

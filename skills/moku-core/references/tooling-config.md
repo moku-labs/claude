@@ -502,7 +502,8 @@ Agents run autonomously to validate code. They are called automatically by build
 3. Validators run automatically after each plugin
 
 **Add a single plugin:**
-1. `/moku:plan add plugin auth "JWT-based authentication"` — plan, build, wire, and verify in one pass
+1. `/moku:plan add plugin auth "JWT-based authentication"` — create plugin spec
+2. `/moku:build add auth` — build, wire, and verify the planned plugin
 
 **Update an existing plugin:**
 1. `/moku:plan update plugin router "add nested route support"` — produces updated spec

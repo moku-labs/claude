@@ -23,7 +23,7 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 ```
 /moku:plan create framework "desc"      # New framework from description
 /moku:plan create app "desc"            # New consumer app
-/moku:plan add plugin auth "JWT auth"   # Quick-add plugin (plan+build+wire)
+/moku:plan add plugin auth "JWT auth"   # Create plugin spec (build with /moku:build add auth)
 /moku:plan update plugin router "add X" # Update existing plugin spec
 /moku:plan update app "add caching"     # Update consumer app composition
 /moku:plan migrate framework ~/path     # Migrate existing code
@@ -168,7 +168,7 @@ The plugin maintains `.planning/STATE.md` for cross-session continuity:
 2. `/moku:plan create framework "A static site generator"` — Design the framework
 3. `/moku:build framework` — Implement all plugins in parallel waves with verification
 4. `/moku:build resume` — Continue if context was heavy
-5. `/moku:plan add plugin cache "LRU cache with TTL"` — Quick-add a plugin (plan + build + wire in one pass)
+5. `/moku:plan add plugin cache "LRU cache with TTL"` — Create a plugin spec, then `/moku:build add cache` to build
 6. `/moku:plan update plugin router "add nested routes"` — Update an existing plugin's spec
 7. `/moku:check` — Verify project health
 8. `/moku:check graph` — Visualize dependency graph and event flow as mermaid diagrams

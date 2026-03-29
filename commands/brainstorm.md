@@ -1,7 +1,7 @@
 ---
 description: Brainstorm a Moku project idea — collaborative analysis, adaptive research, and debate-driven context generation before planning
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-argument-hint: [create|modify|migrate|feature] {name} "description" [--deep|--quick]
+argument-hint: [create|modify|migrate|feature] {name} "description" [--deep [N]|--quick]
 disable-model-invocation: true
 ---
 
@@ -32,9 +32,15 @@ This command runs an adaptive workflow:
    **Brainstorm session marker:** `touch .planning/.brainstorm-active` — this activates the brainstorm-guard hook which prevents writes outside `.planning/`.
 
 2. **Empty-arguments check:** If `$ARGUMENTS` is empty, show usage and stop:
-   "Usage: `/moku:brainstorm [create|modify|migrate|feature] {name} \"description\"  [--deep|--quick]`"
+   "Usage: `/moku:brainstorm [create|modify|migrate|feature] {name} \"description\"  [--deep [N]|--quick]`"
 
-3. **Depth flag extraction:** If `--deep` is present anywhere in `$ARGUMENTS`, set DEPTH_FLAG=`deep` and strip it. If `--quick` is present, set DEPTH_FLAG=`quick` and strip it. Otherwise DEPTH_FLAG=`auto`.
+3. **Depth flag extraction:** If `--deep` is present anywhere in `$ARGUMENTS`:
+   - Check if the token immediately following `--deep` is an integer.
+     - If it is a positive integer ≥ 1 (e.g., `--deep 5`) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`{N}`, and strip both `--deep` and the number from `$ARGUMENTS`.
+     - If it is zero or negative (e.g., `--deep 0`, `--deep -1`) → stop with error: "Invalid `--deep` value: iteration count must be a positive integer ≥ 1."
+     - If the next token is not a number (or `--deep` is the last token) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`null`, and strip only `--deep`.
+   - No upper cap on CUSTOM_ITERATIONS — never limit iterations.
+   If `--quick` is present, set DEPTH_FLAG=`quick`, CUSTOM_ITERATIONS=`null`, and strip it. Otherwise DEPTH_FLAG=`auto`, CUSTOM_ITERATIONS=`null`.
 
 ### Token Extraction
 
@@ -103,7 +109,7 @@ If "Cancel": delete `.planning/.brainstorm-active` and stop.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-flow.md` and follow it.
 
-Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG.
+Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTOM_ITERATIONS.
 
 ---
 

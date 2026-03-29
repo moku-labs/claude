@@ -24,7 +24,7 @@ Create a specification plan for a Moku project. The input (`$ARGUMENTS`) uses a 
 - `create tool "A bundler for TypeScript"` — same as framework (tool is a synonym)
 - `create app "A personal blog"` — new consumer app
 - `create game "A roguelike dungeon crawler"` — same as app (game is a synonym)
-- `add plugin auth "JWT-based authentication"` — add plugin to existing framework (plan + build + wire in one pass)
+- `add plugin auth "JWT-based authentication"` — create a plugin spec for an existing framework (build separately with `/moku:build add`)
 - `update plugin router "add nested route support"` — update an existing plugin's spec
 - `update app "add caching and offline support"` — update consumer app composition
 - `migrate framework ~/Projects/legacy-app` — migrate existing code to Moku
@@ -34,7 +34,7 @@ Create a specification plan for a Moku project. The input (`$ARGUMENTS`) uses a 
 
 This command runs as a **3-stage gated workflow** with optional discussion, optional research, and plan validation. Each stage ends with a user checkpoint — the user must explicitly approve before proceeding to the next stage.
 
-The `add` verb is special — it runs a quick single-pass flow (plan + build + wire + verify) instead of the 3-stage workflow.
+The `add` verb is special — it runs a lightweight spec-only flow instead of the 3-stage workflow. It creates the plugin spec and recommends `/moku:build add {name}` for implementation.
 
 **`--quick` mode:** If `--quick` is present in arguments, collapse the 3-stage workflow into a single pass — analysis, specs, and skeleton in one invocation with one approval at the end instead of three. Auto-suggested when Stage 1 finds ≤ 4 plugins — the auto-suggest check runs after the plugin table is assembled, before the Stage 1 approval gate, **and only when QUICK_MODE is not already true** (if `--quick` was passed explicitly, the user has already chosen quick mode — do not offer the choice again). Use `AskUserQuestion` to offer the choice:
 - Question: "Only [N] plugins detected. Switch to quick mode?"
@@ -93,6 +93,11 @@ If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip 
 
 3. **Extract PATH_OR_LINK** (optional):
    - If next token contains `/`, starts with `.`, `~`, or `http` → set as PATH_OR_LINK
+   - **Fallback probe (when token does NOT match the sigil checks above):** If the token is present but did not match any sigil pattern, apply these probes in order before falling through to REQUIREMENTS:
+     1. **Local path probe:** Test if the token exists as a local directory (`test -d '{token}'`) or file (`test -f '{token}'`). If yes → set as PATH_OR_LINK. Log: "Resolved `{token}` to local path `{token}`". Advance past this token.
+     2. **Context file probe:** Test if `.planning/context-{token}.md` exists. If yes → set CONTEXT_FILE to `.planning/context-{token}.md`. Log: "Resolved `{token}` to `.planning/context-{token}.md`". Do NOT consume the token as PATH_OR_LINK — the context file provides brainstorm context, not the migration source. PATH_OR_LINK remains unset (the migrate verb will prompt for it if needed). Advance past this token.
+     3. **Conflict check:** If BOTH a local path AND a context file would match (i.e., `{token}` is a valid directory/file AND `.planning/context-{token}.md` exists), use `AskUserQuestion`: Question: "The token `{token}` matches both a local path and a context file. Which did you mean?" / Header: "Ambiguous token" / Options: "Use as migration source path (`{token}`)" / "Use as brainstorm context (`.planning/context-{token}.md`)" / multiSelect: false. Set PATH_OR_LINK or CONTEXT_FILE based on the answer.
+     4. **Neither:** Do not advance the token pointer — the token falls through to REQUIREMENTS extraction as before.
    - For `migrate`: PATH_OR_LINK is **required**. If missing after parsing, do NOT route to plan-verb-migrate.md. Instead prompt via `AskUserQuestion`:
      - Question: "What is the path or URL of the project to migrate?"
      - Header: "Migrate source"
@@ -318,3 +323,4 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 - Run plan-checker agent BEFORE every user gate — users see validated plans only
 - Read `.planning/STATE.md` at the start of every stage, write it at the end — enable cross-session continuity
 - After all stages complete, `Next Action` must point to `Run /moku:build resume (build command detects skeleton not-started and runs skeleton build first)`
+- **Plan NEVER builds:** The plan command only creates specs, analyzes, and recommends. It must NEVER invoke build steps, read build reference files, or create/modify source code files. After approval, always recommend the appropriate `/moku:build` command for the user to run in a fresh context. This applies to ALL verbs including `add` and `update` — the `add` verb creates a spec and recommends `/moku:build add {name}`, the `update` verb updates specs and recommends `/moku:build resume`.

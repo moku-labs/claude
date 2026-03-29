@@ -34,11 +34,11 @@ Covers: plugin verification (3-level), gap closure with error-diagnostician (cir
 
 Covers: `src/plugins/index.ts` barrel structure, `src/index.ts` self-documenting manifest pattern, integration check sequence (format → lint → tsc → build).
 
-## Steps 5–7: Final Verification, READMEs & Validation
+## Steps 5–7.5: Final Verification, Documentation, Testing, CI/CD & Validation
 
 → Read **`build-final.md`**
 
-Covers: final framework verification, README wave (dedicated sub-agents), post-build validation pipeline (Group A → Group B → architecture), final report and STATE.md update.
+Covers: final framework verification (Step 5), plugin README wave (5.5), root documentation + LLM docs (5.6), documentation validation (5.7), integration test wave (5.8), coverage verification (5.9), CI/CD generation (5.10), post-build validation pipeline (Step 6), final report (Step 7), cycle archive (Step 7.5), and delta updates for subsequent builds (Step 8).
 
 ---
 
@@ -50,4 +50,14 @@ Covers: final framework verification, README wave (dedicated sub-agents), post-b
 | Wave analysis & building | `build-wave-execution.md` | Starting a new wave |
 | Verification & gap closure | `build-verification.md` | After wave agents return |
 | Barrel & index patterns | `build-assembly.md` | Updating framework files |
-| Final checks & validation | `build-final.md` | All waves complete |
+| Final verification | `build-final.md` Step 5 | All waves complete |
+| README wave | `build-final.md` Step 5.5 | After final verification |
+| Root docs + LLM docs | `build-final.md` Step 5.6 | After plugin READMEs |
+| Documentation validation | `build-final.md` Step 5.7 | After docs generated |
+| Integration tests | `build-final.md` Step 5.8 | After docs validated |
+| Coverage verification | `build-final.md` Step 5.9 | After integration tests |
+| CI/CD generation | `build-final.md` Step 5.10 | After coverage verified |
+| Post-build validation | `build-final.md` Step 6 | After CI/CD generated |
+| Report + state update | `build-final.md` Step 7 | After validation passes |
+| Cycle archive | `build-final.md` Step 7.5 | After report |
+| Delta updates | `build-final.md` Step 8 | Subsequent builds only |
