@@ -18,13 +18,16 @@ Analyze all plugin specifications and group into dependency-aware waves:
 7. Otherwise, compute waves from dependency graph
 ```
 
-Present the wave plan to the user:
+Use `EnterPlanMode` before presenting the wave plan. This activates the read-only plan approval UI, giving the user a visually distinct review experience for the wave assignment:
+
 ```
 Wave 0 (core): log [Core], env [Core]
 Wave 1 (parallel): configValidator [Nano]
 Wave 2 (parallel): router [Standard] (-> env via core), content [Standard]
 Wave 3 (sequential): renderer [Complex] (-> router, content)
 ```
+
+After presenting the full wave plan with dependency rationale, call `ExitPlanMode` to return to normal mode. The plan mode approval UI lets the user review and approve the wave assignments before any code is written. After approval, proceed to pre-flight and wave execution.
 
 ## Step 2.5: Pre-Flight Check
 
@@ -51,8 +54,8 @@ Before spawning any builder sub-agents, run a pre-flight check to catch systemic
 1. Create a safety checkpoint: `git add -A && git commit -m "pre-wave-N: checkpoint before building [plugin list]"`. This enables rollback if the wave produces bad code.
 2. Update `.planning/STATE.md`: set each plugin in this wave to status `building` and record `## Git Checkpoint: <sha>`. This enables crash detection — if a future resume finds `building` status, it knows the previous invocation crashed mid-wave.
 3. **Create Task DAG for progress tracking:**
-   - Create a parent task: `TaskCreate("Wave N: [plugin-list]", "Build [count] plugins in parallel")`
-   - For each plugin in the wave: `TaskCreate("[name] [tier]", "Build from spec [spec-path]")`
+   - Create a parent task: `TaskCreate("Wave N: [plugin-list]", "Build [count] plugins in parallel", activeForm: "Building Wave N...")`
+   - For each plugin in the wave: `TaskCreate("[name] [tier]", "Build from spec [spec-path]", activeForm: "Building [name]...")`
    - Set intra-wave dependencies if any plugin in this wave depends on another in the same wave (rare but possible): `TaskUpdate(depTask, addBlockedBy: [prerequisiteTaskId])`
 
 For each wave, build all plugins in the wave. Within a wave, **spawn parallel sub-agents** for independent plugins using the Agent tool.

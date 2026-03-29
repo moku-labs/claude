@@ -1,6 +1,6 @@
 ---
 description: Brainstorm a Moku project idea — collaborative analysis, adaptive research, and debate-driven context generation before planning. Accepts free-form natural language.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, EnterPlanMode, ExitPlanMode
 argument-hint: {free-form description} or [create|modify|migrate|feature] {name} "description" [--deep [N]|--quick]
 disable-model-invocation: true
 ---
@@ -164,5 +164,6 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTO
 - Ask 0 questions if the context is clear — more questions is not better, only genuine architectural trade-offs deserve discussion
 - The debate loop converges when the user is satisfied OR max iterations reached — never force iterations
 - Context file must be complete enough that `/moku:plan` can skip its steering and discussion phases entirely
+- Before writing the final context file, use `EnterPlanMode` to present the synthesized decisions and architectural choices for user review. This gives a visually distinct approval experience for the brainstorm conclusions. After the user approves via plan mode, call `ExitPlanMode` and write the context file.
 - After writing the context file, always print a closing next-step suggestion:
   > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] "{NAME}" --context context-{NAME}.md` to begin planning."

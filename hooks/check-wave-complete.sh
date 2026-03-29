@@ -8,6 +8,7 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/notify.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
@@ -39,6 +40,7 @@ if [ -n "$ACTIVE_WAVE" ]; then
 
   REASON="Wave $WAVE_ID is still active. Complete the current wave before stopping. Check .planning/STATE.md for remaining tasks."
   log_diagnostic "STOP-BLOCK" "wave:$WAVE_ID" "Prevented stop — wave still active"
+  moku_notify "Moku — Stop Blocked" "Wave $WAVE_ID still active" "submarine"
 
   echo "{\"decision\":\"block\",\"reason\":\"$REASON\"}"
   exit 0

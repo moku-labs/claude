@@ -1,6 +1,6 @@
 ---
 description: Build a framework, consumer app, or plugin from a specification. No args = auto-resume. Accepts free-form natural language.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TaskCreate, TaskUpdate, TaskList, TaskGet, EnterPlanMode, ExitPlanMode
 argument-hint: (empty to auto-resume) or [framework|app|plugin|add|resume|fix] [spec-path-or-name] [--dry-run] [--continue] [--lean]
 disable-model-invocation: true
 ---
@@ -280,27 +280,28 @@ If the project has output styles configured, suggest switching to `moku-building
 Use `TaskCreate` and `TaskUpdate` to provide visual progress tracking during builds. Tasks supplement STATE.md (which remains the cross-session source of truth). Tasks are session-scoped and provide in-session progress UI.
 
 **At wave start:**
-1. Create a parent task for the wave: `TaskCreate("Wave N", "Build plugins: [list]")`
-2. Create a child task for each plugin: `TaskCreate("[name] ([tier])", "Build [name] plugin from spec")`
+1. Create a parent task for the wave: `TaskCreate("Wave N", "Build plugins: [list]", activeForm: "Building Wave N...")`
+2. Create a child task for each plugin: `TaskCreate("[name] ([tier])", "Build [name] plugin from spec", activeForm: "Building [name]...")`
 3. Set dependencies: `TaskUpdate(child, addBlockedBy: [dependencies from other plugins in this wave if any])`
 
 **During wave:**
-- When a builder agent starts: `TaskUpdate(pluginTask, status: "in_progress")`
+- When a builder agent starts: `TaskUpdate(pluginTask, status: "in_progress", activeForm: "Building [name]...")`
 - When a builder agent completes: `TaskUpdate(pluginTask, status: "completed")` or keep as in_progress if failed
 
-**After wave:**
+**After wave verification:**
 - Update parent wave task based on results
 - If all plugins verified: `TaskUpdate(waveTask, status: "completed")`
+- If verification running: `TaskUpdate(waveTask, activeForm: "Verifying Wave N...")`
 
 **Example:**
 ```
-TaskCreate("Wave 1", "Build env, logger, config-validator")
-TaskCreate("env [Nano]", "Build env core plugin")
-TaskCreate("logger [Nano]", "Build logger core plugin")
-TaskCreate("config-validator [Micro]", "Build config-validator plugin")
+TaskCreate("Wave 1", "Build env, logger, config-validator", activeForm: "Building Wave 1...")
+TaskCreate("env [Nano]", "Build env core plugin", activeForm: "Building env...")
+TaskCreate("logger [Nano]", "Build logger core plugin", activeForm: "Building logger...")
+TaskCreate("config-validator [Micro]", "Build config-validator plugin", activeForm: "Building config-validator...")
 ```
 
-This gives the user a live progress view via the task UI while builds run.
+The `activeForm` field shows live spinner text in the task panel (e.g., "Building env...") while a task is `in_progress`, giving the user real-time feedback about what's happening.
 
 ---
 

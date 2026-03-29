@@ -20,6 +20,8 @@ validatorModel: sonnet
 researcherModel: sonnet
 autoFormat: true
 autoCommitBeforeWaves: true
+enableNotifications: true
+enableSounds: true
 bundleSizeTarget:
   js: 8
   css: 10
@@ -41,6 +43,8 @@ Preferences, decisions, and patterns specific to this codebase.
 | `researcherModel` | sonnet | Model for research agent |
 | `autoFormat` | true | Auto-run `bun run format` after edits |
 | `autoCommitBeforeWaves` | true | Git commit checkpoint before each wave |
+| `enableNotifications` | true | Desktop notifications on key events (wave complete, errors, session end) |
+| `enableSounds` | true | Sound alerts on key events (macOS system sounds) |
 | `bundleSizeTarget.js` | 8 | JS bundle target in KB (gzipped) |
 | `bundleSizeTarget.css` | 10 | CSS bundle target in KB (gzipped) |
 

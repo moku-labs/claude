@@ -99,4 +99,18 @@ AGENT_TYPE="${AGENT_TYPE//|/ }"
 DETAIL="${DETAIL//|/ }"
 echo "| $TIMESTAMP | $AGENT_TYPE | $DETAIL |" >> .planning/build/agent-log.md
 
+# Desktop notification for build-critical agent completions
+source "$SCRIPT_DIR/notify.sh" 2>/dev/null || true
+case "$AGENT_TYPE" in
+  moku-verifier|moku-error-diagnostician)
+    if [ -n "$VERDICT" ]; then
+      case "$VERDICT" in
+        pass|PASS) moku_notify "Moku — $AGENT_TYPE" "Passed" "glass" ;;
+        fail|FAIL) moku_notify "Moku — $AGENT_TYPE" "Failed — ${BLOCKERS_COUNT:-0} blockers" "basso" ;;
+        *) moku_notify "Moku — $AGENT_TYPE" "$VERDICT" "tink" ;;
+      esac
+    fi
+    ;;
+esac
+
 exit 0

@@ -2,6 +2,24 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.3 (2026-03-29)
+
+### Added
+- **Custom status line** (`hooks/moku-statusline.sh`) — persistent bottom bar showing Moku phase, wave progress, plugin count, context usage bar (color-coded green/yellow/red), model name, cost, git branch, active agent, and rate limit warnings. Install via `/statusline` or configure `statusLine` in `~/.claude/settings.json`.
+- **Desktop notifications** (`hooks/notify.sh`) — macOS (`osascript`) and Linux (`notify-send`) desktop notifications on key events: permission prompts, wave completion, verifier results, stop blocks, session end. Configurable via `enableNotifications` in `.claude/moku.local.md`.
+- **Sound alerts** — system sounds on key events: glass (verifier pass), basso (verifier fail), submarine (stop block), hero (build/session complete), tink (permission needed), ping (session end). Configurable via `enableSounds` in `.claude/moku.local.md`.
+- **activeForm task spinners** — `TaskCreate` calls in build wave execution now include `activeForm` parameter for live spinner text (e.g., "Building env...") in the task panel during builds.
+- **Expanded Plan Mode UI** — `EnterPlanMode`/`ExitPlanMode` now used for build wave plan approval (before first wave starts) and brainstorm context file review (before writing final output). Provides a visually distinct read-only approval experience beyond the original plan Stage 1 usage.
+- **First-run setup suggestion** — `detect-moku-project.sh` (SessionStart hook) now detects missing status line configuration and suggests `/statusline` setup on first Moku project detection.
+- **Notification integration in hooks** — `log-notification.sh` fires desktop notification on permission prompts; `on-subagent-stop.sh` fires on verifier pass/fail; `check-wave-complete.sh` fires on stop block; `session-end.sh` fires on session end with phase-aware messaging.
+
+### Changed
+- `commands/build.md`: added `EnterPlanMode, ExitPlanMode` to allowed-tools; updated Task DAG section with `activeForm` parameter documentation and examples
+- `commands/brainstorm.md`: added `EnterPlanMode, ExitPlanMode` to allowed-tools; added plan mode for context file review
+- `skills/moku-core/references/build-wave-execution.md`: wave plan now presented in plan mode; `TaskCreate` calls include `activeForm`
+- `skills/moku-core/references/plugin-settings.md`: added `enableNotifications` and `enableSounds` to supported settings table
+- Version bumped to 0.26.3 in plugin.json
+
 ## 0.26.2 (2026-03-29)
 
 ### Added

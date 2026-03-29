@@ -26,4 +26,11 @@ LABEL="${TITLE:-$NTYPE}"
 MSG="${MSG//$'\n'/ }"
 echo "$(date '+%H:%M:%S') [$LABEL] $MSG" >> .planning/notifications.log
 
+# Desktop notification for permission prompts (user needs to act)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+source "$SCRIPT_DIR/notify.sh" 2>/dev/null || true
+if [ "$NTYPE" = "permission_prompt" ]; then
+  moku_notify "Moku — Permission Needed" "$MSG" "tink"
+fi
+
 exit 0

@@ -108,6 +108,22 @@ if [ -f .planning/STATE.md ]; then
   fi
 fi
 
+# Suggest status line setup on first detection (if not already configured)
+if [ -n "$PROJECT_TYPE" ]; then
+  # Check if the user already has a status line configured
+  STATUSLINE_CONFIGURED="false"
+  if [ -f "$HOME/.claude/settings.json" ]; then
+    if grep -q 'statusLine' "$HOME/.claude/settings.json" 2>/dev/null; then
+      STATUSLINE_CONFIGURED="true"
+    fi
+  fi
+  if [ "$STATUSLINE_CONFIGURED" = "false" ]; then
+    echo ""
+    echo "Tip: Set up the Moku status line for live project state in your terminal:"
+    echo "  /statusline ${CLAUDE_PLUGIN_ROOT:-~/.claude/plugins/moku}/hooks/moku-statusline.sh"
+  fi
+fi
+
 # Check for project-level memory
 if [ -f .planning/memory.md ]; then
   MEMORY_LINES=$(wc -l < .planning/memory.md 2>/dev/null | tr -d ' ')
