@@ -70,7 +70,7 @@ Present to the user via `AskUserQuestion`:
   3. label: "Neither — I'll handle this manually", description: "Defer to manual review"
 - multiSelect: false
 
-**Record the decision** in `.planning/decision-log.md` (see Decision Knowledge Graph):
+**Record the decision** in `.planning/decisions.md` (see Decision Knowledge Graph):
 ```
 ## [date] [file]:[line] — [short description]
 - **Chose**: [Validator X]'s approach
@@ -86,9 +86,9 @@ When one finding is clearly wrong:
 1. Identify the false positive by checking:
    - Does the rule apply to this plugin tier? (Nano plugins have relaxed rules)
    - Is the finding about a pattern that's explicitly allowed in the spec?
-   - Does the finding contradict a previous decision in `.planning/decision-log.md`?
+   - Does the finding contradict a previous decision in `.planning/decisions.md`?
 2. Dismiss the false positive finding
-3. Add to `.planning/dismissed-findings.md` (from build-findings-triage.md) with reason
+3. Add to `.planning/build/findings.md` (from build-findings-triage.md) with reason
 
 ### For Scope Mismatch (Non-Conflicts)
 

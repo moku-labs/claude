@@ -38,7 +38,7 @@ After each group completes, run **conflict detection** across all output contrac
 2. Detect conflicts: verdict disagreements, severity disagreements, contradictory fixes (same file, line ±5)
 3. Resolve conflicts before building the cross-group summary:
    - **Information gap** → re-run the less-informed validator with the other's findings
-   - **Genuine trade-off** → present to user via AskUserQuestion, record decision in `.planning/decision-log.md`
+   - **Genuine trade-off** → present to user via AskUserQuestion, record decision in `.planning/decisions.md`
    - **False positive** → dismiss with explanation
    - **Scope mismatch** → not a conflict, keep both findings
 4. Add resolved conflict decisions to the cross-group summary so downstream validators see consistent findings

@@ -243,7 +243,7 @@ If overall coverage is below 80%:
 
 ### Coverage Report
 
-Write `.planning/coverage-report.md` with:
+Write `.planning/build/coverage.md` with:
 - Overall coverage percentages (lines, branches, functions, statements)
 - Per-plugin coverage breakdown table
 - List of plugins below 70% threshold with specific uncovered areas
@@ -283,7 +283,7 @@ jobs:
 Adapt to the actual project: correct package manager, correct script names from `package.json`, correct Node/Bun version.
 
 **Coverage Gate** (added to `ci.yml`):
-Add a coverage step that runs `bun run test:coverage` and fails if coverage drops below the threshold from `.planning/coverage-report.md`.
+Add a coverage step that runs `bun run test:coverage` and fails if coverage drops below the threshold from `.planning/build/coverage.md`.
 
 **npm Publish** (`.github/workflows/release.yml`):
 ```yaml
@@ -403,13 +403,17 @@ Update `.planning/STATE.md`:
 2. Create archive directory: `mkdir -p .planning/archive/cycle-{N}/`
 3. Archive planning artifacts:
    - Copy `.planning/specs/` → `.planning/archive/cycle-{N}/specs/`
-   - Copy `.planning/skeleton-spec.md` → `.planning/archive/cycle-{N}/skeleton-spec.md` (if exists)
    - Copy `.planning/STATE.md` → `.planning/archive/cycle-{N}/STATE.md`
-   - Copy `.planning/coverage-report.md` → `.planning/archive/cycle-{N}/coverage-report.md` (if exists)
-4. **Preserve cross-cycle files** — do NOT archive these (they accumulate across cycles):
+   - Copy `.planning/build/coverage.md` → `.planning/archive/cycle-{N}/coverage.md` (if exists)
+   - Copy `.planning/build/skeleton-spec.md` → `.planning/archive/cycle-{N}/skeleton-spec.md` (if exists)
+   - Copy `.planning/build/findings.md` → `.planning/archive/cycle-{N}/findings.md` (if exists)
+   - Copy `.planning/context-*.md` → `.planning/archive/cycle-{N}/` (if any exist — brainstorm context that fed this cycle)
+4. **Wipe the build workspace:** `rm -rf .planning/build/ && mkdir -p .planning/build/`
+   All ephemeral build artifacts are discarded. The archive has the important ones (coverage, findings). Logs, strategy history, and diagnostics are not preserved.
+5. **Clean up consumed context files:** Delete `.planning/context-*.md` from root (already archived above).
+6. **Preserve cross-cycle files** — do NOT archive or delete these (they accumulate across cycles):
    - `.planning/decisions.md`
    - `.planning/learnings.md`
-   - `.planning/research.md`
    - `.planning/steering.md`
 
 ### Reset State for Next Cycle

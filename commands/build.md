@@ -46,7 +46,7 @@ Build a Moku project from a specification plan. The input (`$ARGUMENTS`) can be:
 
 Parse `$ARGUMENTS`:
 1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files.
-   - **Dry-run + skeleton routing:** If `## Skeleton:` is `not-started` or `in-progress`, report what each remaining skeleton wave would create (file list from `.planning/skeleton-spec.md`) instead of creating them. Read the `## Skeleton Build Waves` section of skeleton-spec.md. The skeleton-spec.md format uses two conventions for file paths:
+   - **Dry-run + skeleton routing:** If `## Skeleton:` is `not-started` or `in-progress`, report what each remaining skeleton wave would create (file list from `.planning/build/skeleton-spec.md`) instead of creating them. Read the `## Skeleton Build Waves` section of skeleton-spec.md. The skeleton-spec.md format uses two conventions for file paths:
      - **H3 sub-headers:** `### path/to/file.ts` — each H3 header names a file to create
      - **Code block first-line comments:** `// path/to/file.ts` — the first line of a fenced code block names the target file
      For each wave, extract all file paths using both conventions. Present as: "Skeleton Wave N would create: [file list]". Then report the framework/app/plugin wave plan as normal. Skeleton routing is suspended — no files are created.
@@ -123,7 +123,7 @@ For **plugin** targets, resolve the argument:
 
 Before starting:
 - If `.planning/STATE.md` does **not** exist:
-  - If `.planning/skeleton-spec.md` **exists**: create a fresh STATE.md before proceeding — Skeleton Detection requires STATE.md to read the `## Skeleton:` field:
+  - If `.planning/build/skeleton-spec.md` **exists**: create a fresh STATE.md before proceeding — Skeleton Detection requires STATE.md to read the `## Skeleton:` field:
     ```
     ## Phase: building
     ## Verb: create
@@ -132,7 +132,7 @@ Before starting:
     ## Next Action: Run /moku:build resume
     ```
     Log: "No STATE.md found but skeleton-spec.md exists. Created fresh STATE.md with Skeleton: not-started." Then continue to Skeleton Detection.
-  - If `.planning/skeleton-spec.md` does **not** exist: log `No state file found. Proceeding with fresh build.` and continue to Step 0 target detection. (No skeleton routing needed — there is nothing to build.)
+  - If `.planning/build/skeleton-spec.md` does **not** exist: log `No state file found. Proceeding with fresh build.` and continue to Step 0 target detection. (No skeleton routing needed — there is nothing to build.)
 - If `.planning/STATE.md` exists, read it to understand what has already been built:
   - Validate it contains required headers: `## Phase:`, `## Target:`, `## Next Action:`
   - If headers are missing or malformed, warn the user and use `AskUserQuestion`:
@@ -218,9 +218,9 @@ Read `## Skeleton:` from STATE.md:
 | Status | Action |
 |--------|--------|
 | field absent | Old STATE.md format — assume skeleton committed, proceed to normal build routing |
-| `not-started` | Read `.planning/skeleton-spec.md` → route to `build-skeleton.md` Step S1 |
+| `not-started` | Read `.planning/build/skeleton-spec.md` → route to `build-skeleton.md` Step S1 |
 | `in-progress` | Read skeleton-spec.md, find last completed skeleton wave → resume from next wave. (Any held `#wave:N` or `--continue` will be re-applied after skeleton is committed.) |
-| `verified` | Re-present skeleton report — read `.planning/skeleton-report.md` (if file is missing, route to `build-skeleton.md` Step S3 to regenerate it first). Use `AskUserQuestion`: "Skeleton verified. How would you like to proceed?" — Options: "Approve and commit (Recommended)" / "Adjust skeleton" / "Show details". **Note:** `--continue` does not bypass the skeleton approval gate. Continuous mode applies only to plugin waves after skeleton is committed. After approval and commit, `--continue` mode resumes automatically for subsequent plugin waves. |
+| `verified` | Re-present skeleton report — read `.planning/build/skeleton-report.md` (if file is missing, route to `build-skeleton.md` Step S3 to regenerate it first). Use `AskUserQuestion`: "Skeleton verified. How would you like to proceed?" — Options: "Approve and commit (Recommended)" / "Adjust skeleton" / "Show details". **Note:** `--continue` does not bypass the skeleton approval gate. Continuous mode applies only to plugin waves after skeleton is committed. After approval and commit, `--continue` mode resumes automatically for subsequent plugin waves. |
 | `committed` | Skeleton complete — proceed to Framework/App/Plugin build routing below |
 
 **Skeleton always takes priority.** Any argument (`resume`, `framework #wave:2`, `--continue`) is held until skeleton is `committed`. The skeleton MUST be committed before any plugin build wave begins. If the user passes `resume` or `--continue` but skeleton is not committed, tell the user: "Skeleton build is not yet committed. Completing skeleton first — your `[argument]` will apply after skeleton is committed." Then proceed with skeleton build. After skeleton is committed, re-apply the held arguments (e.g., `--continue` mode resumes, `#wave:N` routes to the specified wave).

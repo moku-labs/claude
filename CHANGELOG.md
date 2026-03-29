@@ -2,6 +2,19 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.1 (2026-03-29)
+
+### Changed
+- **`.planning/` restructure** — build artifacts moved to `.planning/build/` workspace. Root now contains only 4 persistent files (STATE.md, steering.md, decisions.md, learnings.md) + specs/ and archive/. Down from 17+ files.
+- **Skeleton spec moved to `build/`** — `skeleton-spec.md` and `skeleton-report.md` now live in `.planning/build/`, not root. Never clutter the user's view after initial build.
+- **File merges** — `decision-log.md` merged into `decisions.md` (root, persistent). `deferred-findings.md` + `dismissed-findings.md` merged into `findings.md` (build/).
+- **`coverage-report.md` renamed** to `coverage.md` in `.planning/build/`.
+- **Cycle archive wipes `build/`** — Step 7.5 now archives key artifacts (coverage, findings, skeleton-spec) to `archive/cycle-N/`, then wipes `build/` clean. Context files archived and removed from root.
+- **Hook allowlist simplified** — `approve-planning-writes.sh` now uses `.planning/build/*` and `.planning/archive/*` glob patterns instead of individual file entries.
+- **Filesystem guards** create `.planning/build/` directory (plan, brainstorm commands).
+- All 27 files updated: 8 build references, 6 plan references, 5 agents, 4 hooks, 3 commands, 1 README.
+- Version bumped to 0.26.1 in plugin.json and marketplace.json
+
 ## 0.26.0 (2026-03-29)
 
 ### Added

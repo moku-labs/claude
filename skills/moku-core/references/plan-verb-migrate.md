@@ -31,7 +31,7 @@
 
 ## Research
 
-Spawn **moku-researcher** agent with the tech stack, domain description, and key dependencies found at `MIGRATE_PATH`. The unfamiliar codebase needs ecosystem investigation. Research output is saved to `.planning/research.md`.
+Spawn **moku-researcher** agent with the tech stack, domain description, and key dependencies found at `MIGRATE_PATH`. The unfamiliar codebase needs ecosystem investigation. Research output is saved to `.planning/build/research.md`.
 
 ## Analysis
 

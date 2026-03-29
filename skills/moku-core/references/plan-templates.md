@@ -227,7 +227,7 @@ Build Status values: `not started` | `building` | `built` | `pipeline-built` | `
 ## Wave Progress
 | Step | Status | Notes |
 |------|--------|-------|
-| Skeleton spec | done | .planning/skeleton-spec.md |
+| Skeleton spec | done | .planning/build/skeleton-spec.md |
 | Skeleton Wave 0 | not started | config.ts, plugins/index.ts, index.ts, core plugins |
 | Skeleton Wave 1 | not started | [plugin names] |
 | Skeleton verify | not started | format/lint/tsc/build |
@@ -248,7 +248,7 @@ Build Status values: `not started` | `building` | `built` | `pipeline-built` | `
 
 ## Artifacts
 - Spec files: [list after Stage 2]
-- Skeleton spec: .planning/skeleton-spec.md [after Stage 3]
+- Skeleton spec: .planning/build/skeleton-spec.md [after Stage 3]
 - Skeleton files: [list after skeleton build]
 
 ## Verification Results
@@ -311,7 +311,7 @@ Run `/moku:build resume` — skeleton build will run first (skeleton not-started
 
 ## Skeleton Specification Template
 
-Save to `.planning/skeleton-spec.md`.
+Save to `.planning/build/skeleton-spec.md`.
 
 ~~~markdown
 # Skeleton Specification: [Framework Name]
@@ -708,7 +708,7 @@ Used by the Steering Pre-Phase in `plan-verb-create.md`. Saved to `.planning/ste
 
 ## Decision Log Template
 
-Used by the Decision Knowledge Graph. Saved to `.planning/decision-log.md`. See `decision-knowledge-graph.md` for full protocol.
+Used by the Decision Knowledge Graph. Saved to `.planning/decisions.md`. See `decision-knowledge-graph.md` for full protocol.
 
 ```markdown
 # Decision Log

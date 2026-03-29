@@ -19,9 +19,9 @@ Before reading any data source:
 ## Data Sources
 
 1. **`.planning/STATE.md`** — phase, verb, target, skeleton status, plugin table, wave progress, next action
-2. **`.planning/agent-log.md`** — recent agent activity (last 10 entries); if file is absent or empty, show `"No agent activity recorded."` in the Recent Activity section
+2. **`.planning/build/agent-log.md`** — recent agent activity (last 10 entries); if file is absent or empty, show `"No agent activity recorded."` in the Recent Activity section
 3. **`.planning/notifications.log`** — recent notifications (last 5 entries)
-4. **`.planning/diagnostics.log`** — hook denials, tool failures, permission blocks (last 10 entries)
+4. **`.planning/build/diagnostics.log`** — hook denials, tool failures, permission blocks (last 10 entries)
 5. **`.planning/memory.md`** — project-specific memory (if exists)
 6. **`src/plugins/`** — filesystem evidence of built plugins
 7. **`.planning/specs/`** — specification files count and names
@@ -103,7 +103,7 @@ If `$ARGUMENTS` contains `--full`, also show:
   `"No git repository found."` in place of checkpoint history
 
 If `$ARGUMENTS` contains `diagnostics`, show ONLY the diagnostics section:
-- Full `.planning/diagnostics.log` contents
+- Full `.planning/build/diagnostics.log` contents
 - Summary table: count per category (PERM-DENY, ANTIPATTERN, INDEX-RULE, TOOL-FAIL, STOP-BLOCK, STRUCTURE)
 - Top 5 most repeated issues (group by message similarity)
 - Suggestion: "Run `/moku:audit hooks` to analyze patterns and propose fixes"

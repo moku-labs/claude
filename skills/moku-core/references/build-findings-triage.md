@@ -54,8 +54,8 @@ After all findings are triaged, partition into three buckets:
 | Bucket | Action |
 |--------|--------|
 | **Fix now** | Route to gap closure (Step 4c). These are the only findings that enter the fix cycle. |
-| **Fix later** | Record in `.planning/deferred-findings.md` with file, line, rule, message. These carry forward and are presented again at the next wave's triage or at final verification. |
-| **Not an issue** | Record in `.planning/dismissed-findings.md` with file, line, rule, message, and the wave number. These are excluded from future triage for the same file+rule combination. |
+| **Fix later** | Record in `.planning/build/findings.md` with file, line, rule, message. These carry forward and are presented again at the next wave's triage or at final verification. |
+| **Not an issue** | Record in `.planning/build/findings.md` with file, line, rule, message, and the wave number. These are excluded from future triage for the same file+rule combination. |
 
 ### Step 5: Present Triage Summary
 
@@ -64,7 +64,7 @@ After all findings are triaged, show a compact summary:
 ```
 Triage complete:
   Fix now:      [N] findings → entering gap closure
-  Fix later:    [N] findings → deferred to .planning/deferred-findings.md
+  Fix later:    [N] findings → deferred to .planning/build/findings.md
   Not an issue: [N] findings → dismissed
 ```
 
@@ -72,13 +72,13 @@ If "Fix now" count is 0, skip gap closure and proceed to the wave judge.
 
 ## Deferred Findings Carry-Forward
 
-At the start of each wave's verification (Step 4a), check `.planning/deferred-findings.md`:
+At the start of each wave's verification (Step 4a), check `.planning/build/findings.md`:
 - If any deferred findings reference files that were modified in this wave, re-surface them in the triage
 - Prefix re-surfaced findings with `[DEFERRED from Wave N]` so the user knows it's a carry-forward
 
 ## Dismissed Findings Memory
 
-`.planning/dismissed-findings.md` acts as a suppressions list. When a future triage encounters a finding with the same `file + rule` combination as a dismissed entry, auto-skip it (don't re-ask). Log: `"Auto-skipped [rule] in [file] (dismissed in Wave [N])"`
+`.planning/build/findings.md` acts as a suppressions list. When a future triage encounters a finding with the same `file + rule` combination as a dismissed entry, auto-skip it (don't re-ask). Log: `"Auto-skipped [rule] in [file] (dismissed in Wave [N])"`
 
 If the file has been substantially modified since dismissal (>30% of lines changed), re-surface the finding — the dismissal may no longer apply.
 

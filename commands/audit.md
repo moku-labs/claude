@@ -273,7 +273,7 @@ Analyze all hook files directly — no agent spawn needed. Examine:
 5. **Prompt hook** — analyze the prompt text: is `approve` the explicit default? Is output constrained to exactly one line? Does the non-plugin-file path come first?
 6. **Remaining scripts** — check for: unquoted variables, exit-code correctness (all paths exit 0), missing input guards, hardcoded paths
 7. **Coverage gaps** — any hook events missing from `hooks.json` that moku workflows would benefit from
-8. **Diagnostics log analysis** — if `.planning/diagnostics.log` exists, analyze patterns:
+8. **Diagnostics log analysis** — if `.planning/build/diagnostics.log` exists, analyze patterns:
    a. Count entries per category (PERM-DENY, ANTIPATTERN, INDEX-RULE, TOOL-FAIL, STOP-BLOCK, STRUCTURE)
    b. Identify recurring issues: group by message prefix, flag any that appear 3+ times
    c. For ANTIPATTERN entries: check if the same pattern was blocked multiple times — suggests Claude is not learning from the denial message. Propose rewording the denial reason for clarity.
@@ -310,7 +310,7 @@ Show each proposed fix grouped by file, then use `AskUserQuestion`:
   1. label: "Apply all (Recommended)", description: "Write fixes to all {N} hook files"
   2. label: "Report only", description: "Show full report, apply nothing"
   3. label: "Select files", description: "Choose which hook files to update"
-  4. label: "Clear diagnostics", description: "Archive diagnostics.log and start fresh" (only include if `.planning/diagnostics.log` exists and has entries)
+  4. label: "Clear diagnostics", description: "Archive diagnostics.log and start fresh" (only include if `.planning/build/diagnostics.log` exists and has entries)
 - multiSelect: false
 
 **If Apply all:** For each proposed file change:
@@ -329,8 +329,8 @@ Apply the same dual-write logic per selected file.
 
 **If Report only:** Show full report. "No changes applied."
 
-**If Clear diagnostics (only shown when `.planning/diagnostics.log` exists and has entries):**
-Copy `.planning/diagnostics.log` → `.planning/diagnostics-{YYYY-MM-DD}.log.bak`, then truncate `.planning/diagnostics.log` to empty. Confirm: "Diagnostics archived to diagnostics-{date}.log.bak. Fresh log started."
+**If Clear diagnostics (only shown when `.planning/build/diagnostics.log` exists and has entries):**
+Copy `.planning/build/diagnostics.log` → `.planning/diagnostics-{YYYY-MM-DD}.log.bak`, then truncate `.planning/build/diagnostics.log` to empty. Confirm: "Diagnostics archived to diagnostics-{date}.log.bak. Fresh log started."
 
 After hooks audit completes, if TARGET was `all`, proceed to the next command in sequence.
 
@@ -456,7 +456,7 @@ cd "$CYCLE_TMP" && git init -q && git config user.email "cycle@test.local" && gi
 ```bash
 CYCLE_START_TIME=$(date '+%H:%M:%S')
 mkdir -p .planning
-echo "=== FULL-CYCLE-START $CYCLE_START_TIME [{PROJECT_NAME literal}] ===" >> .planning/diagnostics.log
+echo "=== FULL-CYCLE-START $CYCLE_START_TIME [{PROJECT_NAME literal}] ===" >> .planning/build/diagnostics.log
 ```
 Replace `{PROJECT_NAME literal}` with the actual project name string (e.g., `task-scheduler`). Do the same for all subsequent bash blocks that reference PROJECT_NAME.
 
@@ -499,12 +499,12 @@ If `observation_log_written: false`:
 Write the end bracket marker:
 ```bash
 CYCLE_END_TIME=$(date '+%H:%M:%S')
-echo "=== FULL-CYCLE-END $CYCLE_END_TIME [$PROJECT_NAME] ===" >> .planning/diagnostics.log
+echo "=== FULL-CYCLE-END $CYCLE_END_TIME [$PROJECT_NAME] ===" >> .planning/build/diagnostics.log
 ```
 
 Extract cycle-specific diagnostics:
 ```bash
-awk "/=== FULL-CYCLE-START.*\[$PROJECT_NAME\] ===/,/=== FULL-CYCLE-END.*\[$PROJECT_NAME\] ===/" .planning/diagnostics.log > "$CYCLE_TMP/.planning/cycle-diagnostics.log" 2>/dev/null || true
+awk "/=== FULL-CYCLE-START.*\[$PROJECT_NAME\] ===/,/=== FULL-CYCLE-END.*\[$PROJECT_NAME\] ===/" .planning/build/diagnostics.log > "$CYCLE_TMP/.planning/cycle-diagnostics.log" 2>/dev/null || true
 ```
 
 Report entry count:

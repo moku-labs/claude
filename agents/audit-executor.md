@@ -90,7 +90,7 @@ Write a prose report for each scenario (what you did, what happened, what diverg
       "actual_behavior": "STATE.md was created with correct Phase and Verb. Plugin table was empty (no plugins detected yet).",
       "expected_behavior": "Command parses args, runs Stage 1 analysis, writes STATE.md",
       "divergence": null,
-      "artifacts": [".planning/STATE.md", ".planning/research.md"]
+      "artifacts": [".planning/STATE.md", ".planning/build/research.md"]
     }
   ],
   "blockers": [

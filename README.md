@@ -132,7 +132,7 @@ Sequential (cross-plugin):        architecture-validator
 | **SessionStart** | SessionStart | Detects Moku project type, planning state, specifications; validates environment (Bun/Node/tsc versions); reports @moku-labs/core version |
 | **Notification** | Notification | Logs build progress notifications to `.planning/notifications.log` for long operations |
 | **UserPromptSubmit** | UserPromptSubmit | Injects compact Moku project context (type, plugins, planning state) before every prompt |
-| **SubagentStop** | SubagentStop | Auto-logs moku agent completions to `.planning/agent-log.md` with timestamp |
+| **SubagentStop** | SubagentStop | Auto-logs moku agent completions to `.planning/build/agent-log.md` with timestamp |
 | **SessionEnd** | SessionEnd | Cleans up debug logs and records session end timestamp |
 
 ## Configuration

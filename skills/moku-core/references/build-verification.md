@@ -38,7 +38,7 @@ The code reviewer was already spawned in parallel with the verifier (Step 4a). I
    - `verdict: ISSUES` or `verdict: BLOCKER` → present findings interactively via the triage flow
    - Triage decisions determine what enters gap closure ("Fix now"), what is deferred ("Fix later"), and what is dismissed ("Not an issue")
    - Only "Fix now" findings route to Gap Closure (Step 4c)
-3. Before triage, check `.planning/deferred-findings.md` for carry-forward findings from previous waves that affect files modified in this wave — re-surface them in the triage.
+3. Before triage, check `.planning/build/findings.md` for carry-forward findings from previous waves that affect files modified in this wave — re-surface them in the triage.
 
 **Skip code review for Wave 0** if it contains only Nano/Micro core plugins (low complexity, minimal logic to review).
 
@@ -51,7 +51,7 @@ After both verifier (Step 4a) and code reviewer (Step 4a2) return, check for con
 1. Build the per-file findings matrix from both output contracts
 2. Detect verdict, severity, or contradictory-fix conflicts (same file, line ±5)
 3. Resolve each conflict: information gap → re-run, genuine trade-off → ask user, false positive → dismiss
-4. Record trade-off decisions in `.planning/decision-log.md` (see Decision Knowledge Graph)
+4. Record trade-off decisions in `.planning/decisions.md` (see Decision Knowledge Graph)
 5. Only resolved findings proceed to gap closure or wave judge
 
 **Skip conflict resolution** when both validators agree (both PASS, or findings are on different files with no overlap).
@@ -162,7 +162,7 @@ When verification finds issues (plugins with status `verify-failed`):
 
    **On stalemate — force Alternative Strategy before fresh-context retry:**
 
-   a. **Record what was tried** — append to `.planning/strategy-log.md`:
+   a. **Record what was tried** — append to `.planning/build/strategy-log.md`:
       ```markdown
       ## Wave [N], Plugin [name], Round [R]
       - Strategy: [brief description of the approach — e.g., "added explicit type annotation to api.ts:42"]
@@ -181,7 +181,7 @@ When verification finds issues (plugins with status `verify-failed`):
 
    d. **If alternative strategy also fails (second stalemate on same error)** → skip to Fresh-Context Retry (Step 4c2) with both strategies recorded in the `## Fresh Retry Context`. Log: `[STUCK-LOOP] Wave N, plugin X: 2 strategies failed for same error after round Y`
 
-   e. **Strategy diversity check**: Before the diagnostician proposes a fix, compare it against `.planning/strategy-log.md`. If the proposed fix has >80% text similarity to a previously attempted fix for the same error, REJECT it immediately and demand an alternative. This prevents the "same fix with slightly different wording" loop.
+   e. **Strategy diversity check**: Before the diagnostician proposes a fix, compare it against `.planning/build/strategy-log.md`. If the proposed fix has >80% text similarity to a previously attempted fix for the same error, REJECT it immediately and demand an alternative. This prevents the "same fix with slightly different wording" loop.
 
 9. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist after all rounds (and no stalemate detected earlier), enter **Fresh-Context Retry** (Step 4c2).
 
@@ -195,7 +195,7 @@ When gap closure exhausts its rounds and plugins still have `verify-failed` stat
    - Plugin name and tier
    - The specific errors (tsc output, test failures, lint errors)
    - What fixes were attempted and why they didn't work
-   - **Strategy history** from `.planning/strategy-log.md` — what approaches were tried and why they failed
+   - **Strategy history** from `.planning/build/strategy-log.md` — what approaches were tried and why they failed
    - The relevant spec section (`## Verification` from `.planning/specs/0N-name.md`)
 
 2. **Save to STATE.md** — Add a `## Fresh Retry Context` section:
@@ -223,7 +223,7 @@ When gap closure exhausts its rounds and plugins still have `verify-failed` stat
 
 5. **On resume** — When `/moku:build resume` detects `retry-pending` plugins:
    - Read the `## Fresh Retry Context` section from STATE.md
-   - Read `.planning/strategy-log.md` for full strategy history
+   - Read `.planning/build/strategy-log.md` for full strategy history
    - Spawn the **moku-error-diagnostician** agent with ONLY:
      - The error summary (not the full conversation history)
      - The plugin spec
@@ -260,7 +260,7 @@ After gap closure completes (or if verification passed with no gap closure neede
      - multiSelect: false
    - After the user selects "Continue anyway," `--continue` resumes automatic wave progression. The wave judge re-evaluates each subsequent wave independently — if another `stop-for-review` occurs, the user will be asked again. A single "Continue anyway" does not disable the judge for the remainder of the build.
    - `fresh-retry` → enter Step 4c2 (Fresh-Context Retry) for affected plugins
-3. Log the judge's decision to `.planning/agent-log.md` and `.planning/diagnostics.log`
+3. Log the judge's decision to `.planning/build/agent-log.md` and `.planning/build/diagnostics.log`
 
 **Wave judge decisions are not persisted in STATE.md.** On resume, the wave judge does NOT re-run for previously completed waves — the previous wave is considered complete (its completion state was saved in STATE.md). The judge evaluates only the CURRENT wave being built, never previous waves.
 
@@ -308,7 +308,7 @@ The validation-coordinator uses these hashes to skip per-plugin validators for u
 
 After spec verification ticking and content hashes, archive the completed wave's verbose details to keep STATE.md bounded:
 
-1. **Append to `.planning/STATE-history.md`** — Move the full plugins table rows for this wave's plugins (status, hash, verification notes) into the history file under a `## Wave N` header with a timestamp
+1. **Append to `.planning/build/STATE-history.md`** — Move the full plugins table rows for this wave's plugins (status, hash, verification notes) into the history file under a `## Wave N` header with a timestamp
 2. **Collapse in STATE.md** — Replace the wave's individual plugin rows with a single summary line:
    ```
    | Wave N | 4 plugins | verified | 2025-01-15 |

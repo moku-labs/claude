@@ -13,7 +13,7 @@ The decision log prevents this by making trade-off reasoning explicit and querya
 
 ## Decision Log Location
 
-**File:** `.planning/decision-log.md`
+**File:** `.planning/decisions.md`
 
 This file persists across sessions and is read by agents before making changes.
 
@@ -85,7 +85,7 @@ Record when:
 When an agent is about to modify a file, it should check the decision log for entries mentioning that file or plugin:
 
 ```
-Grep `.planning/decision-log.md` for the plugin name and file path.
+Grep `.planning/decisions.md` for the plugin name and file path.
 If entries found → read them before proposing changes.
 If a proposed change contradicts a recorded decision → flag the conflict to the user:
   "This change conflicts with a previous decision: [title]. Proceed anyway?"
@@ -126,9 +126,9 @@ Structured record of trade-off decisions. Agents consult this before making chan
 ## Querying the Decision Log
 
 Agents can query the log by:
-- **File path**: `grep "Context:.*router" .planning/decision-log.md` — all decisions affecting the router
-- **Phase**: `grep "Phase:.*build-wave-2" .planning/decision-log.md` — all Wave 2 decisions
-- **Irreversible**: `grep "Reversible:.*no" .planning/decision-log.md` — hard constraints
+- **File path**: `grep "Context:.*router" .planning/decisions.md` — all decisions affecting the router
+- **Phase**: `grep "Phase:.*build-wave-2" .planning/decisions.md` — all Wave 2 decisions
+- **Irreversible**: `grep "Reversible:.*no" .planning/decisions.md` — hard constraints
 - **Scope**: section headers contain the scope (planning, build-wave-N, etc.)
 
 ## Housekeeping

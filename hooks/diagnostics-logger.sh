@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Shared diagnostics logging library — source this from other hooks.
-# Writes structured entries to .planning/diagnostics.log for analysis.
+# Writes structured entries to .planning/build/diagnostics.log for analysis.
 #
 # Usage: log_diagnostic "CATEGORY" "TARGET" "message"
 #
@@ -16,7 +16,7 @@
 
 log_diagnostic() {
   local category="$1" target="$2" message="$3"
-  local logfile=".planning/diagnostics.log"
+  local logfile=".planning/build/diagnostics.log"
 
   # Only log if planning state exists (consistent with other loggers)
   [ -f .planning/STATE.md ] || return 0

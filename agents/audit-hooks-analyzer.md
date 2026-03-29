@@ -53,7 +53,7 @@ echo '{"file_path":"/tmp/project/.planning/STATE.md"}' | \
   bash "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh" '{"file_path":"/tmp/project/.planning/STATE.md"}'
 
 # Test 2: Unknown .planning/ file (should NOT approve — let normal flow handle)
-bash "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh" '{"file_path":"/tmp/project/.planning/skeleton-spec.md"}'
+bash "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh" '{"file_path":"/tmp/project/.planning/build/skeleton-spec.md"}'
 
 # Test 3: Non-planning file (should exit cleanly)
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh" '{"file_path":"/tmp/project/src/index.ts"}'
@@ -62,7 +62,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh" '{"file_path":"/tm
 bash "${CLAUDE_PLUGIN_ROOT}/hooks/approve-planning-writes.sh" ''
 ```
 
-**Known gap to check**: Is `.planning/skeleton-spec.md` in the allowlist? (It should be — it's written during the plan Stage 3 skeleton spec.) If missing, any write to `skeleton-spec.md` will not be auto-approved, causing unnecessary hook friction.
+**Known gap to check**: Is `.planning/build/skeleton-spec.md` in the allowlist? (It should be — it's written during the plan Stage 3 skeleton spec.) If missing, any write to `skeleton-spec.md` will not be auto-approved, causing unnecessary hook friction.
 
 Also check for other planning files that might be missing: `.planning/audit-*.md` (written by the new audit command).
 
@@ -161,8 +161,8 @@ Finish with the standard output contract JSON:
       "file": "hooks/approve-planning-writes.sh",
       "line": 30,
       "rule": "missing-edge-case",
-      "message": ".planning/skeleton-spec.md is not in the allowlist — written during plan Stage 3 but not auto-approved",
-      "fix": "Add '.planning/skeleton-spec.md)' to the case block before the *) catch-all"
+      "message": ".planning/build/skeleton-spec.md is not in the allowlist — written during plan Stage 3 but not auto-approved",
+      "fix": "Add '.planning/build/skeleton-spec.md)' to the case block before the *) catch-all"
     }
   ],
   "warnings": [],

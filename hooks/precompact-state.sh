@@ -25,7 +25,7 @@ if [ -f .planning/STATE.md ]; then
   # Extract Verification Results if present (up to 10 lines)
   awk '/^## Verification/{found=1; print; next} found && /^## /{exit} found && NR>0{print}' .planning/STATE.md 2>/dev/null | head -10
 
-  echo '... (full state in .planning/STATE.md, wave history in .planning/STATE-history.md)'
+  echo '... (full state in .planning/STATE.md, wave history in .planning/build/STATE-history.md)'
 fi
 
 # memory.md: inject structured memory with context-aware relevance + recency priority
@@ -86,10 +86,10 @@ if [ -f .planning/decisions.md ]; then
 fi
 
 # research.md: inject only the summary, not full research
-if [ -f .planning/research.md ]; then
+if [ -f .planning/build/research.md ]; then
   echo ''
-  echo '## Moku Research Summary (full in .planning/research.md)'
-  head -30 .planning/research.md
+  echo '## Moku Research Summary (full in .planning/build/research.md)'
+  head -30 .planning/build/research.md
 fi
 
 # Fallback: inject minimal project fingerprint when no planning state exists

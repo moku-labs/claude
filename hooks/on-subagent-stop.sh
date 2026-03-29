@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # SubagentStop hook: auto-save planning state when a build/validation agent completes.
-# Captures agent completion with structured decision data into .planning/agent-log.md.
+# Captures agent completion with structured decision data into .planning/build/agent-log.md.
 # Extracts verdict, decision, blockers/warnings counts from agent JSON output contracts.
 
 # Only act if we're in a Moku project with active planning state
@@ -84,7 +84,7 @@ if [ -n "$VERDICT" ]; then
 fi
 
 # Append agent completion to log (atomic creation with noclobber to avoid TOCTOU race)
-if [ ! -f .planning/agent-log.md ]; then
+if [ ! -f .planning/build/agent-log.md ]; then
   (
     set -o noclobber
     {
@@ -92,11 +92,11 @@ if [ ! -f .planning/agent-log.md ]; then
       echo ""
       echo "| Timestamp | Agent | Result |"
       echo "|-----------|-------|--------|"
-    } > .planning/agent-log.md 2>/dev/null || true  # loses race gracefully
+    } > .planning/build/agent-log.md 2>/dev/null || true  # loses race gracefully
   )
 fi
 AGENT_TYPE="${AGENT_TYPE//|/ }"
 DETAIL="${DETAIL//|/ }"
-echo "| $TIMESTAMP | $AGENT_TYPE | $DETAIL |" >> .planning/agent-log.md
+echo "| $TIMESTAMP | $AGENT_TYPE | $DETAIL |" >> .planning/build/agent-log.md
 
 exit 0

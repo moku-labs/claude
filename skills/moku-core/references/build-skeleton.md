@@ -2,7 +2,7 @@
 
 This file is read by `/moku:build` when `## Skeleton:` in STATE.md is `not-started` or `in-progress`. It handles creating all skeleton source files from the skeleton spec produced by Stage 3 of `/moku:plan`, verifying them, collecting user feedback, and committing the initial commit.
 
-**Key difference from plugin build waves:** Skeleton waves also stop-and-resume (one wave per invocation), but the content is always copied from `.planning/skeleton-spec.md` code blocks — no sub-agents needed. The only user-facing stop (besides between skeleton waves) is after verification + skeleton report, when the user must approve before the initial commit.
+**Key difference from plugin build waves:** Skeleton waves also stop-and-resume (one wave per invocation), but the content is always copied from `.planning/build/skeleton-spec.md` code blocks — no sub-agents needed. The only user-facing stop (besides between skeleton waves) is after verification + skeleton report, when the user must approve before the initial commit.
 
 **`--continue` does not apply to skeleton waves.** Skeleton waves always stop-and-resume regardless of `--continue` mode. The `--continue` flag applies only to plugin build waves (Wave 0 onward after skeleton is committed). If `--continue` was passed but the skeleton is not yet committed, tell the user: "Note: `--continue` is deferred until the skeleton is committed. Skeleton waves always execute one at a time."
 
@@ -10,7 +10,7 @@ This file is read by `/moku:build` when `## Skeleton:` in STATE.md is `not-start
 
 ## Step S1: Read and Validate Skeleton Spec
 
-1. Read `.planning/skeleton-spec.md`
+1. Read `.planning/build/skeleton-spec.md`
 2. Verify all five sections are present:
    - Architecture Overview
    - File Structure
@@ -87,9 +87,9 @@ Update STATE.md: mark `Skeleton verify` row as `done` in Wave Progress.
 
 ## Step S4: Generate Skeleton Report
 
-Generate a report, save it to `.planning/skeleton-report.md`, and present it inline to the user.
+Generate a report, save it to `.planning/build/skeleton-report.md`, and present it inline to the user.
 
-**Save first, then present:** Write the complete report to `.planning/skeleton-report.md` before presenting it. This allows the resume path (when skeleton status is `verified`) to re-read the report from disk without regenerating it.
+**Save first, then present:** Write the complete report to `.planning/build/skeleton-report.md` before presenting it. This allows the resume path (when skeleton status is `verified`) to re-read the report from disk without regenerating it.
 
 **Report format:**
 
@@ -144,8 +144,8 @@ If no issues: "No issues — verification passed on first attempt."
 ## Step S5: Present Report and Wait for User Approval
 
 Present the skeleton report. If resuming from `skeleton: verified` state:
-- Read `.planning/skeleton-report.md` from disk to re-present it (do not regenerate — the verification data is already captured).
-- **If `.planning/skeleton-report.md` does not exist** (e.g., interrupted between verification and report write): re-run Step S3 (verification loop) to regenerate the verification data, then run Step S4 to write and present the report, then continue here.
+- Read `.planning/build/skeleton-report.md` from disk to re-present it (do not regenerate — the verification data is already captured).
+- **If `.planning/build/skeleton-report.md` does not exist** (e.g., interrupted between verification and report write): re-run Step S3 (verification loop) to regenerate the verification data, then run Step S4 to write and present the report, then continue here.
 
 Use `AskUserQuestion`:
 - Question: "Skeleton verified. Review the report above and decide how to proceed."

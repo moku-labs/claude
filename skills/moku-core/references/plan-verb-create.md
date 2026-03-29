@@ -26,7 +26,7 @@ If CONTEXT_FILE is not `(none)`:
    Write this synthesized `steering.md` to `.planning/steering.md`.
 5. **Feed-forward into later stages:**
    - **Discussion phase**: If triggered, pre-populate with CONTEXT_DECISIONS so the user confirms rather than re-derives. If CONTEXT_DECISIONS covers the domain sufficiently, skip the discussion phase: log "Context file provides sufficient discussion context. Skipping Discussion Phase."
-   - **Research phase**: If CONTEXT_FILE `## Research Findings` section exists and is non-empty, skip the research phase: log "Context file includes research findings. Skipping Research Phase." Write the research findings to `.planning/research.md` so Stage 1 can reference them.
+   - **Research phase**: If CONTEXT_FILE `## Research Findings` section exists and is non-empty, skip the research phase: log "Context file includes research findings. Skipping Research Phase." Write the research findings to `.planning/build/research.md` so Stage 1 can reference them.
    - **Stage 1**: CONTEXT_PLUGINS_HINT is treated as a starting plugin inventory suggestion — validate against Moku constraints but do not re-derive from scratch. Show the user the suggested plugins and ask for confirmation/additions. **When reordering plugins from CONTEXT_PLUGINS_HINT to reflect wave assignments**, log the reordering decision: "Reordered [plugin-a] before [plugin-b] to group Wave 0 plugins together." This makes the ordering change visible rather than silent (context files and spec files may otherwise have confusingly different numbering).
    - **Stage 2**: CONTEXT_RISKS are injected into spec writing — the plugin closest to each risk gets an explicit risk mitigation note in its spec.
 
@@ -239,7 +239,7 @@ Use `AskUserQuestion` to confirm before proceeding:
 
 **This phase triggers when planning a new domain** that would benefit from ecosystem investigation. Skip for well-understood domains, simple plugins, or when the user provides detailed specs.
 
-**Migration note:** If migration analysis already ran, research was performed during that step. Skip this phase to avoid redundant investigation. If `.planning/research.md` already exists, do not overwrite it.
+**Migration note:** If migration analysis already ran, research was performed during that step. Skip this phase to avoid redundant investigation. If `.planning/build/research.md` already exists, do not overwrite it.
 
 **When to trigger:**
 - Planning a framework in a domain the user hasn't specified libraries for
@@ -249,7 +249,7 @@ Use `AskUserQuestion` to confirm before proceeding:
 **Research process:**
 1. Spawn the **moku-researcher** agent with the domain description and any decisions from the discussion phase
 2. The agent investigates npm packages, TypeScript patterns, reference implementations, and pitfalls
-3. Output is saved to `.planning/research.md`
+3. Output is saved to `.planning/build/research.md`
 4. Review the research results and incorporate relevant findings into Stage 1 analysis
 
 The research output is available for the user to review but does NOT require a separate approval gate — it flows directly into Stage 1.
@@ -285,7 +285,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` for t
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for detailed Stage 3 instructions per target type.
 
-**Summary**: Produce `.planning/skeleton-spec.md` — a specification document (NOT actual source files) containing: architecture overview, complete file structure, system connections, skeleton build waves with ready-to-paste code blocks per file, and verification checklist. Update `.planning/STATE.md` with `## Skeleton: not-started` and Wave Progress rows for skeleton waves. Set `Next Action: Run /moku:build resume (skeleton build will run first)`. Wait for explicit user approval.
+**Summary**: Produce `.planning/build/skeleton-spec.md` — a specification document (NOT actual source files) containing: architecture overview, complete file structure, system connections, skeleton build waves with ready-to-paste code blocks per file, and verification checklist. Update `.planning/STATE.md` with `## Skeleton: not-started` and Wave Progress rows for skeleton waves. Set `Next Action: Run /moku:build resume (skeleton build will run first)`. Wait for explicit user approval.
 
 ---
 

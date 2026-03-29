@@ -59,14 +59,14 @@ Using the **moku-core** and **moku-plugin** skills, for each identified regular 
 
 #### Record Key Decisions
 
-During plugin identification, record non-obvious decisions to `.planning/decision-log.md` (see `decision-knowledge-graph.md`). Specifically:
+During plugin identification, record non-obvious decisions to `.planning/decisions.md` (see `decision-knowledge-graph.md`). Specifically:
 - Why a concept became a standalone plugin vs. a sub-module of another plugin
 - Why a specific complexity tier was chosen (especially when borderline between tiers)
 - Why two related domains were merged or kept separate
 - Why a dependency direction was chosen (A depends on B, not B depends on A)
 - Steering boundary violations — if a potential plugin was rejected due to stated scope boundaries
 
-Create `.planning/decision-log.md` if it doesn't exist (use template from `plan-templates.md`).
+Create `.planning/decisions.md` if it doesn't exist (use template from `plan-templates.md`).
 
 #### Structure Constraints
 
@@ -274,7 +274,7 @@ Route based on selection:
 
 #### Record Spec Decisions
 
-While creating specifications, record non-obvious design decisions to `.planning/decision-log.md`:
+While creating specifications, record non-obvious design decisions to `.planning/decisions.md`:
 - API shape choices (why this signature over alternatives)
 - Event structure decisions (why events are structured this way)
 - State design trade-offs (why mutable Map vs immutable array, etc.)
@@ -395,7 +395,7 @@ Route based on selection:
 
 #### Produce the Skeleton Spec Document
 
-Save to `.planning/skeleton-spec.md`. Use the Skeleton Specification Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. The document must contain all five sections:
+Save to `.planning/build/skeleton-spec.md`. Use the Skeleton Specification Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. The document must contain all five sections:
 
 1. **Architecture Overview** — entry structure, barrel pattern, core config registration
 2. **File Structure** — complete file tree with every file annotated (tier, purpose)
@@ -417,13 +417,13 @@ Save to `.planning/skeleton-spec.md`. Use the Skeleton Specification Template fr
 
 ### App Target
 
-Produce `.planning/skeleton-spec.md` covering: `main.ts` structure, custom plugin skeletons per their approved tiers, framework import map, and verification checklist.
+Produce `.planning/build/skeleton-spec.md` covering: `main.ts` structure, custom plugin skeletons per their approved tiers, framework import map, and verification checklist.
 
 ---
 
 ### Plugin Target
 
-Produce `.planning/skeleton-spec.md` covering: tier-appropriate file structure, ready-to-paste code blocks for every file (imports, exports, empty types, empty function bodies, JSDoc headers), and verification checklist.
+Produce `.planning/build/skeleton-spec.md` covering: tier-appropriate file structure, ready-to-paste code blocks for every file (imports, exports, empty types, empty function bodies, JSDoc headers), and verification checklist.
 
 ---
 
@@ -432,7 +432,7 @@ Produce `.planning/skeleton-spec.md` covering: tier-appropriate file structure, 
 **On exit**: Update `.planning/STATE.md`:
 - Phase: `stage3/pending-approval`
 - `## Skeleton:` — preserve the current value if it is `in-progress`, `verified`, or `committed` (do not regress a build-advanced value); write `not-started` only if the field is currently absent or already `not-started`
-- Add skeleton spec path to Artifacts section: `Skeleton spec: .planning/skeleton-spec.md`
+- Add skeleton spec path to Artifacts section: `Skeleton spec: .planning/build/skeleton-spec.md`
 - Add skeleton wave rows to Wave Progress table (one row per skeleton wave + verification + commit), all with Status `not started`
 - Set `Next Action: Run /moku:build resume (skeleton build will run first)`
 

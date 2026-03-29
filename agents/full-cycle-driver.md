@@ -113,7 +113,7 @@ Read the plan command file and its reference files (`plan-stages.md`, `plan-verb
 5. Auto-answer approval gate → advance to `stage2/approved`
 
 **Stage 3 — Skeleton Specification:**
-1. Write `.planning/skeleton-spec.md` with all 5 required sections
+1. Write `.planning/build/skeleton-spec.md` with all 5 required sections
 2. Include realistic code blocks for each file the skeleton will create
 3. Update STATE.md: `## Phase: complete`, `## Skeleton: not-started`
 4. Auto-answer approval gate → advance to `stage3/approved`
@@ -134,7 +134,7 @@ Read the build command file and its reference files (`build-skeleton.md`, `build
 1. Read `skeleton-spec.md`, apply steps S1-S7
 2. Create the skeleton source files in `src/` by copying code blocks from the spec
 3. Run verification: `bun run format`, `bun run lint`, `bunx tsc --noEmit` in CYCLE_TMP
-4. Write `.planning/skeleton-report.md`
+4. Write `.planning/build/skeleton-report.md`
 5. Auto-answer skeleton approval gate
 6. Run `git add -A && git commit -m "skeleton: initial structure"` in CYCLE_TMP
 7. Update STATE.md: `## Skeleton: committed`

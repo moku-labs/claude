@@ -187,7 +187,7 @@ The driver writes `$CYCLE_TMP/.planning/cycle-observations.md` with this structu
 
 ### Bracket Markers
 
-The orchestrating command writes timestamp bracket markers to `.planning/diagnostics.log`:
+The orchestrating command writes timestamp bracket markers to `.planning/build/diagnostics.log`:
 
 ```
 === FULL-CYCLE-START {HH:MM:SS} [{project-name}] ===
@@ -199,7 +199,7 @@ The orchestrating command writes timestamp bracket markers to `.planning/diagnos
 
 After the driver completes, extract cycle-specific entries:
 ```bash
-awk "/=== FULL-CYCLE-START.*\[${PROJECT_NAME}\] ===/,/=== FULL-CYCLE-END.*\[${PROJECT_NAME}\] ===/" .planning/diagnostics.log > "$CYCLE_TMP/.planning/cycle-diagnostics.log"
+awk "/=== FULL-CYCLE-START.*\[${PROJECT_NAME}\] ===/,/=== FULL-CYCLE-END.*\[${PROJECT_NAME}\] ===/" .planning/build/diagnostics.log > "$CYCLE_TMP/.planning/cycle-diagnostics.log"
 ```
 
 ### Classification Rules (for reviewers)

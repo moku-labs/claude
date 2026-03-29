@@ -34,23 +34,19 @@ esac
 case "$REL_PATH" in
   .planning/STATE.md|.planning/STATE.md.bak|*/.planning/STATE.md|*/.planning/STATE.md.bak)
     ;;
-  .planning/decisions.md|.planning/research.md|.planning/memory.md|*/.planning/decisions.md|*/.planning/research.md|*/.planning/memory.md)
-    ;;
-  .planning/agent-log.md|.planning/notifications.log|*/.planning/agent-log.md|*/.planning/notifications.log)
+  .planning/decisions.md|.planning/memory.md|*/.planning/decisions.md|*/.planning/memory.md)
     ;;
   .planning/app-spec.md|*/.planning/app-spec.md)
     ;;
   .planning/specs/*.md|*/.planning/specs/*.md)
     ;;
-  .planning/skeleton-spec.md|*/.planning/skeleton-spec.md)
+  .planning/build/*|*/.planning/build/*)
     ;;
-  .planning/STATE-history.md|*/.planning/STATE-history.md)
+  .planning/archive/*|*/.planning/archive/*)
     ;;
   .planning/audit-*.md|*/.planning/audit-*.md)
     ;;
   .planning/moku.md|*/.planning/moku.md)
-    ;;
-  .planning/diagnostics.log|*/.planning/diagnostics.log)
     ;;
   .planning/brainstorm-*.md|*/.planning/brainstorm-*.md)
     ;;
@@ -61,8 +57,6 @@ case "$REL_PATH" in
   .planning/.brainstorm-active|*/.planning/.brainstorm-active)
     ;;
   .planning/steering.md|*/.planning/steering.md)
-    ;;
-  .planning/deferred-findings.md|.planning/dismissed-findings.md|*/.planning/deferred-findings.md|*/.planning/dismissed-findings.md)
     ;;
   *)
     # Not a known .planning/ file — don't auto-approve, let normal flow handle it

@@ -60,8 +60,8 @@ Only AFTER materializing these intermediates, write fix proposals. This prevents
 2. **Parse errors**: Extract file path, line number, error code, and message for each error
 3. **Read context**: For each unique file with errors, read the relevant lines (±10 lines around error)
 4. **Read spec**: If plugin errors, read the corresponding `.planning/specs/` file for expected types
-5. **Check decision log**: Read `.planning/decision-log.md` for entries matching affected plugins/files. If a proposed fix would contradict a recorded decision (especially `Reversible: no`), do NOT propose it — find an alternative that respects the decision. If no alternative exists, flag the conflict in your report.
-6. **Check strategy log**: Read `.planning/strategy-log.md` (if it exists) for previously attempted fixes on the same error. Do NOT propose a fix that was already tried and failed. If you receive an explicit "DO NOT RETRY" list, treat those strategies as hard constraints.
+5. **Check decision log**: Read `.planning/decisions.md` for entries matching affected plugins/files. If a proposed fix would contradict a recorded decision (especially `Reversible: no`), do NOT propose it — find an alternative that respects the decision. If no alternative exists, flag the conflict in your report.
+6. **Check strategy log**: Read `.planning/build/strategy-log.md` (if it exists) for previously attempted fixes on the same error. Do NOT propose a fix that was already tried and failed. If you receive an explicit "DO NOT RETRY" list, treat those strategies as hard constraints.
 7. **Materialize intermediates**: Write out the error inventory, per-file grouping, dependency chain, and root cause list (see Reasoning Protocol above)
 8. **Classify**: Assign each root cause error to a category
 9. **Research (if needed)**: If the root cause relates to an npm package behavior, version conflict, breaking API change, or ecosystem pattern you cannot resolve from local files alone, spawn `moku-researcher` with a focused question. Do not request a broad ecosystem survey — ask the specific question needed to resolve the error.

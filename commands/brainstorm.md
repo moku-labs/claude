@@ -28,7 +28,7 @@ This command runs an adaptive workflow:
 
 **Ordered startup sequence:**
 
-1. **Filesystem guard:** `mkdir -p .planning/`
+1. **Filesystem guard:** `mkdir -p .planning/build/`
    **Brainstorm session marker:** `touch .planning/.brainstorm-active` — this activates the brainstorm-guard hook which prevents writes outside `.planning/`.
 
 2. **Empty-arguments check:** If `$ARGUMENTS` is empty, show usage and stop:

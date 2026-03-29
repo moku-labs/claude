@@ -54,9 +54,10 @@ Parse `$ARGUMENTS` into six components: **VERB**, **TYPE**, **PATH_OR_LINK**, **
 
 1. **Filesystem guard (mandatory):** Ensure the planning directory exists:
    ```bash
-   mkdir -p .planning/
+   mkdir -p .planning/build/
    ```
-   This MUST execute before creating decisions.md, research.md, STATE.md, or any spec files. On fresh projects the directory does not exist and writes will fail without this guard.
+   (This also creates `.planning/` if it doesn't exist.)
+   This MUST execute before creating decisions.md, STATE.md, or any spec files. Also creates `.planning/build/` for ephemeral build artifacts. On fresh projects the directory does not exist and writes will fail without this guard.
 
 2. **Empty-arguments check:** If `$ARGUMENTS` is empty and no VERB can be determined, stop with: "Usage: `/moku:plan [create|update|add|migrate|resume] [type] {description} [--quick]`"
 
@@ -193,7 +194,7 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
     3. label: "Cancel", description: "Don't proceed — leave state as-is"
   - multiSelect: false
   - If user chooses **Resume**: use the Phase-to-Stage Jump Table to determine the resume point.
-  - If user chooses **Start fresh**: back up `.planning/STATE.md` to `.planning/STATE.md.bak`, delete all `.planning/specs/*.md` files (preserve `decisions.md` and `research.md` if present), then proceed as if no state existed.
+  - If user chooses **Start fresh**: back up `.planning/STATE.md` to `.planning/STATE.md.bak`, delete all `.planning/specs/*.md` files (preserve `decisions.md` if present, wipe `.planning/build/` contents), then proceed as if no state existed.
     Immediately after the backup and delete, write a minimal `.planning/STATE.md` with the following headers so that a session drop during the next stage exit is recoverable:
     `## Phase: none` / `## Verb: {VERB}` / `## Target: {REQUIREMENTS if non-empty, else (none)}` / `## Skeleton: not-started` / `## QuickMode: {QUICK_MODE}` / `## PluginTable: (none)` / `## WaveGrouping: (none)` / `## Next Action: Run /moku:plan {VERB} to begin.`
     Guard: Phase `none` means no work has been done — any subsequent resume will skip the resume prompt and proceed as a fresh run (per the Jump Table `none` row).
@@ -216,7 +217,7 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
 | `stage3` or `stage3/pending-approval` | Re-run Stage 3 (Skeleton Specification) |
 | `stage3/approved` | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
 | `complete` (VERB is `resume` or `create`) | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
-| `complete` (VERB is `update` or `add`) | Back up `.planning/STATE.md` to `.planning/STATE.md.bak`. Delete `.planning/specs/*.md` files (preserve decisions.md and research.md). In the existing STATE.md, change only `## Phase:` to `none` — preserve all other headers unchanged. Do not rewrite the full file. Proceed as a new planning cycle for the given verb. |
+| `complete` (VERB is `update` or `add`) | Back up `.planning/STATE.md` to `.planning/STATE.md.bak`. Delete `.planning/specs/*.md` files (preserve decisions.md, wipe `.planning/build/` contents). In the existing STATE.md, change only `## Phase:` to `none` — preserve all other headers unchanged. Do not rewrite the full file. Proceed as a new planning cycle for the given verb. |
 
 **Pending-approval resume note:** When resuming from a phase ending in `/pending-approval`, the stage re-executes its own work and re-presents the approval gate. The stage entry guard (which requires the previous stage to be `/approved`) is bypassed in this case — the stage owns this phase and is resuming mid-run.
 
