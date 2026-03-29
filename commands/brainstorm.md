@@ -35,8 +35,24 @@ Before strict argument parsing, normalize free-form input to structured format.
 1. **Strip flags first:** Extract `--deep [N]`, `--quick` from anywhere.
 
 2. **Wrong-command detection:**
-   - Keywords suggesting plan intent (`plan`, `create spec`, `write spec`, `design the architecture`) → Tell user: "It sounds like you want to plan. Run: `/moku:plan {rest of text}`" and stop.
-   - Keywords suggesting build intent (`build`, `implement`, `compile`, `continue building`, `resume`) → Tell user: "It sounds like you want to build. Run: `/moku:build resume`" and stop.
+   - Keywords suggesting plan intent (`plan`, `create spec`, `write spec`, `design the architecture`) → Use `AskUserQuestion`:
+     - Question: "It looks like you may want to plan, not brainstorm. What would you like to do?"
+     - Header: "Wrong command?"
+     - Options:
+       1. label: "Run plan instead", description: "Run `/moku:plan {rest of text}`"
+       2. label: "Continue brainstorming", description: "Keep going — I want to brainstorm, not plan"
+     - multiSelect: false
+     If "Run plan instead": delete `.planning/.brainstorm-active` if it exists, then tell user "Run: `/moku:plan {rest of text}`" and stop.
+     If "Continue brainstorming": proceed with normalization.
+   - Keywords suggesting build intent (`build`, `implement`, `compile`, `continue building`, `resume`) → Use `AskUserQuestion`:
+     - Question: "It looks like you may want to build, not brainstorm. What would you like to do?"
+     - Header: "Wrong command?"
+     - Options:
+       1. label: "Run build instead", description: "Run `/moku:build resume`"
+       2. label: "Continue brainstorming", description: "Keep going — I want to brainstorm, not build"
+     - multiSelect: false
+     If "Run build instead": delete `.planning/.brainstorm-active` if it exists, then tell user "Run: `/moku:build resume`" and stop.
+     If "Continue brainstorming": proceed with normalization.
 
 3. **Extract intent:**
    - **CATEGORY:** "new", "from scratch", "greenfield" → `create`. "change", "improve", "refactor" → `modify`. "add capability", "extend", "new feature" → `feature`. "port", "convert", "migrate" → `migrate`. Default: `create`.
@@ -60,6 +76,7 @@ Before strict argument parsing, normalize free-form input to structured format.
 
 1. **Filesystem guard:** `mkdir -p .planning/build/`
    **Brainstorm session marker:** `touch .planning/.brainstorm-active` — this activates the brainstorm-guard hook which prevents writes outside `.planning/`.
+   **Early-exit cleanup rule:** On any early exit (validation error, wrong-command redirect, Cancel), always delete `.planning/.brainstorm-active` before stopping. The marker must never be left orphaned between sessions.
 
 2. **Empty-arguments smart prompt:** If `$ARGUMENTS` is empty, use `AskUserQuestion` instead of showing raw usage:
    - Question: "What do you want to brainstorm?"
@@ -72,13 +89,15 @@ Before strict argument parsing, normalize free-form input to structured format.
    - multiSelect: false
    Set CATEGORY from selection. Then ask for NAME and DESCRIPTION via follow-up `AskUserQuestion` calls. Proceed to Step 0 flag extraction (step 3).
 
-3. **Depth flag extraction:** If `--deep` is present anywhere in `$ARGUMENTS`:
-   - Check if the token immediately following `--deep` is an integer.
-     - If it is a positive integer ≥ 1 (e.g., `--deep 5`) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`{N}`, and strip both `--deep` and the number from `$ARGUMENTS`.
-     - If it is zero or negative (e.g., `--deep 0`, `--deep -1`) → stop with error: "Invalid `--deep` value: iteration count must be a positive integer ≥ 1."
-     - If the next token is not a number (or `--deep` is the last token) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`null`, and strip only `--deep`.
-   - No upper cap on CUSTOM_ITERATIONS — never limit iterations.
-   If `--quick` is present, set DEPTH_FLAG=`quick`, CUSTOM_ITERATIONS=`null`, and strip it. Otherwise DEPTH_FLAG=`auto`, CUSTOM_ITERATIONS=`null`.
+3. **Depth flag extraction:**
+   - **Conflict check (first):** If BOTH `--deep` AND `--quick` are present anywhere in `$ARGUMENTS`, delete `.planning/.brainstorm-active` and stop with error: "Conflicting depth flags — use `--deep` OR `--quick`, not both."
+   - If `--deep` is present anywhere in `$ARGUMENTS`:
+     - Check if the token immediately following `--deep` is an integer.
+       - If it is a positive integer ≥ 1 (e.g., `--deep 5`) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`{N}`, and strip both `--deep` and the number from `$ARGUMENTS`.
+       - If it is zero or negative (e.g., `--deep 0`, `--deep -1`) → delete `.planning/.brainstorm-active` and stop with error: "Invalid `--deep` value: iteration count must be a positive integer ≥ 1."
+       - If the next token is not a number (or `--deep` is the last token) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`null`, and strip only `--deep`.
+     - No upper cap on CUSTOM_ITERATIONS — never limit iterations.
+   - If `--quick` is present, set DEPTH_FLAG=`quick`, CUSTOM_ITERATIONS=`null`, and strip it. Otherwise DEPTH_FLAG=`auto`, CUSTOM_ITERATIONS=`null`.
 
 ### Token Extraction
 
@@ -106,8 +125,11 @@ Set CATEGORY to the normalized answer. If the first token was not a category key
 
 2. **Extract NAME** from next token:
    - If the next token does not contain spaces and does not start with `"` → use as NAME
+   - If the next token is a quoted string (starts with `"`) → do NOT use it as NAME; treat the entire remaining token stream (including this token) as DESCRIPTION
    - If no suitable NAME token → derive from first 2–3 meaningful words of DESCRIPTION, slugified (`[a-z0-9-]`, max 50 chars, no path separators)
+     - **Meaningful words defined:** Skip stop words — `a, an, the, to, for, of, in, on, with, and, or, by, from, that, this, it, is, be, are, was`. Use the first 2–3 non-stop-word tokens.
    - **NAME sanitization:** Strip path separators (`/`, `\`, `..`), allow only `[a-z0-9-_]`, truncate to 50 characters. If empty after sanitization, derive from DESCRIPTION.
+   - **Reserved NAME guard:** If NAME (after sanitization) matches a recognized CATEGORY keyword (`create`, `new`, `build`, `modify`, `update`, `change`, `feature`, `add`, `extend`, `migrate`, `port`, `convert`) or a reserved word (`plan`, `resume`), append `-project`: NAME becomes `{original}-project`. Log: "Note: NAME `{original}` is a reserved word — using `{NAME}` instead."
 
 3. **Remaining tokens** → DESCRIPTION (free text).
 
@@ -134,12 +156,13 @@ If `.planning/context-{NAME}.md` already exists, use `AskUserQuestion`:
 - multiSelect: false
 
 If "Resume": check if scratch files exist (`.planning/brainstorm-{NAME}-*.md`).
-  - If `.planning/brainstorm-{NAME}-analysis.md` exists: re-run Phase 2 (Complexity Scoring) from the saved analysis to restore EFFECTIVE_DEPTH, then check for research files.
+  - If `.planning/brainstorm-{NAME}-analysis.md` exists: restore EFFECTIVE_DEPTH silently from the `## Complexity Signals` raw_sum in the analysis file (apply the same score→depth mapping). Do NOT present the depth confirmation `AskUserQuestion` again — resume always uses the previously computed depth.
   - If research files also exist (`.planning/brainstorm-{NAME}-research.md`): skip Phase 3, go straight to the debate loop.
   - If no research files: skip Phase 1 (analysis already done), re-run Phase 3 (research) with restored EFFECTIVE_DEPTH.
   - If no scratch files at all: run from Phase 1.
+  - **Partial state handling:** If `.planning/brainstorm-{NAME}-analysis.md` exists but its `## Complexity Signals` section is missing or malformed, default EFFECTIVE_DEPTH to `standard` and log: "Resume: could not parse complexity signals from analysis file — defaulting to standard depth."
 If "Start fresh": delete `.planning/context-{NAME}.md` and all `.planning/brainstorm-{NAME}-*.md` scratch files.
-If "Cancel": delete `.planning/.brainstorm-active` and stop.
+If "Cancel": delete `.planning/.brainstorm-active`, remove `.planning/build/` only if it was just created by this session (i.e., was empty — check with `find .planning/build -maxdepth 1 -empty`), and stop.
 
 ---
 
@@ -160,6 +183,7 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTO
 - `.planning/learnings.md` persists across brainstorm sessions — never delete it during cleanup
 - Spawn researcher agents in parallel where depth allows — use multiple Agent tool calls in the same response
 - Auto-detect complexity from project context — never ask the user to self-report what the AI can observe
+- **Researcher FAIL handling:** When merging research output (Phase 3), before reading each researcher's output file, verify it exists. If a researcher's output file is missing (FAIL verdict), log: "Researcher {focus} did not produce output — proceeding without it." Merge only the files that are present. Never block on a missing researcher file.
 - Every architectural question MUST include TypeScript code examples showing each approach, a clear recommendation with reasoning, and concerns about each alternative. Be an opinionated colleague, not a passive interviewer
 - Ask 0 questions if the context is clear — more questions is not better, only genuine architectural trade-offs deserve discussion
 - The debate loop converges when the user is satisfied OR max iterations reached — never force iterations

@@ -387,13 +387,14 @@ Each researcher prompt must include:
 ### Merging Research
 
 After all researcher agents complete:
-1. Read all research output files
-2. Merge into a single `.planning/brainstorm-{NAME}-research.md`:
+1. **Validate outputs:** Before reading, verify each researcher's output file exists and is non-empty. If a researcher's file is missing or empty (FAIL verdict), log: "Researcher {focus} did not produce output — proceeding without it." Do NOT attempt to read or merge missing files.
+2. Read all **available** research output files (skip missing ones)
+3. Merge into a single `.planning/brainstorm-{NAME}-research.md`:
    - Combine Key Findings from all researchers (deduplicate similar findings)
    - Merge Approach Options (remove duplicates, max 3)
    - Combine Risks & Gotchas (deduplicate, keep highest severity)
    - Select the single strongest Recommended Starting Point across all researchers
-3. If any researcher returned FAIL verdict, note the gap but proceed — partial research is better than no research
+4. If any researcher returned FAIL verdict, add a note at the top of the merged file: "**Note:** Research from {focus} lens unavailable — findings may have reduced coverage in that area."
 
 ---
 

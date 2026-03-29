@@ -2,6 +2,25 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.4 (2026-03-29)
+
+### Fixed
+- **`.brainstorm-active` orphan prevention** — early-exit cleanup rule ensures the brainstorm-guard marker is always deleted on validation errors, wrong-command redirects, and Cancel exits (was left orphaned, blocking subsequent brainstorms)
+- **Plan-intent keyword shadowing** — `create spec` no longer silently proceeds as CATEGORY=create NAME=spec; wrong-command detection now checks token 2 when normalization is skipped
+- **`--deep 0` / `--deep -1` cleanup** — invalid depth flag errors now clean up `.brainstorm-active` before stopping
+- **Researcher merge crash on FAIL** — Phase 3 research merge now validates output files exist before reading; missing researcher output is logged and skipped instead of blocking
+
+### Changed
+- **`--deep` + `--quick` conflict** — explicit error when both flags present (previously undefined: last-flag-wins by prose order)
+- **Wrong-command detection** — hard-stop replaced with `AskUserQuestion` offering "Continue brainstorming" escape hatch alongside redirect suggestion
+- **Resume depth restoration** — resume now silently restores EFFECTIVE_DEPTH from saved analysis signals; depth confirmation AskUserQuestion no longer fires redundantly on resume
+- **Resume partial state handling** — malformed analysis file on resume defaults to standard depth with logged warning instead of crashing
+- **Quoted-token NAME extraction** — quoted strings (starting with `"`) now explicitly feed DESCRIPTION, not NAME
+- **NAME derivation stop-word list** — "meaningful words" defined with explicit stop words (a, an, the, to, for, of, in, on, with, etc.)
+- **Reserved NAME guard** — category keywords and reserved words used as NAME get `-project` suffix to avoid confusing file names and logs
+- **Cancel cleanup** — Cancel exit now removes `.planning/build/` if empty (was accumulating on repeated cancellations)
+- Version bumped to 0.26.4 in plugin.json and marketplace.json
+
 ## 0.26.3 (2026-03-29)
 
 ### Added
