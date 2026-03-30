@@ -113,7 +113,21 @@ Parse `$ARGUMENTS` into six components: **VERB**, **TYPE**, **PATH_OR_LINK**, **
 
 (The filesystem guard in step 1 runs unconditionally — even if step 2 would stop early. The empty directory is harmless.)
 
-If `--context {filename}` is present anywhere in `$ARGUMENTS`, extract the token following `--context` as the context filename, set CONTEXT_FILE=`.planning/{filename}` (if the value does not already start with `.planning/`, prepend it), and strip `--context {filename}` from `$ARGUMENTS`. Verify: `test -f '{CONTEXT_FILE}'` — if file does not exist, tell user: "Context file `{CONTEXT_FILE}` not found. Run `/moku:brainstorm` first or check the path." and stop. If `--context` is absent, set CONTEXT_FILE=(none).
+If `--context {filename}` is present anywhere in `$ARGUMENTS`, **if it appears multiple times, use the last occurrence (last-wins; earlier values are discarded)**. Extract the token following the last `--context` as the context filename, strip **all** `--context {filename}` occurrences from `$ARGUMENTS`.
+
+   **Absolute path guard:** If the extracted token starts with `/`, reject immediately: "Context file must be a relative path within `.planning/`. Example: `--context my-notes` or `--context .planning/context-file.md`." and stop.
+
+   **Metacharacter guard:** If the extracted token contains any of `;`, `|`, `$`, `` ` ``, `(`, `)`, reject: "Context filename contains illegal characters. Use a plain relative path with no shell metacharacters." and stop.
+
+   **Path construction and probe:**
+   1. If the token already starts with `.planning/`, use it as-is: CONTEXT_FILE=`{token}`.
+   2. Otherwise, set CONTEXT_FILE=`.planning/{token}`.
+
+   **Path traversal guard:** If CONTEXT_FILE (after resolving any `../` sequences) points outside `.planning/`, reject: "Context file path must resolve within `.planning/`. Path traversal (`..`) is not allowed." and stop.
+
+   **File existence probe:** Run `test -f '$CONTEXT_FILE'`. If not found, try `.planning/context-{token}.md` (handles brainstorm-generated names such as `.planning/context-site-gen.md`). If that exists, set CONTEXT_FILE to that path. If neither exists, tell user: "Context file `{CONTEXT_FILE}` not found. Run `/moku:brainstorm` first or check the path." and stop. All bash commands referencing CONTEXT_FILE must single-quote the variable: `test -f '$CONTEXT_FILE'`.
+
+   If `--context` is absent, set CONTEXT_FILE=(none).
 
 **`--context` verb support:** The `--context` flag is fully supported for the `create` verb (Context Injection Pre-Phase in `plan-verb-create.md` consumes the file). For `update` and `migrate` verbs, log a warning: "Note: `--context` provides supplementary context for the `{VERB}` workflow but does not skip any phases. The full {VERB} workflow will run." Pass CONTEXT_FILE through to the verb reference file — it can read the file for additional context but no phases are skipped automatically. For `add` verb: `--context` is not applicable — warn: "`--context` is ignored for the `add` verb." and set CONTEXT_FILE=(none).
 
@@ -144,10 +158,10 @@ If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip 
 
 3. **Extract PATH_OR_LINK** (optional):
    - If next token contains `/`, starts with `.`, `~`, or `http` → set as PATH_OR_LINK
-   - **Fallback probe (when token does NOT match the sigil checks above):** If the token is present but did not match any sigil pattern, apply these probes in order before falling through to REQUIREMENTS:
+   - **Fallback probe (when token does NOT match the sigil checks above):** **Guard: this fallback probe applies only to the `migrate` verb. For all other verbs (`create`, `update`, `add`), skip the fallback probe entirely — the token falls through to REQUIREMENTS (step 4).** If VERB is `migrate` and the token is present but did not match any sigil pattern, apply these probes in order:
      1. **Local path probe:** Test if the token exists as a local directory (`test -d '{token}'`) or file (`test -f '{token}'`). If yes → set as PATH_OR_LINK. Log: "Resolved `{token}` to local path `{token}`". Advance past this token.
      2. **Context file probe:** Test if `.planning/context-{token}.md` exists. If yes → set CONTEXT_FILE to `.planning/context-{token}.md`. Log: "Resolved `{token}` to `.planning/context-{token}.md`". Do NOT consume the token as PATH_OR_LINK — the context file provides brainstorm context, not the migration source. PATH_OR_LINK remains unset (the migrate verb will prompt for it if needed). Advance past this token.
-     3. **Conflict check:** If BOTH a local path AND a context file would match (i.e., `{token}` is a valid directory/file AND `.planning/context-{token}.md` exists), use `AskUserQuestion`: Question: "The token `{token}` matches both a local path and a context file. Which did you mean?" / Header: "Ambiguous token" / Options: "Use as migration source path (`{token}`)" / "Use as brainstorm context (`.planning/context-{token}.md`)" / multiSelect: false. Set PATH_OR_LINK or CONTEXT_FILE based on the answer.
+     3. **Conflict check:** If BOTH a local path AND a context file would match (i.e., `{token}` is a valid directory/file AND `.planning/context-{token}.md` exists), use `AskUserQuestion`: Question: "The token `{token}` matches both a local path and a context file. Which did you mean?" / Header: "Ambiguous token" / Options: "Use as migration source path (`{token}`)" / "Use as brainstorm context (`.planning/context-{token}.md`)" / "Neither — treat as part of REQUIREMENTS" / multiSelect: false. Set PATH_OR_LINK or CONTEXT_FILE based on the answer, or if "Neither" is chosen do not advance the token pointer (the token falls through to REQUIREMENTS).
      4. **Neither:** Do not advance the token pointer — the token falls through to REQUIREMENTS extraction as before.
    - For `migrate`: PATH_OR_LINK is **required**. If missing after parsing, do NOT route to plan-verb-migrate.md. Instead prompt via `AskUserQuestion`:
      - Question: "What is the path or URL of the project to migrate?"
@@ -228,7 +242,7 @@ If invalid combination → tell user: "The `{verb}` verb doesn't support the `{t
 If VERB is `resume`:
 - Read `.planning/STATE.md` — if it doesn't exist, tell user: "No planning state found. Start with `/moku:plan create [type] [description]`."
 - Validate that the file contains all required headers (see State Persistence Protocol below) AND that each header has a non-empty value (not missing, not blank, and not whitespace-only — trim the value before checking). If any header is missing or empty, tell user: "`.planning/STATE.md` is malformed — missing or empty: {list}. Repair it manually or delete it and run `/moku:plan create [type] [description]` to restart."
-- Load VERB, TYPE, phase, plugin table, wave grouping, and QUICK_MODE from state. **Precedence:** If `--quick` was explicitly passed at invocation time (QUICK_MODE was already set to true in Step 0), do not overwrite it with the stored `## QuickMode:` value — the invocation-time flag takes precedence.
+- Load VERB, TYPE, phase, plugin table, wave grouping, QUICK_MODE, and CONTEXT_FILE from state. **If `## ContextFile:` is absent from STATE.md (e.g., state file created before this field was introduced), set CONTEXT_FILE=(none) and continue — do not treat a missing ContextFile field as a validation error.** **Precedence:** If `--context` was explicitly passed at invocation time, it overrides the stored `## ContextFile:` value. If `--quick` was explicitly passed at invocation time (QUICK_MODE was already set to true in Step 0), do not overwrite it with the stored `## QuickMode:` value — the invocation-time flag takes precedence.
 - Use the Phase-to-Stage Jump Table below to determine which stage to resume at
 
 If VERB is NOT `resume` but `.planning/STATE.md` exists:

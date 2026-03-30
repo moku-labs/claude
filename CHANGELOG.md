@@ -2,6 +2,21 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.5 (2026-03-30)
+
+### Fixed
+- **`--context` naming mismatch** — `--context site-gen` now probes `context-{token}.md` pattern when bare path fails, matching brainstorm output naming convention
+- **`--context` absolute path handling** — absolute paths (`/tmp/file`) rejected with clear error instead of producing malformed `.planning//tmp/file`
+- **`--context` shell injection guard** — metacharacter rejection (`;|$\`()`) and mandatory single-quoting prevent command injection via crafted filenames
+- **`--context` path traversal** — `../` sequences resolving outside `.planning/` now rejected
+
+### Changed
+- **Fallback probe migrate-only guard** — PATH_OR_LINK fallback probe (local path + context file checks) now restricted to `migrate` verb only; `create`/`update`/`add` tokens no longer consumed as paths
+- **Conflict-check cancel option** — ambiguous token AskUserQuestion now includes "Neither — treat as part of REQUIREMENTS" option
+- **Duplicate `--context` handling** — last-wins rule documented for multiple `--context` flags
+- **ContextFile resume fallback** — absent `## ContextFile:` in old STATE.md files defaults to `(none)` gracefully instead of undefined behavior
+- Version bumped to 0.26.5 in plugin.json and marketplace.json
+
 ## 0.26.4 (2026-03-29)
 
 ### Fixed
