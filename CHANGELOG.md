@@ -2,6 +2,27 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.6 (2026-03-30)
+
+### Fixed
+- **Jump Table Phase=complete missing VERB=migrate** — resume after completed migrate plan now routes correctly instead of falling through undefined
+- **Start-fresh .bak overwrite** — prior backup renamed to `.bak.YYYY-MM-DD` before overwriting, preventing silent data loss
+- **`--context` probe missing `{token}.md`** — added `{token}.md` as second probe step before `context-{token}.md`, fixing the most common naming pattern (execution-confirmed)
+
+### Changed
+- **Wrong-command detection refined** — bare `build` removed from trigger list; `build a [noun]` patterns now treated as plan-intent instead of false-positive redirect
+- **VERB detection priority order** — normalization now uses explicit first-match-wins numbered priority; state-based default is fallback-only
+- **QuickMode validation on load** — non-boolean values (`yes`, `TRUE`, etc.) warn and default to false instead of undefined behavior
+- **`--context` precedence clarified** — two-phase sequence: Step 0 sets value, Step 0.1 skips STATE.md load if already set
+- **TYPE mismatch on resume** — AskUserQuestion prompt when normalized TYPE differs from STATE.md TYPE instead of silent discard
+- **Context-file probe AskUserQuestion** — migrate PATH_OR_LINK prompt now explains token was matched as brainstorm context
+- **Add verb STATE.md contract** — documented that add never writes STATE.md; resume after add shows "no plan state"
+- **Add verb TYPE default** — auto-detect does not run for `add`; TYPE defaults immediately to `plugin`
+- **Add verb sigil rejection** — path-like tokens (`../evil`, URLs) rejected as invalid plugin names
+- **Output Styles guard** — `test -d` check before suggesting style switch
+- **Whitespace `--context` guard** — empty/whitespace-only tokens rejected before path construction
+- Version bumped to 0.26.6 in plugin.json and marketplace.json
+
 ## 0.26.5 (2026-03-30)
 
 ### Fixed

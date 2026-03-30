@@ -57,23 +57,24 @@ Before strict argument parsing, normalize `$ARGUMENTS` from free-form natural la
 1. **Strip flags first:** Extract `--quick`, `--deep`, `--context {file}` from anywhere in the text. These are unambiguous and can be detected before intent parsing.
 
 2. **Wrong-command detection:** Check if the user's intent belongs to a different command:
-   - Keywords suggesting build intent (`build`, `implement`, `compile`, `continue building`, `run build`, `resume build`, `execute`) → Tell user: "It sounds like you want to build. Run: `/moku:build resume`" and stop.
+   - Keywords suggesting build intent (`implement`, `compile`, `continue building`, `run build`, `resume build`, `execute the build`, `start the build`) → Tell user: "It sounds like you want to build. Run: `/moku:build resume`" and stop. **Note:** bare `build` alone is NOT a trigger — it fires too many false positives (e.g., "build a static site generator framework" is plan-intent). Only multi-word build phrases or imperative constructs (`run build`, `execute`, `implement`) should redirect. If the input contains `build` followed by an article + noun (`build a/an/the [noun]`), treat as plan-intent and continue normalization.
    - Keywords suggesting brainstorm intent (`brainstorm`, `explore ideas`, `let's think about`, `discuss options`) → Tell user: "It sounds like you want to brainstorm. Run: `/moku:brainstorm {rest of text}`" and stop.
    - If unsure, continue with normalization — don't block on ambiguity.
 
 3. **Extract intent from natural language:**
-   - **VERB detection:**
-     - "new", "create", "make", "start", "build a new" → `create`
-     - "change", "update", "modify", "refactor", "improve" → `update`
-     - "add", "include", "add a plugin", "new plugin" → `add`
-     - "migrate", "convert", "port", "move to moku" → `migrate`
-     - "continue", "resume", "pick up", "where was I" → `resume`
-     - If unclear → default to `create` for new projects, `update` for existing ones (check if `.planning/STATE.md` exists)
+   - **VERB detection** — evaluate keywords in this exact priority order (first match wins; apply state-based default only if no keyword matches):
+     1. "new", "create", "make", "start", "build a new" → `create`
+     2. "change", "update", "modify", "refactor", "improve" → `update`
+     3. "add", "include", "add a plugin", "new plugin" → `add`
+     4. "migrate", "convert", "port", "move to moku" → `migrate`
+     5. "continue", "resume", "pick up", "where was I" → `resume`
+     6. If no keyword matched → default to `create` for new projects, `update` for existing ones (check if `.planning/STATE.md` exists)
    - **TYPE detection:**
      - "framework", "library", "tool", "engine", "toolkit" → `framework`
      - "app", "application", "site", "game", "service", "server" → `app`
      - "plugin" → `plugin`
-     - If not mentioned → auto-detect (existing Step 0 logic handles this)
+     - If not mentioned and VERB is `add` → TYPE defaults immediately to `plugin`. Auto-detect does not run for the `add` verb.
+     - If not mentioned and VERB is not `add` → auto-detect (existing Step 0 logic handles this)
    - **NAME/DESCRIPTION:** Everything not consumed by VERB, TYPE, or flag extraction becomes the REQUIREMENTS/DESCRIPTION text.
 
 4. **Reconstruct and log:** Assemble the extracted components into structured format. Log: "Normalized free-form input → VERB={verb}, TYPE={type}, REQUIREMENTS=\"{desc}\"". Proceed to Step 0 with the structured arguments.
@@ -119,19 +120,25 @@ If `--context {filename}` is present anywhere in `$ARGUMENTS`, **if it appears m
 
    **Metacharacter guard:** If the extracted token contains any of `;`, `|`, `$`, `` ` ``, `(`, `)`, reject: "Context filename contains illegal characters. Use a plain relative path with no shell metacharacters." and stop.
 
+   **Whitespace guard:** If the extracted token is empty or whitespace-only (after trimming), reject: "Context filename cannot be empty or whitespace-only. Provide a file name such as `--context brainstorm-notes`." and stop.
+
    **Path construction and probe:**
    1. If the token already starts with `.planning/`, use it as-is: CONTEXT_FILE=`{token}`.
    2. Otherwise, set CONTEXT_FILE=`.planning/{token}`.
 
    **Path traversal guard:** If CONTEXT_FILE (after resolving any `../` sequences) points outside `.planning/`, reject: "Context file path must resolve within `.planning/`. Path traversal (`..`) is not allowed." and stop.
 
-   **File existence probe:** Run `test -f '$CONTEXT_FILE'`. If not found, try `.planning/context-{token}.md` (handles brainstorm-generated names such as `.planning/context-site-gen.md`). If that exists, set CONTEXT_FILE to that path. If neither exists, tell user: "Context file `{CONTEXT_FILE}` not found. Run `/moku:brainstorm` first or check the path." and stop. All bash commands referencing CONTEXT_FILE must single-quote the variable: `test -f '$CONTEXT_FILE'`.
+   **File existence probe:** Run `test -f '$CONTEXT_FILE'`. If not found:
+   - Try `.planning/{token}.md` (handles plain token inputs such as `brainstorm-notes` → `.planning/brainstorm-notes.md`). If that exists, set CONTEXT_FILE to that path.
+   - If still not found, try `.planning/context-{token}.md` (handles brainstorm-generated names such as `.planning/context-site-gen.md`). If that exists, set CONTEXT_FILE to that path.
+   - If none of the three paths exist, tell user: "Context file `{CONTEXT_FILE}` not found. Run `/moku:brainstorm` first or check the path." and stop.
+   All bash commands referencing CONTEXT_FILE must single-quote the variable: `test -f '$CONTEXT_FILE'`.
 
    If `--context` is absent, set CONTEXT_FILE=(none).
 
 **`--context` verb support:** The `--context` flag is fully supported for the `create` verb (Context Injection Pre-Phase in `plan-verb-create.md` consumes the file). For `update` and `migrate` verbs, log a warning: "Note: `--context` provides supplementary context for the `{VERB}` workflow but does not skip any phases. The full {VERB} workflow will run." Pass CONTEXT_FILE through to the verb reference file — it can read the file for additional context but no phases are skipped automatically. For `add` verb: `--context` is not applicable — warn: "`--context` is ignored for the `add` verb." and set CONTEXT_FILE=(none).
 
-**Write CONTEXT_FILE to STATE.md:** On the first STATE.md write of this invocation, include `## ContextFile: {CONTEXT_FILE}` if CONTEXT_FILE is not `(none)`, else `## ContextFile: (none)`. On resume, load CONTEXT_FILE from STATE.md's `## ContextFile:` field. **Precedence:** If `--context` is explicitly passed at invocation time, it overrides the stored value.
+**Write CONTEXT_FILE to STATE.md:** On the first STATE.md write of this invocation, include `## ContextFile: {CONTEXT_FILE}` if CONTEXT_FILE is not `(none)`, else `## ContextFile: (none)`. On resume, load CONTEXT_FILE from STATE.md's `## ContextFile:` field. **Precedence:** If `--context` is explicitly passed at invocation time (CONTEXT_FILE was set in Step 0 above), it overrides the stored `## ContextFile:` value — skip loading CONTEXT_FILE from STATE.md and use the Step 0 value. If `--context` was NOT passed, load CONTEXT_FILE from STATE.md's `## ContextFile:` field (or default to `(none)` if absent).
 
 If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip **all occurrences** of `--quick` before further parsing. Otherwise QUICK_MODE=false.
 
@@ -152,13 +159,13 @@ If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip 
 2. **Extract TYPE** from next token:
    - Guard: if the TYPE token matches a VERB keyword (`create`, `update`, `add`, `migrate`, `resume`), do not normalize — tell user: "The verb `{token}` cannot be used as a type. Did you mean `/moku:plan {token} [type] [description]`?" and stop.
    - Match against normalization table → set normalized TYPE
-   - If no TYPE found and VERB is `add` → default to `plugin`
+   - If no TYPE found and VERB is `add` → default immediately to `plugin` (auto-detect does not run for `add`)
    - If no TYPE found and VERB is `create` or `update` → auto-detect from working directory
    - If no TYPE found and VERB is `migrate` → default to `framework`
 
 3. **Extract PATH_OR_LINK** (optional):
    - If next token contains `/`, starts with `.`, `~`, or `http` → set as PATH_OR_LINK
-   - **Fallback probe (when token does NOT match the sigil checks above):** **Guard: this fallback probe applies only to the `migrate` verb. For all other verbs (`create`, `update`, `add`), skip the fallback probe entirely — the token falls through to REQUIREMENTS (step 4).** If VERB is `migrate` and the token is present but did not match any sigil pattern, apply these probes in order:
+   - **Fallback probe (when token does NOT match the sigil checks above):** **Guard: this fallback probe applies only to the `migrate` verb. For all other verbs (`create`, `update`, `add`), skip the fallback probe entirely — the token falls through to REQUIREMENTS (step 4). For the `add` verb specifically: if the token matches a sigil pattern (contains `/`, starts with `.`, `~`, or `http`), reject it as an invalid plugin name — tell user: "Plugin names cannot be paths or URLs. Provide a plain plugin name such as `auth` or `router`."** If VERB is `migrate` and the token is present but did not match any sigil pattern, apply these probes in order:
      1. **Local path probe:** Test if the token exists as a local directory (`test -d '{token}'`) or file (`test -f '{token}'`). If yes → set as PATH_OR_LINK. Log: "Resolved `{token}` to local path `{token}`". Advance past this token.
      2. **Context file probe:** Test if `.planning/context-{token}.md` exists. If yes → set CONTEXT_FILE to `.planning/context-{token}.md`. Log: "Resolved `{token}` to `.planning/context-{token}.md`". Do NOT consume the token as PATH_OR_LINK — the context file provides brainstorm context, not the migration source. PATH_OR_LINK remains unset (the migrate verb will prompt for it if needed). Advance past this token.
      3. **Conflict check:** If BOTH a local path AND a context file would match (i.e., `{token}` is a valid directory/file AND `.planning/context-{token}.md` exists), use `AskUserQuestion`: Question: "The token `{token}` matches both a local path and a context file. Which did you mean?" / Header: "Ambiguous token" / Options: "Use as migration source path (`{token}`)" / "Use as brainstorm context (`.planning/context-{token}.md`)" / "Neither — treat as part of REQUIREMENTS" / multiSelect: false. Set PATH_OR_LINK or CONTEXT_FILE based on the answer, or if "Neither" is chosen do not advance the token pointer (the token falls through to REQUIREMENTS).
@@ -237,12 +244,15 @@ If invalid combination → tell user: "The `{verb}` verb doesn't support the `{t
 
 **This step runs when VERB is `resume`, or when VERB is not `resume` but `.planning/STATE.md` exists.**
 
-**Guard — add verb:** If VERB is `add`, skip this step entirely. The `add` workflow is self-contained and does not use multi-stage state.
+**Guard — add verb:** If VERB is `add`, skip this step entirely. The `add` workflow is self-contained and does not use multi-stage state. The `add` verb does not write or modify STATE.md. If a user runs `resume` after a previous `add`, there will be no STATE.md entry for the add session — any subsequent `resume` invocation will treat the project as having no plan state and show the "no planning state found" message.
 
 If VERB is `resume`:
 - Read `.planning/STATE.md` — if it doesn't exist, tell user: "No planning state found. Start with `/moku:plan create [type] [description]`."
 - Validate that the file contains all required headers (see State Persistence Protocol below) AND that each header has a non-empty value (not missing, not blank, and not whitespace-only — trim the value before checking). If any header is missing or empty, tell user: "`.planning/STATE.md` is malformed — missing or empty: {list}. Repair it manually or delete it and run `/moku:plan create [type] [description]` to restart."
-- Load VERB, TYPE, phase, plugin table, wave grouping, QUICK_MODE, and CONTEXT_FILE from state. **If `## ContextFile:` is absent from STATE.md (e.g., state file created before this field was introduced), set CONTEXT_FILE=(none) and continue — do not treat a missing ContextFile field as a validation error.** **Precedence:** If `--context` was explicitly passed at invocation time, it overrides the stored `## ContextFile:` value. If `--quick` was explicitly passed at invocation time (QUICK_MODE was already set to true in Step 0), do not overwrite it with the stored `## QuickMode:` value — the invocation-time flag takes precedence.
+- Load VERB, TYPE, phase, plugin table, wave grouping, QUICK_MODE, and CONTEXT_FILE from state.
+  - **QUICK_MODE:** Load from `## QuickMode:` field. After loading, validate the value: if it is not `true` or `false` (case-insensitive), warn: "STATE.md `## QuickMode:` has unexpected value `{value}` — defaulting to false." and set QUICK_MODE=false. **Precedence:** If `--quick` was explicitly passed at invocation time (QUICK_MODE was already set to true in Step 0), do not overwrite it — the invocation-time flag takes precedence.
+  - **CONTEXT_FILE:** If `--context` was explicitly passed at invocation time (CONTEXT_FILE was already set in Step 0), use that value — do not overwrite with STATE.md's stored value. Otherwise load from `## ContextFile:` field. **If `## ContextFile:` is absent from STATE.md (e.g., state file created before this field was introduced), set CONTEXT_FILE=(none) and continue — do not treat a missing ContextFile field as a validation error.**
+  - **TYPE:** If TYPE was explicitly resolved during Step 0 normalization and differs from the TYPE stored in STATE.md, prompt via `AskUserQuestion`: Question: "Your input suggests TYPE={normalized} but the existing plan is TYPE={stored}. Which should be used?" / Header: "Type mismatch" / Options: "Use stored type ({stored}) — continue the existing plan" / "Use input type ({normalized}) — override the stored type" / multiSelect: false. Update STATE.md's `## Type:` field if the user selects the normalized value.
 - Use the Phase-to-Stage Jump Table below to determine which stage to resume at
 
 If VERB is NOT `resume` but `.planning/STATE.md` exists:
@@ -258,10 +268,12 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
     3. label: "Cancel", description: "Don't proceed — leave state as-is"
   - multiSelect: false
   - If user chooses **Resume**: use the Phase-to-Stage Jump Table to determine the resume point.
-  - If user chooses **Start fresh**: back up `.planning/STATE.md` to `.planning/STATE.md.bak`, delete all `.planning/specs/*.md` files (preserve `decisions.md` if present, wipe `.planning/build/` contents), then proceed as if no state existed.
-    Immediately after the backup and delete, write a minimal `.planning/STATE.md` with the following headers so that a session drop during the next stage exit is recoverable:
-    `## Phase: none` / `## Verb: {VERB}` / `## Target: {REQUIREMENTS if non-empty, else (none)}` / `## Skeleton: not-started` / `## QuickMode: {QUICK_MODE}` / `## PluginTable: (none)` / `## WaveGrouping: (none)` / `## Next Action: Run /moku:plan {VERB} to begin.`
-    Guard: Phase `none` means no work has been done — any subsequent resume will skip the resume prompt and proceed as a fresh run (per the Jump Table `none` row).
+  - If user chooses **Start fresh**:
+    - **Backup guard:** Before backing up, check if `.planning/STATE.md.bak` already exists. If it does, rename it to `.planning/STATE.md.bak.{YYYY-MM-DD}` (using today's date) to preserve the prior backup — do not silently overwrite it. Then back up `.planning/STATE.md` to `.planning/STATE.md.bak`.
+    - Delete all `.planning/specs/*.md` files (preserve `decisions.md` if present, wipe `.planning/build/` contents), then proceed as if no state existed.
+    - Immediately after the backup and delete, write a minimal `.planning/STATE.md` with the following headers so that a session drop during the next stage exit is recoverable:
+      `## Phase: none` / `## Verb: {VERB}` / `## Target: {REQUIREMENTS if non-empty, else (none)}` / `## Skeleton: not-started` / `## QuickMode: {QUICK_MODE}` / `## PluginTable: (none)` / `## WaveGrouping: (none)` / `## Next Action: Run /moku:plan {VERB} to begin.`
+    - Guard: Phase `none` means no work has been done — any subsequent resume will skip the resume prompt and proceed as a fresh run (per the Jump Table `none` row).
   - If user chooses **Cancel**: stop.
   - If user chose **Resume** and also provided new REQUIREMENTS in the command args, use `AskUserQuestion`:
     - Question: "You provided a new description. Update the target description?"
@@ -280,7 +292,7 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
 | `stage2/approved` | Start Stage 3 (Skeleton Specification) |
 | `stage3` or `stage3/pending-approval` | Re-run Stage 3 (Skeleton Specification) |
 | `stage3/approved` | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
-| `complete` (VERB is `resume` or `create`) | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
+| `complete` (VERB is `resume`, `create`, or `migrate`) | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
 | `complete` (VERB is `update` or `add`) | Back up `.planning/STATE.md` to `.planning/STATE.md.bak`. Delete `.planning/specs/*.md` files (preserve decisions.md, wipe `.planning/build/` contents). In the existing STATE.md, change only `## Phase:` to `none` — preserve all other headers unchanged. Do not rewrite the full file. Proceed as a new planning cycle for the given verb. |
 
 **Pending-approval resume note:** When resuming from a phase ending in `/pending-approval`, the stage re-executes its own work and re-presents the approval gate. The stage entry guard (which requires the previous stage to be `/approved`) is bypassed in this case — the stage owns this phase and is resuming mid-run.
@@ -332,7 +344,7 @@ Call `ExitPlanMode` when the Stage 1 analysis is complete and ready for user app
 
 ## Output Styles
 
-If the project has output styles configured (`.claude/output-styles/`), suggest switching to `moku-planning` at the start of this command for verbose, analytical formatting.
+If the project has output styles configured (test if `.claude/output-styles/` directory exists: `test -d '.claude/output-styles/'`), suggest switching to `moku-planning` at the start of this command for verbose, analytical formatting.
 
 ---
 
