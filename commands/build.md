@@ -73,7 +73,7 @@ Before strict argument parsing, normalize free-form input. Build is the simplest
 | `keep building` | `resume` |
 | `continue with --continue` | `resume --continue` |
 | `add auth` | `add auth` |
-| `what would the next wave do` | `framework --dry-run` |
+| `what would the next wave do` | `resume --dry-run` (if STATE.md with Phase: building exists) or `framework --dry-run` (no active build) |
 | `fix the broken tests` | `fix` |
 
 ---
@@ -84,6 +84,7 @@ Before strict argument parsing, normalize free-form input. Build is the simplest
 
 Parse `$ARGUMENTS`:
 1. If `--dry-run` is present anywhere in the arguments, enter **dry-run mode**: analyze specs, report what files would be created, wave grouping, and dependency order — but do NOT create or modify any files.
+   - **`--dry-run` + `add` guard:** If `--dry-run` is combined with the `add` verb (i.e., arguments match `add <name> --dry-run` or `--dry-run add <name>`), do NOT enter framework dry-run mode. Instead, report: "`--dry-run` is not supported for `add` — to preview what a single plugin would create, review its spec file directly at `.planning/specs/*-{name}.md`." Stop.
    - **Dry-run + skeleton routing:** If `## Skeleton:` is `not-started` or `in-progress`, report what each remaining skeleton wave would create (file list from `.planning/build/skeleton-spec.md`) instead of creating them. Read the `## Skeleton Build Waves` section of skeleton-spec.md. The skeleton-spec.md format uses two conventions for file paths:
      - **H3 sub-headers:** `### path/to/file.ts` — each H3 header names a file to create
      - **Code block first-line comments:** `// path/to/file.ts` — the first line of a fenced code block names the target file
@@ -99,16 +100,19 @@ Parse `$ARGUMENTS`:
 1d. If `--continue` is present anywhere in the arguments, enter **continuous mode**: auto-advance through all remaining waves without stopping between them. Git checkpoint commits still happen per wave for rollback safety. The ONLY stopping trigger is approaching context exhaustion (if you sense compaction is imminent, stop after the current wave and tell the user to run `/moku:build resume --continue` to pick up). Default behavior (without `--continue`) is unchanged — one wave per invocation.
 1e. **`#wave:N` syntax:** If any argument matches the pattern `#wave:N`:
    - Extract N. Validate it is a non-negative integer. If not (e.g., `#wave:abc`, `#wave:-1`, `#wave:`), report: "Invalid wave number — `#wave:N` requires a non-negative integer (e.g., `#wave:2`)." Stop.
+   - **`#wave:N` + `fix` incompatibility:** If `fix` also appears in `$ARGUMENTS`, report: "`#wave:N` is not supported with `fix` mode — `fix` targets plugins by name or status, not by wave. Remove `#wave:N` or use `fix --all`." Stop.
+   - **`#wave:N` + `--continue` behavior:** When `#wave:N` is combined with `--continue`: execute wave N, then continue to N+1 only if N+1 is incomplete. If N is the last wave, stop normally.
    - Store the wave number as `waveOverride = N`. **Immediate bounds validation:** If `.planning/STATE.md` exists and contains a wave plan (detected by a `| Wave |` header row with plugin entries having numeric wave values), validate N against the maximum wave number now. If N exceeds the maximum wave number, report: "`#wave:N` is out of range — this project has [M] waves (0–[M-1]). Use a number within that range." Stop. If no wave plan exists yet (first build or wave analysis not yet run), defer bounds validation to Step 3 where wave analysis completes.
    - This flag is held and applied after skeleton is committed (see Skeleton Detection).
 2. If the first word is `resume` — read `.planning/STATE.md` and continue from the last recorded position.
    - Check `## Verb:` in STATE.md. If `## Verb: fix`, route directly to **Error Recovery** below — a previous fix session was interrupted. Tell the user: "Resuming interrupted fix session. Targeting remaining plugins with `needs-manual` or `verify-failed` status."
-   - Check `## Verb:` in STATE.md. If `## Verb: update`, mark this session as a **delta build** — after the normal build wave completes for the updated plugins, run Step 8 (Delta Updates) from `build-final.md` to update documentation, LLM docs, integration tests, coverage, and CI/CD.
+   - Check `## Verb:` in STATE.md. If `## Verb: update`, activate **delta build mode** for this session — after all plugin waves complete, run Step 8 (Delta Updates) from `build-final.md` to update documentation, LLM docs, integration tests, coverage, and CI/CD. **Delta build mode is re-activated on every resume where `## Verb: update` is present in STATE.md.** This ensures correct behavior when the build spans multiple invocations (e.g., skeleton + multiple plugin waves across separate sessions).
    - Check `## LeanMode:` in STATE.md. If `## LeanMode: true`, activate lean mode for this session.
    - Check `## Mode:` in STATE.md. If `## Mode: plugins-only`, restore the `plugins-only` sub-mode for this session (build only plugin waves, skip config). If `## Mode: config-only`, restore the `config-only` sub-mode for this session (build only config.ts + index.ts).
    - Skip to the appropriate build step.
 2b. If the first word is `fix` — route directly to **Error Recovery** below. Do NOT enter Skeleton Detection. (The Error Recovery section itself enforces the skeleton-committed prerequisite.)
 2c. If the first word is `add` — **single-plugin add mode**. The second word is the plugin name. This mode builds a plugin whose spec was created by `/moku:plan add`.
+   - **Reserved-word guard:** If the plugin name matches a reserved keyword (`resume`, `framework`, `app`, `plugin`, `add`, `fix`), report: "Cannot add a plugin named `{name}` — that is a reserved command keyword. Use a different name." Stop.
    - Resolve the plugin name to a spec file: search `.planning/specs/*-{name}.md`. If not found, stop: "No spec found for plugin `{name}`. Run `/moku:plan add plugin {name}` first to create the spec."
    - Verify `src/config.ts` exists and skeleton is committed — if not, stop: "Framework skeleton must be built first. Run `/moku:build resume`."
    - Route to the standard plugin build flow from `build-plugin.md`: build the plugin, wire into framework (`src/config.ts`, `src/index.ts`), run verification chain (format, lint, tsc, test), spawn moku-verifier, run targeted validators (plugin-spec-validator, type-validator, jsdoc-validator).
@@ -118,6 +122,7 @@ Parse `$ARGUMENTS`:
      - Add integration test scenarios for the new plugin
      - Re-run coverage verification
      - Update CI workflows if new dependencies were added
+   - **LeanMode persistence:** If lean mode is active during this add build, write `## LeanMode: true` to STATE.md at completion.
    - Report results and update STATE.md.
    - Exit after completion — do NOT enter Skeleton Detection or wave analysis.
 3. If the first word is exactly `framework`, `app`, or `plugin` — use it as the target. The rest is the spec path or plugin name.
@@ -209,6 +214,7 @@ Before starting:
 Run this at wave execution start (Step 3), before spawning builder agents:
 
 1. Read `.planning/STATE.md` — if any plugin has status `building`, the previous invocation crashed mid-wave
+   - **`#wave:N` re-run exception:** If `waveOverride` was set in Step 0 (via `#wave:N`), skip the recovery prompt — wave re-execution is intentional. Reset the `building` status for all plugins assigned to wave N back to `building` (no AskUserQuestion) and proceed directly to execution.
 2. For each `building` plugin, check if its directory (`src/plugins/{name}/`) contains non-skeleton files (files with real implementations, not just type stubs)
 3. If non-skeleton files exist: treat as partially built — use `AskUserQuestion`:
    - Question: "Plugin {name} was partially built in a previous run. How to proceed?"
@@ -238,6 +244,7 @@ When updating `.planning/STATE.md`:
 1. Back up current state: copy to `.planning/STATE.md.bak` before overwriting. If `.planning/STATE.md.bak` already exists, it will be overwritten — the `.bak` file is a single-depth undo (most recent state only), not an accumulating backup history.
 2. Write new content to `.planning/STATE.md.tmp` first (not directly to STATE.md)
 3. Validate that the tmp file contains required headers (`## Phase:`, `## Target:`, `## Next Action:`) before renaming
+   - **Mode preservation:** If the previous STATE.md contained `## Mode:`, verify the new STATE.md also contains `## Mode:` with the same value. If it is absent from the new write, add it before renaming.
 4. If validation passes, rename `.planning/STATE.md.tmp` to `.planning/STATE.md` (atomic replace)
 5. If validation fails, delete the tmp file and stop: "STATE.md write failed validation — the `.bak` is intact."
 6. If in a git repo, record the current commit SHA in the state file as `## Git Checkpoint: <sha>`
@@ -271,7 +278,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-skeleton.md` for d
 
 ## Output Style
 
-If the project has output styles configured, suggest switching to `moku-building` at the start of this command for terse, progress-focused formatting.
+If `.claude/output-styles/` directory exists and contains `moku-building.md`, suggest switching to `moku-building` at the start of this command for terse, progress-focused formatting. Otherwise, skip silently.
 
 ---
 
@@ -283,6 +290,7 @@ Use `TaskCreate` and `TaskUpdate` to provide visual progress tracking during bui
 1. Create a parent task for the wave: `TaskCreate("Wave N", "Build plugins: [list]", activeForm: "Building Wave N...")`
 2. Create a child task for each plugin: `TaskCreate("[name] ([tier])", "Build [name] plugin from spec", activeForm: "Building [name]...")`
 3. Set dependencies: `TaskUpdate(child, addBlockedBy: [dependencies from other plugins in this wave if any])`
+   - `addBlockedBy` lists only plugins this plugin explicitly depends on (per the spec's `depends` field). Independent plugins in the same wave have `addBlockedBy: []` and run in parallel.
 
 **During wave:**
 - When a builder agent starts: `TaskUpdate(pluginTask, status: "in_progress", activeForm: "Building [name]...")`
@@ -409,14 +417,14 @@ This section is entered when: (a) `$ARGUMENTS` starts with `fix`, OR (b) `resume
 
 **Prerequisite checks run in order:**
 
-**(1) Skeleton prerequisite:** Fix mode requires skeleton to be `committed` in STATE.md. If `## Skeleton:` is `not-started` or `in-progress`, tell the user: "Fix mode requires the skeleton to be committed first. Complete the skeleton build with `/moku:build resume`, then re-run fix." If `## Skeleton:` is `verified`, tell the user: "Skeleton is built but not yet committed. Run `/moku:build resume` to approve and commit it, then re-run fix."
+**(1) Skeleton prerequisite:** Fix mode requires skeleton to be `committed` in STATE.md. If `## Skeleton:` field is absent (old STATE.md format without skeleton tracking), assume `committed` and proceed. If `## Skeleton:` is `not-started` or `in-progress`, tell the user: "Fix mode requires the skeleton to be committed first. Complete the skeleton build with `/moku:build resume`, then re-run fix." If `## Skeleton:` is `verified`, tell the user: "Skeleton is built but not yet committed. Run `/moku:build resume` to approve and commit the skeleton, then re-run `fix`."
 
 **Syntax:**
 - `fix auth` — fix a specific plugin by name
 - `fix #3` — fix a specific plugin by number
 - `fix --all` — fix all plugins with `needs-manual` or `verify-failed` status
 
-**Reserved word guard:** If a plugin name argument (`fix <name>`) matches a reserved keyword (`resume`, `framework`, `app`, `plugin`, `fix`), report: "Cannot fix a plugin named `{name}` — that is a reserved command keyword. Use `fix #N` or `fix --all` instead." Stop.
+**Reserved word guard:** If a plugin name argument (`fix <name>`) matches a reserved keyword (`resume`, `framework`, `app`, `plugin`, `fix`), report: "Cannot fix a plugin named `{name}` — that is a reserved command keyword. Use `fix #N` or `fix --all` instead. Run `/moku:status` to see plugin numbers." Stop.
 
 **(2) Zero-match guard for `fix --all`:** Before proceeding, scan STATE.md for plugins with `needs-manual` or `verify-failed` status. If none are found, tell the user: "No plugins need fixing — all plugins are verified or complete." Stop.
 

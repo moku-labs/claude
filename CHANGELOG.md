@@ -2,6 +2,27 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.7 (2026-03-30)
+
+### Fixed
+- **Delta build flag persistence** — `## Verb: update` now re-activates delta build mode on every resume, ensuring delta updates survive skeleton waves and multi-invocation builds
+- **`--dry-run` + `add` precedence** — `add auth --dry-run` no longer produces a misleading framework dry-run; guard stops with clear message directing user to spec file
+- **Idempotency Protocol false positive** — `#wave:N` re-runs skip the crash-recovery prompt since wave re-execution is intentional
+- **Error Recovery skeleton absent-field fallback** — old STATE.md without `## Skeleton:` field now correctly assumes committed, matching Skeleton Detection behavior
+
+### Changed
+- **State Write Protocol `## Mode:` preservation** — sub-mode (config-only/plugins-only) no longer silently lost on STATE.md writes; validation now checks for Mode header carry-forward
+- **Output Style detection** — replaced vague "if configured" with concrete `.claude/output-styles/moku-building.md` file existence check
+- **Intent normalization state-aware** — "what would the next wave do" maps to `resume --dry-run` mid-build instead of `framework --dry-run`
+- **`#wave:N` + `--continue` behavior** — documented: execute wave N, continue to N+1 only if incomplete
+- **`#wave:N` + `fix` incompatibility** — explicit guard with clear error instead of silent flag drop
+- **TaskCreate `addBlockedBy` clarified** — independent same-wave plugins have `addBlockedBy: []` and run in parallel
+- **Add verb skeleton: verified message** — now matches Error Recovery's precise "built but not yet committed" language
+- **Add verb reserved-word guard** — reserved keywords (`resume`, `framework`, etc.) rejected at add time, resolving asymmetry with fix verb
+- **Reserved-word error message** — now includes `/moku:status` hint for finding plugin numbers
+- **LeanMode persistence in add flow** — explicit note to write `## LeanMode: true` at add completion
+- Version bumped to 0.26.7 in plugin.json and marketplace.json
+
 ## 0.26.6 (2026-03-30)
 
 ### Fixed
