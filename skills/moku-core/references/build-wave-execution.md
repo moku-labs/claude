@@ -225,6 +225,18 @@ After each wave's sub-agents return, parse the output contract JSON from each ag
 2. **verdict: PARTIAL** (some files created, hit turn limit, or unresolved issues) → mark plugin as `agent-incomplete` in STATE.md, keep task as `in_progress`
 3. **verdict: FAIL or no output contract found** (crashed, context exhausted, critical failures) → mark plugin as `agent-failed` in STATE.md, keep task as `in_progress`
 
+**Post-wave stub sentinel check:** Before accepting any plugin as `built`, verify that skeleton stub sentinels have been replaced with real implementations:
+```bash
+grep -r "not implemented" src/plugins/{name}/ --include="*.ts" --exclude-dir="__tests__"
+```
+If any matches are found in `api.ts`, `handlers.ts`, `state.ts`, or `index.ts`, the plugin is NOT fully implemented — mark as `agent-incomplete` and re-spawn the builder agent. Only `throw new Error("not implemented")` in genuinely unimplemented optional paths is acceptable (and must be documented with a `// TODO:` comment explaining why).
+
+**Post-wave TDD verification:** For each plugin marked `built`, verify that at least one non-todo test assertion exists:
+```bash
+grep -c "expect\|assert\|toEqual\|toBe\|toThrow" src/plugins/{name}/__tests__/unit/*.test.ts
+```
+If the count is zero (all tests are `it.todo()` stubs), the TDD protocol was not followed — mark as `agent-incomplete` with note "No real test assertions — TDD RED phase was skipped."
+
 After all plugins in the wave are tracked, update the parent wave task:
 - All PASS → `TaskUpdate(waveTask, status: "completed")`
 - Mixed results → keep wave task as `in_progress` with updated description noting failures

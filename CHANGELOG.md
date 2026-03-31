@@ -2,6 +2,27 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.26.8 (2026-03-31)
+
+### Fixed
+- **Skeleton S2 stop enforcement** — STOP instruction now visually isolated block (`>>> STOP HERE <<<`) preventing drivers from skipping per-wave checkpoints and leaving STATE.md stale
+- **Events type gap in skeleton** — new pre-verification step populates `src/config.ts` Events type with all plugin event names, preventing type errors when implementations call `ctx.emit()`
+- **Barrel interleaving in skeleton** — new pre-verification step enforces two-section layout (instances first, then types) in `src/plugins/index.ts`
+- **Context exhaustion recovery in skeleton S3** — verification loop now preserves wave progress in STATE.md before stopping, preventing full skeleton re-execution on resume
+- **Phase value ambiguity** — Stage 3 approval now explicitly writes `Phase: complete` instead of ambiguous `stage3/approved (which sets complete)`
+- **Skeleton field after plan** — plan command no longer writes `in-progress` on fresh runs; always writes `not-started` (reserved for build command)
+- **Antipattern regex gap** — `check-plugin-antipatterns.sh` Check 6 now catches `{ content } as Type` pattern (object-spread casts), not just empty `{} as`
+- **Brainstorm marker cleanup** — explicit `.brainstorm-active` deletion and confirmation log at brainstorm completion, preventing orphaned markers
+
+### Changed
+- **Wave analysis mandatory gate** — build.md now explicitly requires wave analysis before any plugin implementation after skeleton commit
+- **Git checkpoint verification** — skeleton commit verified via `git log --oneline -1` before proceeding to plugin waves
+- **Post-wave stub sentinel check** — `grep -r "not implemented"` blocks waves from accepting skeleton-quality stubs as real implementations
+- **Post-wave TDD verification** — waves now verify at least one non-todo test assertion exists per plugin before acceptance
+- **Unnecessary cast quality rule** — skeleton quality rules now prohibit redundant `as string` casts when config types are inferred from defaults
+- **Core plugin spec template** — code example instruction now requires `config:` field when Config type is defined
+- Version bumped to 0.26.8 in plugin.json and marketplace.json
+
 ## 0.26.7 (2026-03-30)
 
 ### Fixed

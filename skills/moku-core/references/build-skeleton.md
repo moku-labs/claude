@@ -41,12 +41,18 @@ For each file listed in the wave's code blocks in the skeleton spec:
 
 **Barrel file (`src/plugins/index.ts`):** Must group ALL plugin instance exports in one block first, then ALL type namespace re-exports in a second block, separated by section comments. Follow the exact two-section layout from the skeleton spec template — do not interleave instance and type exports.
 
-Mark the wave `done` in STATE.md.
+Mark the wave `done` in STATE.md. Write the updated STATE.md using the State Write Protocol (backup → tmp → validate → rename).
 
 **If more skeleton waves remain (check Wave Progress table):**
 > "Skeleton Wave [N] complete ([file count] files). Run `/moku:build resume` to continue with Skeleton Wave [N+1]."
 
-**STOP.** Do not continue to the next wave in the same invocation.
+---
+
+**>>> STOP HERE <<<**
+
+**Do NOT continue to the next skeleton wave in the same invocation.** Each skeleton wave is a separate invocation. The STATE.md write above preserves progress so the next `/moku:build resume` picks up at the correct wave. Continuing past this point without stopping defeats the crash-recovery mechanism and causes STATE.md to fall out of sync with disk state.
+
+---
 
 **If this was the last skeleton wave:** Continue immediately to Step S3.
 
@@ -57,6 +63,24 @@ Mark the wave `done` in STATE.md.
 After all skeleton waves complete, run the verification checklist from the skeleton spec.
 
 Track every issue found AND the exact fix applied — this feeds the skeleton report in Step S4.
+
+### Events Type Population (Pre-Verification)
+
+Before running the verification sequence, update `src/config.ts` to declare all plugin events in the `Events` type. Scan all plugin skeleton files for `events: register => (...)` blocks and collect every event name. Replace the empty `Events` type with one that includes all discovered events:
+
+```typescript
+export type Events = {
+  "schema:field-defined": Record<string, never>;
+  "rules:validation-complete": Record<string, never>;
+  // ... one entry per plugin event
+};
+```
+
+Use `Record<string, never>` as the placeholder payload type for each event. This ensures `ctx.emit()` is type-correct in the skeleton and prevents type errors when plugin implementations call emit. If no plugins declare events, leave `Events` as `Record<string, never>`.
+
+### Barrel Structure Verification (Pre-Verification)
+
+Verify that `src/plugins/index.ts` follows the two-section layout: all plugin instance exports (`export { name } from ...`) in the first block, then all type namespace exports (`export * as Name from ...`) in the second block. If they are interleaved, reorder them before running the verification sequence.
 
 Run in sequence:
 
@@ -80,6 +104,13 @@ Run in sequence:
 **Maximum 3 rounds.** If still failing after 3 rounds, report to user:
 > "Skeleton verification could not reach a clean state after 3 rounds. Remaining issues: [list]. Please fix manually then run `/moku:build resume`."
 And stop.
+
+**Context exhaustion guard:** If context is running low during the verification loop (approaching compaction), stop immediately. Before stopping:
+1. Update STATE.md to preserve the current wave's `done` status — do NOT regress any completed wave back to `not started`
+2. Mark `Skeleton verify` row as `in-progress` (not `done` — verification is incomplete)
+3. Tell the user: "Context is running low during skeleton verification. Skeleton wave files are in place. Run `/moku:build resume` to continue from the verification step."
+
+This ensures that on resume, skeleton waves are not re-executed and verification picks up where it left off.
 
 Update STATE.md: mark `Skeleton verify` row as `done` in Wave Progress.
 
@@ -218,4 +249,5 @@ These invariants apply to ALL skeleton files:
 - **@param names must match underscore prefix** — Unused stub parameters use `_` prefix (e.g., `_ctx`). All `@param` tags must match the actual parameter name including the underscore: `@param _ctx`, not `@param ctx`. For destructured object parameters, list each property as a separate entry: `@param _ctx.global`, `@param _ctx.config`.
 - **No @returns on throw-only stubs** — Functions whose body contains only `throw new Error("not implemented")` must NOT include `@returns` JSDoc tags. ESLint's `jsdoc/require-returns-check` rejects `@returns` on non-returning functions.
 - **Subscribe-style stubs** — API methods that return an unsubscribe arrow function (e.g., `subscribe` returning `() => void`) require `// eslint-disable-next-line unicorn/consistent-function-scoping` before the inner return. The empty `() => {}` triggers `unicorn/consistent-function-scoping` because it doesn't close over any stub variables.
+- **No unnecessary type casts** — when a config field's type is inferred from its default value (e.g., `config: { locale: "en" }` infers `string`), do NOT add redundant `as string` casts in API methods. Only cast when the inferred type is genuinely insufficient (e.g., widening a literal type to a union)
 - **No business logic** — no real algorithms, no data manipulation, no conditional logic beyond structural stubs

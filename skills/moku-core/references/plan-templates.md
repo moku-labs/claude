@@ -114,7 +114,7 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 - All tests live inside the plugin directory, NOT in root `tests/`
 
 ## Code Example
-[Complete createCorePlugin call — NO explicit generics]
+[Complete createCorePlugin call — NO explicit generics. If a Config type is defined above, the code example MUST include the `config:` field with the default values shown in the Config section. Do not omit config from the example when Config is non-empty.]
 
 ## Verification
 - [ ] Plugin directory exists

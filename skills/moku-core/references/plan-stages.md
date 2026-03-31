@@ -431,7 +431,7 @@ Produce `.planning/build/skeleton-spec.md` covering: tier-appropriate file struc
 
 **On exit**: Update `.planning/STATE.md`:
 - Phase: `stage3/pending-approval`
-- `## Skeleton:` — preserve the current value if it is `in-progress`, `verified`, or `committed` (do not regress a build-advanced value); write `not-started` only if the field is currently absent or already `not-started`
+- `## Skeleton:` — on a fresh plan run (no prior build activity), always write `not-started`. Only preserve `in-progress`, `verified`, or `committed` if the build command already advanced the value during a prior session (i.e., the value was read from an existing STATE.md on resume and the build had already started). The plan command must never write `in-progress` — that value is reserved for the build command's first skeleton wave. If unsure, write `not-started`; the build command will advance it correctly
 - Add skeleton spec path to Artifacts section: `Skeleton spec: .planning/build/skeleton-spec.md`
 - Add skeleton wave rows to Wave Progress table (one row per skeleton wave + verification + commit), all with Status `not started`
 - Set `Next Action: Run /moku:build resume (skeleton build will run first)`
@@ -448,6 +448,6 @@ Present the completed skeleton spec document. Then use `AskUserQuestion`:
 - multiSelect: false
 
 Route based on selection:
-- **Approve**: Update `## Phase:` to `stage3/approved` (which sets `complete`), update `## Next Action:`
+- **Approve**: Update `## Phase:` to `complete` (do NOT write `stage3/approved` — the jump table and `next.md` routing only recognize `complete` for this state), update `## Next Action:`
 - **Edit skeleton**: Ask what to change, apply edits, re-present gate
 - **Go back to Stage 2**: Reset phase to `stage2/pending-approval`, re-run Stage 2 gate

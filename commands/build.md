@@ -266,7 +266,9 @@ Read `## Skeleton:` from STATE.md:
 | `not-started` | Read `.planning/build/skeleton-spec.md` → route to `build-skeleton.md` Step S1 |
 | `in-progress` | Read skeleton-spec.md, find last completed skeleton wave → resume from next wave. (Any held `#wave:N` or `--continue` will be re-applied after skeleton is committed.) |
 | `verified` | Re-present skeleton report — read `.planning/build/skeleton-report.md` (if file is missing, route to `build-skeleton.md` Step S3 to regenerate it first). Use `AskUserQuestion`: "Skeleton verified. How would you like to proceed?" — Options: "Approve and commit (Recommended)" / "Adjust skeleton" / "Show details". **Note:** `--continue` does not bypass the skeleton approval gate. Continuous mode applies only to plugin waves after skeleton is committed. After approval and commit, `--continue` mode resumes automatically for subsequent plugin waves. |
-| `committed` | Skeleton complete — proceed to Framework/App/Plugin build routing below |
+| `committed` | Skeleton complete — proceed to **Step 2: Wave Analysis** in `build-framework.md` (or app/plugin routing). Do NOT skip wave analysis and proceed directly to plugin file creation — the wave plan must be computed and approved before any plugin implementation begins |
+
+**Git checkpoint verification:** After skeleton is committed, verify the commit exists: `git log --oneline -1` must show the skeleton commit. If no commit exists (e.g., skeleton build ran without committing), route back to `build-skeleton.md` Step S6 to create the commit before proceeding.
 
 **Skeleton always takes priority.** Any argument (`resume`, `framework #wave:2`, `--continue`) is held until skeleton is `committed`. The skeleton MUST be committed before any plugin build wave begins. If the user passes `resume` or `--continue` but skeleton is not committed, tell the user: "Skeleton build is not yet committed. Completing skeleton first — your `[argument]` will apply after skeleton is committed." Then proceed with skeleton build. After skeleton is committed, re-apply the held arguments (e.g., `--continue` mode resumes, `#wave:N` routes to the specified wave).
 
@@ -321,9 +323,11 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 
 **Flow**: Each invocation executes exactly ONE step (wave, verification, README, or validation), saves STATE.md, and stops. User runs `/moku:build resume` for the next step. This ensures fresh context and explicit user control.
 
+**CRITICAL: Wave analysis is mandatory before any plugin implementation.** After skeleton is committed, the FIRST action is always Step 1 (wave analysis) from `build-framework.md`. Do NOT skip wave analysis and create plugin implementation files directly. The wave plan determines build order, parallelism, and dependency safety.
+
 **Step sequence per invocation:**
 1. Read specs → Wave analysis → **STOP** (present wave plan). **On resume:** if STATE.md already contains a stored wave plan (detect by looking for `| Wave |` in the plugins table header row AND all plugin rows have a numeric value in the Wave column), skip wave analysis and proceed directly to executing the next incomplete wave.
-2. Build Wave 0 (core plugins) → verify → integrate → tick spec checkboxes → **STOP**
+2. Build Wave 0 (core plugins) → verify → integrate → tick spec checkboxes → git checkpoint → STATE.md update → **STOP**
 3. Build Wave 1 → verify → integrate → **regression test** → tick spec checkboxes → **STOP**
 4. Build Wave N → ... → **regression test** → ... → **STOP** (one wave per invocation until all waves done)
 

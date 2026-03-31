@@ -189,5 +189,6 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTO
 - The debate loop converges when the user is satisfied OR max iterations reached — never force iterations
 - Context file must be complete enough that `/moku:plan` can skip its steering and discussion phases entirely
 - Before writing the final context file, use `EnterPlanMode` to present the synthesized decisions and architectural choices for user review. This gives a visually distinct approval experience for the brainstorm conclusions. After the user approves via plan mode, call `ExitPlanMode` and write the context file.
-- After writing the context file, always print a closing next-step suggestion:
+- After writing the context file, delete `.planning/.brainstorm-active` and confirm cleanup: log "Removed `.planning/.brainstorm-active` marker." If the file does not exist (already cleaned), skip silently.
+- After cleanup, always print a closing next-step suggestion:
   > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] "{NAME}" --context context-{NAME}.md` to begin planning."
