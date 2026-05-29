@@ -114,13 +114,13 @@ Key conventions:
  * @see README.md
  */
 import { createPlugin } from '../../config';
-import { renderer } from '../renderer';
+import { rendererPlugin } from '../renderer';
 import { createRouterState } from './state';
 import { createRouterApi } from './api';
 import { handleRouteNotFound } from './handlers';
 
-export const router = createPlugin('router', {
-  depends: [renderer],
+export const routerPlugin = createPlugin('router', {
+  depends: [rendererPlugin],
   config: { basePath: '/', notFoundRedirect: '/404' },
   createState: createRouterState,
   api: createRouterApi,
@@ -167,14 +167,14 @@ export const utilPlugin = createPlugin('util', {
 // DON'T: Create multiple plugins for one domain concern
 // spa-head, spa-router, spa-progress → merge into one "spa" plugin
 
-// DON'T: Add "Plugin" postfix to exported plugin instances
-export const routePlugin = createPlugin("route", { ... })
+// CORRECT (spec/15 §7): export instance uses the <name>Plugin suffix; name string stays bare
+export const routerPlugin = createPlugin("router", { ... })
 export const authPlugin = createPlugin("auth", { ... })
+export const templateEnginePlugin = createPlugin("templateEngine", { ... })
 
-// CORRECT: Use bare name matching the plugin string name
-export const route = createPlugin("route", { ... })
-export const auth = createPlugin("auth", { ... })
-// Exception: use a distinct name when collisions exist (e.g., router vs route helper)
+// DON'T: drop the suffix on the export
+export const router = createPlugin("router", { ... })   // WRONG — export should be routerPlugin
+// Islands / non-plugin instances may use a domain suffix instead: lightboxIsland, shareButtonsIsland
 
 // DON'T: Parameterize createPlugin and dependencies through a factory
 export function wireFooPlugin(pluginFactory, dep) {
@@ -237,7 +237,7 @@ Each plugin directory exports exactly ONE `createPlugin` (or `createCorePlugin`)
 
 ```typescript
 // CORRECT: One plugin instance + helper
-export const router = createPlugin("router", { ... });
+export const routerPlugin = createPlugin("router", { ... });
 export function route(path: string): Route { ... }  // helper, not a plugin
 
 // WRONG: Multiple plugin instances from one directory
@@ -276,7 +276,7 @@ import { createPlugin } from '../../config';
 import { createRouterApi } from './router/api';
 import { createHeadApi } from './head/api';
 
-export const spa = createPlugin('spa', {
+export const spaPlugin = createPlugin('spa', {
   config: { router: { basePath: '/' }, head: { titleSuffix: '' } },
   createState: () => ({ router: { currentPath: '/' }, head: { title: '' } }),
   api: (ctx) => ({

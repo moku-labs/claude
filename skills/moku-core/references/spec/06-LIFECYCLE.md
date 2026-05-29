@@ -1,0 +1,204 @@
+# 06 - Lifecycle
+
+**Domain:** 3 lifecycle phases, ordering, async execution, error handling, core plugin lifecycle
+**Architecture:** 3-step (createCoreConfig -> createCore -> createApp)
+
+---
+
+## 1. Three Phases
+
+The kernel has exactly three lifecycle phases:
+
+| Phase | Method | Direction | When | Context |
+|-------|--------|-----------|------|---------|
+| init | onInit | Forward (array order) | During `createApp(...)` | PluginContext |
+| start | onStart | Forward (array order) | `await app.start()` | PluginContext |
+| stop | onStop | **REVERSE** (array order) | `await app.stop()` | TeardownContext |
+
+Forward = plugin array order (first registered runs first). Reverse = last registered runs first.
+
+**Core plugins run on a separate timeline from regular plugins.** Core plugin init/start runs BEFORE any regular plugin init/start. Core plugin stop runs AFTER all regular plugins have stopped. This guarantees that infrastructure services (logging, env, storage) are available for the entire lifetime of regular plugins.
+
+| Phase | Core Plugins | Regular Plugins |
+|-------|-------------|-----------------|
+| init  | First (forward order) | Second (forward order) |
+| start | First (forward order) | Second (forward order) |
+| stop  | Second (reverse order) | First (reverse order) |
+
+The `start` / `stop` phases are optional. They exist for applications that have a distinct runtime phase (for example servers, workers, long-lived connections, file watchers, background processes). If an app does all its useful work during init and plain API calls, it may never need to call `start()` or `stop()`.
+
+---
+
+## 2. The init Phase
+
+Runs during `createApp(...)`. This single phase encompasses all initialization work. Internal sub-steps (not visible to plugin authors as separate phases):
+
+1. **Merge plugin lists:** `[...frameworkDefaultPlugins, ...consumerExtraPlugins]`
+2. **Validate reserved names:** No plugin name can conflict with app methods or dangerous object keys (`start`, `stop`, `emit`, `require`, `has`, `config`, `__proto__`, `constructor`, `prototype`).
+3. **Validate names:** No duplicate plugin names in the final list (including core plugin names). Throw if any collision.
+4. **Validate dependencies:** For each plugin with `depends`, verify all dependencies exist and appear earlier in the array. Throw with clear error if either fails.
+5. **Resolve global config:** Shallow merge `{ ...configDefaults, ...consumerOverrides }`. Freeze the result.
+6. **Resolve core plugin configs:** For each core plugin, 4-level shallow merge `{ ...spec.config, ...coreConfigOverrides, ...frameworkOverrides, ...consumerOverrides }`. Freeze each result.
+7. **Init core plugins:** For each core plugin (forward order), create state via `createState({ config })`, build API via `api({ config, state })`, run `onInit({ config, state })`. Core plugin APIs are now available for injection into regular plugin contexts.
+8. **Resolve per-plugin config:** For each regular plugin, 3-level shallow merge `{ ...plugin.config, ...frameworkOverride, ...consumerOverride }`. Freeze each result.
+9. **Create state:** For each regular plugin (forward order), call `createState({ global, config })`. Store mutable state. Default `{}` if no `createState`.
+10. **Register hooks:** For each regular plugin (forward order), call `hooks(PluginContext)`, register handlers in the event bus.
+11. **Build API:** For each regular plugin (forward order), call `api(PluginContext)`. Register the API in the plugin registry.
+12. **Run onInit:** For each regular plugin (forward order), call `onInit(PluginContext)`. Synchronous. This is where plugins validate dependencies with `require()`/`has()`. Core APIs (e.g., `ctx.log`, `ctx.env`) are available on the context.
+13. **Call framework onReady:** If `onReady` was passed to `createCore`, call it with `{ config: globalConfig }`. Synchronous.
+14. **Call consumer onReady:** If `onReady` was passed to `createApp`, call it with full `AppCallbackContext` (config, emit, require, has, plugin APIs). Synchronous.
+
+These sub-steps are presented as ONE phase with internal mechanics. Plugin authors write `onInit` -- the rest is kernel machinery.
+
+After init completes, `createApp` returns the app object.
+
+---
+
+## 3. The start Phase
+
+Runs when the consumer calls `await app.start()`. Core plugins start first (forward order), then regular plugins start (forward order). Each plugin's `onStart` is called and awaited sequentially.
+
+```typescript
+const app = createApp({ ... });
+await app.start();
+// 1. Core plugins onStart (forward order) -- infrastructure starts first
+// 2. Regular plugins onStart (forward order)
+// 3. Consumer onStart callback (if provided)
+```
+
+This is where plugins perform runtime setup: opening connections, starting servers, loading data. Plugins that need async initialization should use `onStart`, not `onInit`.
+
+After all core and regular plugin `onStart` methods complete, the consumer `onStart` callback (if provided) is called with `AppCallbackContext`.
+
+**Error behavior:** If any plugin's `onStart` throws, the error propagates immediately. Remaining plugins do not get their `onStart` called. There is no automatic rollback or teardown-after-failed-start -- any recovery is domain-specific.
+
+---
+
+## 4. The stop Phase
+
+Runs when the consumer calls `await app.stop()`. Regular plugins stop first (reverse order), then core plugins stop (reverse order). Each plugin's `onStop` is called and awaited sequentially.
+
+```typescript
+await app.stop();
+// 1. Regular plugins onStop (REVERSE order)
+// 2. Core plugins onStop (REVERSE order) -- infrastructure stops last
+```
+
+Reverse order ensures that plugins which depend on other plugins stop first. If Plugin B depends on Plugin A, B stops before A -- so B can still clean up using A's resources. Core plugins stop after all regular plugins, ensuring infrastructure services (logging, env, storage) remain available throughout regular plugin teardown.
+
+Regular plugins receive `TeardownContext` (`{ global }`) during stop. Core plugins receive `CorePluginContext` (`{ config, state }`) during stop -- they have no inter-plugin dependencies to worry about.
+
+---
+
+## 5. Execution Model
+
+`createApp` is **synchronous** -- it returns the app object directly. The init phase (including `onInit` and `onReady`) runs synchronously during the call.
+
+`onStart` and `onStop` support async (return `void | Promise<void>`):
+
+- `createApp(options)` returns `App`
+- `app.start()` returns `Promise<void>`
+- `app.stop()` returns `Promise<void>`
+
+**Sequential execution within start/stop.** Plugins run one at a time, awaited. Plugin A's `onStart` resolves before Plugin B's `onStart` begins. No parallelism within or across phases.
+
+```typescript
+// Each plugin is awaited before the next
+for (const plugin of plugins) {
+  await plugin.onStart(ctx);  // sequential, not parallel
+}
+```
+
+**Important:** lifecycle completion is not the same thing as hook completion. `emit()` is fire-and-forget, so async hook work triggered during `onInit` or `onStart` may still be running after `createApp()` or `app.start()` returns.
+
+---
+
+## 6. Error Handling
+
+Lifecycle methods can throw (or reject). When they do:
+
+- The error propagates immediately to the caller.
+- If `onInit` throws, `createApp` throws.
+- If `onStart` throws, `app.start()` rejects. No rollback -- remaining plugins are not started.
+- If `onStop` throws, `app.stop()` rejects. The error propagates immediately.
+
+**No catch-and-silence. No error swallowing. No retry logic.** The consumer decides how to handle errors. The kernel does not know what "error recovery" means in your domain.
+
+### 6.1 Non-Transactional Lifecycle
+
+The lifecycle is not transactional.
+
+- The kernel only sequences and awaits the promises returned by lifecycle methods.
+- Detached async work (for example, `void` promises or background tasks created by plugins) is outside the kernel contract.
+- The kernel does not attempt rollback, compensation, or teardown-after-failed-start.
+- `stop()` is not a guaranteed recovery mechanism after a failed `start()`.
+- After a lifecycle failure, the safest contract is to discard the app instance and recreate it if needed.
+
+---
+
+## 7. Supported Lifecycle Usage
+
+The supported lifecycle is:
+
+`createApp()` -> optional `await app.start()` -> optional `await app.stop()`
+
+Repeated calls, concurrent calls, or recovery attempts after lifecycle failure are outside the primary contract unless explicitly documented otherwise.
+
+The current runtime additionally throws when:
+
+- `stop()` is called before a successful `start()`
+- `start()` is called again after a successful `start()`
+
+```typescript
+const app = createApp({ ... });
+await app.start();
+await app.start();          // throws: "App already started."
+```
+
+---
+
+## 8. Complete Example
+
+```typescript
+// Framework plugin
+const dbPlugin = createPlugin('db', {
+  config: { connectionString: 'sqlite::memory:' },
+  createState: () => ({ connection: null as any }),
+  api: (ctx) => ({
+    query: (sql: string) => ctx.state.connection.query(sql),
+  }),
+  onInit: (ctx) => {
+    // Validate config during init (synchronous)
+    if (!ctx.config.connectionString) {
+      throw new Error('[my-framework] db.connectionString is required.');
+    }
+  },
+  onStart: async (ctx) => {
+    // Open connection during start (async)
+    ctx.state.connection = await connect(ctx.config.connectionString);
+  },
+  onStop: async (ctx) => {
+    // Close connection during stop (reverse order)
+    // Only has ctx.global -- cannot access other plugins
+  },
+});
+
+// Consumer
+const app = createApp({
+  plugins: [dbPlugin],
+  pluginConfigs: { db: { connectionString: 'postgres://...' } },
+});
+
+await app.start();   // db.onStart opens connection
+app.db.query('SELECT 1');
+await app.stop();    // db.onStop closes connection
+```
+
+---
+
+## Cross-References
+
+- Plugin spec: [03-PLUGIN-SYSTEM](./03-PLUGIN-SYSTEM.md)
+- Context details: [08-CONTEXT](./08-CONTEXT.md)
+- Communication: [07-COMMUNICATION](./07-COMMUNICATION.md)
+- Invariants: [11-INVARIANTS](./11-INVARIANTS.md)

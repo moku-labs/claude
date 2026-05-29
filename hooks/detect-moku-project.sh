@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
 # Detect Moku project type and state on session start.
 # Creates/reads .planning/moku.md marker for fast detection by other hooks.
-# Outputs context hints for Claude to understand the current project.
+# Emits SessionStart context for Claude — as structured hookSpecificOutput JSON
+# (additionalContext + sessionTitle) when jq is available, else plain stdout (fallback).
 
 PROJECT_TYPE=""
 PROJECT_NAME=""
 CORE_VER=""
+
+# Accumulate human-readable context here; emitted once at the end.
+CTX=""
+add() { CTX="${CTX}$1"$'\n'; }
 
 # --- Read from marker if it exists (fast path) ---
 if [ -f .planning/moku.md ]; then
@@ -19,19 +24,19 @@ if [ -z "$PROJECT_TYPE" ]; then
   # First-run detection — welcome new users with decision tree
   if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; then
     if grep -q '@moku-labs' package.json 2>/dev/null; then
-      echo "Welcome to Moku! Choose your path:"
-      echo ""
-      echo "  Quick start:"
-      echo "    /moku:init            — scaffold a new project (framework, app, or tools)"
-      echo "    /moku:plan add plugin — add a plugin to an existing framework"
-      echo ""
-      echo "  Full workflow:"
-      echo "    /moku:plan create framework \"description\" — plan a new framework (3-stage gated)"
-      echo "    /moku:plan create app \"description\"       — plan a consumer app"
-      echo "    /moku:plan migrate ~/path/to/project       — migrate existing code to Moku"
-      echo ""
-      echo "  Diagnostics:"
-      echo "    /moku:check — run project diagnostics"
+      add "Welcome to Moku! Choose your path:"
+      add ""
+      add "  Quick start:"
+      add "    /moku:init            — scaffold a new project (framework, app, or tools)"
+      add "    /moku:plan add plugin — add a plugin to an existing framework"
+      add ""
+      add "  Full workflow:"
+      add "    /moku:plan create framework \"description\" — plan a new framework (3-stage gated)"
+      add "    /moku:plan create app \"description\"       — plan a consumer app"
+      add "    /moku:plan migrate ~/path/to/project       — migrate existing code to Moku"
+      add ""
+      add "  Diagnostics:"
+      add "    /moku:check — run project diagnostics"
     fi
   fi
 
@@ -77,40 +82,40 @@ MOKUEOF
   fi
 fi
 
-# --- Output context ---
+# --- Build context ---
 case "$PROJECT_TYPE" in
   framework)
-    echo "Moku Framework project detected (Layer 2)."
+    add "Moku Framework project detected (Layer 2)."
     PLUGIN_COUNT=$(find src/plugins -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l | tr -d ' ')
     if [ "$PLUGIN_COUNT" -gt 0 ]; then
-      echo "Plugins found: $PLUGIN_COUNT"
+      add "Plugins found: $PLUGIN_COUNT"
     fi
     ;;
   consumer)
-    echo "Moku Consumer App detected (Layer 3)."
+    add "Moku Consumer App detected (Layer 3)."
     ;;
   tools)
-    echo "Moku Tools/Library project detected."
+    add "Moku Tools/Library project detected."
     ;;
 esac
 
 # Check planning state with quick-action suggestions
+PHASE=""
 if [ -f .planning/STATE.md ]; then
   PHASE=$(grep '^## Phase:' .planning/STATE.md 2>/dev/null | head -1 | sed 's/## Phase: //')
   NEXT=$(grep '^## Next Action:' .planning/STATE.md 2>/dev/null | head -1 | sed 's/## Next Action: //')
   if [ -n "$PHASE" ]; then
-    echo "Planning state: $PHASE"
+    add "Planning state: $PHASE"
     if [ -n "$NEXT" ]; then
-      echo "Quick action: $NEXT"
+      add "Quick action: $NEXT"
     else
-      echo "Resume with /moku:plan resume or /moku:build resume"
+      add "Resume with /moku:plan resume or /moku:build resume"
     fi
   fi
 fi
 
 # Suggest status line setup on first detection (if not already configured)
 if [ -n "$PROJECT_TYPE" ]; then
-  # Check if the user already has a status line configured
   STATUSLINE_CONFIGURED="false"
   if [ -f "$HOME/.claude/settings.json" ]; then
     if grep -q 'statusLine' "$HOME/.claude/settings.json" 2>/dev/null; then
@@ -118,29 +123,27 @@ if [ -n "$PROJECT_TYPE" ]; then
     fi
   fi
   if [ "$STATUSLINE_CONFIGURED" = "false" ]; then
-    echo ""
-    echo "Tip: Set up the Moku status line for live project state in your terminal:"
-    echo "  /statusline ${CLAUDE_PLUGIN_ROOT:-~/.claude/plugins/moku}/hooks/moku-statusline.sh"
+    add ""
+    add "Tip: Set up the Moku status line for live project state in your terminal:"
+    add "  /statusline ${CLAUDE_PLUGIN_ROOT:-~/.claude/plugins/moku}/hooks/moku-statusline.sh"
   fi
 fi
 
 # Check for project-level memory
 if [ -f .planning/memory.md ]; then
   MEMORY_LINES=$(wc -l < .planning/memory.md 2>/dev/null | tr -d ' ')
-  echo "Project memory: $MEMORY_LINES lines in .planning/memory.md"
+  add "Project memory: $MEMORY_LINES lines in .planning/memory.md"
 fi
 
 # Check for specifications
 SPEC_COUNT=$(find .planning/specs -name '*.md' 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SPEC_COUNT" -gt 0 ]; then
-  echo "Specifications found: $SPEC_COUNT files in .planning/specs/"
+  add "Specifications found: $SPEC_COUNT files in .planning/specs/"
 fi
 
 # Environment validation — warn early if required tools are missing or outdated
 if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
   WARNINGS=""
-
-  # Check Bun
   if command -v bun &>/dev/null; then
     BUN_VER=$(bun --version 2>/dev/null)
     BUN_MAJOR=$(echo "$BUN_VER" | cut -d. -f1)
@@ -152,8 +155,6 @@ if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
   else
     WARNINGS="${WARNINGS}  - Bun not found (required)\n"
   fi
-
-  # Check Node
   if command -v node &>/dev/null; then
     NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
     if [ "${NODE_MAJOR:-0}" -lt 22 ]; then
@@ -162,20 +163,33 @@ if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
   else
     WARNINGS="${WARNINGS}  - Node not found (required)\n"
   fi
-
-  # Check TypeScript compiler
   if ! command -v tsc &>/dev/null && ! [ -f node_modules/.bin/tsc ]; then
     WARNINGS="${WARNINGS}  - tsc not found (install typescript)\n"
   fi
-
   if [ -n "$WARNINGS" ]; then
-    echo "Environment warnings:"
-    printf '%b' "$WARNINGS"
+    add "Environment warnings:"
+    add "$(printf '%b' "$WARNINGS")"
   fi
-
   if [ -n "$CORE_VER" ]; then
-    echo "@moku-labs/core: $CORE_VER"
+    add "@moku-labs/core: $CORE_VER"
   fi
 fi
 
+# Nothing to say → stay silent (valid for SessionStart).
+[ -z "$CTX" ] && exit 0
+
+# --- Emit: structured JSON (preferred) or plain stdout (fallback) ---
+# Session title: "moku: <name> · <type>[ · <phase>]"
+TITLE="moku"
+if [ -n "$PROJECT_NAME" ]; then TITLE="moku: ${PROJECT_NAME}"; fi
+if [ -n "$PROJECT_TYPE" ]; then TITLE="${TITLE} · ${PROJECT_TYPE}"; fi
+if [ -n "$PHASE" ]; then TITLE="${TITLE} · ${PHASE}"; fi
+
+if command -v jq &>/dev/null; then
+  jq -n --arg ctx "$CTX" --arg title "$TITLE" \
+    '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx, sessionTitle: $title}}'
+else
+  # Fallback: plain stdout is added to context by the harness (original behavior).
+  printf '%s' "$CTX"
+fi
 exit 0

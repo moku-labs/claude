@@ -5,6 +5,10 @@ argument-hint: {free-form description} or [create|modify|migrate|feature] {name}
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 ## Project Configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 
@@ -166,6 +170,13 @@ If "Cancel": delete `.planning/.brainstorm-active`, remove `.planning/build/` on
 
 ---
 
+## Ground in spec (before research & debate)
+
+Before spawning researchers or opening the debate loop, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and load the `spec/NN-*.md` files relevant to the DESCRIPTION (architecture, plugin boundaries, events, types, invariants). This is the authoritative frame for the whole session:
+- Spawn `brainstorm-researcher` and `brainstorm-challenger` with an explicit instruction to evaluate every approach against cited spec sections.
+- Any approach that would deviate from `spec/11-INVARIANTS.md` must be surfaced as a challenge, not silently adopted.
+- The final `context-{NAME}.md` must contain a populated **Spec Alignment** section (see `brainstorm-templates.md`) so `/moku:plan` can verify specs against the same cited sections.
+
 ## Route to Flow
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-flow.md` and follow it.
@@ -176,7 +187,7 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTO
 
 ## Rules
 
-- **Write protection:** During brainstorm, Write and Edit may ONLY target files in `.planning/`. Never create, modify, or delete source code files (`src/`, `tests/`, project root configs). Brainstorm is for exploration and decision-making — code changes happen during `/moku:build`
+- **Write protection:** During brainstorm, Write and Edit may ONLY target files in `.planning/`. Never create, modify, or delete source code files (`src/`, `tests/`, project root configs). Brainstorm is for exploration and decision-making — code changes happen during `/moku:build`. This is a **path-based** gate enforced by the `brainstorm-guard.sh` hook (not `disallowed-tools`, which is per-tool and would block the legitimate `.planning/` writes) — see `skills/moku-core/references/tool-scoping.md`.
 - Never write to `.planning/STATE.md` — brainstorm state is separate from plan state
 - All scratch files use the `.planning/brainstorm-{NAME}-*` prefix for clean isolation
 - The final output is always `.planning/context-{NAME}.md` — one file, standardized schema
@@ -192,3 +203,16 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTO
 - After writing the context file, delete `.planning/.brainstorm-active` and confirm cleanup: log "Removed `.planning/.brainstorm-active` marker." If the file does not exist (already cleaned), skip silently.
 - After cleanup, always print a closing next-step suggestion:
   > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] "{NAME}" --context context-{NAME}.md` to begin planning."
+
+## Run unattended (optional `/goal`)
+
+`/goal` (Claude Code v2.1.139+) sets a completion condition and a fresh evaluator model keeps the
+session working until it holds — useful for running the debate loop to convergence without
+re-prompting each turn. The plugin cannot set a goal for you (no command/hook can invoke `/goal`);
+**offer this ready-to-paste line** as a closing tip when the user wants an unattended run:
+
+> ```
+> /goal .planning/context-{NAME}.md exists, every architectural decision in it is resolved (no TBD/open-question markers), it has a populated Spec Alignment section citing spec/NN-*.md, and writes stayed within .planning/ — or stop after 12 turns
+> ```
+
+Phrase conditions as something the transcript can demonstrate; the turn cap guards against runaway loops. `/goal clear` cancels it.

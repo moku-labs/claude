@@ -83,6 +83,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-lean-mode.md` for 
 #### Normal prompt (default):
 ```
 You are building a Moku plugin using TDD. Follow the moku-plugin skill strictly.
+Before writing source, open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox-index.md`
+and read the tier-matching exemplar (env/counter/router/analytics/cms) to mirror file layout,
+export naming (`<name>Plugin`), JSDoc, and test style.
 
 ## Specification
 [Full contents of .planning/specs/0N-name.md]
@@ -201,6 +204,14 @@ If the agent approaches its turn limit with incomplete files, it should prioriti
 
 **Auto-throttle:** If the current wave is Wave 3+ and `--continue` mode is active, reduce effective parallelism to `min(maxParallelAgents, 3)` to conserve context window. Long continuous builds accumulate context from multiple waves — throttling prevents context exhaustion in later waves.
 
+> **1M-context models (current default):** this Wave-3+ throttle was tuned for 200K windows. On a
+> 1M-token model it is largely unnecessary and needlessly slows large builds — orchestrator context
+> from a handful of waves is a small fraction of 1M. Keep full `maxParallelAgents` parallelism until
+> window usage is genuinely high (~70%+), and lean on **server-side compaction** rather than
+> pre-emptive throttling. The throttle still applies as a safety net once usage is high or on
+> 200K-window models. (Sub-agents have isolated context regardless, so fan-out width itself does not
+> consume the orchestrator window — only the summaries they return do.)
+
 ### Plugin Implementation Order (per sub-agent) — TDD
 
 Each sub-agent builds its plugin using **Test-Driven Development** in four phases. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md` for the full protocol.
@@ -219,7 +230,7 @@ Each sub-agent builds its plugin using **Test-Driven Development** in four phase
 
 ### Per-Plugin Tracking
 
-After each wave's sub-agents return, parse the output contract JSON from each agent's response and update both STATE.md and Task progress per-plugin:
+After each wave's sub-agents return, parse the output contract JSON from each agent's response and update both STATE.md and Task progress per-plugin. **Also refresh the `## Recovery` block in STATE.md on every write** (Last good step = "wave N (plugins) verified", Open blockers, Next action = the exact next `/moku:*` command, Updated = timestamp) per `memory-schema.md`, so a fresh session or `/moku:next` rehydrates in one read:
 
 1. **verdict: PASS** (all files created, tests pass, lint clean) → mark plugin as `built` in STATE.md, `TaskUpdate(pluginTask, status: "completed")`
 2. **verdict: PARTIAL** (some files created, hit turn limit, or unresolved issues) → mark plugin as `agent-incomplete` in STATE.md, keep task as `in_progress`

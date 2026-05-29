@@ -5,6 +5,10 @@ argument-hint: (empty to auto-resume) or [framework|app|plugin|add|resume|fix] [
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 ## Project Configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 
@@ -382,7 +386,7 @@ During gap closure, track fix effectiveness between rounds. If the same errors p
 - Biome and ESLint must pass with zero warnings
 - Follow the exact complexity tier specified in the plan
 - Never use explicit generics on `createPlugin` — see moku-plugin skill
-- Plugin export names must NOT have "Plugin" postfix — use bare name
+- Plugin export names use the `<name>Plugin` suffix per spec/15 §7 (e.g. `routerPlugin`); the plugin name string stays bare (`'router'`)
 - NO unnecessary `onStart`/`onStop` — only when managing actual resources (servers, connections, listeners)
 - `src/plugins/index.ts` must exist as plugin barrel with grouped sections (Instances → Helpers → Types)
 - `src/index.ts` must be self-documenting: JSDoc module comment with options/defaults table, grouped exports (Framework API → Plugins → Helpers → Types)
@@ -451,3 +455,19 @@ This section is entered when: (a) `$ARGUMENTS` starts with `fix`, OR (b) `resume
 7. If still failing after 2 rounds, report remaining issues to user
 
 **Key difference from normal build:** The builder agent receives enhanced context about what already exists and what specifically failed, avoiding redundant work.
+
+## Run unattended (optional `/goal`)
+
+Build is the **strongest fit** for `/goal` (Claude Code v2.1.139+): it is normally one-wave-per-invocation,
+so a goal lets the user run *all* remaining waves unattended while a fresh evaluator model guards each
+hand-off against real verification output already in the transcript. The plugin cannot set the goal
+itself; **offer this ready-to-paste line** when the user asks to build to completion:
+
+> ```
+> /goal `bunx tsc --noEmit` exits 0 and `bun run lint` is clean and all wave tests pass with the test count not lower than the baseline at the start, and STATE.md Next Action shows "build complete" — do not delete or skip tests and do not use --no-verify — or stop after 25 turns
+> ```
+
+The anti-cheat clauses ("test count not lower than baseline", "do not delete or skip tests",
+"no `--no-verify`") matter because the evaluator only reads the transcript — it can't re-run commands.
+The turn cap bounds runaway loops. `/goal clear` cancels it. This complements, and does not replace,
+the verify-before-commit gate.

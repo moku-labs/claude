@@ -55,12 +55,11 @@ if printf '%s\n' "$CONTENT" | grep -q 'createCorePlugin<'; then
   exit 2
 fi
 
-# Check 4: "Plugin" postfix in exported plugin variable names
-if printf '%s\n' "$CONTENT" | grep -qE 'export const [a-z][a-zA-Z]*Plugin\b'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "Plugin postfix in export name"
-  echo 'BLOCKED: Plugin export name has "Plugin" postfix (e.g. routePlugin). Moku convention: use bare name matching the plugin string name (e.g. route). See moku-plugin skill for naming rules.' >&2
-  exit 2
-fi
+# Check 4: (removed) Plugin export NAMING is a spec/15 §7 convention, not a hard rule.
+# The spec and the vendored sandbox BOTH use the `<name>Plugin` suffix (routerPlugin),
+# so the previous hard block here was inverted and rejected correct code. Naming is now
+# a WARNING handled with judgment by moku-plugin-spec-validator (which can tell islands /
+# core plugins / collisions apart — a regex cannot). No block here.
 
 # Check 5: Wire factory pattern — function wireXxx wrapping createPlugin
 if printf '%s\n' "$CONTENT" | grep -qE 'function wire[A-Z]'; then

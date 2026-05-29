@@ -6,6 +6,7 @@ description: >
   <example>Context: Build wave 1 completed. user: "Review the code changes from wave 1" assistant: launches moku-code-reviewer</example>
   <example>Context: Post-build quality check. user: "Check if implementations match specs" assistant: launches moku-code-reviewer</example>
 model: sonnet
+effort: high
 color: green
 maxTurns: 25
 skills:

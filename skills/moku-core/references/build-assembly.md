@@ -13,9 +13,9 @@ Two-section barrel. Plugin instances first, types second. **No helpers.**
  */
 
 // ─── Plugin Instances ────────────────────────────────────────
-export { build } from "./build";
-export { router } from "./router";
-export { seo } from "./seo";
+export { buildPlugin } from "./build";
+export { routerPlugin } from "./router";
+export { seoPlugin } from "./seo";
 // ... one line per plugin, alphabetical
 
 // ─── Plugin Types ─────────────────────────────────────────────
@@ -43,10 +43,10 @@ Import plugin instances from the barrel (no circular dep: barrel → plugin dirs
  * @module
  */
 import { coreConfig, createCore } from "./config";
-import { build, router, seo, spa } from "./plugins"; // from barrel, not individual dirs
+import { buildPlugin, routerPlugin, seoPlugin, spaPlugin } from "./plugins"; // from barrel, not individual dirs
 
 const framework = createCore(coreConfig, {
-  plugins: [seo, router, spa, build],
+  plugins: [seoPlugin, routerPlugin, spaPlugin, buildPlugin],
   // Framework default plugin configuration.
   // Consumer apps override specific values via createApp({ pluginConfigs: { ... } }).
   pluginConfigs: {

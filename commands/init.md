@@ -5,6 +5,10 @@ argument-hint: [project-path]
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 Initialize a new Moku development environment at the path specified by `$1` (or current directory if not provided). The environment must be identical to the moku_core project's tooling setup.
 
 ## Setup Process
@@ -89,8 +93,11 @@ Then configure all tooling files (these are **identical across all project types
 12. **.bun-version** — `1.3.8`
 
 13. **.gitignore** — Standard ignores for node_modules, dist, coverage, .env files, caches, .claude, .planning. Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
+    - **Idempotent for existing repos:** if a `.gitignore` already exists (e.g. initializing into an existing project), do NOT blindly overwrite it. Instead, ensure both `.claude/` and `.planning/` are present, appending any missing line under a `# Claude Code` / `# Planning artifacts` comment. `.planning/` is local-only state and must NEVER be committed — this is a hard rule enforced by the `verify-before-commit` hook, which blocks any `git add`/commit referencing `.planning`.
 
 14. **.claude/settings.local.json** — Safe default permissions for Claude Code agents. Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
+
+14b. **.claude/workflows/moku-verify.js** — Install the bundled validation workflow so the project gets a `/moku-verify` slash command (a parallel fan-out of all Moku validators). Copy `${CLAUDE_PLUGIN_ROOT}/workflows/moku-verify.js` into `.claude/workflows/`. (Requires Claude Code v2.1.154+; if workflows are unavailable the copied file is simply inert. Do NOT install `moku-audit.js` — it targets the plugin's own command files and is a maintainer-only workflow.) See `${CLAUDE_PLUGIN_ROOT}/workflows/README.md` for caveats.
 
 15. **CLAUDE.md** — Project-specific instructions for Claude Code. Generate from the template in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`, replacing the framework name and description with the actual project values. Adjust these sections to match the project type:
     - **Architecture:** Framework shows 3-layer model; Consumer shows `createApp` usage; Tools/Library omit this section.

@@ -6,7 +6,7 @@ Formatters, validators, helpers. Pure functions, no state, no lifecycle.
 **Tier: Nano or Micro.**
 
 ```typescript
-export const format = createPlugin('format', {
+export const formatPlugin = createPlugin('format', {
   config: { locale: 'en-US', currency: 'USD' },
   api: (ctx) => ({
     date: (d: Date) => d.toLocaleDateString(ctx.config.locale),
@@ -51,7 +51,7 @@ HTTP server, middleware, routing, auth, database. Almost always need `onStart` (
 **Tier: Standard.**
 
 ```typescript
-export const http = createPlugin('http', {
+export const httpPlugin = createPlugin('http', {
   events: register => register.map<HttpEvents>({
     'http:request': 'Incoming HTTP request',
     'http:response': 'Outgoing HTTP response',
@@ -109,7 +109,7 @@ plugins/content/
 Not built into the kernel. Plugins implement internally:
 
 ```typescript
-const http = createPlugin('http', {
+const httpPlugin = createPlugin('http', {
   createState: () => ({ middlewares: [] as Function[] }),
   api: (ctx) => ({
     use: (fn: Function) => { ctx.state.middlewares.push(fn); },
@@ -121,10 +121,10 @@ const http = createPlugin('http', {
   }),
 });
 
-const auth = createPlugin('auth', {
-  depends: [http],
+const authPlugin = createPlugin('auth', {
+  depends: [httpPlugin],
   onInit: (ctx) => {
-    ctx.require(http).use((req: any) => ({ ...req, user: 'authenticated' }));
+    ctx.require(httpPlugin).use((req: any) => ({ ...req, user: 'authenticated' }));
   },
 });
 ```

@@ -6,6 +6,7 @@ description: >
   <example>Context: User finished writing plugin code. user: "Check my JSDoc coverage" assistant: launches moku-jsdoc-validator</example>
   <example>Context: Pre-build review. user: "Are all exports documented?" assistant: launches moku-jsdoc-validator</example>
 model: haiku
+effort: low
 color: cyan
 maxTurns: 30
 skills:

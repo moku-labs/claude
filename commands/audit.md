@@ -5,6 +5,10 @@ argument-hint: <command-name|hooks|all|full-cycle> [--sim-only] [--iterate] [--m
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 ## Project Configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 
@@ -261,6 +265,14 @@ cat "${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json"
 !`ls -la ${CLAUDE_PLUGIN_ROOT}/hooks/*.sh`
 
 Read each `.sh` file from the listing above.
+
+**First-party manifest validation (run when auditing in the plugin source repo):** Claude Code's
+own validator checks `plugin.json`, `hooks/hooks.json`, and every command/agent/skill frontmatter,
+and `--strict` turns unrecognized-field warnings into errors. Run it before the inline analysis and
+fold any findings into the report:
+```bash
+[ -f "./.claude-plugin/plugin.json" ] && claude plugin validate ./ --strict 2>&1 || true
+```
 
 ### Step H2: Analyze Hooks Inline
 

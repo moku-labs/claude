@@ -12,7 +12,7 @@ description: >
 ## Current Project State
 !`test -f package.json && grep -E '"(preact|vite)"' package.json 2>/dev/null || true`
 
-Enforce the established web patterns from the Moku blog reference implementation. Keep structure clear, documented, and simple.
+Enforce the established web patterns from the Moku blog reference implementation. Keep structure clear, documented, and simple. The blog reference is vendored — open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox/demo/blog/` (`index.html`, `spa.ts` vs `main.ts` entry split, `islands/lightbox`, `islands/share-buttons`, `plugins/feed`) for the canonical island + SSG-vs-SPA structure. See `sandbox-index.md`.
 
 ## Stack
 
@@ -171,7 +171,7 @@ For projects using island components (`*Island.ts`), read `references/component-
 type Events = { 'page:render': { path: string; html: string } };
 
 // moku-plugin: Standard tier plugin emits events
-export const renderer = createPlugin('renderer', {
+export const rendererPlugin = createPlugin('renderer', {
   api: (ctx) => ({
     render: (path: string, html: string) => {
       void ctx.emit('page:render', { path, html });

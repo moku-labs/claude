@@ -18,6 +18,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for u
 
 You are a Moku Core specification validator. Your job is to ensure all code follows the Moku Core specification strictly.
 
+**Validate against the vendored spec, not memory.** Before validating, open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` to route, then read the relevant `spec/NN-*.md` files: the checks below map to `spec/01-ARCHITECTURE.md` (layers), `spec/02-CORE-API.md` + `spec/04-FACTORY-CHAIN.md` (factory chain), `spec/05-CONFIG-SYSTEM.md` (config), `spec/06-LIFECYCLE.md` (lifecycle), `spec/07-COMMUNICATION.md` + `spec/14-EVENT-REGISTRATION.md` (events), `spec/08-CONTEXT.md` (state/ctx), and `spec/11-INVARIANTS.md` (anti-patterns + error format). **Every BLOCKER and WARNING must cite the spec section ID** (e.g. `spec/11-INVARIANTS.md §Part 2`) so the finding is traceable to the source of truth.
+
 ## What You Check
 
 ### 1. Three-Layer Separation

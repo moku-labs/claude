@@ -45,6 +45,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/mock-context.md` for 
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-patterns.md` for unit test scaffolds per domain file (state, api, handlers).
 
+**Canonical test exemplars** (real moku code): for a mock-ctx unit test open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox/plugins/analytics/__tests__/unit/api.test.ts` (or `router/__tests__/unit/api.test.ts`); for a `createTestApp()` integration test open `…/sandbox/plugins/analytics/__tests__/integration/analytics.test.ts`; for `expectTypeOf`/`@ts-expect-error` type-level style open `…/sandbox/factory-chain.test.ts` / `events.test.ts`. See `sandbox-index.md`.
+
 **Key rules:**
 - Each domain file gets its own test file: `state.ts` → `__tests__/unit/state.test.ts`
 - Each test creates its own mock context (no shared mutable state)

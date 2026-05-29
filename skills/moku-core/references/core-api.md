@@ -1,5 +1,7 @@
 # Core API Reference
 
+> **Distilled summary — not authoritative.** Source of truth: `spec/02-CORE-API.md`. When this summary and the spec disagree, the spec wins. See `spec-index.md`.
+
 ## Package Entry Point
 
 ```typescript
@@ -127,10 +129,10 @@ function createCore(
 ```typescript
 // Example: index.ts
 import { createCore, coreConfig } from './config';
-import { router } from './plugins/router';
+import { routerPlugin } from './plugins/router';
 
 const framework = createCore(coreConfig, {
-  plugins: [router],
+  plugins: [routerPlugin],
   pluginConfigs: { router: { basePath: '/app' } },
 });
 export const { createApp, createPlugin } = framework;

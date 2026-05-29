@@ -161,11 +161,11 @@ api: (ctx) => ({
 
 // DON'T: Use emit for request/response — events are notifications
 ctx.emit('auth:getUser', { id });       // WRONG — events don't return values
-ctx.require(auth).getUser(id);          // CORRECT — use require() for queries
+ctx.require(authPlugin).getUser(id);    // CORRECT — use require() for queries
 
 // DON'T: Make a core plugin that needs events or depends
 createCorePlugin("router", {
-  depends: [auth],                     // WRONG — core plugins are self-contained
+  depends: [authPlugin],               // WRONG — core plugins are self-contained
   events: (r) => ({ ... }),            // WRONG — core plugins can't have events
 })
 ```
@@ -199,6 +199,12 @@ All kernel errors: `[framework-name] <description>.\n  <actionable suggestion>.`
 
 ## References
 
+**Authoritative source of truth:** `references/spec-index.md` — the fast index over the vendored
+Moku Core specification (`references/spec/NN-*.md`). Before deciding or validating anything about
+architecture, the API, types, lifecycle, events, or plugin structure, consult the index and open
+the cited `spec/NN-*.md` file. The distilled references below are summaries that may lag the spec —
+when they disagree, the spec wins.
+
 For detailed specifications, consult:
 - `references/architecture.md` — 3-layer model, design principles, LLM advantages
 - `references/core-api.md` — Complete function signatures with examples
@@ -208,11 +214,33 @@ For detailed specifications, consult:
 - `references/type-system.md` — Type helpers, BuildPluginApis, type flow
 - `references/invariants.md` — Guarantees, error format, anti-patterns
 - `references/tooling-config.md` — Exact Biome, ESLint, TypeScript, Lefthook, Vitest configs
+- `references/sandbox-index.md` — Coding-style exemplars (real moku code) — open the tier-matching plugin before writing source
+- `references/memory-schema.md` — `.planning/` durable layer + STATE.md Recovery block for fast multi-session resume
+- `references/tool-scoping.md` — Per-stage tool posture: why path-based write gates live in hooks, not `disallowed-tools`
 
 ## Advanced References (load when needed)
 
 For projects with 5+ plugins, read `references/type-system.md` (type helpers) and `references/build-framework.md` (framework assembly patterns).
 For projects using `createCorePlugin`, read `references/plugin-settings.md` (4-level config cascade).
+
+## Context Strategy (1M-context models)
+
+All current Claude models (Opus/Sonnet 4.x) run a **1M-token context window**. Apply Anthropic's
+context-engineering guidance rather than treating the window as scarce:
+
+- **Index + fetch on demand — do NOT front-load the whole spec.** The vendored spec is ~6,400
+  lines; read `spec-index.md` (small, ~5KB) and open only the one or two `spec/NN-*.md` files a
+  decision needs. More tokens in context is not automatically better — recall degrades as the
+  window fills ("context rot").
+- **Keep invariant material at the front for prompt-cache hits.** The spec-authority block, the
+  agent preamble, and templates are stable — front-loading them lets the cache serve them cheaply
+  across turns. Put volatile, task-specific content later.
+- **Prefer full-context prompts; lean mode is a cost lever, not a necessity** (see
+  `references/build-lean-mode.md`). The old 200K-era auto-lean and Wave-3+ throttles are relaxed.
+- **Rely on server-side compaction** for genuinely long build sessions instead of pre-emptively
+  stripping context.
+- **Subagents isolate context.** Fan-out width itself doesn't consume the orchestrator window —
+  only the summaries agents return do — so prefer delegating detailed reads to subagents.
 
 ## Related Skills
 
@@ -228,7 +256,7 @@ const { createPlugin, createCore } = createCoreConfig<Config, Events>('app', { c
 
 // 2. moku-plugin: Standard tier plugin in plugins/router/index.ts (~30 lines)
 import { createRouterApi } from './api';       // domain logic extracted
-export const router = createPlugin('router', {
+export const routerPlugin = createPlugin('router', {   // export uses <name>Plugin suffix (spec/15 §7)
   config: { basePath: '/' },
   createState: () => ({ currentPath: '/' }),
   api: createRouterApi,                        // wiring harness pattern

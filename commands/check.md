@@ -5,14 +5,38 @@ argument-hint: [verbose|self-test|graph|status|plugin <name>|diff <name>]
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 Before routing to any subcommand, validate the raw arguments:
 - If `$ARGUMENTS` is empty, proceed to the default full diagnostic (Checks 1–6).
 - If `$ARGUMENTS` is `plugin` with no following token, stop and output:
   `Usage: /moku:check plugin <name>` — then list all plugin names found in `src/plugins/`.
 - If `$ARGUMENTS` is `diff` with no following token, stop and output:
   `Usage: /moku:check diff <name>` — then list all spec files found in `.planning/specs/`.
-- If `$ARGUMENTS` contains an unrecognized subcommand (not one of: verbose, self-test, graph, status, plugin, diff), stop and output:
-  `Unknown subcommand: <token>. Valid subcommands: verbose | self-test | graph | status | plugin <name> | diff <name>`
+- If `$ARGUMENTS` is `usage`, jump to the **Usage / Footprint** subcommand below.
+- If `$ARGUMENTS` contains an unrecognized subcommand (not one of: verbose, self-test, graph, status, plugin, diff, usage), stop and output:
+  `Unknown subcommand: <token>. Valid subcommands: verbose | self-test | graph | status | plugin <name> | diff <name> | usage`
+
+## Subcommand: usage (`/moku:check usage`)
+
+Report the moku plugin's context/token footprint so the user can manage cost (Claude Code's
+`/usage` itemizes spend per skill, subagent, plugin, and MCP server — v2.1.149+).
+
+1. Print the component inventory and rough sizes from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/SKILL-INVENTORY.md`
+   (skills, 10 commands, 25 agents, 4 workflows, vendored spec/sandbox line counts).
+2. Compute on-disk sizes as a proxy for context cost:
+   ```bash
+   echo "skills:   $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills 2>/dev/null | cut -f1)"
+   echo "  spec/   $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec 2>/dev/null | cut -f1) ($(ls ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec/*.md 2>/dev/null | wc -l | tr -d ' ') files, index-loaded)"
+   echo "  sandbox/ $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox 2>/dev/null | cut -f1) ($(find ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox -type f 2>/dev/null | wc -l | tr -d ' ') files, index-loaded)"
+   echo "agents:   $(ls ${CLAUDE_PLUGIN_ROOT}/agents/*.md 2>/dev/null | wc -l | tr -d ' ') agents"
+   ```
+3. Remind the user that `spec/` and `sandbox/` are **index + fetch on demand** (≈0 tokens until an
+   agent opens a file), the heavy cost is the 25-agent fan-outs, and `/usage` shows the real
+   per-category breakdown. Suggest: run waves one-per-session, prefer `effort: low` validators for
+   routine checks. Then stop (do not run Checks 1–6).
 
 Run a diagnostic check on the current Moku project and plugin installation. Reports issues with project structure, planning state, and plugin health.
 

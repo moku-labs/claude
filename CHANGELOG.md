@@ -2,6 +2,42 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.28.0 (2026-05-29)
+
+### Added
+- **Vendored sandbox exemplars** — 48 curated files from `moku-labs/core/tests/sandbox` (pinned to commit `fdee8c06`) under `skills/moku-core/references/sandbox/`, with a `sandbox-index.md` "open this when you want X" map + style cheat-sheet. Build agents consult the tier-matching exemplar (env→counter→router→analytics→cms) to mirror real moku coding style. Wired into `build-wave-execution.md`, the agent preamble, and the `moku-testing`/`moku-web` skills. `/moku:spec-sync` now refreshes both `spec/` and `sandbox/`.
+- **`/goal` integration** — `brainstorm`, `plan`, and `build` each end with an optional, ready-to-paste `/goal` line (with anti-cheat clauses + turn caps) so users can run a stage unattended to completion. Documented that a command/hook cannot set `/goal` programmatically (it's a session-scoped wrapper around a prompt Stop hook).
+- **Dynamic workflows (2 new)** — `moku-build-wave.js` (build one wave non-interactively: parallel builders over disjoint plugin dirs → verify-as-each-completes → wave-judge) and `moku-migrate-sweep.js` (repo-wide mechanical change: discover → one-agent-per-file transform → verify). Plus an opt-in **adversarial pass** in `moku-verify.js` (each blocker challenged by N `moku-skeptic` agents; majority-refuted blockers downgrade to warnings) and a new read-only `moku-skeptic` agent.
+- **Multi-session resumability** — STATE.md now carries a `## Recovery` block (last good step / open blockers / next action / timestamp) for one-read cold-start rehydration; `/moku:next` and `/moku:status` read it first. New `references/memory-schema.md` documents `.planning/` as the durable cross-compaction layer.
+- **Discovery + cost** — `$schema` + `displayName` in `plugin.json`; `.claude-plugin/SKILL-INVENTORY.md` component map; `/moku:check usage` footprint view; `references/tool-scoping.md` and `references/hook-patterns.md`; `docs/plugin-composition-evaluation.md` (monolith split evaluated and deferred). PR-5 proposals (`docs/proposals/2026-05-pr5.md`) implemented.
+- **Capability adoption** — `subagentStatusLine` wired in `settings.json`; SessionStart hook now emits structured `hookSpecificOutput` (additionalContext + sessionTitle) when `jq` is available (plain-stdout fallback otherwise); `PostToolUseFailure` routes tsc/lint/test failures to `moku-error-diagnostician` via `additionalContext`; `effort: low` on mechanical validators (jsdoc, verifier) and `effort: high` on deep reviewers (code-reviewer, wave-judge, skeptic); `claude plugin validate --strict` step in `/moku:audit`.
+
+### Fixed
+- **Inverted R4 naming rule (spec-contradicting bug, surfaced by spec grounding)** — R4 previously forbade the `Plugin` export suffix, but the authoritative spec (`spec/15-PLUGIN-STRUCTURE.md §7`) and the vendored sandbox both mandate `export const <name>Plugin = createPlugin('<name>', …)`. Corrected R4 on all normative surfaces — `agent-preamble.md`, `plugin-spec-validator`, `architecture-validator`, `build.md`, the `moku-plugin`/`moku-core` skill bodies — and **removed the antipattern hook check that was hard-blocking the spec-correct `routerPlugin` naming**. Naming is now a WARNING-level §7 convention. The bare-name example snippets across the distilled `references/*.md` corpus (21 files) were then swept to the `<name>Plugin` convention — including all interlinked `depends`/`import`/`require`/`plugins` references — while preserving name strings, flat `app.<name>`/`ctx.<name>` accessors, `create<Name>Api` factories, import paths, event names, and types; **core plugins (`createCorePlugin`) stay bare**, and intentional anti-pattern demos keep their bare names. (This sweep dogfooded the new `/moku-migrate-sweep` workflow; output was reviewed before acceptance.)
+- **`brainstorm-guard.sh` fail-open** — the deny JSON was hand-built with path interpolation and became malformed (and was silently dropped, allowing the write) when a file path contained a double-quote. Now built with `jq`/`python3` for safe escaping.
+- **`verify-before-commit.sh` `.planning` false-block** — the guard matched `.planning` as a bare substring, wrongly blocking `git add some.planning-notes.md` and `git commit -m "…​.planning/…"`. Now strips `-m`/`--message` values and matches `.planning` only as a real path token.
+
+### Changed
+- **1M-context note** — recorded that Opus 4.8 ships a lean *system prompt* by default, so the plugin's lean mode is now largely redundant on 4.8 and is reserved as a lever for older models.
+
+## 0.27.0 (2026-05-29)
+
+### Added
+- **Vendored Moku Core specification** — all 15 upstream spec files copied into `skills/moku-core/references/spec/`, pinned to commit `fdee8c06`. The plugin is now spec-grounded instead of relying on hand-distilled summaries.
+- **Fast spec index** (`skills/moku-core/references/spec-index.md`) — a ~5KB routing index over the 6,400-line spec (file + section map, "when to open this file" hints, how-to-use rule). Injected into **every command** (a `## Moku Core Specification (authoritative)` header block in all 8 commands) and **every agent** (Universal Rule 8 in `agent-preamble.md`, read by all 24 agents). Commands and agents must consult the index and open the cited `spec/NN-*.md` file before architecture/API/type/lifecycle/event/structure decisions, and cite spec section IDs in findings.
+- **`/moku:spec-sync`** — refresh the vendored spec from `github.com/moku-labs/core` at a given ref, re-pin the SHA, and regenerate the index (read-only network; `--dry-run` diff).
+- **`/moku:clean`** — reset `.planning/` before a new large effort. Keeps `learnings.md` by default (durable architecture learnings); removes everything else with no backup, behind a confirmation gate and a mid-flight guard. Flags: `--keep specs,context,state`, `--dry-run`, `--force`.
+- **Dynamic workflows** — committed `workflows/` directory with `moku-verify.js` (parallel fan-out of all validators → deduped disposition; installed into projects by `/moku:init` as `/moku-verify`) and `moku-audit.js` (maintainer command-audit fan-out). See `workflows/README.md` (requires Claude Code v2.1.154+).
+- **Spec grounding in brainstorm** — `brainstorm-researcher`, `brainstorm-challenger`, and `brainstorm-synthesizer` now evaluate every approach against cited spec sections; a mandatory **Spec Alignment** section flows from the position document through the context file into `/moku:plan`.
+- **PR-5 roadmap** — `docs/proposals/2026-05-pr5.md` (next-step proposals from current Claude Code capabilities).
+
+### Changed
+- **`.planning/` is never committed** — hard rule enforced by `verify-before-commit.sh` (blocks any `git add`/commit referencing `.planning`, including force-adds), documented in the agent preamble and every command header, and `init.md` now idempotently ensures `.planning/`/`.claude/` are gitignored in pre-existing repos.
+- **1M-context tuning** — lean mode is now an opt-in cost lever (auto-lean raised to ~70% window usage, not 40%); the Wave-3+ parallelism throttle is relaxed on 1M models; added a "Context strategy (1M models)" section to the `moku-core` skill (index + fetch, front-load invariants for cache hits, rely on server-side compaction).
+- **Validators cite the spec** — `moku-spec-validator`, `moku-plugin-spec-validator`, and `moku-architecture-validator` now map each check to a `spec/NN-*.md §N` section and cite it in every blocker/warning. The R1–R8 code rules are linked to their `spec/11-INVARIANTS.md` origin.
+- **Distilled references cross-linked** — `architecture.md`, `core-api.md`, `plugin-system.md`, `type-system.md`, and `invariants.md` now carry a `> Source: spec/NN-*.md` header marking them as non-authoritative summaries.
+- Version bumped to 0.27.0 in plugin.json and marketplace.json.
+
 ## 0.26.8 (2026-03-31)
 
 ### Fixed

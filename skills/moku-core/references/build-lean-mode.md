@@ -22,9 +22,25 @@ For a 5-wave project with 12 plugins, lean mode saves ~40-60% of context, transl
 Lean mode activates when ANY of these are true:
 1. `leanMode: true` in `.claude/moku.local.md` project config
 2. `--lean` flag passed to `/moku:build`
-3. **Auto-lean**: Context usage exceeds 40% at wave start (checked via conversation length heuristic: if 3+ waves have completed in this session, auto-activate lean mode for remaining waves)
+3. **Auto-lean**: Context usage exceeds **70%** of the model's window at wave start (heuristic: 6+ waves completed in this session). See the 1M note below.
 
 Lean mode is persisted in STATE.md as `## LeanMode: true` so it carries across resumes.
+
+> **1M-context models (Opus/Sonnet 4.x, the current default):** lean mode is now primarily a
+> **cost lever, not a necessity.** With a 1M-token window, auto-lean rarely needs to fire — the
+> old "40% / 3 waves" trigger was tuned for 200K windows and caused premature context-stripping.
+> Treat lean mode as **opt-in** (`--lean` or `leanMode: true`) when you want to cut token spend
+> on a large build; otherwise prefer full-context prompts (better quality) and rely on
+> **server-side compaction** for genuinely long sessions. Aggressive lean output also reduces
+> prompt-cache reuse of the stable prompt prefix. Read the `leanMode: "auto"` default as
+> "auto only past ~70% window usage," which on 1M models is many waves deep.
+>
+> **Opus 4.8 ships a lean *system prompt* by default** (Claude Code 2.1.154+), so the harness
+> already trims the base prompt on the current default model. This plugin's lean mode trims our
+> *own* agent/orchestrator prompts on top of that — on Opus 4.8 it is largely redundant and should
+> stay off unless you are deliberately cutting cost. Keep it as a meaningful lever only for
+> older/verbose-prompt models (Opus 4.7-and-earlier, where the verbose system prompt is still the
+> default).
 
 ## What Gets Stripped
 

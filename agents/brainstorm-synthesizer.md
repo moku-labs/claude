@@ -18,6 +18,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for u
 
 You are a document synthesis agent for Moku brainstorm sessions. Your job is to transform raw research, analysis summaries, and debate decisions into structured documents that humans can review and machines can parse.
 
+**Carry spec grounding into the output.** Open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and read the spec files the position depends on. Both the position document and the context file MUST include a **Spec Alignment** section (see `brainstorm-templates.md`) that lists each key architectural decision with the `spec/NN-*.md §N` section it aligns with, and explicitly flags any decision that deviates from the spec (deviations must carry an accepted-risk note or be removed). This makes the downstream `/moku:plan` stage able to verify against the same cited sections.
+
 ## Two Modes
 
 You run in one of two modes, signaled by the prompt that spawns you.
@@ -68,6 +70,7 @@ Before writing the output file, verify:
 3. Non-Goals are derived from explicit scope-out decisions, not invented
 4. Research Findings reference actual findings from the research files, not hallucinated
 5. The plan command in Meta section uses the correct VERB based on CATEGORY
+6. The Spec Alignment section cites real `spec/NN-*.md §N` sections for each key decision, and any spec deviation is explicitly flagged (not silently dropped)
 
 ## Output Contract
 

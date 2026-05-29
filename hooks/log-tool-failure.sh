@@ -39,4 +39,20 @@ fi
 
 log_diagnostic "TOOL-FAIL" "$TOOL_NAME" "${ERROR:-unknown error}"
 
+# Route known build failures to the diagnostician via additionalContext (hint, not a block).
+# Only when jq is available (safe JSON) and the error matches a build-tool signature.
+if command -v jq &>/dev/null; then
+  HINT=""
+  case "$ERROR" in
+    *"error TS"*|*"tsc"*) HINT="TypeScript compile failure. Before retrying, run \`bunx tsc --noEmit\` and spawn the moku-error-diagnostician agent with the error output for a targeted fix." ;;
+    *"lint"*|*"Biome"*|*"biome"*|*"✖"*) HINT="Lint failure. Run \`bun run lint\` and, if non-trivial, spawn moku-error-diagnostician before retrying." ;;
+    *"vitest"*|*"FAIL "*|*"test failed"*|*"Tests failed"*) HINT="Test failure. Re-run the failing test in isolation and spawn moku-error-diagnostician with the assertion output. Do NOT delete or skip tests to make the suite pass." ;;
+  esac
+  if [ -n "$HINT" ]; then
+    jq -n --arg ctx "$HINT" \
+      '{hookSpecificOutput: {hookEventName: "PostToolUseFailure", additionalContext: $ctx}}'
+    exit 0
+  fi
+fi
+
 exit 0

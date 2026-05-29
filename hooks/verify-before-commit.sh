@@ -8,10 +8,6 @@
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
 
-# Only act in a Moku project with active planning state
-[ -f .planning/STATE.md ] || exit 0
-[ -f .planning/moku.md ] || exit 0
-
 INPUT=$(cat)
 
 # --- Extract the bash command ---
@@ -22,6 +18,30 @@ elif command -v python3 &>/dev/null; then
 else
   exit 0
 fi
+
+[ -z "$COMMAND" ] && exit 0
+
+# --- Universal guard: never stage or commit .planning/ ---
+# (Active in any project where a JSON parser was available to extract $COMMAND above.)
+# .planning/ is local-only state and is gitignored. It reaches history only via an explicit
+# `git add .planning…`, a force-add bypassing .gitignore, or an explicit commit pathspec.
+# Match `.planning` ONLY as a real path token: strip any -m/--message value first (so a commit
+# *message* mentioning .planning/ doesn't trigger), then require a leading boundary and a
+# trailing slash/space/EOL (so a filename like `my.planning-notes.md` doesn't trigger).
+GITCMD=$(printf '%s' "$COMMAND" | sed -E "s/(-m|--message)[[:space:]]*(\"[^\"]*\"|'[^']*'|[^[:space:]]+)//g")
+case "$GITCMD" in
+  *"git add"*|*"git stage"*|*"git commit"*)
+    if printf '%s' "$GITCMD" | grep -Eq '(^|[[:space:]/])\.planning([/[:space:]]|$)'; then
+      log_diagnostic "PLANNING-GUARD" "git" "Blocked staging/committing .planning/" 2>/dev/null || true
+      echo "BLOCKED: .planning/ is local-only state and must never be staged or committed. Remove the .planning path from this git command (it is gitignored on purpose). If .gitignore is missing the entry, add '.planning/' to .gitignore instead of force-adding." >&2
+      exit 2
+    fi
+    ;;
+esac
+
+# Only act in a Moku project with active planning state
+[ -f .planning/STATE.md ] || exit 0
+[ -f .planning/moku.md ] || exit 0
 
 # Only trigger on git commit commands
 case "$COMMAND" in

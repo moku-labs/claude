@@ -5,6 +5,10 @@ argument-hint: [--dry-run]
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 Detect the current Moku project state and automatically route to the next logical command. This is the single entry point for "what should I do next?"
 
 If `$ARGUMENTS` contains `--dry-run`, report what command would be run without executing it.
@@ -28,6 +32,14 @@ If `package.json` exists but `.planning/` directory does not:
 - Stop.
 
 ### 1c. .planning/STATE.md exists
+
+**Fast path — read the Recovery block first.** Read the `## Recovery` block (see
+`plan-templates.md` / `memory-schema.md`). If present and its `Next action` is a concrete
+`/moku:*` command and its `Updated` timestamp is consistent with the file, route to that command
+immediately (in `--dry-run`, just report it). This is a one-read rehydration and avoids re-parsing
+the full plugin tables.
+
+If the Recovery block is missing, stale, or inconsistent, fall through to the full read below.
 
 Read `.planning/STATE.md`. Extract `## Phase:`, `## Verb:`, `## Target:`, `## Skeleton:`, `## Next Action:`.
 

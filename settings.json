@@ -1,2 +1,6 @@
 {
+  "subagentStatusLine": {
+    "type": "command",
+    "command": "${CLAUDE_PLUGIN_ROOT}/hooks/moku-statusline.sh"
+  }
 }

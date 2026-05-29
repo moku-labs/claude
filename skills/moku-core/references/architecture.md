@@ -1,5 +1,7 @@
 # Architecture Reference
 
+> **Distilled summary — not authoritative.** Source of truth: `spec/01-ARCHITECTURE.md` and `spec/04-FACTORY-CHAIN.md`. When this summary and the spec disagree, the spec wins. See `spec-index.md`.
+
 ## The Three Layers
 
 ```

@@ -1,5 +1,7 @@
 # Plugin System Reference
 
+> **Distilled summary — not authoritative.** Source of truth: `spec/03-PLUGIN-SYSTEM.md` and `spec/15-PLUGIN-STRUCTURE.md`. When this summary and the spec disagree, the spec wins. See `spec-index.md`.
+
 ## PluginSpec Shape
 
 All fields optional. Types inferred from values.
@@ -72,7 +74,7 @@ Merged map: `Events & PluginEvents & DepsEvents<Deps>`
 
 ### Zero events (most common)
 ```typescript
-export const router = createPlugin('router', {
+export const routerPlugin = createPlugin('router', {
   config: { basePath: '/', notFoundRedirect: '/404' },
   createState: () => ({ currentPath: '/', history: [] as string[] }),
   api: (ctx) => ({
@@ -88,7 +90,7 @@ export const router = createPlugin('router', {
 
 ### With events
 ```typescript
-export const auth = createPlugin('auth', {
+export const authPlugin = createPlugin('auth', {
   events: (register) => ({
     'auth:login':  register<{ userId: string }>('After login'),
     'auth:logout': register<{ userId: string }>('After logout'),
@@ -101,11 +103,11 @@ export const auth = createPlugin('auth', {
 
 ### With depends
 ```typescript
-export const seo = createPlugin('seo', {
-  depends: [router, renderer],
+export const seoPlugin = createPlugin('seo', {
+  depends: [routerPlugin, rendererPlugin],
   api: (ctx) => ({
     setTitle: (title: string) => {
-      const path = ctx.require(router).current();
+      const path = ctx.require(routerPlugin).current();
       void ctx.emit('renderer:render', { path, html: `<title>${title}</title>` });
     },
   }),
@@ -116,7 +118,7 @@ export const seo = createPlugin('seo', {
 ```typescript
 type Route = { path: string; component: string };
 
-export const router = createPlugin('router', {
+export const routerPlugin = createPlugin('router', {
   config: { routes: [] as Route[] },
   api: (ctx) => ({
     navigate: (path: string) => { /* ... */ },
@@ -127,7 +129,7 @@ export const router = createPlugin('router', {
 });
 
 // Consumer usage — BEFORE createApp:
-const home = router.route('/home', 'HomePage');  // fully typed
+const home = routerPlugin.route('/home', 'HomePage');  // fully typed
 const app = createApp({
   pluginConfigs: { router: { routes: [home] } },
 });

@@ -19,6 +19,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for u
 
 You are a Moku architecture validator. Your job is to validate cross-plugin concerns that are invisible when checking individual plugins in isolation.
 
+**Validate against the vendored spec, not memory.** Open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` to route, then read `spec/03-PLUGIN-SYSTEM.md` (`depends`), `spec/07-COMMUNICATION.md` + `spec/14-EVENT-REGISTRATION.md` (event flow/visibility), and `spec/11-INVARIANTS.md` (cross-cutting invariants) before judging the graph. Cite the spec section ID in every BLOCKER and WARNING.
+
 ## Reasoning Protocol
 
 Before writing the report, materialize these intermediate results explicitly (write them out):
@@ -92,7 +94,7 @@ Review all plugin API methods across the framework:
 - Event names should use `pluginName:action` format
 - No plugin name conflicts with JavaScript reserved words or built-in objects
 - Related plugins should share a domain prefix if they will be merged into VeryComplex
-- Plugin export names must NOT have "Plugin" postfix — use bare name matching the plugin string name
+- Plugin export names SHOULD use the `<name>Plugin` suffix (camelCase) per `spec/15-PLUGIN-STRUCTURE.md §7`; the plugin name string stays bare
 
 ### 5. Performance Red Flags
 
@@ -304,7 +306,7 @@ Before writing your report, double-check these rules — they are the most frequ
 
 - **Core plugins MUST NOT appear in event flow** — if a core plugin emits or hooks events, it is a BLOCKER
 - **Preamble R1** — every `createPlugin(` with angle brackets is a BLOCKER
-- **Preamble R4** — plugin export names must NOT have "Plugin" postfix
+- **Preamble R4** — plugin export names SHOULD use the `<name>Plugin` suffix (spec/15 §7); flag a missing suffix as WARNING
 - **`ctx.require()` inside frequently-called API methods is a performance flag** — should be cached at factory level
 - **Helpers must be static pure functions** — no `ctx` access, no lifecycle, no side effects (see preamble R1–R8 for full list)
 

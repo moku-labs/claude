@@ -33,10 +33,10 @@ Write `src/main.ts` (or the specified entry file):
 ```typescript
 import { createApp, createPlugin } from 'framework-name';
 // Import optional/consumer plugins
-import { custom } from './plugins/custom';
+import { customPlugin } from './plugins/custom';
 
 const app = createApp({
-  plugins: [custom],
+  plugins: [customPlugin],
   config: {
     // Global config overrides from spec
   },

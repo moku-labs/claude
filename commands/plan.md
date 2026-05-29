@@ -5,6 +5,10 @@ argument-hint: {free-form description} or [create|update|add|migrate|resume] [ty
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 ## Project Configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 
@@ -398,6 +402,19 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 - Include verification criteria for all plugins
 - The spec must be complete enough to implement without further questions
 - Run plan-checker agent BEFORE every user gate — users see validated plans only
-- Read `.planning/STATE.md` at the start of every stage, write it at the end — enable cross-session continuity
+- Read `.planning/STATE.md` at the start of every stage, write it at the end — enable cross-session continuity. **Every STATE.md write must refresh the `## Recovery` block** (Last good step / Open blockers / Next action / Updated) per `plan-templates.md` + `memory-schema.md`, so a cold session or `/moku:next` rehydrates in one read.
 - After all stages complete, `Next Action` must point to `Run /moku:build resume (build command detects skeleton not-started and runs skeleton build first)`
 - **Plan NEVER builds:** The plan command only creates specs, analyzes, and recommends. It must NEVER invoke build steps, read build reference files, or create/modify source code files. After approval, always recommend the appropriate `/moku:build` command for the user to run in a fresh context. This applies to ALL verbs including `add` and `update` — the `add` verb creates a spec and recommends `/moku:build add {name}`, the `update` verb updates specs and recommends `/moku:build resume`.
+
+## Run unattended (optional `/goal`)
+
+`/goal` (Claude Code v2.1.139+) lets a user run the 3-stage workflow to completion without
+approving each gate manually. The plugin cannot set it programmatically; **offer this ready-to-paste
+line** when the user wants an unattended planning pass (note: this trades the per-stage approval
+gates for one completion check):
+
+> ```
+> /goal STATE.md shows Phase: complete, every plugin in the plugin table has a .planning/specs/0N-*.md spec, .planning/skeleton-spec.md exists and is consistent with the structure, and no files under src/ were created or modified — or stop after 20 turns
+> ```
+
+The `no files under src/` clause preserves the plan-never-builds invariant; the turn cap bounds the loop. `/goal clear` cancels it.

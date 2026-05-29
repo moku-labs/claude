@@ -48,6 +48,20 @@ case "$REL_PATH" in
   .planning/*|*/.planning/*) exit 0 ;;
 esac
 
-# Block writes outside .planning/ during brainstorm
-echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"Brainstorm mode active — writes restricted to .planning/ directory. Brainstorm is for exploration and decisions. Use /moku:plan and /moku:build for source code changes."}}'
-exit 0
+# Block writes outside .planning/ during brainstorm.
+# Build the deny JSON with jq/python3 (NOT string interpolation) so a file path containing a
+# double-quote can't produce malformed JSON — a malformed deny would be dropped and the guard would
+# fail OPEN. Self-correcting reason: tell Claude what to do instead (see references/hook-patterns.md).
+REASON="Brainstorm mode is active — writes are restricted to .planning/. To continue: write exploration/decisions to .planning/ (e.g. the context or position file) instead of ${REL_PATH}. Source/test changes belong to /moku:build; if you meant to leave brainstorm, finish it (the context file is written, then .planning/.brainstorm-active is removed) and run /moku:plan."
+if command -v jq &>/dev/null; then
+  jq -n --arg r "$REASON" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
+  exit 0
+elif command -v python3 &>/dev/null; then
+  REASON="$REASON" python3 -c 'import os,json; print(json.dumps({"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":os.environ["REASON"]}}))'
+  exit 0
+else
+  # Unreachable in practice (FILE_PATH extraction above already required jq or python3), but
+  # fail CLOSED here since we definitively intend to block: exit 2 with a plain reason.
+  echo "BLOCKED: $REASON" >&2
+  exit 2
+fi

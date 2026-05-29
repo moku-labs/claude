@@ -5,6 +5,10 @@ argument-hint: [--full]
 disable-model-invocation: true
 ---
 
+## Moku Core Specification (authoritative)
+
+Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
 Show a consolidated dashboard of the current Moku project state. Reads multiple sources and presents a unified view.
 
 ## Execution Guard
@@ -18,7 +22,7 @@ Before reading any data source:
 
 ## Data Sources
 
-1. **`.planning/STATE.md`** — phase, verb, target, skeleton status, plugin table, wave progress, next action
+1. **`.planning/STATE.md`** — phase, verb, target, skeleton status, plugin table, wave progress, next action. **Read the `## Recovery` block first** (see `memory-schema.md`): use its `Last good step` / `Open blockers` / `Next action` to render the header line and Quick Actions in one read; fall back to the full tables for the detailed plugin/wave breakdown.
 2. **`.planning/build/agent-log.md`** — recent agent activity (last 10 entries); if file is absent or empty, show `"No agent activity recorded."` in the Recent Activity section
 3. **`.planning/notifications.log`** — recent notifications (last 5 entries)
 4. **`.planning/build/diagnostics.log`** — hook denials, tool failures, permission blocks (last 10 entries)

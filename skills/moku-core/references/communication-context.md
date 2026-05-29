@@ -79,7 +79,7 @@ Other plugins may already be stopped. Minimal context prevents unreliable inter-
 
 ### `ctx.require(pluginInstance)` — Instance-Only, Fully Typed
 ```typescript
-const routerApi = ctx.require(router);
+const routerApi = ctx.require(routerPlugin);
 //       ^? RouterApi — fully typed, no cast
 routerApi.navigate('/about');
 ```
@@ -88,7 +88,7 @@ Throws with clear error if not registered. Only accepts PluginInstance reference
 ### `ctx.has(name)` — String-Based Boolean Check
 ```typescript
 if (ctx.has('analytics')) {
-  const analyticsApi = ctx.require(analytics);
+  const analyticsApi = ctx.require(analyticsPlugin);
   analyticsApi.track('pageview');
 }
 ```

@@ -6,6 +6,7 @@ description: >
   <example>Context: Build wave completed. user: "Verify the plugins from wave 2" assistant: launches moku-verifier</example>
   <example>Context: Post-build check. user: "Are the built plugins real implementations or stubs?" assistant: launches moku-verifier</example>
 model: haiku
+effort: low
 color: cyan
 maxTurns: 30
 skills:

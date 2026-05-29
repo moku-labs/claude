@@ -7,6 +7,7 @@ description: >
   <example>Context: Wave verification completed with mixed results. user: "Judge whether wave 2 should proceed" assistant: launches moku-wave-judge</example>
   <example>Context: Gap closure completed but quality uncertain. user: "Evaluate wave quality after fixes" assistant: launches moku-wave-judge</example>
 model: sonnet
+effort: high
 color: yellow
 maxTurns: 15
 skills:

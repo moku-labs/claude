@@ -193,6 +193,15 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 ## QuickMode: [true | false — read by plan command on resume to restore quick mode]
 ## Cycle: [1 | 2 | ... — incremented after each build/complete → archive cycle]
 
+## Recovery
+<!-- Cold-start rehydration block. A fresh session (or /moku:next, /moku:status) reads THIS first
+     to route in one read, before parsing the full tables below. Keep it ≤ 6 lines and rewrite it
+     every time STATE.md is written. -->
+- Last good step: [e.g. "Skeleton wave 2 verified" | "Plugin wave 1 (router, auth) verified" | "Stage 2 approved" | "not started"]
+- Open blockers: [short list, or "none"]
+- Next action: [the exact command to run next, e.g. `/moku:build resume`]
+- Updated: [ISO timestamp — same as Last Updated above]
+
 ## Decisions
 [Summary from .planning/decisions.md, or inline if no discuss phase]
 

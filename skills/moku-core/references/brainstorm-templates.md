@@ -71,6 +71,15 @@ Saved to `.planning/context-{name}.md`. This is the primary output of `/moku:bra
 |---|---|---|---|
 | {topic} | {chosen option} | {alternative} | {1-sentence reason} |
 
+## Spec Alignment
+Each key architectural decision mapped to the authoritative Moku Core spec. The `/moku:plan` stage verifies specs against these same sections.
+
+| Decision / Approach | Spec section | Aligns? | Note |
+|---|---|---|---|
+| {decision} | spec/NN-*.md §N | YES / DEVIATES | {if DEVIATES: why, and the accepted-risk justification} |
+
+> No decision may silently contradict `spec/11-INVARIANTS.md`. Any DEVIATES row must carry an explicit accepted-risk note or be removed before planning.
+
 ## Recommended Plan Approach
 
 ### Suggested VERB + TYPE
@@ -110,6 +119,11 @@ Intermediate scratch document used during the debate loop. Written by brainstorm
 - {question 1}
 - {max 3}
 
+## Spec Alignment
+| Key decision | Spec section | Aligns? | Note |
+|---|---|---|---|
+| {decision} | spec/NN-*.md §N | YES / DEVIATES | {note} |
+
 ## Decisions Made This Iteration
 | Challenge | Resolution | Rationale |
 |---|---|---|
@@ -129,4 +143,5 @@ The context file maps to plan-verb-create.md's steering inputs:
 | `### Suggested Plugins (Preliminary)` (top 3) | `## MVP Priorities` |
 | `### Ecosystem Landscape` (first reference) | `## Reference Point` |
 | `## Risks Requiring Spec Attention` (first) | `## Biggest Risk` |
+| `## Spec Alignment` | Spec-section citations carried into Stage 2 spec validation |
 | `## Migration Source` → Path (migrate only) | `MIGRATE_PATH` (skips "Where is the code?" question in plan migrate) |

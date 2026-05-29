@@ -35,7 +35,7 @@ export const { createPlugin, createCore } = coreConfig;
 // plugins/router/index.ts
 import { createPlugin } from '../../config';
 
-export const router = createPlugin('router', {
+export const routerPlugin = createPlugin('router', {
   config: { basePath: '/' },
   createState: () => ({ currentPath: '/' }),
   api: (ctx) => ({
@@ -51,11 +51,11 @@ export const router = createPlugin('router', {
 ### Layer 2: Framework index.ts (Step 2)
 ```typescript
 import { createCore, coreConfig } from './config';
-import { router } from './plugins/router';
-import { renderer } from './plugins/renderer';
+import { routerPlugin } from './plugins/router';
+import { rendererPlugin } from './plugins/renderer';
 
 const framework = createCore(coreConfig, {
-  plugins: [router, renderer],
+  plugins: [routerPlugin, rendererPlugin],
 });
 export const { createApp, createPlugin } = framework;
 ```
@@ -64,13 +64,13 @@ export const { createApp, createPlugin } = framework;
 ```typescript
 import { createApp, createPlugin } from 'my-framework';
 
-const blog = createPlugin('blog', {
+const blogPlugin = createPlugin('blog', {
   config: { postsPerPage: 10 },
   api: (ctx) => ({ listPosts: () => ['post1', 'post2'] }),
 });
 
 const app = createApp({
-  plugins: [blog],
+  plugins: [blogPlugin],
   config: { siteName: 'My Blog', mode: 'production' },
   pluginConfigs: { blog: { postsPerPage: 5 } },
 });
@@ -87,8 +87,8 @@ await app.stop();
 import { createPlugin } from 'my-framework';
 import { createContactFormApi } from './api';
 
-export const contactForm = createPlugin('contactForm', {
-  depends: [renderer],
+export const contactFormPlugin = createPlugin('contactForm', {
+  depends: [rendererPlugin],
   api: createContactFormApi,
   hooks: (ctx) => ({
     'page:render': (payload) => { /* framework typed */ },
@@ -122,11 +122,11 @@ Central file that re-exports all plugin instances, helpers, and namespaced types
  */
 
 // ─── Plugin Instances ───────────────────────────────────────
-export { build } from "./build";
-export { env } from "./env";
-export { router } from "./router";
-export { seo } from "./seo";
-export { spa } from "./spa";
+export { buildPlugin } from "./build";
+export { envPlugin } from "./env";
+export { routerPlugin } from "./router";
+export { seoPlugin } from "./seo";
+export { spaPlugin } from "./spa";
 
 // ─── Helpers ────────────────────────────────────────────────
 export { route } from "./router";           // builder helper (not the plugin)
@@ -161,7 +161,7 @@ Expose the barrel as a subpath so consumers can import plugins independently:
 Consumer usage:
 ```typescript
 import { createApp } from "@moku-labs/web";
-import { router, route, type Router } from "@moku-labs/web/plugins";
+import { routerPlugin, route, type Router } from "@moku-labs/web/plugins";
 
 const home = route("/");
 const app = createApp({ pluginConfigs: { router: { routes: [home] } } });
@@ -181,7 +181,7 @@ When a plugin needs to provide typed builder/factory functions that consumers ca
 
 ```typescript
 // Framework plugin:
-export const router = createPlugin('router', {
+export const routerPlugin = createPlugin('router', {
   config: { routes: [] as Route[] },
   helpers: {
     route: (path: string, component: string): Route => ({ path, component }),
@@ -189,13 +189,13 @@ export const router = createPlugin('router', {
 });
 
 // Consumer:
-const home = router.route('/home', 'HomePage');  // typed, autocomplete
+const home = routerPlugin.route('/home', 'HomePage');  // typed, autocomplete
 const app = createApp({
   pluginConfigs: { router: { routes: [home] } },
 });
 
 // Destructuring also works:
-const { route } = router;  // types preserved
+const { route } = routerPlugin;  // types preserved
 ```
 
 **Design constraints:**

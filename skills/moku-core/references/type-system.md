@@ -1,5 +1,7 @@
 # Type System Reference
 
+> **Distilled summary — not authoritative.** Source of truth: `spec/09-TYPE-SYSTEM.md`. When this summary and the spec disagree, the spec wins. See `spec-index.md`.
+
 ## Design Philosophy
 
 Types flow through closures, not explicit generics:

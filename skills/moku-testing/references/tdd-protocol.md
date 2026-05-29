@@ -21,7 +21,7 @@ Create the type foundation and a minimal skeleton so test imports resolve:
    ```typescript
    import { createPlugin } from "@moku-labs/core";
 
-   export const router = createPlugin("router", {
+   export const routerPlugin = createPlugin("router", {
      createState({ config }) {
        return {} as any; // stub — will be replaced in Phase 3
      },
@@ -30,7 +30,7 @@ Create the type foundation and a minimal skeleton so test imports resolve:
      },
    });
    ```
-   This makes `import { router } from "../"` work in test files. The `as any` stubs are temporary — they exist ONLY to unblock Phase 2 imports and will be replaced.
+   This makes `import { routerPlugin } from "../"` work in test files. The `as any` stubs are temporary — they exist ONLY to unblock Phase 2 imports and will be replaced.
 
 **Phase 1 output**: types.ts + skeleton index.ts. No real logic yet.
 
@@ -139,7 +139,7 @@ Now write the real implementation to make tests pass. Fix the implementation, NO
     import { createApi } from "./api";
     // import { createHandlers } from "./handlers"; // if hooks exist
 
-    export const router = createPlugin("router", {
+    export const routerPlugin = createPlugin("router", {
       createState,
       createApi,
       // hooks: createHandlers, // if hooks exist

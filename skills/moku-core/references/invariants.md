@@ -1,5 +1,7 @@
 # Invariants & Anti-Patterns Reference
 
+> **Distilled summary — not authoritative.** Source of truth: `spec/11-INVARIANTS.md`. When this summary and the spec disagree, the spec wins. See `spec-index.md`.
+
 ## Invariants (Always True — Breaking Any Is a Bug)
 
 ### Reserved Names
