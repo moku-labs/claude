@@ -12,6 +12,7 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 |---------|-------------|
 | `/moku:next [--dry-run]` | Auto-detect project state and run the next logical step |
 | `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
+| `/moku:upgrade` | Upgrade an existing Moku project to the current target stack (TypeScript 6, tooling versions, tsconfig). Zero-arg, gated, resumable — the official migration path for future stack jumps (TS7, etc.). |
 | `/moku:plan [verb] [type] [args]` | Plan a project: create, update, add plugin, or migrate. 3-stage gated workflow with validation. |
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`, `fix`. |
 | `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
@@ -194,7 +195,7 @@ The plugin maintains `.planning/STATE.md` for cross-session continuity:
 
 ## Requirements
 
-- [Bun](https://bun.sh/) >= 1.3.8
+- [Bun](https://bun.sh/) >= 1.3.14
 - Node.js >= 22.0.0
 - [@moku-labs/core](https://github.com/moku-labs/core)
 

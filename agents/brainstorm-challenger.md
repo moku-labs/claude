@@ -6,6 +6,7 @@ description: >
   debate loop. Read-only — never modifies files.
   <example>Context: Brainstorm debate turn 2. user: "Challenge the current position on this router design" assistant: launches brainstorm-challenger</example>
   <example>Context: Deep brainstorm iteration. user: "Find flaws in the proposed caching architecture" assistant: launches brainstorm-challenger</example>
+model: sonnet
 color: red
 maxTurns: 15
 skills:

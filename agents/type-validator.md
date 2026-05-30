@@ -82,7 +82,7 @@ For each plugin, verify the type inference chain works:
 
 This check is primarily done by verifying type-level tests exist. If they don't exist, flag as CRITICAL.
 
-### 6. Strict Mode Compliance
+### 6. Strict Mode Compliance (TypeScript 6 baseline)
 
 Verify `tsconfig.json` includes:
 - `"strict": true`
@@ -90,9 +90,20 @@ Verify `tsconfig.json` includes:
 - `"noUncheckedIndexedAccess": true`
 - `"verbatimModuleSyntax": true`
 - `"noEmit": true`
-- `"isolatedModules": true`
+- `"types": ["bun"]` (web projects: `["vite/client", …]`) — **TS6 requirement.** TypeScript 6
+  defaults `types` to `[]` (no auto-`@types`), so omitting it makes `tsc` fail with
+  `Cannot find name 'Bun'`. Report a **missing or empty `types`** as **CRITICAL** (it breaks the
+  type-check), not just WARNING.
 
-Report missing flags as WARNING.
+Report other missing flags as WARNING.
+
+**Do NOT flag the absence of an explicit `"isolatedModules": true`** when both
+`"verbatimModuleSyntax": true` and `"module": "Preserve"` are set — that pairing already enforces
+isolated-modules behavior, and moku's prescribed `tsconfig.json` deliberately omits the explicit
+flag. Only flag missing `isolatedModules` if neither of those two is present.
+
+The `tsc --noEmit` output format (error codes `TS####`, file:line) is **unchanged** in TS6 — the
+error-parsing in Check 1 needs no adjustment.
 
 ### 7. PluginCtx / EmitFn Usage (Standard+ plugins)
 
@@ -164,6 +175,7 @@ For the kernel itself (`@moku-labs/core`):
 | exactOptionalPropertyTypes | [OK/MISSING] |
 | noUncheckedIndexedAccess | [OK/MISSING] |
 | verbatimModuleSyntax | [OK/MISSING] |
+| types (TS6: required, e.g. ["bun"]) | [OK/MISSING — CRITICAL] |
 
 ### PluginCtx Usage (Standard+ plugins)
 - [plugin]: [OK / not using PluginCtx / incorrect type]

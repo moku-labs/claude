@@ -93,6 +93,11 @@ Run quick checks (skip if no package.json):
 - Check `@moku-labs/core` version (if framework project)
 - Check for outdated dependencies
 - Report any peer dependency warnings
+- **Target-stack check:** compare against `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md`.
+  If `package.json` pins `typescript` below `^6`, or `tsconfig.json` is missing `compilerOptions.types`,
+  or `typescript-eslint < 8.58.0` / `tsdown < 0.22.1`, report:
+  `INFO: project is below the current Moku target stack (v2, TypeScript 6) — run /moku:upgrade` and
+  show the one-line diff. Do not auto-fix here; `/moku:upgrade` owns that.
 
 ## Output
 

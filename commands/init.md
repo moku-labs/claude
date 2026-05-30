@@ -64,7 +64,7 @@ Then configure all tooling files (these are **identical across all project types
 
 1. **package.json** — Set up with:
    - `"type": "module"`
-   - `"engines": { "node": ">=22.0.0", "bun": ">=1.3.8" }`
+   - `"engines": { "node": ">=22.0.0", "bun": ">=1.3.14" }`
    - `main`, `module`, `types`, `exports`, `files` fields for publishable packages (copy from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`). Consumer apps can omit these if not publishing.
    - Dependencies vary by project type (see Step 4)
    - Add all devDependencies with exact versions from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` (you read this in Step 0)
@@ -76,7 +76,7 @@ Then configure all tooling files (these are **identical across all project types
 
 4. **declarations.d.ts** — Ambient module declarations for untyped JS packages. Required because `strict: true` enables `noImplicitAny`, which errors on imports from packages without `.d.ts` files (like `eslint-config-biome`). Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-5. **tsconfig.json** — Copy exact strict config. The `include` array must contain `"declarations.d.ts"` and `"*.config.ts"` alongside `"src"` and `"tests"` so ambient declarations are visible when type-checking config files.
+5. **tsconfig.json** — Copy exact strict config. The `include` array must contain `"declarations.d.ts"` and `"*.config.ts"` alongside `"src"` and `"tests"` so ambient declarations are visible when type-checking config files. **TypeScript 6:** the config sets `"types": ["bun"]` because TS6 defaults `types` to `[]` (no auto-`@types`); without it `bunx tsc --noEmit` fails with `Cannot find name 'Bun'`.
 
 6. **tsconfig.build.json** — Extends tsconfig.json for build output with declaration emit. Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
@@ -90,7 +90,7 @@ Then configure all tooling files (these are **identical across all project types
 
 11. **bunfig.toml** — `exact = true`. **Write this before running `bun install` in Step 5** to ensure exact version pinning applies from the first install. (It is listed here for documentation order, but must exist on disk before any `bun install` or `bun add` calls.)
 
-12. **.bun-version** — `1.3.8`
+12. **.bun-version** — `1.3.14`
 
 13. **.gitignore** — Standard ignores for node_modules, dist, coverage, .env files, caches, .claude, .planning. Copy exact content from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
     - **Idempotent for existing repos:** if a `.gitignore` already exists (e.g. initializing into an existing project), do NOT blindly overwrite it. Instead, ensure both `.claude/` and `.planning/` are present, appending any missing line under a `# Claude Code` / `# Planning artifacts` comment. `.planning/` is local-only state and must NEVER be committed — this is a hard rule enforced by the `verify-before-commit` hook, which blocks any `git add`/commit referencing `.planning`.

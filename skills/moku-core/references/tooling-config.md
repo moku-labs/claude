@@ -2,6 +2,12 @@
 
 Exact configurations from moku_core. Use these as the reference when scaffolding new projects.
 
+> **Stack version: 2** (TypeScript 6 baseline). This file is the canonical target stack that
+> `/moku:init` scaffolds and `/moku:upgrade` migrates existing projects toward. A machine-readable
+> summary lives in `target-stack.md`; the per-version migration steps live in
+> `upgrade-migrations.md`. When you change a pinned version or a tsconfig default here, bump the
+> stack version in `target-stack.md` and add a migration entry in `upgrade-migrations.md`.
+
 ## package.json (devDependencies)
 
 ```json
@@ -23,12 +29,12 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
     }
   },
   "files": ["dist", "LICENSE", "README.md"],
-  "engines": { "node": ">=22.0.0", "bun": ">=1.3.8" },
+  "engines": { "node": ">=22.0.0", "bun": ">=1.3.14" },
   "devDependencies": {
-    "@arethetypeswrong/cli": "0.18.2",
-    "@arethetypeswrong/core": "0.18.2",
-    "@biomejs/biome": "2.4.2",
-    "@types/bun": "1.3.10",
+    "@arethetypeswrong/cli": "0.18.3",
+    "@arethetypeswrong/core": "0.18.3",
+    "@biomejs/biome": "2.4.16",
+    "@types/bun": "1.3.14",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint": "9.39.3",
     "eslint-config-biome": "2.1.3",
@@ -38,10 +44,10 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
     "globals": "17.4.0",
     "jiti": "2.6.1",
     "lefthook": "2.1.1",
-    "publint": "0.3.17",
-    "tsdown": "0.20.3",
-    "typescript": "5.9.3",
-    "typescript-eslint": "8.56.0",
+    "publint": "0.3.21",
+    "tsdown": "0.22.1",
+    "typescript": "6.0.3",
+    "typescript-eslint": "8.58.0",
     "vitest": "4.0.18"
   },
   "scripts": {
@@ -62,7 +68,7 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
 
 ```json
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.2/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "files": {
     "includes": ["src/**", "tests/**", "*.config.ts"]
   },
@@ -264,11 +270,24 @@ declare module "eslint-config-biome";
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "noFallthroughCasesInSwitch": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["bun"]
   },
   "include": ["src", "tests", "declarations.d.ts", "*.config.ts"]
 }
 ```
+
+> **TypeScript 6 note:** TS 6.0 changes two defaults that affect this config.
+> (1) `types` now defaults to `[]` (it previously auto-included every `@types/*` package), so
+> `"types": ["bun"]` is now **required** — without it `bunx tsc --noEmit` reports
+> `Cannot find name 'Bun'`. This matches Bun's official TS6 guidance.
+> (2) `rootDir` now defaults to the tsconfig directory; the build config below pins
+> `"rootDir": "./src"` so emit layout is stable.
+> Every other option here is already on the TS6 forward path: `verbatimModuleSyntax` is the
+> replacement for the now-removed `importsNotUsedAsValues`/`preserveValueImports`; `module: Preserve`
+> and `moduleResolution: bundler` are modern (not the removed `classic`/`amd`/`umd`); `strict` is now
+> the TS6 default. `skipLibCheck: true` also shields the project from the refreshed ESNext lib
+> snapshot and from `@types/bun` ↔ `@types/node` lib clashes.
 
 ## tsconfig.build.json
 
@@ -281,6 +300,7 @@ Extends the main tsconfig for build output with declaration emit. Used by tsdown
     "noEmit": false,
     "declaration": true,
     "emitDeclarationOnly": true,
+    "rootDir": "./src",
     "outDir": "dist"
   }
 }
@@ -374,7 +394,7 @@ exact = true
 ## .bun-version
 
 ```
-1.3.8
+1.3.14
 ```
 
 ## .gitignore

@@ -134,7 +134,7 @@ export default app;
   "devDependencies": {
     "vite": "^7.3.1",
     "vite-plugin-bundlesize": "^0.3.0",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.3",
     "postcss-preset-env": "^11.1.3",
     "@playwright/test": "^1.58.2",
     "eslint": "^9.0.0",
@@ -155,10 +155,16 @@ export default app;
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
     "noUncheckedIndexedAccess": true,
-    "allowImportingTsExtensions": true
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"]
   }
 }
 ```
+
+> **TypeScript 6 note:** TS 6.0 defaults `types` to `[]`, so a web project must list the ambient
+> type packages it relies on explicitly — `"types": ["vite/client"]` (add more entries as needed,
+> e.g. `"@playwright/test"` for test configs). Without it, `import.meta.env` and other Vite client
+> globals resolve to errors. `strict` is now the TS6 default; keep it set here for clarity.
 
 ## Vite Config
 

@@ -17,10 +17,10 @@ for the live component list and `/usage` (per-category) to see actual token spen
 > disclosure — they cost ~0 tokens until an agent opens them, which is why the vendored spec/sandbox
 > (~6,400 + ~4,000 lines) are *indexed*, not front-loaded.
 
-## Commands (10)
+## Commands (11)
 
 `brainstorm` · `plan` · `build` (the 3-stage gated core) · `next` · `status` · `check` (incl.
-`check --usage`) · `clean` · `init` · `audit` · `spec-sync`.
+`check --usage`) · `clean` · `init` · `upgrade` (zero-arg stack migration) · `audit` · `spec-sync`.
 
 ## Agents (25) — spawned on demand by commands/workflows, isolated context
 

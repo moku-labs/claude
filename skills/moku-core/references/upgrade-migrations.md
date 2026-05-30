@@ -1,0 +1,137 @@
+# Upgrade Migration Registry
+
+The ordered set of migrations `/moku:upgrade` can apply to bring an existing Moku project up to the
+current **target stack** (`target-stack.md`). Each migration is a self-contained
+**detect → apply → verify** unit. `/moku:upgrade` runs every migration whose `detect` fires (and
+whose `default` is `on`, unless the user opts into an `off` one), in the order listed here.
+
+This is the **extension point** for all future stack jumps — TypeScript 7, build-tool swaps,
+de-vibecoding, etc. To add one: append an entry below, bump the stack version in `target-stack.md`,
+and (if it changes the scaffold) update `tooling-config.md`.
+
+## Migration entry schema
+
+```
+### <id>
+- Title:        <human label>
+- Stack:        <stack version this belongs to>
+- Applies to:   framework | app | plugin | web | all
+- Default:      on | off (opt-in — user is asked at the gate)
+- Depends on:   <other migration ids that must run first, or —>
+- Detect:       <precise condition that means the project still needs this>
+- Apply:        <ordered, idempotent steps>
+- Verify:       <command(s) that must pass after Apply>
+- Risk:         <what can go wrong + the mitigation>
+- Rollback:     <how to undo — usually `git checkout` since git is the safety net>
+```
+
+**Invariants for every migration:**
+- **Idempotent** — running it twice is a no-op. `detect` must return false after a successful `apply`.
+- **Verify-gated** — never mark a migration done until its `verify` passes. Never use `--no-verify`.
+- **Reversible via git** — the command refuses to run on a dirty tree (or warns + asks) so the whole
+  upgrade is one reviewable diff. Rollback = `git checkout -- <files>` / `git reset`.
+
+---
+
+## Stack version 2 migrations (TypeScript 6 baseline)
+
+### ts6-core
+- **Title:** TypeScript 6 baseline (compiler + required tool bumps + tsconfig defaults)
+- **Stack:** 2
+- **Applies to:** framework, app, plugin, web
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `package.json.devDependencies.typescript` matches `^5`/`5.*`, OR
+  `typescript-eslint < 8.58.0`, OR `tsdown < 0.22.1` present, OR `tsconfig.json` has no
+  `compilerOptions.types`, OR `tsconfig.build.json` exists without `compilerOptions.rootDir`.
+- **Apply:**
+  1. `package.json`: set `devDependencies.typescript` → `6.0.3`.
+  2. `package.json`: set `devDependencies["typescript-eslint"]` → `8.58.0` (TS6 support landed here;
+     older prints the typescript-estree "unsupported version" warning).
+  3. `package.json`: if `tsdown` is present, set it → `0.22.1` (first peer range allowing `^6`,
+     pulls `rolldown-plugin-dts ^0.25.1`).
+  4. `tsconfig.json`: add `"types": ["bun"]` to `compilerOptions` (web projects:
+     `["vite/client"]` plus any test-config types). TS6 defaults `types` to `[]`, so without this
+     `tsc` reports `Cannot find name 'Bun'`. If `types` is already present, merge — do not clobber.
+  5. `tsconfig.build.json` (if it exists): add `"rootDir": "./src"` to `compilerOptions` — TS6
+     defaults `rootDir` to the tsconfig dir; pin it so emit layout is stable.
+  6. Run `bun install` to resolve the new versions.
+- **Verify:** `bunx tsc --noEmit` (clean) → `bun run lint` (clean) → `bun run test` (pass) →
+  if the project publishes a library, `bun run build` then `bunx publint` + `bunx attw --pack .`
+  (emitted `.d.ts` intact). On `tsc` failure, route the output to the **error-diagnostician** agent;
+  the most likely new errors come from the `strict`-by-default flip surfacing real issues in deep
+  inference chains — fix locally, do not weaken `strict`.
+- **Risk:** (a) `types: []` default is the #1 silent breaker — covered by step 4. (b) A handful of
+  new `strict` diagnostics in the deepest generic chains are possible; they are legitimate and
+  locally fixable. (c) Removed legacy options (amd/umd/system module, classic resolution, `--outFile`,
+  `es5` target, `baseUrl`) — moku prescribes none, so near-zero exposure; if a hand-edited tsconfig
+  has any, surface it and migrate to the modern equivalent.
+- **Rollback:** `git checkout -- package.json tsconfig.json tsconfig.build.json bun.lock && bun install`.
+
+### tooling-freshness
+- **Title:** Tooling freshness bumps (Bun, Biome, package validators)
+- **Stack:** 2
+- **Applies to:** all
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `.bun-version < 1.3.14`, OR `@biomejs/biome < 2.4.16`, OR `@types/bun < 1.3.14`, OR
+  `publint < 0.3.21`, OR `@arethetypeswrong/cli < 0.18.3`, OR `engines.bun` floor `< 1.3.14`.
+- **Apply:**
+  1. `.bun-version` → `1.3.14`; `package.json.engines.bun` → `>=1.3.14`.
+  2. `package.json.devDependencies`: `@biomejs/biome` → `2.4.16`, `@types/bun` → `1.3.14`,
+     `publint` → `0.3.21`, `@arethetypeswrong/cli` and `@arethetypeswrong/core` → `0.18.3`.
+  3. `biome.json`: update `$schema` URL to `…/schemas/2.4.16/schema.json`.
+  4. `bun install`.
+- **Verify:** `bun run format` (no unexpected churn beyond formatting), `bun run lint`,
+  `bunx tsc --noEmit`. Biome minor bumps can introduce new lint rules — if new lint findings appear,
+  report them; auto-fix formatting only (`biome check --write`), leave rule violations for the user.
+- **Risk:** Biome rule additions can flag previously-clean code (advisory, not a hard break). Bun
+  runtime bump is low-risk (Bun never consumes the `typescript` package). Mitigation: this migration
+  is independently skippable at the gate if the user wants TS6 only.
+- **Rollback:** `git checkout -- package.json biome.json .bun-version bun.lock && bun install`.
+
+### tsgo-fastcheck  *(opt-in)*
+- **Title:** TypeScript 7 native preview (`tsgo`) as an opt-in fast type-checker, side-by-side with `tsc`
+- **Stack:** 2
+- **Applies to:** framework, app, plugin
+- **Default:** **off** — the user is explicitly asked at the gate; never applied silently.
+- **Depends on:** ts6-core
+- **Detect:** user opted in AND `package.json.devDependencies["@typescript/native-preview"]` is absent.
+- **Apply:**
+  1. `package.json.devDependencies`: add `"@typescript/native-preview": "latest"` (ships nightly
+     `7.0.0-dev.*` builds; pin to a specific build for reproducible CI if desired).
+  2. `package.json.scripts`: add `"typecheck:fast": "tsgo --noEmit"` (the `tsgo` binary comes from
+     the native-preview package). **Leave the existing `tsc`-based scripts as the authoritative
+     gate** — `lint`/`validate`/pre-commit keep using real `tsc`/`tsdown`.
+  3. `bun install`.
+  4. Append a note to the project `CLAUDE.md`: "`bun run typecheck:fast` runs the TS7 native
+     preview for fast inner-loop checks; `bunx tsc --noEmit` remains the authoritative gate and the
+     `.d.ts` publish path."
+- **Verify:** `bun run typecheck:fast` runs and, on clean code, agrees with `bunx tsc --noEmit`.
+  Treat `tsc` as the source of truth on any disagreement.
+- **Risk:** `tsgo` is **Beta / nightly** — feature parity is "very nearly complete," not identical
+  (~74/6000 error cases diverge; JS/JSDoc handling intentionally changed; emits **no** `.d.ts` on
+  type error, unlike `tsc`). So it is suitable as a fast *checker* only — NOT as the emit/publish
+  compiler. That is exactly why this migration is off by default and adds a *parallel* script rather
+  than replacing `tsc`.
+- **Rollback:** remove the dep + script, `git checkout -- package.json CLAUDE.md bun.lock && bun install`.
+
+---
+
+## Reserved (future stack versions — not applied yet)
+
+Documented so the extension path is concrete; `/moku:upgrade` ignores these until they are promoted
+to an active stack version in `target-stack.md`.
+
+### ts7-native  *(Stack 3 — when TS7 GAs)*
+- Swap `typescript` → `^7`; make the TS6 deprecation cleanup mandatory (`ignoreDeprecations` is gone
+  in TS7); switch `typecheck:fast`/`tsgo` to the primary path; re-validate `.d.ts` emit against the
+  native emitter; revisit the `isolatedDeclarations` stance. The `tsgo-fastcheck` opt-in is the
+  on-ramp that de-risks this jump.
+
+### devibe-*  *(de-vibecoding class)*
+- One migration per repairable anti-pattern from `invariants.md` / `house-style.md`, e.g.:
+  `devibe-no-createplugin-generics` (strip explicit generics off `createPlugin<…>`),
+  `devibe-thin-index` (move inline logic out of an oversized `index.ts`),
+  `devibe-jsdoc` (add missing JSDoc on exports). Each: detect via grep/validator → transform →
+  verify with the matching moku validator agent.

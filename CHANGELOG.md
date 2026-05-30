@@ -2,6 +2,51 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.30.0 (2026-05-30)
+
+TypeScript 6 baseline + the first universal stack-migration command. Researched against the TS6 GA
+(last JS-codebase release; bridge to the native `tsgo`/TS7) and the moku toolchain — only two tools
+actually gate TS6 (`typescript-eslint`, `tsdown`); Bun is orthogonal (own transpiler, never consumes
+the `typescript` package).
+
+### Added — `/moku:upgrade` (the official migration path)
+- **`commands/upgrade.md`** — a **zero-argument**, gated, resumable command that brings any existing
+  Moku project (framework/app/plugin/web) up to the **target stack hardcoded into the installed
+  plugin version**. There are no version arguments: the target is whatever this plugin ships. Flow:
+  detect project + git safety → compute a delta from the migration registry → present the plan →
+  single approval gate (with opt-in prompts for off-by-default migrations) → apply idempotently →
+  verify each step (`tsc`/lint/test, plus `build`/`publint`/`attw` for libraries) → report. Failures
+  route to `moku-error-diagnostician` (bounded 3 rounds); progress persists to `.planning/UPGRADE.md`
+  for stop-and-resume. Never commits, never `--no-verify`, never weakens `strict`. Distinct from
+  `/moku:plan migrate` (which maps *foreign* code *into* Moku). Supports `--dry-run`.
+- **`references/target-stack.md`** — the versioned, machine-readable **target stack manifest**
+  (Stack version 2 = TS6). Pinned tool versions, engines, tsconfig deltas, the detection signature
+  `/moku:upgrade` reads, a stack-version history table, and reserved future entries (TS7, de-vibe).
+- **`references/upgrade-migrations.md`** — the extensible **migration registry**: each migration is a
+  self-contained `detect → apply → verify → rollback` unit. Seeds `ts6-core`, `tooling-freshness`,
+  and an **off-by-default opt-in `tsgo-fastcheck`** (TS7 native preview as a side-by-side fast
+  checker; `tsc` stays authoritative). TS7 and de-vibecoding are documented as reserved entries — the
+  registry is how every future stack jump (incl. "migrate out of vibe-coded") plugs in.
+- **Discoverability** — `/moku:check` dependency check now flags a below-target stack and points to
+  `/moku:upgrade`; README command table updated.
+
+### Changed — TypeScript 6 baseline stack (Stack version 2)
+- **`references/tooling-config.md`** (the canonical scaffold copied by `/moku:init`): `typescript`
+  `5.9.3 → 6.0.3`, `typescript-eslint` `8.56.0 → 8.58.0` (first TS6-supporting release),
+  `tsdown` `0.20.3 → 0.22.1` (first peer range allowing `^6`). tsconfig now sets `"types": ["bun"]`
+  (TS6 defaults `types` to `[]` → otherwise `Cannot find name 'Bun'`) and `tsconfig.build.json` pins
+  `"rootDir": "./src"` (TS6 changed the `rootDir` default). Freshness bumps: Bun `1.3.8 → 1.3.14`,
+  `@biomejs/biome` `2.4.2 → 2.4.16`, `@types/bun` `1.3.10 → 1.3.14`, `publint` `0.3.17 → 0.3.21`,
+  `attw` `0.18.2 → 0.18.3`. Web tsconfig (`moku-web`) gains `"types": ["vite/client"]`.
+- **`agents/type-validator.md`** — TS6-aware tsconfig checklist: `"types"` is now a **CRITICAL**
+  requirement (empty/missing breaks `tsc`); stops flagging missing explicit `isolatedModules` when
+  `verbatimModuleSyntax` + `module: Preserve` are set (they enforce it); notes the `tsc` error format
+  is unchanged in TS6 so output parsing needs no change.
+- **`commands/init.md`, `README.md`** — engines/`.bun-version`/requirements updated to Bun 1.3.14;
+  init notes the new `types: ["bun"]` requirement.
+- Version bumped to 0.30.0 in `plugin.json` and `marketplace.json`; `SKILL-INVENTORY.md` commands
+  count 10 → 11.
+
 ## 0.29.0 (2026-05-30)
 
 Driven by a real end-to-end framework build that surfaced defects in v0.28.0 plus two reported regressions.
