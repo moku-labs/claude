@@ -8,6 +8,22 @@ This file contains the detailed per-target instructions for Stages 1, 2, and 3 o
 
 **On entry**: Read `.planning/STATE.md` if it exists. Load any decisions from Step 0.5, research from Step 0.6, and steering from `.planning/steering.md` (if it exists).
 
+### Discussing architecture decisions (all targets)
+
+Whenever Stage 1 hits a genuine architectural decision the user should weigh in on (framework shape,
+plugin boundaries, a tier choice, a dependency trade-off), present it the SAME way `/moku:brainstorm`
+does — be an opinionated colleague, not a passive interviewer:
+
+1. **Frame the trade-off** — the tension, and why it matters for THIS project.
+2. **Show 2–3 concrete approaches with TypeScript code examples** (5–15 lines each) in Moku's plugin model.
+3. **Give a clear recommendation with reasoning** tied to this project (not generic advice).
+4. **Name specific concerns** about each alternative.
+
+Use the **two-turn pattern** (see `brainstorm-flow.md` Step 3): present the full discussion with code
+examples and your recommendation as visible text FIRST, THEN ask via `AskUserQuestion` whose option
+descriptions are short summaries — never a bare "Option A / Option B" with the examples omitted. Skip
+the discussion only when there is genuinely no decision to make (then proceed directly).
+
 ### Framework Target
 
 #### If given a description:
@@ -395,7 +411,7 @@ Route based on selection:
 
 #### Produce the Skeleton Spec Document
 
-Save to `.planning/build/skeleton-spec.md`. Use the Skeleton Specification Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. The document must contain all five sections:
+Save to `.planning/build/skeleton-spec.md`. Use the Skeleton Specification Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. **Every code block you emit must already satisfy `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md`** (≤30-line wiring index from the literal template, typed-const config, `type` not `interface` for Config/Api, `createCoreConfig` third CorePlugins arg, JSDoc tag-line rules, no inline `as`, no `wireX`, structural injectable types) — so the build doesn't have to reconcile spec code against the hooks. The document must contain all five sections:
 
 1. **Architecture Overview** — entry structure, barrel pattern, core config registration
 2. **File Structure** — complete file tree with every file annotated (tier, purpose)

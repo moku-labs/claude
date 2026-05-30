@@ -70,24 +70,35 @@ if (plugins.length === 0) {
 log(`Wave: ${plugins.map((p) => p.name).join(', ')} (${plugins.length} plugins)`)
 
 // --- Build + Verify (pipeline: verify each plugin as soon as it is built) ---
-// Builders touch disjoint dirs (src/plugins/<name>/), so they run in parallel safely without
-// worktree isolation. If a future wave needs builders that share files, add
-// {isolation:'worktree'} to the builder agent() call and merge the worktrees afterward.
+// Builders touch disjoint dirs (src/plugins/<name>/), BUT a misbehaving builder can still run a
+// repo-wide command (lint:fix, git checkout) that clobbers a sibling's work — this caused real data
+// loss in a prior build. So for any wave with >1 builder, isolate each in its own git worktree
+// (disjoint indices -> a stray git/format command can't reach siblings). The builder prompt ALSO
+// hard-forbids repo-wide commands and git mutations as belt-and-suspenders.
+const ISOLATE = plugins.length > 1 ? 'worktree' : undefined
+const HARD_RULES =
+  ' HARD RULES (filesystem safety): write ONLY under src/plugins/' +
+  '<this-plugin>/ and its __tests__/ — never edit src/config.ts, src/plugins/index.ts (barrel), ' +
+  'package.json, or sibling plugins. NEVER run a repo-wide command (lint:fix, bun run format, ' +
+  '`biome … .`, `eslint .`) or ANY git mutation (checkout/restore/reset/stash/clean/add/commit). ' +
+  'Scoped formatting only: `bunx biome format --write src/plugins/<this-plugin>/`. Report lint/format ' +
+  'issues as hints; the orchestrator fixes them repo-wide after the wave.'
 phase('Build+Verify')
 const results = await pipeline(
   plugins,
   (p) =>
     agent(
       `You are building the Moku plugin "${p.name}" (${p.tier || 'tier per spec'}) using TDD ` +
-        `(types → red → green → refactor). Spec: ${p.spec || `.planning/specs for ${p.name}`}. ${STYLE} ` +
-        `Write only under src/plugins/${p.name}/ and its __tests__/. Return the build result.`,
-      { label: `build:${p.name}`, phase: 'Build+Verify', schema: BUILD_RESULT },
+        `(types → red → green → refactor). Spec: ${p.spec || `.planning/specs for ${p.name}`}. ${STYLE}` +
+        HARD_RULES.replaceAll('<this-plugin>', p.name) +
+        ` Return the build result.`,
+      { label: `build:${p.name}`, phase: 'Build+Verify', schema: BUILD_RESULT, isolation: ISOLATE },
     ),
   (build, p) =>
     agent(
       `Verify the just-built plugin "${p.name}": files exist, content is substantive (not stubs), ` +
         `lint + tests pass, and it complies with the spec. Cite spec/NN-*.md §N in any blocker.`,
-      { label: `verify:${p.name}`, phase: 'Build+Verify', agentType: 'moku-verifier', schema: VERIFY_RESULT },
+      { label: `verify:${p.name}`, phase: 'Build+Verify', agentType: 'moku:moku-verifier', schema: VERIFY_RESULT },
     ).then((verify) => ({ plugin: p.name, build, verify })),
 )
 
@@ -107,7 +118,7 @@ const JUDGE = {
 const judgment = await agent(
   `Evaluate this build wave and decide continue / stop-for-review / retry. Results: ` +
     `${JSON.stringify(done.map((r) => ({ plugin: r.plugin, build: r.build?.status, verify: r.verify?.verdict })))}`,
-  { label: 'wave-judge', phase: 'Judge', agentType: 'moku-wave-judge', schema: JUDGE },
+  { label: 'wave-judge', phase: 'Judge', agentType: 'moku:moku-wave-judge', schema: JUDGE },
 )
 
 return {

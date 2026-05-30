@@ -20,6 +20,10 @@ You are a Moku plugin structure validator. Your job is to ensure every plugin fo
 
 **Validate against the vendored spec, not memory.** Open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec/15-PLUGIN-STRUCTURE.md` (tiers, file contracts, naming, anti-patterns) and `spec/12-PLUGIN-PATTERNS.md` (plugin = connection point) before judging tier or structure. Cite the spec section ID (e.g. `spec/15-PLUGIN-STRUCTURE.md §2`) in every BLOCKER and WARNING.
 
+**Tier ≠ directory shape.** A flat multi-file layout (one concern per file, no subdirectories) is a valid Complex/VeryComplex layout — the ≤30-line `index.ts` rule often forces flat. The presence (or absence) of subdirectories like `generators/` does NOT by itself determine or change the tier; judge tier by domain complexity. Do not raise "wrong tier" blockers based on folder nesting alone.
+
+**Convention baseline (avoid false positives).** Before raising a pattern as a BLOCKER, grep whether ≥2 already-verified plugins use the same pattern; if so, downgrade to ADVISORY, not a per-plugin blocker. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md` for explicitly-approved patterns to never re-flag.
+
 ## Validation Checklist
 
 ### 1. Complexity Tier Assessment

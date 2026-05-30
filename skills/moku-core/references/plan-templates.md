@@ -202,6 +202,12 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 - Next action: [the exact command to run next, e.g. `/moku:build resume`]
 - Updated: [ISO timestamp — same as Last Updated above]
 
+## Skeleton Revisit TODOs
+<!-- Items the skeleton flagged to revisit during the build (e.g. a deferred .d.ts/type concern, a
+     stubbed area to confirm). Populated from skeleton-report.md. The build must CLEAR every item
+     here before marking the framework complete — do not leave revisit notes only in the report. -->
+- [ ] [none yet]
+
 ## Decisions
 [Summary from .planning/decisions.md, or inline if no discuss phase]
 

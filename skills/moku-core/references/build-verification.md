@@ -2,6 +2,25 @@
 
 After per-plugin tracking is complete, run verification on successfully built plugins.
 
+## Step 4a0: Independent reconciliation (MANDATORY — treat builder reports as hints, not facts)
+
+Builder self-reports can be **stale or wrong** — in a real build, two parallel builders both reported
+"all green" while one had silently reverted the other's files to stubs. Before trusting any wave,
+the orchestrator independently checks disk/git/tooling and reconciles against the claims:
+
+1. **`git status --short`** — for every plugin reported `built`, confirm its tracked source files
+   actually show as modified/added. **A plugin reported `built` whose tracked files do NOT appear in
+   `git status` is a RED FLAG** — its work may have been reverted by a sibling. Mark `verify-failed`
+   and route to gap closure; do not accept the builder's claim.
+2. **Files exist** — every path the builder listed in `files[]` must exist on disk; a missing file ⇒ `verify-failed`.
+3. **`bunx tsc --noEmit`** and **`bun run lint`** and **`bun run test`** — run them yourself and
+   reconcile against the builder's reported counts. If the builder claimed passing but the tool
+   disagrees, the tool wins (`verify-failed`).
+4. **No stray commits** — builders must not commit; if `git log` shows a wave commit from a builder, flag it.
+
+Only plugins that survive reconciliation proceed to Step 4a. Record results to
+`.planning/build/reconciliation-{wave}.md` (kept for forensics; pruned by `/moku:clean`).
+
 ## Step 4a: Plugin Verification + Code Review (Parallel)
 
 Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`, and `needs-manual` plugins.
@@ -72,7 +91,16 @@ Then run integration checks in the target workspace:
 1. **Format** — `bun run format` (Biome auto-formats all files)
 2. **Lint** — `bun run lint` -> if errors, run `bun run lint:fix` then re-check. Manually fix anything lint:fix cannot resolve.
 3. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. Fix all type errors.
-4. **Build** — `bun run build` compiles without errors (if build script exists)
+4. **Build + bundled types (REQUIRED, not optional)** — run `bun run build` (the dist + `.d.ts`
+   emit). **`tsc --noEmit` is NOT sufficient** — it type-checks source but does not catch
+   `.d.ts` *bundling* bugs. A real build passed `tsc --noEmit` but shipped a broken `.d.ts`
+   (an injectable function type referenced a runtime package's *namespace* type
+   `import("bun").SpawnOptions.X`, which `tsdown`/rolldown dropped, so the consumer-facing type
+   resolved to `undefined`). After `bun run build`: confirm it exits 0, then sanity-check the emitted
+   `.d.ts` (run `bunx publint` if available, or grep the dist `.d.ts` for `undefined`/`any` where a
+   real exported type is expected). If a `.d.ts` symbol is missing/`undefined`, fix the source to use
+   a **structural** type (own `interface`/`type`), never a runtime package's namespace type. This
+   build+types step is part of the verification chain on every wave — do not defer it to commit time.
 
 **Loop until clean**: If any check still fails after fixes, re-run the full sequence. All checks must pass with zero errors and zero warnings before proceeding.
 

@@ -252,13 +252,36 @@ Write `.planning/build/coverage.md` with:
 Update STATE.md: mark coverage verification complete with overall percentages.
 **STOP.** Tell the user: `"Coverage: {lines}% lines, {branches}% branches, {functions}% functions. Run /moku:build resume for CI/CD generation."`
 
-## Step 5.10: CI/CD Wave
+## Step 5.10: CI/CD, Deployment & Publication Wave
 
-**Separate invocation.** Generate GitHub Actions workflows and distribution configuration based on user choices from the steering phase.
+**Separate invocation.** Generate GitHub Actions workflows + distribution/deployment configuration.
+The **user decides how and where to ship** — present concrete options with examples and let them choose.
 
-### Read CI/CD Choices
+### Choose what to ship (interactive gate)
 
-Read `.planning/steering.md` `## CI/CD` section. If the section is missing or contains "None", skip this step entirely: "No CI/CD requested during planning. Skipping." Update STATE.md and STOP.
+Read `.planning/steering.md` `## CI/CD` section for any pre-selected choices. Then **confirm/extend
+with the user via `AskUserQuestion`** (multiSelect) — do NOT silently skip shipping setup just because
+steering was empty. Present each option with a one-line example of what it produces:
+
+- **PR validation CI** — `.github/workflows/ci.yml`: format + lint + tsc + test on every PR.
+- **Coverage gate** — adds a coverage step to CI that fails below the project threshold.
+- **Publish to npm** — `release.yml` on `v*` tags → `npm publish --provenance` (for libraries/frameworks).
+- **GitHub Releases** — `release.yml` step that cuts a GitHub Release from the tag + changelog.
+- **Deploy: Cloudflare Pages/Workers** — `deploy.yml` using `cloudflare/wrangler-action` (for web apps/SSG/SSR).
+- **Deploy: Vercel** — `deploy.yml` using `amondnet/vercel-action` (or the Vercel CLI).
+- **Deploy: Netlify** — `deploy.yml` using `nwtgck/actions-netlify`.
+- **Deploy: GitHub Pages** — `deploy.yml` using `actions/deploy-pages` (static SSG output).
+- **Container image** — `docker.yml`: multi-stage Dockerfile build + push to a registry on release.
+- **None / skip** — generate nothing.
+
+Default the question's pre-checked options from steering.md when present. For each chosen item, show a
+short example workflow snippet in the discussion BEFORE generating, and ask for the target-specific
+inputs you need (e.g. Cloudflare project name + the secret names like `CLOUDFLARE_API_TOKEN`, the npm
+registry/scope, the Pages output dir). If the user picks **None**, skip generation: "No CI/CD or
+deployment selected. Skipping." Update STATE.md and STOP.
+
+Frameworks/libraries lean toward **publish** (npm + GitHub Releases); apps lean toward **deploy**
+(Cloudflare/Vercel/Netlify/Pages) — recommend accordingly, but the user chooses.
 
 ### Generate Workflows
 
@@ -317,6 +340,37 @@ Generate a multi-stage Dockerfile and a workflow that builds and pushes on relea
 
 **`publishConfig` in package.json** (if npm publish selected):
 Add `"publishConfig": { "access": "public" }` and verify `"files"` field includes the dist directory.
+
+**Deploy: Cloudflare Pages/Workers** (`.github/workflows/deploy.yml`) — for web apps/SSG/SSR:
+```yaml
+name: Deploy
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install
+      - run: bun run build
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./dist --project-name=<project>
+```
+Adapt: `wrangler.jsonc`/`wrangler.toml` if Workers, correct output dir, correct project name.
+
+**Deploy: Vercel** — `deploy.yml` using `amondnet/vercel-action@v25` (or `vercel --prod` CLI) with
+`VERCEL_TOKEN`/`VERCEL_ORG_ID`/`VERCEL_PROJECT_ID` secrets. **Deploy: Netlify** —
+`nwtgck/actions-netlify@v3` with `NETLIFY_AUTH_TOKEN`/`NETLIFY_SITE_ID`, `publish-dir: ./dist`.
+**Deploy: GitHub Pages** — build the static output, then `actions/upload-pages-artifact` +
+`actions/deploy-pages@v4` (set `permissions: { pages: write, id-token: write }`).
+
+Generate ONLY the targets the user selected. Use the secret names above and tell the user which repo
+secrets to add. Never inline real tokens.
 
 ### Validate Workflows
 

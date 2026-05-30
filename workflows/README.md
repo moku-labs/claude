@@ -25,18 +25,24 @@ Runs the full validation pipeline as a parallel fan-out: `moku-spec-validator`,
 `moku-test-validator`, `moku-web-validator`, `moku-architecture-validator` — then aggregates a
 single deduped PASS/FAIL disposition. Mirrors `moku-validation-coordinator` but with true
 concurrency. **`/moku:init` installs this into a project's `.claude/workflows/`.**
-**Adversarial mode (opt-in):** pass `{adversarial:true}` (or args `"adversarial"`) to add a
-skeptic pass — each surviving blocker is challenged by N `moku-skeptic` agents (default 2) that
-try to *refute* it; a majority-refuted blocker is downgraded to a warning. Kills
-plausible-but-wrong findings before they fail the build.
+**Adversarial mode (ON by default):** each surviving blocker is challenged by N `moku-skeptic`
+agents (default 2) that try to *refute* it — including checking whether ≥2 already-verified plugins
+use the same pattern (a house convention, not a per-plugin violation); a majority-refuted blocker is
+downgraded to a warning. Kills plausible-but-wrong findings before they fail the build. Opt out with
+`{adversarial:false}` (or args `"no-adversarial"`).
+**Verdict:** `PASS` requires *every* validator to have run and returned a parseable contract;
+if any is missing the verdict is `INCONCLUSIVE` (never a vacuous `PASS`). Validator `agentType`s are
+namespaced (`moku:moku-spec-validator`, …) so they actually launch.
 
 ### `moku-build-wave.js` → `/moku-build-wave`  (framework projects, opt-in)
-Builds ONE wave non-interactively: builders run in parallel over the wave's plugins (disjoint
-`src/plugins/<name>/` dirs, so no worktree isolation needed), each plugin is verified by
-`moku-verifier` *as it finishes* (pipeline, not barrier), and `moku-wave-judge` returns a
-continue/stop/retry disposition. The gated `/moku:build` (per-wave user checkpoint) stays the
-default; reach for this only when you explicitly want a wave built end-to-end without stopping.
-Pass `{plugins:[{name,tier,spec}]}` or omit to auto-detect the next wave from STATE.md.
+Builds ONE wave non-interactively: builders run in parallel over the wave's plugins. For waves with
+**>1 plugin each builder runs in its own git `worktree`** (disjoint indices, so a stray repo-wide
+command or `git checkout` from one builder can't clobber a sibling — this happened in a real build);
+single-plugin waves run without isolation. The builder prompt also hard-forbids repo-wide commands and
+git mutations. Each plugin is verified by `moku-verifier` *as it finishes* (pipeline, not barrier), and
+`moku-wave-judge` returns a continue/stop/retry disposition. The gated `/moku:build` (per-wave user
+checkpoint) stays the default; reach for this only when you explicitly want a wave built end-to-end
+without stopping. Pass `{plugins:[{name,tier,spec}]}` or omit to auto-detect the next wave from STATE.md.
 
 ### `moku-migrate-sweep.js` → `/moku-migrate-sweep`  (any moku repo, opt-in)
 Mechanical repo-wide change: discover sites → transform each file in parallel (one agent owns a

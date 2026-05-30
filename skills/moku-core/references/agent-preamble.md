@@ -29,14 +29,14 @@ These are the canonical definitions of Moku-wide code rules. All agents enforce 
 
 ## Output Contract
 
-Your response MUST end with a fenced `json` code block containing structured results. The prose report comes FIRST (for human readability), the JSON block comes LAST (for machine parsing).
+Your response MUST end with a fenced `json` code block containing structured results. The prose report comes FIRST (for human readability), the JSON block comes LAST (for machine parsing). **Your LAST message MUST be that contract — never stop mid-analysis.** If you were spawned via a workflow that requires `StructuredOutput`, call it as your final action; otherwise emit the fenced ```json block. A run that ends without the contract is treated as a failed/missing validator (it does not count as PASS), so always close with it. The `fix` field is allowed (optional) on warnings too — include it when you have a concrete fix.
 
 ```json
 {
   "agent": "<your-agent-name>",
   "verdict": "PASS | FAIL | PARTIAL",
   "blockers": [{"file": "path", "line": N, "rule": "...", "message": "...", "fix": "..."}],
-  "warnings": [{"file": "path", "line": N, "rule": "...", "message": "..."}],
+  "warnings": [{"file": "path", "line": N, "rule": "...", "message": "...", "fix": "(optional)"}],
   "stats": {"filesChecked": N, "blockers": N, "warnings": N, "infos": N}
 }
 ```

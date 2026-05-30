@@ -2,6 +2,30 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.29.0 (2026-05-30)
+
+Driven by a real end-to-end framework build that surfaced defects in v0.28.0 plus two reported regressions.
+
+### Fixed
+- **`moku-verify` (and all workflows) used unqualified `agentType`s** (`moku-spec-validator`) that don't resolve against the `moku:`-namespaced registry — every validator silently failed to launch and the disposition still returned a vacuous **PASS**. Now all workflow `agentType`s are namespaced (`moku:…`), `PASS` requires every validator to have run and returned a parseable verdict (else **INCONCLUSIVE**, never a vacuous PASS), the adversarial skeptic pass is **on by default** (checks repo conventions), warnings may carry an optional `fix`, and a validator returning prose is re-spawned once for its JSON contract.
+- **Notifications only fired on session close.** The Stop hook now plays a short "your turn" chime on a genuine finish (silent on continuation), and the Notification hook beeps for *any* input-needed event (question/idle), not just permission prompts — both fire in any project, sound-only (no popup spam), suppressible via `enableSounds: false`. Added a `moku_sound` helper with a terminal-bell fallback.
+- **Brainstorm/plan stopped showing worked examples + recommendations when asking the user to decide.** Reinforced that Turn A (code examples + clear recommendation + concerns) is the primary deliverable and option descriptions are summaries only; added the same "present decisions as an opinionated colleague" requirement to `plan` Stage 1 (it never had it).
+
+### Added — correctness-on-first-try (from the build's diagnostics)
+- **`references/skeleton-conventions.md`** — permanent hook-compliant authoring rules (≤30-line wiring index w/ literal template, typed-const config, `type` not `interface`, `createCoreConfig` third tuple arg, JSDoc tag-lines, structural injectable types, no inline `as`/`wireX`). The skeleton/spec generator (plan Stage 3) and every builder now emit hook-compliant code from line 1 instead of rediscovering the rules each build. Skeleton "revisit" items are carried into a STATE.md `## Skeleton Revisit TODOs` section.
+- **`references/house-style.md` + convention-baseline rule** on the validators and skeptic — before a BLOCKER, check whether ≥2 already-verified plugins use the pattern; if so it's a house convention (ADVISORY), not a per-plugin blocker. Codifies three patterns as approved (`api: createApi` direct ref, framework `__tests__` importing `createCoreConfig`, per-event `register<T>()`).
+- **`references/glossary.md`** + pre-expanded `unicorn/prevent-abbreviations` allowList and a `cspell.json` in `tooling-config.md` (scaffolded by `/moku:init`) so builds never widen abbreviation/dictionary lists mid-flight.
+- **Correct-first-try checklist** in `build-plugin.md` + targeted rules: structural injectable types (no namespace types) + `bun run build`/`.d.ts` in the verification chain; `data-*` not `classList` (incl. JSDoc examples); exact `[fw] desc.\n  fix.` error format; honor override hooks; no dead `depends`; tier ≠ directory shape.
+
+### Added — build safety & final stages
+- **Parallel-builder filesystem safety (P0 data-loss fix):** builder prompts now hard-forbid repo-wide commands (`lint:fix`, repo `format`) and ALL git mutations and out-of-plugin writes; `moku-build-wave` isolates each builder in a `worktree` when a wave has >1 plugin. A stray `git checkout` had reverted a sibling plugin to stubs.
+- **Mandatory post-wave reconciliation** (`build-verification.md`): the orchestrator independently runs `git status`/tsc/lint/test and treats builder reports as hints — a plugin reported `built` whose tracked files don't show in `git status` is a red flag.
+- **Hook false-positive fixes:** `INDEX-RULE` ≤30-line check now counts effective wiring lines (excludes JSDoc/imports/blanks — killed 16 false hits); `STRUCTURE` recognizes barrel-exported `types.ts` and excludes entry files (`index/client/lifecycle`) from the tier cap; `onStart/onStop` check learned more resource verbs (incl. `addEventListener`) and a `// @no-resource-check` escape hatch.
+- **Final build stages extended to app builds** (`build-app.md`): full-app realistic integration tests, README generation/update, and a CI/CD step. **CI/CD step now lets the user choose how/where to ship** with options + examples — npm publish, GitHub Releases, and deployment targets (Cloudflare Pages/Workers, Vercel, Netlify, GitHub Pages, container).
+
+### Changed
+- Version bumped to 0.29.0 in plugin.json and marketplace.json.
+
 ## 0.28.0 (2026-05-29)
 
 ### Added

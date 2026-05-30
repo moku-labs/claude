@@ -41,12 +41,17 @@ emit_warning() {
   fi
 }
 
-# Check 1: Plugin directory should not have too many .ts source files (excluding tests)
-# >12 source files suggests the plugin is too large and should be split
-SOURCE_COUNT=$(find "$PLUGIN_DIR" -maxdepth 1 -name '*.ts' -not -name '*.test.ts' -not -name '*.spec.ts' -type f 2>/dev/null | wc -l | tr -d ' ')
+# Check 1: too many DOMAIN source files suggests the plugin is too large.
+# Count domain files only — exclude tests AND wiring/entry files (index.ts, client.ts, lifecycle.ts)
+# which are structural, not domain concerns. A legitimate Complex SPA (client entry + lifecycle
+# teardown split) was previously flagged at 13 flat files; excluding entry files fixes that.
+SOURCE_COUNT=$(find "$PLUGIN_DIR" -maxdepth 1 -name '*.ts' \
+  -not -name '*.test.ts' -not -name '*.spec.ts' \
+  -not -name 'index.ts' -not -name 'client.ts' -not -name 'lifecycle.ts' \
+  -type f 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SOURCE_COUNT" -gt 12 ]; then
-  log_diagnostic "STRUCTURE" "$PLUGIN_NAME" "$SOURCE_COUNT source files — exceeds VeryComplex tier max (12)"
-  emit_warning "WARNING: Plugin '$PLUGIN_NAME' has $SOURCE_COUNT source files — exceeds VeryComplex tier max (12). Consider splitting into sub-plugins."
+  log_diagnostic "STRUCTURE" "$PLUGIN_NAME" "$SOURCE_COUNT domain files — exceeds VeryComplex tier max (12)"
+  emit_warning "WARNING: Plugin '$PLUGIN_NAME' has $SOURCE_COUNT domain source files (excluding index/client/lifecycle entry files) — exceeds VeryComplex tier max (12). Consider splitting into sub-modules or sub-plugins."
   exit 0
 fi
 
@@ -59,15 +64,20 @@ if [ -n "$DEEP_DIRS" ]; then
   exit 0
 fi
 
-# Check 3: If types.ts exists, verify it's imported (Standard+ pattern)
-if [ -f "$PLUGIN_DIR/types.ts" ]; then
-  if [ -f "$PLUGIN_DIR/index.ts" ] && ! grep -qE "from ['\"][./]*types['\"]" "$PLUGIN_DIR/index.ts" 2>/dev/null; then
-    # Only warn if index.ts already exists and doesn't import types
-    if [ -s "$PLUGIN_DIR/index.ts" ]; then
-      log_diagnostic "STRUCTURE" "$PLUGIN_NAME" "types.ts exists but not imported in index.ts"
-      emit_warning "WARNING: Plugin '$PLUGIN_NAME' has types.ts but index.ts does not import from it. Standard+ plugins should use types from types.ts."
-      exit 0
-    fi
+# Check 3: If types.ts exists, verify it's consumed — EITHER imported locally in index.ts OR
+# re-exported via the plugins barrel (src/plugins/index.ts `export … from "./<name>/types"`).
+# The barrel-export path is the standard way types are surfaced, so recognizing it avoids a
+# pervasive false "types.ts not imported" warning.
+if [ -f "$PLUGIN_DIR/types.ts" ] && [ -s "$PLUGIN_DIR/index.ts" ]; then
+  IMPORTED_LOCALLY=no
+  grep -qE "from ['\"][./]*types['\"]" "$PLUGIN_DIR/index.ts" 2>/dev/null && IMPORTED_LOCALLY=yes
+  BARREL="$(dirname "$PLUGIN_DIR")/index.ts"
+  EXPORTED_VIA_BARREL=no
+  [ -f "$BARREL" ] && grep -qE "from ['\"]\./$PLUGIN_NAME/types['\"]" "$BARREL" 2>/dev/null && EXPORTED_VIA_BARREL=yes
+  if [ "$IMPORTED_LOCALLY" = "no" ] && [ "$EXPORTED_VIA_BARREL" = "no" ]; then
+    log_diagnostic "STRUCTURE" "$PLUGIN_NAME" "types.ts exists but neither imported in index.ts nor exported via the plugins barrel"
+    emit_warning "WARNING: Plugin '$PLUGIN_NAME' has types.ts but it is neither imported in its index.ts nor re-exported from src/plugins/index.ts (barrel). Wire it one of those two ways."
+    exit 0
   fi
 fi
 

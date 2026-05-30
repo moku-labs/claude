@@ -31,7 +31,10 @@ evidence that it does NOT hold, and only concede if it is genuinely unrefutable.
 3. Check for context that exonerates the code: is the flagged construct in a test file, a type-only
    position, a core-plugin context where different rules apply, an island/non-plugin export, or a
    generated/vendored file out of scope? Is the "missing" thing actually present elsewhere?
-4. Decide:
+4. **Convention check (most common refutation):** grep the other plugins under `src/plugins/`. If
+   **≥2 already-verified plugins use the same pattern** the finding flags, it is an established house
+   convention, not a per-plugin violation — **refute it**. Cross-check `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md`; if the pattern is listed there as approved (e.g. `api: createApi`, framework `__tests__` importing `createCoreConfig`, per-event `register<T>()`), refute regardless of count.
+5. Decide:
    - **refuted = true** — the finding is wrong, misapplied, out of scope, or not actually a spec
      violation. Give the specific reason and evidence.
    - **refuted = false** — you tried hard and the finding genuinely holds. Concede, and cite the

@@ -1,5 +1,38 @@
 # Plugin Build — Detailed Steps
 
+## Correct-First-Try checklist (confirm EACH before reporting "done")
+
+Author against this list from line 1 — don't write freehand then fix in review. Pairs with
+`skeleton-conventions.md` (hook-compliant authoring) and `house-style.md` (approved patterns).
+
+1. `index.ts` is WIRING ONLY, ≤30 effective lines (JSDoc header + imports + blanks don't count).
+2. NO explicit generics on `createPlugin`/`createCorePlugin` — types infer from the spec object.
+3. `api: createApi` — pass the factory by DIRECT REFERENCE (house style; NOT `(ctx) => createApi(ctx)`).
+4. Events via individual `register<T>("desc")` per event (house style; `register.map` is optional).
+5. Export name is `<name>Plugin`; the plugin NAME STRING stays bare (`"router"`, not `"routerPlugin"`).
+6. NO `onStart`/`onStop` unless managing a real resource (listener/server/handle). `onStop` gets ONLY
+   `{ global }` — capture refs in a closure during `onStart`. If you DO manage DOM/nav listeners, keep
+   them and add `// @no-resource-check — <why>` so the hook stays quiet.
+7. `import type` for ALL type-only imports. Full multi-line JSDoc (`@param`/`@returns`/`@example`) on
+   every export. `@returns` omitted on throw-only stubs; `jsdoc/tag-lines` = 1 blank after the
+   description, 0 between tags.
+8. NO inline type assertions (`x as T`, `{} as T`, `null as T`) in `createState`/`config` — use typed consts.
+9. Injectable/exported function types are STRUCTURAL (own `interface`/`type`). NEVER a runtime package's
+   namespace type (e.g. `import("bun").SpawnOptions.X`) — it breaks the bundled `.d.ts` even though `tsc` passes.
+10. Error format EXACTLY: `[<framework>] <description>.\n  <actionable suggestion>.` — no arrows (`→`); both lines end with a period.
+11. (web/UI) State & styling via `data-*` attributes, NEVER CSS classes — including in JSDoc `@example` blocks.
+12. If a builder API exposes an override (`.toFile()`, `.toJson()`), the compiler/runtime MUST honor it: `override?.(x) ?? default(x)`.
+13. A `depends` edge must correspond to a real `ctx.require(dep).method()` call, OR be documented inline as presence/ordering-only. No silent dead deps.
+14. Framework-internal `__tests__` MAY import `createCoreConfig` from `@moku-labs/core` (the bootstrap every plugin uses — NOT a 3-layer violation).
+15. `Config`/`Api` are `type` aliases, never `interface`. `createCoreConfig<Config, Events, [typeof p1, …]>` REQUIRES the third tuple arg once any explicit type arg is given.
+16. Verification chain is `bunx tsc --noEmit` AND `bun run lint` AND `bun run test` AND `bun run build` (the build/`.d.ts` step catches bundling bugs tsc misses).
+17. Don't guess paths — `ls`/glob before `Read`; never `Read` a directory; get the EXACT spec path from STATE.md's plugin table (spec numbers are NOT guessable).
+
+### Filesystem safety for PARALLEL builders
+- Touch ONLY files in your own plugin dir. Never edit shared barrels, `src/config.ts`, or sibling plugins.
+- NEVER run `lint:fix`, a repo-wide `format`, or ANY git mutation (checkout/restore/reset/stash/clean/add/commit).
+- Scoped formatting only: `bunx biome format --write src/plugins/<name>/`. Report issues as hints; the orchestrator fixes repo-wide after the wave.
+
 ## Step 1: Understand the Plugin
 
 If referencing a spec (file path or `#N`):

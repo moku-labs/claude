@@ -10,8 +10,10 @@ export const meta = {
   ],
 }
 
-// Opt-in adversarial verification: each surviving blocker is challenged by N skeptics.
-const ADVERSARIAL = args === 'adversarial' || (args && args.adversarial === true)
+// Adversarial verification is ON BY DEFAULT — every surviving blocker is challenged by N skeptics
+// who check whether the pattern is an established repo convention before it fails the build.
+// Opt OUT with {adversarial:false} (or args "no-adversarial").
+const ADVERSARIAL = !(args === 'no-adversarial' || (args && args.adversarial === false))
 const SKEPTICS_PER_BLOCKER = (args && args.skeptics) || 2
 
 // Shape of every Moku validator's JSON output contract (see agent-preamble.md).
@@ -43,6 +45,7 @@ const VALIDATOR_RESULT = {
           line: { type: 'number' },
           rule: { type: 'string' },
           message: { type: 'string' },
+          fix: { type: 'string' },
         },
       },
     },
@@ -88,13 +91,24 @@ const VALIDATORS = [
   { type: 'moku-architecture-validator', focus: 'cross-plugin architecture: dependency graph, event flow, API consistency.' },
 ]
 
+// agentType MUST be namespaced (`moku:<name>`) — the registry registers these agents under the
+// plugin namespace, and an unqualified type silently fails to launch (which previously produced a
+// vacuous PASS with 0 validators run). If a validator returns no parseable verdict, re-spawn once
+// asking explicitly for the JSON contract before giving up.
 const results = await parallel(
-  VALIDATORS.map((v) => () =>
-    agent(
-      `Validate the project (plugins: ${pluginList}). Focus: ${v.focus} ${SPEC_RULE}`,
-      { label: v.type.replace('moku-', ''), phase: 'Validate', agentType: v.type, schema: VALIDATOR_RESULT },
-    ),
-  ),
+  VALIDATORS.map((v) => () => {
+    const qualified = `moku:${v.type}`
+    const run = (extra) =>
+      agent(
+        `Validate the project (plugins: ${pluginList}). Focus: ${v.focus} ${SPEC_RULE}${extra || ''}`,
+        { label: v.type.replace('moku-', ''), phase: 'Validate', agentType: qualified, schema: VALIDATOR_RESULT },
+      )
+    return run().then((r) =>
+      r && r.verdict
+        ? r
+        : run(' Your LAST message MUST be the JSON output contract via StructuredOutput — do not end mid-analysis.'),
+    )
+  }),
 )
 
 // --- Synthesize (plain-JS aggregation — no extra agent needed) ------------
@@ -113,9 +127,10 @@ let blockers = dedupe(ok.flatMap((r) => (r.blockers ?? []).map((b) => ({ ...b, f
 const warnings = dedupe(ok.flatMap((r) => (r.warnings ?? []).map((w) => ({ ...w, from: r.agent }))))
 const downgraded = []
 
-// --- Adversarial pass (opt-in): N skeptics try to REFUTE each blocker. ----
+// --- Adversarial pass (ON BY DEFAULT): N skeptics try to REFUTE each blocker. ----
 // A blocker that a majority of skeptics refute is downgraded to a warning — this kills
-// plausible-but-wrong findings before they fail the build. Real blockers survive.
+// plausible-but-wrong findings (esp. ones that contradict an already-verified repo convention)
+// before they fail the build. Real blockers survive.
 if (ADVERSARIAL && blockers.length > 0) {
   phase('Adversarial')
   const VERDICT = {
@@ -129,8 +144,10 @@ if (ADVERSARIAL && blockers.length > 0) {
         Array.from({ length: SKEPTICS_PER_BLOCKER }, (_, i) => () =>
           agent(
             `Try to REFUTE this validation finding. Default to refuted=true unless it genuinely holds.\n` +
+              `Convention check: if two or more ALREADY-VERIFIED plugins in this repo use the same ` +
+              `pattern (grep them), it is a house convention, not a per-plugin violation — refute it.\n` +
               `Finding: ${JSON.stringify({ file: b.file, line: b.line, rule: b.rule, message: b.message })}`,
-            { label: `skeptic:${(b.file || '?').split('/').pop()}#${i + 1}`, phase: 'Adversarial', agentType: 'moku-skeptic', schema: VERDICT },
+            { label: `skeptic:${(b.file || '?').split('/').pop()}#${i + 1}`, phase: 'Adversarial', agentType: 'moku:moku-skeptic', schema: VERDICT },
           ),
         ),
       ).then((votes) => {
@@ -150,15 +167,21 @@ if (ADVERSARIAL && blockers.length > 0) {
   log(`Adversarial: ${downgraded.length} blocker(s) refuted/downgraded, ${blockers.length} survived`)
 }
 
+// A run where not every validator actually ran + returned a parseable verdict is NOT a PASS —
+// it is INCONCLUSIVE. PASS requires all validators to have run AND zero surviving blockers.
+// (This guards against the prior "0 validators run -> vacuous PASS" failure.)
+const missing = VALIDATORS.length - ok.length
+const verdict = blockers.length > 0 ? 'FAIL' : missing > 0 ? 'INCONCLUSIVE' : 'PASS'
 const disposition = {
-  verdict: blockers.length > 0 ? 'FAIL' : 'PASS',
+  verdict,
   adversarial: ADVERSARIAL,
   ranValidators: ok.map((r) => r.agent),
-  missing: VALIDATORS.length - ok.length,
+  missing,
+  missingNote: missing > 0 ? `${missing} validator(s) did not run or returned no parseable verdict — verdict is INCONCLUSIVE, not PASS.` : undefined,
   blockers,
   warnings: [...warnings, ...downgraded.map((d) => ({ ...d, note: `downgraded by skeptics (${d.refuteVotes} refuted)` }))],
-  counts: { blockers: blockers.length, warnings: warnings.length + downgraded.length, refuted: downgraded.length },
+  counts: { blockers: blockers.length, warnings: warnings.length + downgraded.length, refuted: downgraded.length, missing },
 }
 
-log(`Disposition: ${disposition.verdict} — ${blockers.length} blocker(s), ${disposition.counts.warnings} warning(s)`)
+log(`Disposition: ${verdict} — ${blockers.length} blocker(s), ${disposition.counts.warnings} warning(s), ${missing} validator(s) missing`)
 return disposition

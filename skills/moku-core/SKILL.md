@@ -217,6 +217,9 @@ For detailed specifications, consult:
 - `references/sandbox-index.md` — Coding-style exemplars (real moku code) — open the tier-matching plugin before writing source
 - `references/memory-schema.md` — `.planning/` durable layer + STATE.md Recovery block for fast multi-session resume
 - `references/tool-scoping.md` — Per-stage tool posture: why path-based write gates live in hooks, not `disallowed-tools`
+- `references/skeleton-conventions.md` — Hook-compliant authoring rules (≤30-line index, typed config, structural types, JSDoc) — read BEFORE writing skeleton/plugin source
+- `references/house-style.md` — Approved repo conventions validators must NOT block (api: createApi, framework test bootstrap, per-event register)
+- `references/glossary.md` — Domain terms + ESLint abbreviation allowList so agents/spell-check don't "correct" valid names
 
 ## Advanced References (load when needed)
 

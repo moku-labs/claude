@@ -15,7 +15,7 @@ Before any decision about architecture, the core API, factory chain, config, lif
 Explore and contextualize a Moku project idea before planning. The output is a `.planning/context-{name}.md` file consumed by `/moku:plan ... --context`.
 
 This command runs an adaptive workflow:
-1. **Collaborative analysis** — auto-detect complexity from project context, discuss only genuine architectural decisions with code examples and recommendations
+1. **Collaborative analysis** — auto-detect complexity from project context, discuss only genuine architectural decisions, and for each one show TypeScript code examples per option, a clear recommendation with reasoning, and specific concerns about the alternatives (opinionated colleague, not a passive interviewer)
 2. **Research** — 1–3 parallel researcher agents based on detected depth
 3. **Debate** — Present → Challenge → Decide loop to stress-test the approach
 4. **Context file** — structured output for the plan command

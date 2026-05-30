@@ -32,6 +32,37 @@ _moku_read_settings() {
   fi
 }
 
+# Play ONLY a sound (no desktop popup). Use for high-frequency events (e.g. every agent stop)
+# where a popup would be spammy. Gated by enableSounds. Falls back to the terminal bell.
+moku_sound() {
+  local sound="${1:-}"
+  _moku_read_settings
+  [ "$_MOKU_SOUND_ENABLED" = "true" ] || return 0
+  [ -n "$sound" ] && [ "$sound" != "none" ] || return 0
+  case "$(uname -s)" in
+    Darwin)
+      # Capitalize first letter for macOS sound file names (Glass.aiff, Tink.aiff, …)
+      local sound_cap="$(echo "${sound:0:1}" | tr '[:lower:]' '[:upper:]')${sound:1}"
+      local sound_file="/System/Library/Sounds/${sound_cap}.aiff"
+      if [ -f "$sound_file" ] && command -v afplay &>/dev/null; then
+        afplay "$sound_file" 2>/dev/null &
+      else
+        { printf '\a' >/dev/tty; } 2>/dev/null || printf '\a' >&2 2>/dev/null
+      fi
+      ;;
+    Linux)
+      if command -v paplay &>/dev/null; then
+        paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null &
+      else
+        { printf '\a' >/dev/tty; } 2>/dev/null || printf '\a' >&2 2>/dev/null
+      fi
+      ;;
+    *)
+      printf '\a' >/dev/tty 2>/dev/null || printf '\a' >&2
+      ;;
+  esac
+}
+
 moku_notify() {
   local title="$1" message="$2" sound="${3:-}"
   _moku_read_settings
@@ -51,22 +82,5 @@ moku_notify() {
   fi
 
   # --- Sound alert ---
-  if [ "$_MOKU_SOUND_ENABLED" = "true" ] && [ -n "$sound" ] && [ "$sound" != "none" ]; then
-    case "$(uname -s)" in
-      Darwin)
-        local sound_file="/System/Library/Sounds/${sound}.aiff"
-        # Capitalize first letter for macOS sound file names
-        local sound_cap="$(echo "${sound:0:1}" | tr '[:lower:]' '[:upper:]')${sound:1}"
-        sound_file="/System/Library/Sounds/${sound_cap}.aiff"
-        if [ -f "$sound_file" ]; then
-          afplay "$sound_file" 2>/dev/null &
-        fi
-        ;;
-      Linux)
-        if command -v paplay &>/dev/null; then
-          paplay /usr/share/sounds/freedesktop/stereo/complete.oga 2>/dev/null &
-        fi
-        ;;
-    esac
-  fi
+  moku_sound "$sound"
 }

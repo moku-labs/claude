@@ -32,21 +32,32 @@ esac
 
 # Rule 1: ≤30 lines, wiring-only (Write only — Edit's new_string is a partial replacement)
 if [ "$IS_WRITE" = "yes" ]; then
-  LINE_COUNT=$(printf '%s\n' "$CONTENT" | wc -l | tr -d ' ')
-  if [ "$LINE_COUNT" -gt 30 ]; then
-    log_diagnostic "INDEX-RULE" "$FILE_PATH" "index.ts has $LINE_COUNT lines (max 30)"
-    echo "BLOCKED: plugins/*/index.ts must be ≤30 lines (wiring-only), got $LINE_COUNT lines. Move business logic into separate module files." >&2
+  # Count EFFECTIVE wiring lines only — exclude blank lines, comment-only lines (// and JSDoc * /** */),
+  # and import lines. The JSDoc header + imports are not "wiring" and previously inflated the count,
+  # causing pervasive false INDEX-RULE hits on otherwise-correct files.
+  EFFECTIVE=$(printf '%s\n' "$CONTENT" \
+    | grep -vE '^[[:space:]]*$' \
+    | grep -vE '^[[:space:]]*(//|/\*|\*)' \
+    | grep -vE '^[[:space:]]*import[[:space:]]' \
+    | wc -l | tr -d ' ')
+  if [ "$EFFECTIVE" -gt 30 ]; then
+    log_diagnostic "INDEX-RULE" "$FILE_PATH" "index.ts has $EFFECTIVE effective wiring lines (max 30; blanks/comments/imports excluded)"
+    echo "BLOCKED: plugins/*/index.ts must be ≤30 wiring lines (the JSDoc header, blank lines, and imports do NOT count), got $EFFECTIVE. Move logic into module files (state.ts/api.ts/handlers.ts). See skeleton-conventions.md for the literal wiring template." >&2
     exit 2
   fi
 fi
 
 # Rule 2: explicit type params — already blocked by check-plugin-antipatterns.sh
 
-# Rule 3: onStart/onStop must reference a real resource lifecycle method
+# Rule 3: onStart/onStop must reference a real resource lifecycle method.
+# Escape hatch: a one-line `// @no-resource-check — <why>` comment opts out (e.g. a plugin that
+# legitimately manages DOM/navigation listeners, which a regex can't reliably recognize).
 if printf '%s\n' "$CONTENT" | grep -qE '\bon(Start|Stop)\s*:'; then
-  if ! printf '%s\n' "$CONTENT" | grep -qE '\.(listen|close|connect|disconnect|start|stop|end|destroy|kill|open|shutdown|init|initialize|cleanup|dispose|terminate|release)\('; then
+  if printf '%s\n' "$CONTENT" | grep -qE '@no-resource-check'; then
+    : # explicitly justified — allow
+  elif ! printf '%s\n' "$CONTENT" | grep -qE '\.(listen|close|connect|disconnect|start|stop|end|destroy|kill|open|shutdown|init|initialize|cleanup|dispose|terminate|release|addEventListener|removeEventListener|subscribe|unsubscribe|observe|watch|unwatch|abort|flush)\('; then
     log_diagnostic "INDEX-RULE" "$FILE_PATH" "onStart/onStop without real resource lifecycle"
-    echo "BLOCKED: onStart/onStop in index.ts must manage a real resource (server, connection, listener). Remove lifecycle hooks if no resource is being managed." >&2
+    echo "BLOCKED: onStart/onStop in index.ts must manage a real resource (server/connection/listener). If this is intentional (e.g. DOM/nav listeners), add a one-line '// @no-resource-check — <why>' comment to suppress. Otherwise remove the lifecycle hooks." >&2
     exit 2
   fi
 fi

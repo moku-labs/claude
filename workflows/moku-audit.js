@@ -71,7 +71,7 @@ const gen = await agent(
     `inputs, edge cases, error paths, and adversarial inputs. Also cross-check the command ` +
     `against skills/moku-core/references/spec-index.md — any step that decides architecture/API ` +
     `behavior should route through the spec. Return the scenarios array.`,
-  { label: `gen:${COMMAND}`, phase: 'Generate', agentType: 'moku-audit-scenario-generator', schema: SCENARIOS },
+  { label: `gen:${COMMAND}`, phase: 'Generate', agentType: 'moku:moku-audit-scenario-generator', schema: SCENARIOS },
 )
 
 const scenarios = gen?.scenarios ?? []
@@ -93,7 +93,7 @@ const batchResults = await parallel(
       `Simulate these scenarios against ${COMMAND_PATH} step-by-step (pure text analysis, no file ` +
         `changes). Identify gaps, missing error handling, ambiguities, and contradictions. ` +
         `Scenarios: ${JSON.stringify(batch)}`,
-      { label: `sim:batch-${i + 1}`, phase: 'Simulate', agentType: 'moku-audit-simulator', schema: FINDINGS },
+      { label: `sim:batch-${i + 1}`, phase: 'Simulate', agentType: 'moku:moku-audit-simulator', schema: FINDINGS },
     ),
   ),
 )
@@ -107,7 +107,7 @@ const report = await agent(
   `Synthesize these audit findings for ${COMMAND_PATH} into a deduplicated, prioritized gap ` +
     `list and produce an improved version of the command. Do NOT overwrite the original — write ` +
     `any improved draft to a clearly-named file and report its path. Findings: ${JSON.stringify(findings)}`,
-  { label: `synth:${COMMAND}`, phase: 'Synthesize', agentType: 'moku-audit-synthesizer', schema: REPORT },
+  { label: `synth:${COMMAND}`, phase: 'Synthesize', agentType: 'moku:moku-audit-synthesizer', schema: REPORT },
 )
 
 return { command: COMMAND, scenarios: scenarios.length, findings: findings.length, report }

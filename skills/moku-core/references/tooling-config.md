@@ -148,7 +148,15 @@ export default [
   {
     rules: {
       "unicorn/prevent-abbreviations": ["error", {
-        allowList: { ctx: true, fn: true, cb: true }
+        // Pre-expanded so builds don't have to widen this mid-flight. See references/glossary.md.
+        allowList: {
+          ctx: true, fn: true, cb: true, ref: true, args: true, params: true, props: true,
+          env: true, i18n: true, l10n: true, spa: true, ssg: true, ssr: true, seo: true,
+          api: true, dev: true, prod: true, md: true, dir: true, doc: true, docs: true,
+          db: true, util: true, utils: true, pkg: true, src: true, dist: true, config: true,
+          cfg: true, e2e: true, cli: true, dom: true, css: true, html: true, url: true, uri: true,
+          str: true, num: true, msg: true, err: true, req: true, res: true, opts: true, attr: true
+        }
       }]
     }
   },
@@ -568,6 +576,28 @@ Safe default permissions for Claude Code agents working in a Moku project. These
 - `git add`, `git commit`, `git push` — destructive/shared operations
 - `rm`, `mv` — destructive file operations
 - `bun add`, `bun remove` — dependency changes
+
+## cspell.json
+
+Pre-seeded spell-check dictionary so the live spell-checker doesn't flag valid moku/domain terms in
+comments, docs, and Markdown. Seed `words` from `references/glossary.md` (flatten its grouped lists).
+
+```json
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "Moku", "createCoreConfig", "createCore", "createApp", "createPlugin", "createCorePlugin",
+    "createState", "pluginConfigs", "onInit", "onStart", "onStop", "ctx", "microkernel",
+    "bun", "bunx", "tsdown", "rolldown", "vite", "vitest", "biome", "eslint", "publint", "lefthook",
+    "tsc", "noEmit", "monorepo", "frontmatter", "gitignore", "worktree", "argv", "stdout", "stderr",
+    "cwd", "dotenv", "cspell", "SSG", "SPA", "SSR", "SEO", "HMR", "preact", "VNode", "hydration",
+    "remark", "rehype", "shiki", "satori", "resvg", "hast", "mdast", "Cloudflare", "wrangler",
+    "NFKD", "subprocess", "afplay", "paplay", "expectTypeOf", "EISDIR", "antipatterns"
+  ],
+  "ignorePaths": ["node_modules/**", "dist/**", ".planning/**"]
+}
+```
 
 ## Key Conventions
 

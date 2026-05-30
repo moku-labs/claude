@@ -59,6 +59,11 @@ Error: [framework-name] <description>.
   <actionable suggestion>.
 ```
 
+**Exact format — no deviations:** two lines, the second indented two spaces. Use a period at the end
+of BOTH the description and the suggestion. Do NOT use arrows (`→`), em-dashes, or other separators in
+place of the two-line `.\n  ` structure. The `[framework-name]` bracket prefix is required on every
+thrown message. Copy-paste template: `[web] Plugin "x" is not registered.\n  Add it to createApp({ plugins: [...] }).`
+
 Validation errors → `TypeError`. Lifecycle errors → `Error`.
 
 Examples:

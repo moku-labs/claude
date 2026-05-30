@@ -10,6 +10,8 @@ This file is read by `/moku:build` when `## Skeleton:` in STATE.md is `not-start
 
 ## Step S1: Read and Validate Skeleton Spec
 
+**Before writing ANY skeleton code, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md`** and emit hook-compliant code from line 1 (≤30-line wiring `index.ts`, typed-const config, `type` not `interface` for Config/Api, `createCoreConfig` third CorePlugins arg, JSDoc tag-line rules, no inline `as`, no `wireX`, structural injectable types). This is the single biggest first-try-correctness lever — the spec code blocks are content-correct but are NOT pre-written against the hooks, so reconcile them to these conventions as you write, not in a later rework.
+
 1. Read `.planning/build/skeleton-spec.md`
 2. Verify all five sections are present:
    - Architecture Overview
@@ -121,6 +123,13 @@ Update STATE.md: mark `Skeleton verify` row as `done` in Wave Progress.
 Generate a report, save it to `.planning/build/skeleton-report.md`, and present it inline to the user.
 
 **Save first, then present:** Write the complete report to `.planning/build/skeleton-report.md` before presenting it. This allows the resume path (when skeleton status is `verified`) to re-read the report from disk without regenerating it.
+
+**Carry "revisit" items into STATE.md (do NOT leave them only in the report).** If the skeleton
+flagged anything to revisit during the build (a deferred `.d.ts`/type concern, a stubbed area to
+confirm, an event-type to populate), copy each into a `## Skeleton Revisit TODOs` section in STATE.md
+(see `plan-templates.md`). A real build lost a `.d.ts` fix because its "revisit" note lived only in
+`skeleton-report.md` and was never re-read. The build waves must clear every Skeleton Revisit TODO
+before the framework is marked complete.
 
 **Report format:**
 

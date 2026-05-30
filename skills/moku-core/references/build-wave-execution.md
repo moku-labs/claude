@@ -101,6 +101,21 @@ export naming (`<name>Plugin`), JSDoc, and test style.
 If no entries exist, omit this section.
 These are intentional trade-off decisions — follow them, do not override.]
 
+## Hard Rules — filesystem safety (MANDATORY for parallel builders)
+Sibling builders run concurrently. A repo-wide command from one builder will corrupt the others.
+- **Write ONLY under `src/plugins/[name]/` and its `__tests__/`.** Never touch `src/config.ts`,
+  `src/index.ts`, `src/plugins/index.ts` (the barrel), `package.json`, or any sibling plugin.
+- **NEVER run a repo-wide command:** no `lint:fix`, no `bun run format`, no `biome … .`, no
+  `eslint .` across the repo.
+- **NEVER run a git mutation:** no `checkout`, `restore`, `reset`, `stash`, `clean`, `add`, `commit`
+  (a stray `git checkout` reverted a sibling plugin to stubs in a real build — data loss).
+- **Scoped formatting only:** `bunx biome format --write src/plugins/[name]/`.
+- Report lint/format/dependency issues as HINTS in your output contract; the orchestrator fixes them
+  repo-wide AFTER the wave. Do not "tidy" outside your plugin.
+> For waves with >1 builder, the orchestrator SHOULD spawn each builder with `isolation: "worktree"`
+> (Agent tool) so a stray command cannot reach siblings, then merge each worktree back after it
+> verifies. The command ban above is the belt to the worktree's suspenders.
+
 ## Build Rules
 - Follow complexity tier [tier] file structure exactly
 - No explicit generics on createPlugin or createCorePlugin — all types inferred
@@ -110,6 +125,7 @@ These are intentional trade-off decisions — follow them, do not override.]
 - Only include onStart/onStop if spec justifies resource management
 - Write all tests inside the plugin directory: `__tests__/unit/` and `__tests__/integration/`
 - Do NOT create tests in root `tests/` — that directory is for framework-level tests only
+- **Author hook-compliant from line 1** — before writing, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md` and the **Correct-First-Try checklist** in `build-plugin.md`. Don't write freehand then shrink: `index.ts` starts as the ≤30-line wiring template; config is a typed const; `Config`/`Api` are `type` aliases (not `interface`); no inline `as`; no `wireX()`; injectable function types are structural (never a runtime package's namespace types).
 
 ## TDD Protocol — RED → GREEN → REFACTOR
 Follow the full TDD protocol from the moku-testing skill:

@@ -53,7 +53,10 @@ src/
 ## Core Principles
 
 ### Zero Classes in Markup
-All styling via `data-*` attributes. Never use CSS classes in markup.
+All styling and state signals via `data-*` attributes. Never use CSS classes in markup — and this
+applies to **island/runtime code and JSDoc `@example` blocks too**: use `el.dataset.active = ""` /
+`delete el.dataset.active`, never `el.classList.add("active")` / `el.classList.add("loading")`. A
+classList call anywhere (including examples) is the regression this rule prevents.
 
 ```tsx
 // CORRECT

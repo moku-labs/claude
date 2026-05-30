@@ -215,6 +215,23 @@ createState: (): { processor: Processor | null } => ({ processor: null }),
 
 **Rule:** If your plugin has no connections to open, no listeners to start, and no resources to manage, omit onStart and onStop entirely.
 
+## Correct-first-try gotchas (real fixes that should never have been needed)
+
+- **Tier ≠ directory shape.** Pick the tier by domain complexity. A flat multi-file layout (one
+  concern per file, no subdirectories) is a valid Complex/VeryComplex layout — the ≤30-line `index.ts`
+  rule frequently forces flat. A `generators/`-style subdir does NOT force a tier relabel.
+- **Injectable / exported function types must be STRUCTURAL.** Declare your own `interface`/`type`
+  for options and return values. NEVER type them via a runtime package's *namespace* type (e.g.
+  `import("bun").SpawnOptions.OptionsObject<…>`) — `tsdown`/rolldown `.d.ts` bundling drops it, so the
+  shipped type resolves to `undefined` for consumers even though `tsc --noEmit` passes. Verify with
+  `bun run build` + the emitted `.d.ts`, not just `tsc`.
+- **Honor override hooks.** If a builder API exposes an override (`.toFile()`, `.toJson()`, …), the
+  compiler/runtime MUST call it: `override?.(x) ?? default(x)`. Don't silently ignore a provided override.
+- **No dead `depends`.** Every `depends` edge should back a real `ctx.require(dep).method()` call. If an
+  edge exists only for init ordering/presence, document why inline; otherwise drop it.
+- **Error messages:** exactly `[<framework>] <description>.\n  <suggestion>.` — no arrows, both lines
+  end with a period (see `spec/11-INVARIANTS.md §Part 3`).
+
 ## JSDoc Requirements
 
 Every file must have full JSDoc. Plugin index.ts must have:

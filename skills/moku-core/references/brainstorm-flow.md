@@ -206,6 +206,14 @@ For each identified decision that passed the Question Validation Protocol, prese
 
 **IMPORTANT — Two-turn pattern to prevent text blocking:** The AskUserQuestion dialog can obscure text output above it. To ensure the user can read the code examples and reasoning, split each decision into TWO response turns:
 
+> **Turn A is the primary deliverable — never skip or thin it.** The full TypeScript code examples
+> (5–15 lines per option), the clear recommendation with reasoning, and the concerns about each
+> alternative MUST appear as visible text in Turn A. Turn B's option descriptions are short
+> summaries for quick reference — they do NOT replace Turn A. Asking the user to decide WITHOUT
+> first showing the worked code examples and your recommendation is the regression this rule exists
+> to prevent. If you ever find yourself opening `AskUserQuestion` without having shown the examples,
+> stop and present Turn A first.
+
 **Turn A — Present the full discussion (text only, NO AskUserQuestion in this turn):**
 
 ````markdown
@@ -235,6 +243,8 @@ For each identified decision that passed the Question Validation Protocol, prese
 ````
 
 **Turn B — Ask the question (in the NEXT response, after the user has seen the code):**
+
+**Prerequisite:** Turn A (above) must already have shown the full code examples, the framed trade-offs, and your recommendation. The option descriptions below are summaries ONLY — do not try to fit the code or full reasoning into them.
 
 Use `AskUserQuestion`:
 - Question: "{decision title}"
