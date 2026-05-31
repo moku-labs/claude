@@ -49,6 +49,10 @@
 6. Write updated specs as needed
 7. Proceed to Stage 2
 
+## Quick-mode auto-suggest (update skips Stage 1)
+
+All three update flows above skip Stage 1 and enter at Stage 2. Because the `--quick` auto-suggest in `plan.md` fires "before the FIRST approval gate of this run," for `update` that gate is the **Stage 2** gate. After the change set is assembled (the plugins/specs this update touches) and **before** presenting the Stage 2 gate, run the auto-suggest: if ≤ 4 plugins/changes are in scope AND QUICK_MODE is not already true, offer quick mode via the `AskUserQuestion` defined in `plan.md` ("Only [N] plugins detected. Switch to quick mode?"). This is the update-verb counterpart to the create-verb's pre-Stage-1 check — without it the auto-suggest would never fire for updates.
+
 ## Next
 
 After the update analysis, proceed to **Stage 2** (Specifications) and then **Stage 3** (Skeleton + Verification). Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for detailed instructions. Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md` for templates.

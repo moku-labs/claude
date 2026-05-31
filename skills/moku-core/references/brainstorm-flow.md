@@ -392,14 +392,15 @@ Each researcher prompt must include:
 3. The DESCRIPTION
 4. The CATEGORY
 5. The analysis summary (from `.planning/brainstorm-{NAME}-analysis.md`) — this provides richer context including auto-detected signals and architectural decisions made with the user
-6. The output path: `.planning/brainstorm-{NAME}-research-{focus-slug}.md`
+
+**Researchers return findings as text — they do NOT write files.** The `brainstorm-researcher` agent has no `Write` tool (`tools: ["Read","Grep","Glob","WebSearch","WebFetch"]`), and its output contract is the structured findings in its final message, which the runtime captures. Do NOT instruct a researcher to write an output path — capture each agent's returned text instead. (Writing the merged file is the parent session's job; the parent can write to `.planning/`.)
 
 ### Merging Research
 
-After all researcher agents complete:
-1. **Validate outputs:** Before reading, verify each researcher's output file exists and is non-empty. If a researcher's file is missing or empty (FAIL verdict), log: "Researcher {focus} did not produce output — proceeding without it." Do NOT attempt to read or merge missing files.
-2. Read all **available** research output files (skip missing ones)
-3. Merge into a single `.planning/brainstorm-{NAME}-research.md`:
+After all researcher agents complete (the **parent** brainstorm session does this — it has Write access to `.planning/`):
+1. **Collect returned text:** Use each researcher agent's returned final message as its findings. If an agent returned nothing or errored (FAIL verdict), log: "Researcher {focus} returned no findings — proceeding without it." and skip it. Do NOT look for per-researcher files — they were never written.
+2. Gather all **available** returned findings (skip the FAILed ones).
+3. **The parent writes** a single `.planning/brainstorm-{NAME}-research.md` (one `### {focus}` section per researcher that returned text; a single-researcher `standard`/`quick` run yields one section):
    - Combine Key Findings from all researchers (deduplicate similar findings)
    - Merge Approach Options (remove duplicates, max 3)
    - Combine Risks & Gotchas (deduplicate, keep highest severity)

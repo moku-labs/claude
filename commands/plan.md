@@ -40,7 +40,7 @@ This command runs as a **3-stage gated workflow** with optional discussion, opti
 
 The `add` verb is special — it runs a lightweight spec-only flow instead of the 3-stage workflow. It creates the plugin spec and recommends `/moku:build add {name}` for implementation.
 
-**`--quick` mode:** If `--quick` is present in arguments, collapse the 3-stage workflow into a single pass — analysis, specs, and skeleton in one invocation with one approval at the end instead of three. Auto-suggested when Stage 1 finds ≤ 4 plugins — the auto-suggest check runs after the plugin table is assembled, before the Stage 1 approval gate, **and only when QUICK_MODE is not already true** (if `--quick` was passed explicitly, the user has already chosen quick mode — do not offer the choice again). Use `AskUserQuestion` to offer the choice:
+**`--quick` mode:** If `--quick` is present in arguments, collapse the 3-stage workflow into a single pass — analysis, specs, and skeleton in one invocation with one approval at the end instead of three. Auto-suggested when ≤ 4 plugins/changes are in scope — the auto-suggest check runs **after the plugin/change set is assembled, before the FIRST approval gate of this run**, **and only when QUICK_MODE is not already true** (if `--quick` was passed explicitly, the user has already chosen quick mode — do not offer the choice again). The "first gate" differs by verb: for `create`/`migrate` it is the Stage 1 gate; for `update` (which skips Stage 1 — see `plan-verb-update.md`) it is the Stage 2 gate, so the check fires there using the count of plugins/changes the update touches. This keeps the auto-suggest reachable for every verb, not just the ones that run Stage 1. Use `AskUserQuestion` to offer the choice:
 - Question: "Only [N] plugins detected. Switch to quick mode?"
 - Header: "Quick mode"
 - Options: "Continue with 3-stage workflow" / "Switch to --quick (Recommended)" with descriptions
@@ -118,31 +118,35 @@ Parse `$ARGUMENTS` into six components: **VERB**, **TYPE**, **PATH_OR_LINK**, **
 
 (The filesystem guard in step 1 runs unconditionally — even if step 2 would stop early. The empty directory is harmless.)
 
-If `--context {filename}` is present anywhere in `$ARGUMENTS`, **if it appears multiple times, use the last occurrence (last-wins; earlier values are discarded)**. Extract the token following the last `--context` as the context filename, strip **all** `--context {filename}` occurrences from `$ARGUMENTS`.
+**Multiple contexts → one plan.** `--context {filename}` may appear **more than once** — each occurrence names a brainstorm context (e.g. two features explored in the same session: `--context context-web-parity --context context-client-data`). Collect **all** occurrences into an ordered, de-duplicated list **CONTEXT_FILES** (this is the fix for the incident where a second feature's context collided with the first feature's plan — both now feed one plan). Extract the token following **each** `--context`, then strip **all** `--context {filename}` occurrences from `$ARGUMENTS`. **Resolve and validate every token** with the per-token rules below; a failure on any one token stops the command (do not silently drop a context the user asked for).
 
-   **Absolute path guard:** If the extracted token starts with `/`, reject immediately: "Context file must be a relative path within `.planning/`. Example: `--context my-notes` or `--context .planning/context-file.md`." and stop.
+   For **each** extracted token, in order:
 
-   **Metacharacter guard:** If the extracted token contains any of `;`, `|`, `$`, `` ` ``, `(`, `)`, reject: "Context filename contains illegal characters. Use a plain relative path with no shell metacharacters." and stop.
+   **Absolute path guard:** If the token starts with `/`, reject immediately: "Context file must be a relative path within `.planning/`. Example: `--context my-notes` or `--context .planning/context-file.md`." and stop.
 
-   **Whitespace guard:** If the extracted token is empty or whitespace-only (after trimming), reject: "Context filename cannot be empty or whitespace-only. Provide a file name such as `--context brainstorm-notes`." and stop.
+   **Metacharacter guard:** If the token contains any of `;`, `|`, `$`, `` ` ``, `(`, `)`, reject: "Context filename contains illegal characters. Use a plain relative path with no shell metacharacters." and stop.
 
-   **Path construction and probe:**
-   1. If the token already starts with `.planning/`, use it as-is: CONTEXT_FILE=`{token}`.
-   2. Otherwise, set CONTEXT_FILE=`.planning/{token}`.
+   **Whitespace guard:** If the token is empty or whitespace-only (after trimming), reject: "Context filename cannot be empty or whitespace-only. Provide a file name such as `--context brainstorm-notes`." and stop.
 
-   **Path traversal guard:** If CONTEXT_FILE (after resolving any `../` sequences) points outside `.planning/`, reject: "Context file path must resolve within `.planning/`. Path traversal (`..`) is not allowed." and stop.
+   **Path construction and probe (per token):**
+   1. If the token already starts with `.planning/`, use it as-is: CANDIDATE=`{token}`.
+   2. Otherwise, set CANDIDATE=`.planning/{token}`.
 
-   **File existence probe:** Run `test -f '$CONTEXT_FILE'`. If not found:
-   - Try `.planning/{token}.md` (handles plain token inputs such as `brainstorm-notes` → `.planning/brainstorm-notes.md`). If that exists, set CONTEXT_FILE to that path.
-   - If still not found, try `.planning/context-{token}.md` (handles brainstorm-generated names such as `.planning/context-site-gen.md`). If that exists, set CONTEXT_FILE to that path.
-   - If none of the three paths exist, tell user: "Context file `{CONTEXT_FILE}` not found. Run `/moku:brainstorm` first or check the path." and stop.
-   All bash commands referencing CONTEXT_FILE must single-quote the variable: `test -f '$CONTEXT_FILE'`.
+   **Path traversal guard:** If CANDIDATE (after resolving any `../` sequences) points outside `.planning/`, reject: "Context file path must resolve within `.planning/`. Path traversal (`..`) is not allowed." and stop.
 
-   If `--context` is absent, set CONTEXT_FILE=(none).
+   **File existence probe (per token):** Run `test -f '$CANDIDATE'`. If not found:
+   - Try `.planning/{token}.md` (handles plain token inputs such as `brainstorm-notes` → `.planning/brainstorm-notes.md`). If that exists, use it.
+   - If still not found, try `.planning/context-{token}.md` (handles brainstorm-generated names such as `.planning/context-site-gen.md`). If that exists, use it.
+   - If none of the three paths exist, tell user: "Context file for `{token}` not found (tried `{CANDIDATE}`, `.planning/{token}.md`, `.planning/context-{token}.md`). Run `/moku:brainstorm` first or check the path." and stop.
+   Append the resolved path to CONTEXT_FILES (skip if already present — de-duplicate). All bash commands referencing a path must single-quote the variable: `test -f '$CANDIDATE'`.
 
-**`--context` verb support:** The `--context` flag is fully supported for the `create` verb (Context Injection Pre-Phase in `plan-verb-create.md` consumes the file). For `update` and `migrate` verbs, log a warning: "Note: `--context` provides supplementary context for the `{VERB}` workflow but does not skip any phases. The full {VERB} workflow will run." Pass CONTEXT_FILE through to the verb reference file — it can read the file for additional context but no phases are skipped automatically. For `add` verb: `--context` is not applicable — warn: "`--context` is ignored for the `add` verb." and set CONTEXT_FILE=(none).
+   **CONTEXT_FILE (compatibility variable):** After building CONTEXT_FILES, set CONTEXT_FILE to its **first** element (so any single-context references downstream still work), or `(none)` if the list is empty. When CONTEXT_FILES has **more than one** entry, log: "Multi-context plan: combining {N} brainstorm contexts into one plan — {comma-separated list}." The create-verb Context Injection Pre-Phase merges all of them (see `plan-verb-create.md`).
 
-**Write CONTEXT_FILE to STATE.md:** On the first STATE.md write of this invocation, include `## ContextFile: {CONTEXT_FILE}` if CONTEXT_FILE is not `(none)`, else `## ContextFile: (none)`. On resume, load CONTEXT_FILE from STATE.md's `## ContextFile:` field. **Precedence:** If `--context` is explicitly passed at invocation time (CONTEXT_FILE was set in Step 0 above), it overrides the stored `## ContextFile:` value — skip loading CONTEXT_FILE from STATE.md and use the Step 0 value. If `--context` was NOT passed, load CONTEXT_FILE from STATE.md's `## ContextFile:` field (or default to `(none)` if absent).
+   If `--context` is absent, set CONTEXT_FILES=(empty) and CONTEXT_FILE=(none).
+
+**`--context` verb support:** The `--context` flag (one or many) is fully supported for the `create` verb (Context Injection Pre-Phase in `plan-verb-create.md` consumes and **merges all** of CONTEXT_FILES). For `update` and `migrate` verbs, log a warning: "Note: `--context` provides supplementary context for the `{VERB}` workflow but does not skip any phases. The full {VERB} workflow will run." — and these verbs also read **all** of CONTEXT_FILES for additional context (no phases skipped automatically). For `add` verb: `--context` is not applicable — warn: "`--context` is ignored for the `add` verb." and set CONTEXT_FILES=(empty), CONTEXT_FILE=(none).
+
+**Write CONTEXT_FILE(S) to STATE.md:** On the first STATE.md write of this invocation, include `## ContextFile: {comma-separated CONTEXT_FILES}` if CONTEXT_FILES is non-empty (a single entry writes just that one path; multiple entries are comma-separated), else `## ContextFile: (none)`. On resume, load CONTEXT_FILES by splitting STATE.md's `## ContextFile:` field on commas (trim each); CONTEXT_FILE is the first element. **Precedence:** If `--context` is explicitly passed at invocation time (CONTEXT_FILES was set in Step 0 above), it overrides the stored value — skip loading from STATE.md and use the Step 0 list. If `--context` was NOT passed, load from STATE.md's `## ContextFile:` field (or default to empty/`(none)` if absent).
 
 If `--quick` is present anywhere in `$ARGUMENTS`, set QUICK_MODE=true and strip **all occurrences** of `--quick` before further parsing. Otherwise QUICK_MODE=false.
 
@@ -273,8 +277,9 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
   - multiSelect: false
   - If user chooses **Resume**: use the Phase-to-Stage Jump Table to determine the resume point.
   - If user chooses **Start fresh**:
+    - **Run the Unbuilt-Plan Guard first** (above). If the current specs are an approved-but-unbuilt plan, the user chooses Combine / Archive / Replace; only **Replace** permits deletion. If the guard determined the plan is not at risk (empty specs, or a built/archived phase), continue directly.
     - **Backup guard:** Before backing up, check if `.planning/STATE.md.bak` already exists. If it does, rename it to `.planning/STATE.md.bak.{YYYY-MM-DD}` (using today's date) to preserve the prior backup — do not silently overwrite it. Then back up `.planning/STATE.md` to `.planning/STATE.md.bak`.
-    - Delete all `.planning/specs/*.md` files (preserve `decisions.md` if present, wipe `.planning/build/` contents), then proceed as if no state existed.
+    - Then, per the guard's outcome: **Replace** → delete all `.planning/specs/*.md` files (preserve `decisions.md` if present, wipe `.planning/build/` contents); **Archive** → specs already moved to `.planning/archive/{slug}/`; **Combine** → keep specs and carry them into the new cycle. Proceed as the guard's outcome dictates (only Replace/Archive proceed "as if no state existed").
     - Immediately after the backup and delete, write a minimal `.planning/STATE.md` with the following headers so that a session drop during the next stage exit is recoverable:
       `## Phase: none` / `## Verb: {VERB}` / `## Target: {REQUIREMENTS if non-empty, else (none)}` / `## Skeleton: not-started` / `## QuickMode: {QUICK_MODE}` / `## PluginTable: (none)` / `## WaveGrouping: (none)` / `## Next Action: Run /moku:plan {VERB} to begin.`
     - Guard: Phase `none` means no work has been done — any subsequent resume will skip the resume prompt and proceed as a fresh run (per the Jump Table `none` row).
@@ -284,6 +289,33 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
     - Header: "Update"
     - Options: "Yes, update description" / "No, keep original"
     - multiSelect: false
+
+### Unbuilt-Plan Guard (MANDATORY before any spec deletion)
+
+**This protocol is the single gate every spec-clearing path must pass through. No path in this command (or any verb reference file) may delete or overwrite `.planning/specs/*.md` / `.planning/build/skeleton-spec.md` without running it first.** It exists because an approved-but-**unbuilt** plan is real, user-approved design work — deleting it silently is the incident this guard eliminates.
+
+**Why `complete` + populated specs ⇒ unbuilt:** after a successful build, `/moku:build` (build-final Step 7.5, Cycle Archive) moves the specs into `.planning/archive/cycle-N/` and resets `## Phase:` to `ready` (or `build/complete`). Therefore a `STATE.md` whose `## Phase:` is `complete` (or any `stageN/*`) **with spec files still present in `.planning/specs/`** is, by definition, a plan that was never built. That is exactly the state in which the old behavior deleted the specs.
+
+**Protocol — run before clearing specs:**
+
+1. **Detect an at-risk plan.** It is at risk if BOTH hold:
+   - `.planning/specs/` contains at least one `*.md` file (check: `find .planning/specs -maxdepth 1 -name '*.md' -type f 2>/dev/null | head -1`), AND
+   - the current `## Phase:` is NOT a built/archived state — i.e. it is one of `stage1*`, `stage2*`, `stage3*`, or `complete` (a plan that build has not yet consumed). If `## Phase:` is `none`, `building`, `build/*`, `ready`, or the specs dir is empty, the plan is NOT at risk — skip the rest of this protocol and proceed with the caller's normal behavior.
+2. **Never delete at-risk specs silently.** If at risk, present `AskUserQuestion`:
+   - Question: "There is an approved but **unbuilt** plan in `.planning/specs/` (Target: {current Target}, Phase: {phase}). Planning {new Target} would otherwise overwrite it. How do you want to proceed?"
+   - Header: "Unbuilt plan"
+   - Options:
+     1. label: "Combine into one plan (Recommended)", description: "Keep the existing specs and plan the new feature together with them — produces one merged plan + skeleton. Best when both features will be built together."
+     2. label: "Archive the existing plan", description: "Move the current specs + skeleton-spec.md + STATE.md to `.planning/archive/{slug}/` (preserved, not deleted), then plan the new feature in a clean slot."
+     3. label: "Replace (discard existing)", description: "Permanently drop the existing unbuilt specs and start the new plan fresh. Only choose this if the existing plan is abandoned."
+   - multiSelect: false
+3. **Route by choice:**
+   - **Combine:** Do NOT delete anything. Set COMBINE_MODE=true and record the existing spec set as an input to the new planning cycle. If a brainstorm context backs the existing plan (a `.planning/context-*.md` whose feature matches the current Target), add it to CONTEXT_FILES so the merge is context-driven. Hand off to the verb flow with both the existing specs and the new requirement; Stage 1/2 reconcile them into one numbered spec set (renumber `01..NN` across the union; tag each spec section with its source feature when they overlap a plugin). Set `## Target:` to a combined label (e.g. `{old} + {new}`).
+   - **Archive:** Run the **Archive-Plan helper** below, then proceed as a clean new cycle.
+   - **Replace:** Only now may specs be deleted. Back up STATE.md to `.planning/STATE.md.bak` first, then delete `.planning/specs/*.md` and `.planning/build/skeleton-spec.md`, and proceed fresh.
+4. **Non-interactive / `--quick`:** Never auto-Replace. If the gate cannot be shown, default to **Archive** (non-destructive) and log the archive path.
+
+**Archive-Plan helper:** derive SLUG from the current `## Target:` (slugify: lowercase, `[a-z0-9-]`, spaces→`-`; fallback `plan`); if `.planning/archive/{SLUG}/` already exists, suffix `-2`, `-3`, … Then `mkdir -p .planning/archive/{SLUG}/` and move into it: every `.planning/specs/*.md`, `.planning/build/skeleton-spec.md` (if present), and a copy of `.planning/STATE.md`. Log: "Archived unbuilt plan '{Target}' → `.planning/archive/{SLUG}/` ({N} specs + skeleton + STATE)." The archive is never deleted automatically.
 
 ### Phase-to-Stage Jump Table
 
@@ -297,7 +329,7 @@ If VERB is NOT `resume` but `.planning/STATE.md` exists:
 | `stage3` or `stage3/pending-approval` | Re-run Stage 3 (Skeleton Specification) |
 | `stage3/approved` | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
 | `complete` (VERB is `resume`, `create`, or `migrate`) | Tell user: "This plan is already complete. Run `/moku:build resume` to begin building." Stop. |
-| `complete` (VERB is `update` or `add`) | Back up `.planning/STATE.md` to `.planning/STATE.md.bak`. Delete `.planning/specs/*.md` files (preserve decisions.md, wipe `.planning/build/` contents). In the existing STATE.md, change only `## Phase:` to `none` — preserve all other headers unchanged. Do not rewrite the full file. Proceed as a new planning cycle for the given verb. |
+| `complete` (VERB is `update` or `add`) | **Run the Unbuilt-Plan Guard first** (the specs here are an approved-but-unbuilt plan — never delete them silently). Per the user's choice: **Combine** → keep specs, plan the new work together with them (no deletion); **Archive** → run the Archive-Plan helper, then continue; **Replace** → back up `.planning/STATE.md` to `.planning/STATE.md.bak` and delete `.planning/specs/*.md` (preserve decisions.md, wipe `.planning/build/` contents). After the chosen action, in the existing STATE.md change only `## Phase:` to `none` — preserve all other headers unchanged. Do not rewrite the full file. Proceed as a new planning cycle for the given verb. |
 
 **Pending-approval resume note:** When resuming from a phase ending in `/pending-approval`, the stage re-executes its own work and re-presents the approval gate. The stage entry guard (which requires the previous stage to be `/approved`) is bypassed in this case — the stage owns this phase and is resuming mid-run.
 
@@ -370,11 +402,11 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 
 **IMPORTANT:** Load only the one reference file matching the verb. Do not load all of them.
 
-**Context handoff:** All values parsed in Step 0 — VERB, TYPE, PATH_OR_LINK, REQUIREMENTS, PLUGIN_NAME, QUICK_MODE, and CONTEXT_FILE — are available as context variables in the routed reference file. The reference file does not need to re-parse `$ARGUMENTS`.
+**Context handoff:** All values parsed in Step 0 — VERB, TYPE, PATH_OR_LINK, REQUIREMENTS, PLUGIN_NAME, QUICK_MODE, CONTEXT_FILE, and **CONTEXT_FILES** (the full list) — are available as context variables in the routed reference file. The reference file does not need to re-parse `$ARGUMENTS`.
 
 **Quick mode:** QUICK_MODE is persisted in STATE.md via the `## QuickMode:` header. When `--quick` is passed, write `## QuickMode: true` to STATE.md on the first write of this invocation (before routing — see Step 0 startup sequence). On resume without `--quick`, read QUICK_MODE from STATE.md's `## QuickMode:` field. This allows quick mode to carry across sessions.
 - **Precedence:** If `--quick` is explicitly passed at invocation time, it overrides the stored `## QuickMode:` value — set QUICK_MODE=true regardless of what STATE.md contains, and update `## QuickMode: true` in STATE.md on the next write.
-- If QUICK_MODE=true and VERB is `create` or `update`: collapse Stages 1+2+3 into a single pass — run all three sequentially without stopping for approval between them. Present one combined summary at the end for a single approval gate. The verb reference files describe the individual stages — in quick mode, just run them back-to-back. **Important:** Even in quick mode, write STATE.md at each stage boundary (`stage1/approved`, `stage2/approved`) before proceeding to the next stage. This enables `plan resume` to recover from a session drop mid-quick-mode. The only difference from normal mode is that the user gate is skipped — the STATE.md writes still happen.
+- If QUICK_MODE=true and VERB is `create` or `update`: collapse Stages 1+2+3 into a single pass — run all three sequentially without stopping for approval between them. Present one combined summary at the end for a single approval gate. The verb reference files describe the individual stages — in quick mode, just run them back-to-back. **Before presenting that single combined gate, run the plan-checker on the final assembled plan and triage every BLOCKER (Interactive Triage) — the gate must not be shown while unresolved BLOCKERs exist (see the plan-checker rule under Rules).** **Important:** Even in quick mode, write STATE.md at each stage boundary (`stage1/approved`, `stage2/approved`) before proceeding to the next stage. This enables `plan resume` to recover from a session drop mid-quick-mode. The only difference from normal mode is that the user gate is skipped — the STATE.md writes still happen.
 - If QUICK_MODE=true and VERB is `resume`: apply quick mode to the **remaining** stages from the resumed position — run all remaining stages back-to-back with one combined approval gate at the end. QUICK_MODE is read from STATE.md if `--quick` was not explicitly passed.
 - If QUICK_MODE=true and VERB is `migrate`: QUICK_MODE is passed through to the reference file. Migrate is already a single-pass workflow; no collapse is needed.
 - If QUICK_MODE=true and VERB is `add`: no effect — add always runs in quick mode regardless.
@@ -401,7 +433,7 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 - Include testing strategy for all custom plugins
 - Include verification criteria for all plugins
 - The spec must be complete enough to implement without further questions
-- Run plan-checker agent BEFORE every user gate — users see validated plans only
+- **Run plan-checker agent BEFORE every user gate, and triage BLOCKERs BEFORE the gate is shown — users see validated plans only.** This ordering is mandatory and is NOT relaxed by quick mode: the plan-checker → BLOCKER-triage → fix step must complete *before* the approval `AskUserQuestion` is presented, never after approval. In quick mode the three per-stage gates collapse to ONE combined gate — so run plan-checker on the final assembled plan and resolve every "Fix now" BLOCKER (per `plan-stages.md` Interactive Triage) *before* presenting that single gate. Presenting an approval while unresolved BLOCKERs exist is a defect (this was the recurring deviation in the multi-plan incident: gates were accepted, then BLOCKERs fixed after). If a BLOCKER is found after a gate was already shown, withdraw the gate, fix, re-run plan-checker, and re-present.
 - Read `.planning/STATE.md` at the start of every stage, write it at the end — enable cross-session continuity. **Every STATE.md write must refresh the `## Recovery` block** (Last good step / Open blockers / Next action / Updated) per `plan-templates.md` + `memory-schema.md`, so a cold session or `/moku:next` rehydrates in one read.
 - After all stages complete, `Next Action` must point to `Run /moku:build resume (build command detects skeleton not-started and runs skeleton build first)`
 - **Plan NEVER builds:** The plan command only creates specs, analyzes, and recommends. It must NEVER invoke build steps, read build reference files, or create/modify source code files. After approval, always recommend the appropriate `/moku:build` command for the user to run in a fresh context. This applies to ALL verbs including `add` and `update` — the `add` verb creates a spec and recommends `/moku:build add {name}`, the `update` verb updates specs and recommends `/moku:build resume`.
@@ -414,7 +446,7 @@ line** when the user wants an unattended planning pass (note: this trades the pe
 gates for one completion check):
 
 > ```
-> /goal STATE.md shows Phase: complete, every plugin in the plugin table has a .planning/specs/0N-*.md spec, .planning/skeleton-spec.md exists and is consistent with the structure, and no files under src/ were created or modified — or stop after 20 turns
+> /goal STATE.md shows Phase: complete, every plugin in the plugin table has a .planning/specs/0N-*.md spec, .planning/build/skeleton-spec.md exists and is consistent with the structure, and no files under src/ were created or modified — or stop after 20 turns
 > ```
 
 The `no files under src/` clause preserves the plan-never-builds invariant; the turn cap bounds the loop. `/goal clear` cancels it.

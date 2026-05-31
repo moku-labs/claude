@@ -201,8 +201,13 @@ Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTO
 - Context file must be complete enough that `/moku:plan` can skip its steering and discussion phases entirely
 - Before writing the final context file, use `EnterPlanMode` to present the synthesized decisions and architectural choices for user review. This gives a visually distinct approval experience for the brainstorm conclusions. After the user approves via plan mode, call `ExitPlanMode` and write the context file.
 - After writing the context file, delete `.planning/.brainstorm-active` and confirm cleanup: log "Removed `.planning/.brainstorm-active` marker." If the file does not exist (already cleaned), skip silently.
-- After cleanup, always print a closing next-step suggestion:
-  > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] "{NAME}" --context context-{NAME}.md` to begin planning."
+- After cleanup, print a closing next-step suggestion. **First check for other unbuilt brainstorm contexts** so multiple features get planned together instead of colliding over the single plan slot (the failure mode from the multi-feature incident): run `ls .planning/context-*.md 2>/dev/null` and exclude the just-written `.planning/context-{NAME}.md`.
+  - **If other context files exist** (one or more sibling `context-*.md`), AND a plan may already be in progress, prefer combining. Print:
+    > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. I also see other un-planned brainstorm contexts: {list}. To plan them **together as one plan** (recommended when they'll be built together), run:
+    > `/moku:plan create [type] "{combined-name}" --context context-{NAME}.md {--context <each other file>}`
+    > Or plan this feature alone with `/moku:plan create [type] "{NAME}" --context context-{NAME}.md`. **Note:** if a completed-but-unbuilt plan already exists, `/moku:plan` will not overwrite it — it offers Combine / Archive / Replace."
+  - **If no other context files exist**, print:
+    > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] "{NAME}" --context context-{NAME}.md` to begin planning."
 
 ## Run unattended (optional `/goal`)
 

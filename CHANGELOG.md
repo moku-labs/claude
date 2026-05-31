@@ -2,6 +2,55 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.33.0 (2026-05-31)
+
+Eliminates a data-loss class: two features brainstormed + planned in one session could collide
+over the single `.planning/specs/` slot, and the `complete`+`update` transition was *defined* to
+delete the first feature's approved-but-unbuilt specs. Fixed at all three layers.
+
+### Fixed — plan can never silently destroy an unbuilt plan
+- **`commands/plan.md`** — new **Unbuilt-Plan Guard**, the single mandatory gate every
+  spec-clearing path now runs first. An approved-but-**unbuilt** plan is detected precisely
+  (specs present in `.planning/specs/` while `## Phase:` is `stageN*`/`complete` — because a built
+  plan is archived and reset to `ready` by build-final Step 7.5). On collision it offers
+  **Combine / Archive / Replace** instead of deleting; only Replace deletes, Archive moves specs +
+  skeleton + STATE to `.planning/archive/{slug}/`, and non-interactive runs default to Archive
+  (never auto-delete). The `complete`+`update`/`add` jump-table row and the Start-fresh branch now
+  route through this guard.
+
+### Added — plan accepts multiple `--context` files → one merged plan
+- **`commands/plan.md` + `plan-verb-create.md`** — `--context` may be repeated; all files are
+  collected into `CONTEXT_FILES`, validated per-token, persisted to `## ContextFile:`
+  (comma-separated), and **merged into one plan** by the create verb (union plugin hints — same
+  plugin touched by two features becomes one entry; conflicting decisions surfaced via
+  AskUserQuestion; merged research/risks). This is the first-class path for planning multiple
+  features together, replacing the manual spec merge the incident required.
+
+### Added — brainstorm steers coexisting features into one plan
+- **`commands/brainstorm.md`** — the closing suggestion now scans for sibling un-planned
+  `context-*.md` files; when others exist it recommends the multi-`--context` combined-plan
+  invocation and notes that `/moku:plan` will not overwrite an existing unbuilt plan.
+
+### Fixed — four smaller plan/brainstorm consistency gaps
+- **Researcher file-write contradiction** — `brainstorm-flow.md` Phase 3 told researcher
+  agents to write `.planning/brainstorm-*-research-*.md`, but `brainstorm-researcher`/
+  `researcher` have no `Write` tool (and their output contract is text-return). The flow now
+  states researchers return findings as text and the **parent** assembles the merged
+  `brainstorm-{NAME}-research.md` — matching what actually happens, instead of always falling
+  through the missing-file guard.
+- **Skeleton-spec path inconsistency** — the `/goal` completion line in `commands/plan.md`
+  said `.planning/skeleton-spec.md`; every authoritative reference and the build reader use
+  `.planning/build/skeleton-spec.md`. Corrected so the path the plan writes is the path the
+  build reads.
+- **`--quick` auto-suggest unreachable on `update`** — the ≤4-plugin auto-suggest was keyed to
+  the Stage 1 gate, which `update` skips. It is now keyed to the **first gate of the run**
+  (Stage 1 for create/migrate; Stage 2 for update), with the trigger documented in
+  `plan-verb-update.md`, so it fires for every verb.
+- **plan-checker BLOCKER triage ordering** — the rule now explicitly binds to gate ordering
+  and is not relaxed by quick mode: plan-checker runs and all "Fix now" BLOCKERs are triaged
+  **before** the (single, in quick mode) approval gate is shown; a gate must never be presented
+  while unresolved BLOCKERs exist.
+
 ## 0.32.0 (2026-05-31)
 
 Moku-family framework awareness: the toolkit now tracks, teaches, indexes, and auto-upgrades

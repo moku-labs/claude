@@ -4,18 +4,20 @@
 
 ## Context Injection Pre-Phase
 
-**This phase runs BEFORE the Steering Pre-Phase when CONTEXT_FILE is set** (i.e., the user provided `--context` from a `/moku:brainstorm` session).
+**This phase runs BEFORE the Steering Pre-Phase when CONTEXT_FILES is non-empty** (i.e., the user provided one or more `--context` files from `/moku:brainstorm` session(s)).
 
-If CONTEXT_FILE is not `(none)`:
-1. Read `{CONTEXT_FILE}`
-2. Extract and store context variables:
-   - CONTEXT_SUMMARY: contents of `## Summary` section
-   - CONTEXT_ASSUMPTIONS: contents of `## Key Assumptions` subsection within `## Proposed Approach`
-   - CONTEXT_NON_GOALS: contents of `## Explicit Non-Goals` subsection
-   - CONTEXT_DECISIONS: contents of `## Decisions Made` table
-   - CONTEXT_RISKS: contents of `## Risks Requiring Spec Attention` section
-   - CONTEXT_PLUGINS_HINT: contents of the `### Suggested Plugins (Preliminary)` subsection under `## Recommended Plan Approach` (may be empty or "deferred")
-3. **Skip the Steering Pre-Phase entirely.** The brainstorm session has already captured equivalent information. Log: "Brainstorm context detected at `{CONTEXT_FILE}`. Skipping Steering Pre-Phase."
+**Multiple contexts → one plan.** CONTEXT_FILES may list **several** brainstorm contexts (e.g. two features explored in one session). They are **all** merged into a single plan — this is the supported path for planning multiple features together (and the fix for the incident where a second feature's context collided with the first feature's already-completed plan). Read and merge every file; do not pick just one.
+
+If CONTEXT_FILES is non-empty:
+1. Read **every** file in CONTEXT_FILES (in list order). For each, extract its sections; then **merge** across all files into the combined context variables below.
+2. Extract and store context variables (merged across all context files — union the lists, concatenate prose with a `### From {feature}` subheading per source so provenance is preserved):
+   - CONTEXT_SUMMARY: union of each file's `## Summary` section (label each by feature when more than one)
+   - CONTEXT_ASSUMPTIONS: union of each `## Key Assumptions` subsection within `## Proposed Approach`
+   - CONTEXT_NON_GOALS: union of each `## Explicit Non-Goals` subsection
+   - CONTEXT_DECISIONS: merged `## Decisions Made` tables — **flag conflicts**: if two contexts make contradictory decisions about the same concern, surface them via `AskUserQuestion` (Question: "Contexts {A} and {B} disagree on {concern}. Which decision should the merged plan use?" / options: each decision + "Combine — keep both, scoped differently") and record the resolution in `.planning/decisions.md`.
+   - CONTEXT_RISKS: union of each `## Risks Requiring Spec Attention` section
+   - CONTEXT_PLUGINS_HINT: **union** of each `### Suggested Plugins (Preliminary)` — when two features touch the **same** plugin, merge them into one plugin entry (note both features' needs) rather than creating duplicate plugins; this is the merge the incident had to do by hand.
+3. **Skip the Steering Pre-Phase entirely.** The brainstorm session(s) have already captured equivalent information. Log: "Brainstorm context detected ({N} file(s): {comma-separated CONTEXT_FILES}). Merging into one plan. Skipping Steering Pre-Phase." When N > 1, also set `## Target:` to a combined label that names both features (e.g. `web (web-parity + client-data)`).
 4. Synthesize a `steering.md` from the context file so downstream stages find their expected input:
    - `## Boundaries (NOT in scope)` ← from CONTEXT_NON_GOALS
    - `## Primary User` ← from `## Analysis Summary` section (scope assessment)
@@ -26,11 +28,11 @@ If CONTEXT_FILE is not `(none)`:
    Write this synthesized `steering.md` to `.planning/steering.md`.
 5. **Feed-forward into later stages:**
    - **Discussion phase**: If triggered, pre-populate with CONTEXT_DECISIONS so the user confirms rather than re-derives. If CONTEXT_DECISIONS covers the domain sufficiently, skip the discussion phase: log "Context file provides sufficient discussion context. Skipping Discussion Phase."
-   - **Research phase**: If CONTEXT_FILE `## Research Findings` section exists and is non-empty, skip the research phase: log "Context file includes research findings. Skipping Research Phase." Write the research findings to `.planning/build/research.md` so Stage 1 can reference them.
+   - **Research phase**: If **any** context file in CONTEXT_FILES has a non-empty `## Research Findings` section, skip the research phase: log "Context file(s) include research findings. Skipping Research Phase." Write the **merged** research findings (concatenated, one `### From {feature}` block per source) to `.planning/build/research.md` so Stage 1 can reference them.
    - **Stage 1**: CONTEXT_PLUGINS_HINT is treated as a starting plugin inventory suggestion — validate against Moku constraints but do not re-derive from scratch. Show the user the suggested plugins and ask for confirmation/additions. **When reordering plugins from CONTEXT_PLUGINS_HINT to reflect wave assignments**, log the reordering decision: "Reordered [plugin-a] before [plugin-b] to group Wave 0 plugins together." This makes the ordering change visible rather than silent (context files and spec files may otherwise have confusingly different numbering).
    - **Stage 2**: CONTEXT_RISKS are injected into spec writing — the plugin closest to each risk gets an explicit risk mitigation note in its spec.
 
-If CONTEXT_FILE is `(none)`: proceed normally to the Steering Pre-Phase below.
+If CONTEXT_FILES is empty (CONTEXT_FILE is `(none)`): proceed normally to the Steering Pre-Phase below.
 
 ---
 
