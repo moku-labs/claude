@@ -28,8 +28,78 @@ Every source file (`src/**/*.ts`) must have JSDoc on:
 - All exported interfaces
 - All exported methods
 - All public class members
+- All exported `const`/`let` bindings — including factory-result consts (`export const x = createPlugin(…)`) and destructured exports (`export const { a, b } = …`); see §1b for these two false-pass shapes
 
 Test files (`tests/**/*.ts`) and config files (`*.config.ts`) are EXEMPT from JSDoc requirements.
+
+### 1b. Export-Shape Gaps (CRITICAL — silent false-passes)
+
+Two export shapes are idiomatic in Moku's factory-chain architecture and **silently
+ship undocumented** even when naive tooling reports "all exports documented." A real
+`@moku-labs/web` build shipped only 4 of 12 public exports with JSDoc and still passed.
+You MUST flag both as **MISSING** (undocumented public exports), each with the
+explicit-const fix below.
+
+**Gap A — destructured public-API exports.** Any `export const { … } = <expr>;`:
+
+```typescript
+export const { createApp, createPlugin } = framework;   // index.ts — FLAG
+export const { createPlugin, createCore } = coreConfig;  // config.ts — FLAG
+```
+
+TypeScript resolves a destructured binding's JSDoc ONLY at the destructure site; it
+does NOT carry across a module boundary. So cross-module hover shows nothing and the
+emitted `dist/*.d.ts` ships those exports with NO JSDoc — consumers get nothing on the
+primary API. Inline JSDoc on each binding (`const { /** doc */ x } = …`) does NOT fix
+it either (verified via the TS language service `getQuickInfoAtPosition` and
+`dist/index.d.mts` inspection). The ONLY form whose docs reach BOTH cross-module hover
+AND the emitted `.d.ts` is an explicit, separately-documented re-export:
+
+```typescript
+/**
+ * Create a configured app instance from plugins and config.
+ *
+ * @param options - Plugins, base config, and per-plugin config overrides.
+ * @returns A fully wired `App`.
+ * @example
+ * ```typescript
+ * const app = createApp({ plugins: [routerPlugin] });
+ * ```
+ */
+export const createApp = framework.createApp;
+```
+
+Detection: any `export const {` — i.e. an `ExportNamedDeclaration > VariableDeclaration`
+whose declarator id is an `ObjectPattern`. Grep seed: `^export const \{`. Every name
+destructured there is an undocumented public export, regardless of any JSDoc above the
+statement.
+
+**Gap B — factory-result const exports.** Any `export const … = <CallExpression>;`
+without a directly-preceding JSDoc block:
+
+```typescript
+export const routerPlugin = createPlugin("router", { … });  // no JSDoc above — FLAG
+export const app = createApp({ … });                         // FLAG
+```
+
+ESLint's `jsdoc/require-jsdoc` IGNORES a `VariableDeclaration` initialized by a
+`CallExpression` (it only inspects functions/classes/methods), so plugin-factory and
+other factory-result exports ship undocumented and lint stays green. Flag any
+`export const <name> = <ident>(…)` (createPlugin / createCorePlugin / createApp /
+createCore / any call) that lacks an immediately-preceding `/** … */` block. Grep
+seed: `^export const \w+ = \w+\(`.
+
+**Gap C — `@file` does NOT count as per-export JSDoc.** A top-of-file `@file` /
+`@fileoverview` comment can hoist onto the first declaration in the bundled `.d.ts`
+and masquerade as a real per-symbol doc. Do NOT credit a file-level comment toward any
+individual export's JSDoc requirement. Only a block in the export's own
+**directly-preceding** position (no blank line, no intervening statement) counts.
+
+**Fix to recommend for both A and B:** replace with an explicit, individually
+documented `export const x = source.x;` (Gap A) or add a directly-preceding multi-line
+JSDoc block to the `export const x = factory(…)` (Gap B). Never destructure
+public-facing exports. Verify a fix by confirming each `declare const X` in the emitted
+`dist/index.d.mts` is preceded by a `/** … */` block.
 
 ### 2. Required Tags
 
@@ -140,11 +210,17 @@ export function createRouterApi(ctx: RouterCtx): RouterApi { ... }
 ## Process
 
 1. Find all source files in the target directory
-2. For each file, identify all exports (functions, types, interfaces, classes)
-3. Check each export for JSDoc presence and completeness
-4. Evaluate description quality (not redundant, explains what/where/why)
-5. Verify examples exist and are correct
-6. Report findings
+2. For each file, identify all exports (functions, types, interfaces, classes) — including
+   the two false-pass shapes from §1b:
+   - `export const { … } = <expr>` (Gap A — destructured public API). Grep seed: `^export const \{`
+   - `export const <name> = <call>(…)` (Gap B — factory-result const). Grep seed: `^export const \w+ = \w+\(`
+3. Check each export for JSDoc presence and completeness. A directly-preceding `/** … */`
+   block is required per export; a file-level `@file`/`@fileoverview` comment does NOT count (Gap C).
+4. Flag every destructured-export name (Gap A) as MISSING regardless of surrounding comments,
+   and every factory-result const lacking a directly-preceding block (Gap B).
+5. Evaluate description quality (not redundant, explains what/where/why)
+6. Verify examples exist and are correct
+7. Report findings — for Gaps A/B, recommend the explicit-const fix
 
 ## Output Format
 
@@ -160,8 +236,11 @@ export function createRouterApi(ctx: RouterCtx): RouterApi { ... }
 
 Issues:
 - MISSING: `TypeName` has no JSDoc
+- MISSING (Gap A): `createApp`, `createPlugin` destructured in `export const { … } = framework` — docs don't cross the module boundary. FIX: re-export as explicit `export const createApp = framework.createApp;` with its own JSDoc block.
+- MISSING (Gap B): `routerPlugin` (`export const routerPlugin = createPlugin(…)`) has no directly-preceding JSDoc block. FIX: add a multi-line JSDoc block above the export.
 - INCOMPLETE: `functionName` missing @example
 - LOW QUALITY: `getCount` description restates the function name
+- NOTE: a file-level `@file` comment never satisfies a per-export requirement (Gap C).
 
 ### Summary
 - Exports checked: N

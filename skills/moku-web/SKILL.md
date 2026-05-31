@@ -26,6 +26,35 @@ Enforce the established web patterns from the Moku blog reference implementation
 | TypeScript | Strict mode, `jsxImportSource: "preact"` |
 | Tests | Playwright (visual regression) |
 
+## Framework API (@moku-labs/web v0.3.1)
+
+`@moku-labs/web` is the Layer-2 framework these web patterns sit on. One entry point;
+`createApp` is **synchronous**, while `start()` / `build.run()` / `deploy.run()` are async.
+
+```ts
+import { createApp, defineRoutes, route } from "@moku-labs/web";
+
+const app = createApp({
+  config: { mode: "production" },          // "production" | "development"
+  pluginConfigs: {                          // per-plugin, keyed by plugin name
+    site:   { name: "My Blog", url: "https://blog.dev", author: "Ada", description: "Notes" },
+    router: { routes: defineRoutes({ home: route("/"), post: route("/blog/{slug}/") }), mode: "ssg" },
+  },
+});
+await app.build.run();                      // SSG → dist/   (or: await app.start())
+```
+
+Ships 8 framework plugins — `site, i18n, router, content, head, build, spa, deploy` — plus
+2 core plugins (`log`, `env`) whose APIs are injected flat on every `ctx` (`ctx.log.*`,
+`ctx.env.*`). Author custom plugins with `createPlugin("name", spec)` (types infer from the
+spec; document the export with a directly-preceding JSDoc block — never destructure exports,
+see moku-core "Public Export Shape"). SEO `<head>` helpers (`meta/og/twitter/jsonLd/
+canonical/hreflang/feedLink/buildArticleHead`) and the `route()` builder are top-level exports.
+
+**Full catalog — plugins, events, config, the `ctx`/`app` property index, usage:**
+[`references/plugin-index.md`](references/plugin-index.md). Consult it first when wiring an
+app; it is regenerated from upstream by the `moku-sync` maintainer skill.
+
 ## Project Structure
 
 ```
@@ -156,6 +185,7 @@ article { padding: 1rem; }              // WRONG — global pollution
 - `references/component-patterns.md` — Preact components, islands, naming conventions
 - `references/css-architecture.md` — Tokens, @scope, @layer, responsive design
 - `references/layout-structure.md` — SiteLayout, pages, routing, entry point
+- `references/plugin-index.md` — **@moku-labs/web plugin & property index** (every plugin, event, config key, `ctx`/`app` accessor + API form); the catalog to consult when wiring an app
 
 ## Advanced References (load when needed)
 

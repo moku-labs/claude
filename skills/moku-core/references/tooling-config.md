@@ -629,3 +629,27 @@ comments, docs, and Markdown. Seed `words` from `references/glossary.md` (flatte
 - **Git hooks:** Lefthook pre-commit (build, format, lint, test)
 - **Import style:** `import type` enforced via `@typescript-eslint/consistent-type-imports`
 - **JSDoc:** Required on all source exports (functions, types, interfaces) with descriptions, params, returns, and examples
+
+## Optional: ESLint JSDoc backstop for factory-const exports
+
+Biome (the primary linter) and ESLint's default `jsdoc/require-jsdoc` both IGNORE a
+`VariableDeclaration` initialized by a `CallExpression`, so a factory-result export
+like `export const routerPlugin = createPlugin("router", {})` ships undocumented while
+lint stays green. If a project also runs ESLint, add a `contexts` entry so the
+factory-const case is caught at lint time too:
+
+```jsonc
+// .eslintrc.json (only if ESLint is in the stack — Biome cannot express this rule)
+{
+  "rules": {
+    "jsdoc/require-jsdoc": ["error", {
+      "contexts": ["ExportNamedDeclaration > VariableDeclaration > VariableDeclarator"]
+    }]
+  }
+}
+```
+
+This covers Gap B (factory-result consts). It does NOT catch Gap A (destructured
+`export const { … } = …`) — no lint rule does; that one is prevented by the
+explicit-re-export convention and flagged by `moku-jsdoc-validator`. A file-level
+`@file` comment must never be treated as satisfying a per-export requirement (Gap C).

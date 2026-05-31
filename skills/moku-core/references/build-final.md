@@ -265,7 +265,7 @@ steering was empty. Present each option with a one-line example of what it produ
 
 - **PR validation CI** — `.github/workflows/ci.yml`: format + lint + tsc + test on every PR.
 - **Coverage gate** — adds a coverage step to CI that fails below the project threshold.
-- **Publish to npm** — `release.yml` on `v*` tags → `npm publish --provenance` (for libraries/frameworks).
+- **Publish to npm (Layer-2 framework)** — the two-workflow flow (`ci.yml` + `publish.yml`): OIDC Trusted Publishing, tag-only releases, branch protection. Authoritative spec: [ci-release.md](ci-release.md).
 - **GitHub Releases** — `release.yml` step that cuts a GitHub Release from the tag + changelog.
 - **Deploy: Cloudflare Pages/Workers** — `deploy.yml` using `cloudflare/wrangler-action` (for web apps/SSG/SSR).
 - **Deploy: Vercel** — `deploy.yml` using `amondnet/vercel-action` (or the Vercel CLI).
@@ -308,29 +308,16 @@ Adapt to the actual project: correct package manager, correct script names from 
 **Coverage Gate** (added to `ci.yml`):
 Add a coverage step that runs `bun run test:coverage` and fails if coverage drops below the threshold from `.planning/build/coverage.md`.
 
-**npm Publish** (`.github/workflows/release.yml`):
-```yaml
-name: Release
-on:
-  push:
-    tags: ['v*']
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - run: bun install
-      - run: bun run test
-      - run: bun run build
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-```
-Adapt: correct registry, correct package name, correct build steps.
+**npm Publish (Layer-2 framework package):**
+
+For a framework package published to npm, do NOT scaffold a single ad-hoc `release.yml`.
+Generate the **two-workflow flow** — `ci.yml` (parallel lint/types/test/build, reusable via
+`workflow_call`) + `publish.yml` (one release+publish workflow, OIDC Trusted Publishing,
+tag-only releases compatible with branch protection) — exactly as specified in
+[ci-release.md](ci-release.md). That reference also covers SHA-pinning every action,
+least-privilege per-job permissions, the no-script-injection `run:` rule, native release
+notes, the branch-protection ruleset, and the acceptance checks. Apply it verbatim;
+resolve each `@<SHA>` placeholder with `gh api repos/<o>/<r>/commits/<tag> --jq .sha`.
 
 **GitHub Releases** (added to `release.yml`):
 Add a step using `softprops/action-gh-release` that creates a GitHub Release from the tag, attaching the changelog entry.

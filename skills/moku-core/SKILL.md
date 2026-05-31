@@ -45,6 +45,51 @@ Step 3 — main.ts:    createApp({ plugins?, config?, pluginConfigs? })
 
 Each step captures types in closures. This solves the circular dependency problem between config and plugins. The `index.ts` (Step 2) doubles as the framework's public API reference — consumers should understand all options, defaults, and exports just by reading it.
 
+## Public Export Shape (JSDoc survival)
+
+The factory chain tempts you to destructure its results straight into exports. Don't —
+JSDoc does not survive that shape to consumers. Two rules:
+
+**1. Re-export public API as explicit, documented consts.** In `config.ts` and
+`index.ts`, expand the destructure into individually-documented re-exports:
+
+```typescript
+// ❌ WRONG — docs resolve only at the destructure site; dist/*.d.ts ships them bare
+export const { createPlugin, createCore } = createCoreConfig<Config, Events>(id, { config });
+export const { createApp, createPlugin } = createCore(coreConfig, { plugins });
+
+// ✅ RIGHT — each export carries its own block; hover + emitted .d.ts both get docs
+const coreConfig = createCoreConfig<Config, Events>(id, { config });
+/**
+ * Define a plugin for this framework. Types infer from the spec object.
+ *
+ * @param name - Unique plugin id.
+ * @param spec - Plugin spec (config, state, api, lifecycle).
+ * @returns A typed plugin definition.
+ */
+export const createPlugin = coreConfig.createPlugin;
+/**
+ * Internal: assemble the framework core from its default plugins.
+ *
+ * @returns The framework factory (`createApp` / `createPlugin`).
+ */
+export const createCore = coreConfig.createCore;
+```
+
+A destructured binding's JSDoc is resolved by TypeScript ONLY at the destructure site.
+It does not cross the module boundary: another file hovering the symbol sees nothing,
+and the bundled `dist/index.d.mts` emits `declare const createApp` with no preceding
+block. Inline JSDoc on the binding (`const { /** doc */ x } = …`) does not fix it
+either. The explicit `export const x = source.x;` is the only form that works.
+
+**2. A `@file` comment never substitutes for a per-export block.** A top-of-file
+`@file`/`@fileoverview` comment can hoist onto the first `declare const` in the bundled
+`.d.ts` and look like a real doc — it isn't one for the other exports. Give every
+public export its own directly-preceding block.
+
+Verify after build: every `declare const X` in `dist/index.d.mts` is preceded by a
+`/** … */` block. `moku-jsdoc-validator` enforces both rules.
+
 ## Core Plugins
 
 Core plugins are self-contained infrastructure plugins (log, storage, env) whose APIs are injected directly onto every regular plugin's context. Created with `createCorePlugin(name, spec)` and registered via `createCoreConfig({ plugins: [...] })`.
@@ -108,6 +153,7 @@ createPlugin("router", {
 - **createApp is synchronous** — Returns `App` directly, not a Promise. `onInit` is sync.
 - **Core plugin APIs injected flat** — `ctx.log`, `ctx.env` — no `require()` needed for core plugins.
 - **Core plugin 4-level config cascade** — spec defaults → createCoreConfig → createCore → createApp.
+- **Public exports are explicit, documented consts — never destructured.** Re-export `createApp` / `createPlugin` / `createCore` (and every plugin factory) as `export const x = source.x;` with its own directly-preceding JSDoc block. NEVER `export const { … } = framework` — a destructured binding's JSDoc dies at the module boundary, so consumers and editor hover get nothing and the emitted `dist/*.d.ts` ships them bare. See [Public Export Shape](#public-export-shape-jsdoc-survival).
 
 ## Event Registration Standard
 

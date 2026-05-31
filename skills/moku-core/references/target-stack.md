@@ -72,6 +72,18 @@ A project is **below** the current target if ANY of these hold:
 
 ---
 
+## Moku-family framework versions (separate from the tool stack)
+
+The pinned versions above are the **toolchain** (TypeScript, Biome, Bun, …). The versions of
+the Moku **frameworks** a project consumes — `@moku-labs/core`, `@moku-labs/web`, and any
+future moku-family package — live in their own registry: [moku-frameworks.md](moku-frameworks.md).
+`/moku:upgrade` reads that registry and, when a project depends on one of those packages,
+applies the matching `moku-web-version` / `moku-core-version` migration to bump it to the
+registry's `knownVersion`. This is intentionally decoupled from the stack version: a Moku
+framework can ship a new release without a TypeScript/tooling stack bump, and vice versa. The
+registry (and the generated skill plugin-indexes) are kept current by the `moku-sync`
+maintainer skill.
+
 ## Stack version history
 
 | Stack | moku Claude | Headline | Migration id(s) |

@@ -176,6 +176,13 @@ export const templateEnginePlugin = createPlugin("templateEngine", { ... })
 export const router = createPlugin("router", { ... })   // WRONG — export should be routerPlugin
 // Islands / non-plugin instances may use a domain suffix instead: lightboxIsland, shareButtonsIsland
 
+// DON'T: destructure or leave factory exports undocumented — JSDoc never reaches consumers
+export const { createApp, createPlugin } = framework            // WRONG — docs die at the module boundary
+export const routerPlugin = createPlugin("router", { ... })     // WRONG if no directly-preceding /** */ block (lint won't catch it)
+// CORRECT: explicit, individually-documented const (a file-level @file comment does NOT count)
+/** Router plugin — Standard tier. Emits `router:navigate`. @see README.md */
+export const routerPlugin = createPlugin("router", { ... })
+
 // DON'T: Parameterize createPlugin and dependencies through a factory
 export function wireFooPlugin(pluginFactory, dep) {
   return pluginFactory("foo", { depends: [dep], ... });
@@ -239,6 +246,14 @@ Every file must have full JSDoc. Plugin index.ts must have:
 - Description of what the plugin does
 - Events it emits
 - `@see README.md` reference
+
+**The plugin export itself must be documented.** Export the factory as an explicit,
+individually-documented const with a **directly-preceding** JSDoc block — never
+destructured, and never relying on a file-level `@file` comment. ESLint's
+`jsdoc/require-jsdoc` ignores a const initialized by a call (`createPlugin(…)`), so a
+plugin-factory export with no block above it ships undocumented while lint stays green;
+its docs also fail to reach editor hover and the emitted `dist/*.d.ts`. The block above
+the `createPlugin` call is what `moku-jsdoc-validator` and consumers actually see.
 
 ## Testing Requirements
 

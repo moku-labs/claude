@@ -2,6 +2,79 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.32.0 (2026-05-31)
+
+Moku-family framework awareness: the toolkit now tracks, teaches, indexes, and auto-upgrades
+the frameworks a project consumes — starting with `@moku-labs/web` v0.3.1.
+
+### Added — `@moku-labs/web` plugin & property index
+- **`skills/moku-web/references/plugin-index.md`** — a source-grounded catalog (generated from
+  `@moku-labs/web@0.3.1`): the v0.3.1 API form (`createApp`/`createPlugin` + the `route()` DSL +
+  `head` SEO helpers), all 10 plugins (8 framework + the `log`/`env` core plugins) with their
+  `depends`, emitted events + payloads, context/app API, and config keys, a flat `ctx`/`app`
+  property index, and an event index. So an agent knows what's available without reading source.
+- **`skills/moku-web/SKILL.md`** — new minimal "Framework API (@moku-labs/web v0.3.1)" section
+  (the skill previously covered only Preact/island/CSS patterns) linking to the plugin index.
+
+### Added — Moku-family framework registry + auto-upgrade
+- **`skills/moku-core/references/moku-frameworks.md`** — the single registry of moku-family
+  frameworks (`@moku-labs/core`, `@moku-labs/web`, future): npm name, repo, local clone,
+  `knownVersion`, the skill + plugin index each backs, dependency detection, release source
+  (npm registry is the version-of-truth — no `llms.txt` upstream), and the upgrade migration id.
+- **`/moku:upgrade` now bumps depended-on Moku frameworks.** Two registry-driven migrations
+  (`moku-web-version`, `moku-core-version`) in `upgrade-migrations.md` fire when a project
+  depends on `@moku-labs/web` / `@moku-labs/core` below the registry's `knownVersion`, bumping
+  to it (core before web) and verifying — decoupled from the TypeScript/tooling stack version.
+  `commands/upgrade.md` and `target-stack.md` wired to read the registry; the early-exit no
+  longer stops when the stack is current but a `@moku-labs/*` dep is stale.
+
+### Added — `moku-sync` maintainer skill (extensible)
+- **`.claude/skills/moku-sync/SKILL.md`** — local project skill that polls each registered
+  framework's release source, detects whether a new version shipped (`--check` reports only),
+  and on a newer version regenerates that framework's skill API section + plugin index and
+  writes the new `knownVersion` back to the registry. Onboarding a new moku-family framework is
+  data-only: add a registry row, create its skill + index, run `moku-sync <key>`.
+
+## 0.31.0 (2026-05-31)
+
+Two changes shipped together.
+
+### Fixed — JSDoc validator catches the two silent false-pass export shapes
+- **`agents/jsdoc-validator.md`** now flags, as MISSING public-export documentation:
+  (a) destructured public-API exports — `export const { createApp, createPlugin } = framework`
+  (a destructured binding's JSDoc resolves only at the destructure site, so it never crosses
+  the module boundary — cross-module hover and the emitted `dist/*.d.ts` get nothing); and
+  (b) factory-result const exports — `export const x = createPlugin(…)` / `createApp(…)` —
+  lacking a **directly-preceding** JSDoc block (ESLint `jsdoc/require-jsdoc` ignores
+  call-initialized consts, so these ship undocumented with lint green). A file-level `@file`
+  comment is explicitly **not** credited toward any per-export requirement. The validator
+  recommends the explicit, individually-documented `export const x = source.x;` fix — the only
+  form whose docs reach both editor hover and the shipped `.d.ts`. Detection grep seeds and
+  Process/Output updates included. Closes the gap found in a real `@moku-labs/web` build
+  (4 of 12 public exports shipped docs while the validator passed).
+- **`skills/moku-core/SKILL.md`** — new "Public Export Shape (JSDoc survival)" section plus a
+  Critical Design Decisions rule: public exports are explicit, individually-documented consts,
+  never destructured.
+- **`skills/moku-plugin/SKILL.md`** — plugin export must be an explicit, individually-documented
+  const (never destructured; `@file` does not count); new anti-pattern example.
+- **`skills/moku-core/references/tooling-config.md`** — optional ESLint `jsdoc/require-jsdoc`
+  `contexts` backstop for the factory-const case (Gap B); notes it cannot catch Gap A.
+
+### Added — CI/release reference for Layer-2 framework packages
+- **`skills/moku-core/references/ci-release.md`** — the canonical two-workflow flow for a
+  framework package published to npm: `ci.yml` (parallel lint/types/test/build, reusable via
+  `workflow_call`) + a single `publish.yml` (`workflow_dispatch` + `release: published`,
+  reusing ci.yml). Encodes npm OIDC Trusted Publishing (tokenless, provenance, `npm publish`
+  kept inline; npm ≥ 11.5.1 asserted fail-closed, no global npm install), SHA-pinned actions
+  (with the `gh api …/commits/<tag> --jq .sha` resolution rule and Node-24 floors),
+  least-privilege per-job permissions, script-injection-safe `run:` blocks (no `${{ }}` in
+  shell), GitHub-native release notes, no-double-publish handling, tag-only releases compatible
+  with branch protection, ref↔package.json verification with `latest`/`next` dist-tag split,
+  the branch-protection ruleset (`gh api …/rulesets`, no bypass), gotchas (PR-head lag,
+  concurrency reuse), the optional split package/publish hardening, and acceptance checks.
+- **`skills/moku-core/references/build-final.md`** — Step 5.10 now routes the npm-publish path
+  to `ci-release.md` instead of scaffolding an ad-hoc token-based `release.yml`.
+
 ## 0.30.0 (2026-05-30)
 
 TypeScript 6 baseline + the first universal stack-migration command. Researched against the TS6 GA

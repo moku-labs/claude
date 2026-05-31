@@ -50,13 +50,13 @@ If `$ARGUMENTS` contains anything other than `--dry-run`, output:
 
 3. **Resume check.** If `.planning/UPGRADE.md` exists and its `## Status:` is `in-progress`, read it and **resume** from the first migration not marked `done` (skip Steps 1–2's re-planning unless the target stack version recorded there differs from the current one — if it differs, re-plan from scratch).
 
-4. **Read current state.** Parse `package.json` (`devDependencies`, `engines`, `scripts`), `tsconfig.json`, `tsconfig.build.json` (if present), `.bun-version` (if present), `biome.json`. Read the target from `target-stack.md` and the migrations from `upgrade-migrations.md`.
+4. **Read current state.** Parse `package.json` (`dependencies`, `devDependencies`, `engines`, `scripts`), `tsconfig.json`, `tsconfig.build.json` (if present), `.bun-version` (if present), `biome.json`. Read the target from `target-stack.md`, the migrations from `upgrade-migrations.md`, and the **Moku-family framework registry** from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-frameworks.md`. For each registry entry whose `detect.packageJsonDep` appears in this project's dependencies, note the declared version vs the entry's `knownVersion` — a project below it is a candidate for that entry's `upgrade.migrationId` (e.g. `moku-web-version`, `moku-core-version`).
 
 ## Step 1 — Compute the upgrade plan
 
-1. Determine the project's current **stack version** from the detection signatures in `target-stack.md`. If every detection signature is already satisfied (project is at or above the target), output:
-   `Already on Stack version <N> (<headline>). Nothing to upgrade.` — then stop.
-2. From `upgrade-migrations.md`, select every migration whose `Applies to` includes this project type AND whose `Detect` condition fires. Order them as listed (respect `Depends on`).
+1. Determine the project's current **stack version** from the detection signatures in `target-stack.md`. If the project is at or above the target stack **and** no registry-driven framework-version migration fires (Step 0.4 — no depended-on moku-family package is below its `knownVersion`), output:
+   `Already on Stack version <N> (<headline>). Nothing to upgrade.` — then stop. If the stack is current but a `@moku-labs/*` dependency is behind the registry, do NOT stop — proceed with just the framework-version migration(s).
+2. From `upgrade-migrations.md`, select every migration whose `Applies to` includes this project type AND whose `Detect` condition fires. Order them as listed (respect `Depends on`). This includes the **registry-driven framework-version migrations** (`moku-web-version`, `moku-core-version`): each fires when the project depends on that moku-family package at a version below the registry's `knownVersion`, and bumps it to that version (core before web per `dependsOn`).
 3. Separate them into **default-on** (applied unless the user deselects) and **opt-in** (`Default: off`, e.g. `tsgo-fastcheck` — only applied if the user explicitly says yes).
 
 ## Step 2 — Present the plan & gate
