@@ -12,14 +12,19 @@ This file is read by `/moku:build` when `## Skeleton:` in STATE.md is `not-start
 
 **Before writing ANY skeleton code, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md`** and emit hook-compliant code from line 1 (≤30-line wiring `index.ts`, typed-const config, `type` not `interface` for Config/Api, `createCoreConfig` third CorePlugins arg, JSDoc tag-line rules, no inline `as`, no `wireX`, structural injectable types). This is the single biggest first-try-correctness lever — the spec code blocks are content-correct but are NOT pre-written against the hooks, so reconcile them to these conventions as you write, not in a later rework.
 
-1. Read `.planning/build/skeleton-spec.md`
-2. Verify all five sections are present:
-   - Architecture Overview
-   - File Structure
-   - System Connections
-   - Skeleton Build Waves (at least one wave with code blocks)
-   - Verification Checklist
-3. If spec is missing or any section is absent: tell the user — `"Skeleton spec is incomplete or missing. Re-run /moku:plan resume to regenerate Stage 3."` — and stop.
+### Delta Mode Detection (for `Verb: update`)
+
+Read `## Verb:` from STATE.md first. If `## Verb: update`, run this skeleton in **delta mode** for the whole session:
+- A delta skeleton creates **only the NEW files** the update introduces — it must NOT recreate or overwrite existing plugin/framework files (those are evolved by the plugin waves).
+- New-file source: a `## Delta File Structure` section in the spec if present (new files only); otherwise treat `## File Structure` as the create-list and **skip any path that already exists on disk** (`test -e`). Never clobber an existing file in skeleton mode.
+- For new files, generate compiling stubs (correct imports/exports/signatures, `throw new Error("not implemented")` bodies) from the spec's Signatures/Wiring; for existing files, do nothing.
+- If `Verb` is `create`/`migrate`, run **full mode** (everything below as written).
+
+1. Read the skeleton spec. Try `.planning/build/skeleton-spec.md`; if not found, fall back to `.planning/skeleton-spec.md` (backward-compat for plans written by older plugin versions). If neither exists, stop: `"Skeleton spec not found at .planning/build/skeleton-spec.md or .planning/skeleton-spec.md. Re-run /moku:plan resume to regenerate Stage 3."`
+2. Verify the required sections for the active mode are present:
+   - **Full mode** (`create`/`migrate`) — all five: Architecture Overview, File Structure, System Connections, Skeleton Build Waves (≥1 wave with code blocks), Verification Checklist.
+   - **Delta mode** (`update`) — accept EITHER a full spec that also carries a `## Delta File Structure` (new files only), OR a spec whose `## File Structure` *is* the delta (only new files). Delta needs File Structure (delta) + Signatures/Wiring + Verification; it does NOT require verbatim wave code blocks.
+3. If the required sections for the active mode are missing: tell the user — `"Skeleton spec is incomplete or missing. Re-run /moku:plan resume to regenerate Stage 3."` — and stop.
 4. Update STATE.md: `## Skeleton: in-progress`
 
 ---
@@ -29,6 +34,8 @@ This file is read by `/moku:build` when `## Skeleton:` in STATE.md is `not-start
 Read the Wave Progress table from STATE.md. Find the first skeleton wave row with status `not started`.
 
 **Mark the wave `in-progress` in STATE.md before creating files** — this enables crash detection on resume.
+
+**Delta mode (`Verb: update`):** there are typically no multi-wave code blocks — create each NEW file from the delta list as a compiling stub (imports/exports/signatures from the Signatures/Wiring sections, `throw new Error("not implemented")` bodies). **Skip every path that already exists** (`test -e` — never overwrite an existing file). Then go straight to S3 (verify) and the commit step. The numbered steps below apply to **full mode**.
 
 For each file listed in the wave's code blocks in the skeleton spec:
 
@@ -208,6 +215,13 @@ Use `AskUserQuestion`:
 ## Step S6: Initial Commit
 
 After user approval:
+
+**Step S6a: Protected-branch guard.** Before committing, detect the default/protected branch:
+```bash
+branch="$(git rev-parse --abbrev-ref HEAD)"
+default="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')"; default="${default:-main}"
+```
+If `branch` equals `default` (or `main`/`master`), do NOT commit yet — the skeleton + every wave checkpoint would stack onto a protected branch. Use `AskUserQuestion`: "Build commits the skeleton and a checkpoint per wave, but you're on the protected default branch `{branch}`. Create a feature branch first?" — options "Create `build/{target-slug}` and continue (Recommended)" / "Commit on `{branch}` anyway" / "Cancel". On the first, `git switch -c build/{target-slug}` before committing, and record the working branch in STATE.md so resumed invocations stay on it. If already off the default branch, proceed.
 
 1. Stage skeleton files (`.planning/` is gitignored — do NOT stage planning files):
    ```

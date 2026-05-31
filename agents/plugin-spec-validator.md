@@ -150,6 +150,28 @@ Validate `src/index.ts`:
 - Has `// ─── Framework API + Plugin Helpers` section
 - `createCore` call includes `pluginConfigs` with framework defaults
 
+### 16. README Freshness vs Public API (docs-sync)
+
+When a plugin's **public API** changes, its `README.md` MUST be updated to match. A plugin's public API is exactly the three consumer-facing surfaces (per `spec/15-PLUGIN-STRUCTURE.md` and the moku-plugin skill):
+
+- the **API methods** consumers call as `app.<plugin>.<method>()` — the `api:` factory return / exported `Api` type (`api.ts`, or the `api:` field of `index.ts` for Nano/Micro);
+- the **events** it emits — the `events:` register callback (`events.ts` or the `events:` field);
+- the **config keys** consumers set via `pluginConfigs` — the `Config` type / `config:` defaults (`config.ts` / `types.ts`).
+
+State, handlers, and internal helpers are NOT public API — never flag README staleness for internal-only changes.
+
+Validate for **Standard+ tier** plugins, and for any lower-tier plugin that already ships a `README.md`:
+
+1. **Decide whether the public API changed.** Prefer the hash signal in `.planning/build/validation-hashes.md` / the STATE.md plugins table (see `build-verification.md` Step 4a / 4d2): a plugin is at risk when its `API Hash` (public-API fingerprint) differs from its `README-API Hash` (the value recorded when its README was last generated), or a Standard+ plugin has no `README.md`. If no hash record exists (validation run outside a build), fall back to comparing the current source surface against the README directly.
+2. **Confirm staleness by content.** Read `src/plugins/<name>/README.md` and compare its `## API`, `## Events`, and `## Config` sections against the source surface above (method names + signatures, event names + payloads, config keys + types + defaults).
+3. **Emit findings:**
+   - An API method, emitted event, or config key present in source but missing/wrong in the README (or a README entry that no longer exists in source) → **BLOCKER**, `rule: docs-sync`, `file: src/plugins/<name>/README.md`, with a `fix` naming the changed elements: "Public API changed — regenerate via the readme-generator agent or update the {API|Events|Config} section to match {elements}; then record the new README-API hash."
+   - A Standard+ plugin missing `README.md` entirely → **BLOCKER** (`rule: docs-sync`).
+   - Public-API hash changed but the README sections already match source → no finding (note it so the orchestrator refreshes `README-API Hash`).
+   - README merely lacks polish while the API matches → **WARNING** at most, never BLOCKER.
+
+Do NOT BLOCKER when only internal state/handler logic changed (public-API hash unchanged) — the narrow fingerprint exists precisely to avoid forcing README churn on internal refactors.
+
 ## Process
 
 1. Find the plugin's root directory
@@ -159,7 +181,8 @@ Validate `src/index.ts`:
 5. Check for JSDoc completeness
 6. Verify test existence and coverage
 7. **Scan all sibling plugins for domain merge opportunities**
-8. Report findings
+8. **Check README freshness vs public API** (§16) — for Standard+ (and any plugin with a README), compare the README's API/Events/Config sections against the source surface; flag `docs-sync` BLOCKERs when the public API changed but the README did not
+9. Report findings
 
 ## Output Format
 
@@ -188,6 +211,9 @@ Reason: [why this tier]
 ### Compliance Issues
 - VIOLATION: [description] — Fix: [how]
 - WARNING: [description] — Recommendation: [what]
+
+### README Freshness vs Public API
+- [PASS/BLOCKER] [plugin] — public API {unchanged | changed: methods/events/config} vs README — Fix: [regenerate / update section]
 
 ### JSDoc Coverage
 - [filename]: [complete/incomplete] — Missing: [what]

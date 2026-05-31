@@ -38,7 +38,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-multi-pass-review.
 Run 4 sequential passes. Each pass focuses on ONE concern:
 
 ### Setup (once)
-1. **Get the diff** — Run `git diff HEAD~1` (or the specified range) to see what changed
+1. **Get the diff** — Run `git diff HEAD~1` (or the specified range) to see what changed. **Scope discipline:** extract the exact set of files (and line ranges) in this diff. In every subsequent pass, review ONLY files in that set. NEVER review committed-but-unchanged files — a skeleton stub committed in a prior wave, previously-verified code, or spec files are NOT part of this wave's diff. If you find yourself analyzing a file not in the diff, drop it. (Real false positive: a reviewer flagged `clientData` — a committed skeleton stub absent from the W1 diff — by conflating committed state with the diff.)
 2. **Read specs** — For each plugin in the wave, read its spec from `.planning/specs/`
 3. **Cross-plugin check** — Note inconsistencies between plugins in the same wave
 
@@ -51,6 +51,7 @@ Run 4 sequential passes. Each pass focuses on ONE concern:
 - Dependencies used via `ctx.require()`? Hooks listen to correct events?
 - Off-by-one errors, missing null guards, race conditions, wrong boolean logic
 - TDD check: do tests verify spec behavior, not just structure?
+- **Grep-before-claiming:** a "symbol X missing / not imported / not implemented / not present" finding is valid ONLY after you `grep -rn 'X' src/` (and the specific file the spec names) and confirm the absence. If it exists anywhere relevant, the finding is FALSE — drop it. Treat a spec alternative ("in match.ts **or** compile.ts", "X **or** Y") as satisfied by EITHER. If you cannot run the grep, downgrade to a QUESTION, never a BLOCKER. (Real false positives this prevents: claiming `clientManifest()` missing when it exists at `api.ts:164`; claiming a comparator "not imported by match.ts" when the spec said "match.ts or compile.ts" and it was imported in `compile.ts`.)
 
 ### Pass 2: Security (skip files with Pass 1 BLOCKERs)
 - Unsanitized user input, prototype pollution, unsafe type assertions
@@ -79,7 +80,11 @@ Run 4 sequential passes. Each pass focuses on ONE concern:
 | 70–90% certain | Report as WARNING with caveat |
 | < 70% certain | Do NOT report — false positives waste more time than they save |
 
+**Optional self-skeptic pass:** for any BLOCKER you are not certain of, try to refute it from the code before emitting — as the **moku-skeptic** agent (`agents/skeptic.md`) would (grep the code, check the cited spec rule, validate context). Keep it only if you cannot refute it. The orchestrator MAY also run `moku-skeptic` over your findings; write each finding to survive that pass (concrete file:line evidence, not a hunch).
+
 ## Output Contract
+
+**Your LAST message MUST be this complete contract — the findings AND a verdict — never stop mid-analysis.** Do not yield with a partial thought (e.g. "let me check X more carefully…"); finish the check, then emit the JSON. A run that ends without the contract + verdict is treated as a **failed review** (it does NOT count as PASS): the orchestrator must re-invoke you (wasted round-trip), and an unattended `--continue` run would proceed with no verdict at all. If you are near the turn limit, stop investigating and emit your best-evidence verdict now rather than leaving it unwritten.
 
 ```json
 {

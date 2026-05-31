@@ -27,7 +27,11 @@ Wave 2 (parallel): router [Standard] (-> env via core), content [Standard]
 Wave 3 (sequential): renderer [Complex] (-> router, content)
 ```
 
-After presenting the full wave plan with dependency rationale, call `ExitPlanMode` to return to normal mode. The plan mode approval UI lets the user review and approve the wave assignments before any code is written. After approval, proceed to pre-flight and wave execution.
+After presenting the full wave plan with dependency rationale, call `ExitPlanMode` to return to normal mode. The plan mode approval UI lets the user review and approve the wave assignments before any code is written.
+
+**STOP here — end this invocation.** Update STATE.md (`## Next Action: Run /moku:build resume`) and exit. The next `/moku:build resume` begins at Step 2.5 (Pre-Flight Check) and Step 3 (Build by Waves). Per-invocation stop is authoritative (see `build.md`); do NOT proceed from wave analysis into pre-flight/execution in the same turn. This keeps build context fresh and lets the user reject the plan before any code is written.
+
+**Framework-level waves (not just plugins).** A wave may contain **non-plugin** work — `package.json` engines/exports, `src/index.ts` barrel/exports, `tsdown.config.ts`, a `./client` export, CI config. These have no `src/plugins/<name>/` dir and are NOT built by a sub-agent: the orchestrator edits the framework files directly, then verifies (tsc/lint/test) and checkpoints. The wave table may carry a row whose Plugins cell is a framework-target label (e.g. `_framework: src/index.ts exports, tsdown ./client_`). Common in `Verb: update` builds where some waves are pure framework wiring.
 
 ## Step 2.5: Pre-Flight Check
 
@@ -49,6 +53,8 @@ Before spawning any builder sub-agents, run a pre-flight check to catch systemic
 **Skip pre-flight for Wave 0 only when no prior source files exist** (`src/` directory is empty or contains only skeleton stubs). If any real implementation files exist in `src/` from prior waves, run pre-flight even for Wave 0 (e.g., when re-running a specific wave with `#wave:N`).
 
 ## Step 3: Build by Waves
+
+**Protected-branch guard (Wave 0 only, before the FIRST checkpoint).** If the skeleton commit didn't already move off the default branch, check now: `branch="$(git rev-parse --abbrev-ref HEAD)"`; `default="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')"; default="${default:-main}"`. If `branch` equals `default`/`main`/`master`, do NOT commit — `AskUserQuestion`: "Wave builds commit a checkpoint per wave, but you're on the protected default branch `{branch}`. Create a feature branch?" → "Create `build/{target-slug}` (Recommended)" / "Use current branch anyway" / "Cancel". On the first, `git switch -c build/{target-slug}`. Skip on later waves (already safe).
 
 **Before each wave:**
 1. Create a safety checkpoint: `git add -A && git commit -m "pre-wave-N: checkpoint before building [plugin list]"`. This enables rollback if the wave produces bad code.
@@ -74,7 +80,7 @@ Lean mode (single line per wave, details only on failure):
 
 ### Per-Plugin Executor (Sub-Agent)
 
-Each plugin in a wave is built by a dedicated sub-agent using **Test-Driven Development (TDD)**. The sub-agent writes failing tests FIRST (derived from the spec), then implements code to make them pass. This catches spec-implementation divergence at the source rather than during post-wave verification.
+Each **plugin** in a wave is built by the **moku-builder** agent (`agents/builder.md`) — spawn it with `subagent_type: moku-builder`, NOT `general-purpose`. The agent bakes in the TDD protocol, the hard filesystem rules, the scoped-lint contract, and the JSON output contract, so the orchestrator no longer re-derives the prompt per plugin. Pass it: plugin name + tier, the spec, framework config, dependency interfaces, relevant decisions, and a **mode** flag — `greenfield` (net-new: RED-first tests fail on stubs) or `delta` (modifying an EXISTING plugin: read existing → keep all existing tests green → add RED-first tests for the NEW behavior only → implement). Framework-level wave items are NOT spawned as sub-agents (see Wave Analysis). The prompt blocks below are the agent's reference / fallback.
 
 **Agent prompt — select based on lean mode:**
 
@@ -109,7 +115,7 @@ Sibling builders run concurrently. A repo-wide command from one builder will cor
   `eslint .` across the repo.
 - **NEVER run a git mutation:** no `checkout`, `restore`, `reset`, `stash`, `clean`, `add`, `commit`
   (a stray `git checkout` reverted a sibling plugin to stubs in a real build — data loss).
-- **Scoped formatting only:** `bunx biome format --write src/plugins/[name]/`.
+- **Scoped formatting AND linting:** `bunx biome format --write src/plugins/[name]/` **and `bunx eslint src/plugins/[name]/ --fix`** (the project's real ESLint, scoped to your dir). Biome alone misses unicorn-style rules (`no-null`, `prevent-abbreviations`, `prefer-structured-clone`, `consistent-function-scoping`, `prefer-regexp-test`), and ESLint ignores `.tsx` so Biome covers those — a builder that runs only Biome reports "lint clean" while the orchestrator's repo-wide ESLint then fails. Fix in-scope ESLint findings here; report anything `--fix` cannot resolve as a HINT.
 - Report lint/format/dependency issues as HINTS in your output contract; the orchestrator fixes them
   repo-wide AFTER the wave. Do not "tidy" outside your plugin.
 > For waves with >1 builder, the orchestrator SHOULD spawn each builder with `isolation: "worktree"`
@@ -164,6 +170,23 @@ Depends: [## Dependencies plugin names, or "None"]
 ## Decisions
 [Relevant decision-log entries, or omit section entirely]
 ```
+
+#### Delta prompt (modifying an EXISTING plugin — `mode: delta`):
+```
+You are modifying an existing Moku plugin by adding new behavior.
+TDD (incremental): read the existing code + existing tests → keep all existing tests GREEN
+→ write RED-first tests for the NEW behavior only → implement until new tests pass AND old tests still pass.
+
+## Existing Source
+[Read current src/plugins/[name]/*.ts files and the existing __tests__/]
+
+## New Behavior Spec
+[The change description / ## Changes section from the spec]
+
+## Hard Rules + Scoped Checks
+[Same filesystem rules and scoped biome+eslint as the normal prompt above]
+```
+Do NOT rewrite the whole suite or re-test existing behavior — incremental TDD on existing code is not a TDD violation. If the public API (api/events/config) changes, set `publicApiChanged: true` so the README-freshness gate fires.
 
 #### Output contract (same for both modes):
 ```
@@ -273,6 +296,16 @@ For `agent-incomplete` or `agent-failed` plugins:
 - Re-spawn the builder agent with the same prompt + note about what was already created on disk
 - If re-spawn also fails, mark as `needs-manual` and continue with other plugins in the wave
 - `needs-manual` plugins are excluded from verification and reported to the user at the end
+
+### Wave Table Format
+
+Canonical wave-table shape. `/moku:build` detects an existing plan and skips its own wave analysis by finding this `| Wave | … |` table in STATE.md, so `/moku:plan` emits it in exactly this shape (see `plan-templates.md` → Wave Table). The Plugins cell may be a **framework-target label** for orchestrator-executed framework-level waves (no sub-agent).
+
+| Wave | Plugins | Status |
+|------|---------|--------|
+| 0 | log, env | verified |
+| 1 | router, site, i18n | building |
+| 2 | _framework: src/index.ts exports, tsdown ./client, package.json engines_ | not started |
 
 ### Wave Pipelining (Build N+1 While Verifying N)
 

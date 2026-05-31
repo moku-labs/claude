@@ -34,6 +34,18 @@ Before spawning validators, check if any `built` plugins are unchanged since a p
 3. If hash matches AND the plugin was previously `verified` (now set back to `built` due to crash recovery) → skip verification, restore `verified` status. Log: `"Lazy skip: {name} unchanged since last verification (hash: {short})"`
 4. If hash doesn't match OR no prior hash exists → verify normally
 
+**Public-API hash (for README-freshness, Step 4d3).** Also compute a narrower fingerprint covering ONLY the consumer-facing surface — the `api:`/`Api` type, emitted `events`, and `Config` keys — not internal state/handlers:
+
+```bash
+# Standard+: the files that define the public surface
+{ for f in api.ts events.ts config.ts types.ts index.ts; do
+    test -f "src/plugins/{name}/$f" && cat "src/plugins/{name}/$f"
+  done; } | shasum -a 256 | cut -d' ' -f1
+# Nano/Micro (single index.ts): falls back to index.ts content
+```
+
+This hash changes only when the public API/events/config change, so an internal refactor does not force README churn. Record it alongside the full hash (Step 4d2) for the README-freshness check.
+
 This saves 50-70% on resume builds where most plugins haven't changed. Only newly built or modified plugins go through the full verification pipeline.
 
 **Spawn both agents simultaneously** — the verifier and code reviewer read the same files independently. Running them in parallel saves ~15-20% per wave compared to sequential execution.
@@ -89,7 +101,7 @@ After the wave's plugins pass verification, update the framework files to includ
 Then run integration checks in the target workspace:
 
 1. **Format** — `bun run format` (Biome auto-formats all files)
-2. **Lint** — `bun run lint` -> if errors, run `bun run lint:fix` then re-check. Manually fix anything lint:fix cannot resolve.
+2. **Lint** — `bun run lint` -> if errors, run `bun run lint:fix` then re-check. Manually fix anything lint:fix cannot resolve. Builders now run **scoped `eslint src/plugins/<name>/`** in their own contract (see `build-wave-execution.md` Builder Sub-Agent Protocol), so this repo-wide lint should be a *confirmation* — not the first place unicorn-style findings (`no-null`, `prevent-abbreviations`, …) appear. If repo-wide eslint still surfaces new in-scope findings a builder missed, treat it as a builder-contract gap for that plugin (route the fix, and the builder PASS was overstated).
 3. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. Fix all type errors.
 4. **Build + bundled types (REQUIRED, not optional)** — run `bun run build` (the dist + `.d.ts`
    emit). **`tsc --noEmit` is NOT sufficient** — it type-checks source but does not catch
@@ -180,6 +192,7 @@ When verification finds issues (plugins with status `verify-failed`):
    - `anti-pattern`, `config-shape`, `lifecycle`, `event-type` → **moku-spec-validator**
    - `lint-format` → no agent needed, just re-run `bun run lint`
    - `missing-export`, `dependency` → **moku-verifier** (Level 3 wiring checks)
+   - `docs-sync` → no code fix — regenerate the plugin's `README.md` via the **readme-generator** agent (or hand-edit the affected `## API`/`## Events`/`## Config` section), then record the new `README-API Hash` (build-final Step 5.5) and re-run **moku-plugin-spec-validator** §6 to confirm it clears.
 5. After the targeted validator passes, re-run the **moku-verifier** agent on affected plugins for final confirmation
 6. **Integration re-check**: Re-run the integration check suite (`bun run format`, `bun run lint`, `bunx tsc --noEmit`) to ensure the fix didn't introduce new integration-level issues. If integration fails, route back through the diagnostician (this counts toward the circuit breaker).
 7. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
@@ -319,16 +332,33 @@ After integration checks pass, verify each plugin in the wave against its specif
 5. Add failure notes to failing checkboxes: `- [ ] API methods — FAIL: missing navigate()`
 6. Failed checkboxes → route to Gap Closure (Step 4c)
 
+## Step 4d3: README Freshness vs Public API
+
+After spec ticking, enforce: **a change to a plugin's public API requires its README to be updated.** Run for Standard+ tier plugins (and any lower-tier plugin that already ships a `README.md`).
+
+1. For each verified plugin, compute its **public-API hash** (Step 4a) and compare to the `README-API Hash` stored from the last time its README was generated (Step 4d2 / build-final Step 5.5 / Delta Step 8).
+2. A plugin is **at risk** when the public-API hash differs (consumer-facing api/events/config changed since the README was written) OR a Standard+ plugin has no `README.md`.
+3. For each at-risk plugin, spawn (or, in the post-build pipeline, rely on) the **moku-plugin-spec-validator** agent's README-freshness check (§6): it confirms by comparing the README's `## API` / `## Events` / `## Config` sections against the source surface.
+   - Source has an API method / event / config key the README lacks or misstates → **BLOCKER** (`docs-sync`).
+   - Public-API hash changed but README already matches → not stale; just refresh the `README-API Hash` in Step 4d2.
+4. **On a `docs-sync` BLOCKER:** route to gap closure — the fix is to regenerate the README via the **readme-generator** agent (or hand-edit the affected section), then record the new `README-API Hash`. Do NOT tick the plugin's wave as fully verified while a `docs-sync` BLOCKER is open. This is the same enforcement the Delta Update Checklist (build-final Step 8) applies on the common case — a later build changes a plugin's API and the README must move with it.
+
+Skip plugins whose public-API hash is unchanged (internal-only edits) — they need no README update.
+
 ## Step 4d2: Record Content Hashes
 
-After spec verification ticking, compute and record a content hash for each verified plugin. This enables incremental validation — unchanged plugins can be skipped in future validation runs.
+After spec verification ticking, compute and record content hashes for each verified plugin. This enables incremental validation — unchanged plugins can be skipped in future validation runs.
 
 ```bash
-# Per-plugin hash: hash of all .ts files in the plugin directory
+# Full per-plugin hash: hash of all .ts files in the plugin directory
 find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1
+# Public-API hash: see Step 4a (api/events/config surface only)
 ```
 
-Store the hash in the STATE.md plugins table as a `Hash` column: `| Name | Tier | Wave | Status | Hash |`
+Store in the STATE.md plugins table: `| Name | Tier | Wave | Status | Hash | API Hash | README-API Hash |`
+- `Hash` — full source hash (lazy-validation skip).
+- `API Hash` — current public-API hash (Step 4a).
+- `README-API Hash` — the public-API hash captured the last time this plugin's `README.md` was (re)generated. Step 4d3 flags the README stale when `API Hash` ≠ `README-API Hash`. Update this column **only** when the README is actually (re)generated this pass; otherwise carry the prior value forward so a still-stale README keeps failing Step 4d3.
 
 The validation-coordinator uses these hashes to skip per-plugin validators for unchanged plugins. Cross-plugin validators (architecture-validator) always run on the full framework regardless of hashes.
 

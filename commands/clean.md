@@ -29,7 +29,7 @@ If `.planning/` does not exist, report that and stop.
   combined — see Step 2).
 - `--keep <list>` — comma-separated extra categories to preserve in addition to the default.
   Recognized tokens:
-  - `specs` → keep `.planning/specs/` and `.planning/skeleton-spec.md`
+  - `specs` → keep `.planning/specs/` and `.planning/build/skeleton-spec.md`
   - `context` → keep `.planning/context-*.md`
   - `state` → keep `.planning/STATE.md`
   - `learnings` is **always** kept and need not be listed.
@@ -53,13 +53,13 @@ Compute two lists from the actual contents of `.planning/` (use `find`, do not a
 
 **KEEP** (default + any `--keep` tokens):
 - `.planning/learnings.md` (always)
-- `.planning/specs/`, `.planning/skeleton-spec.md` — only if `specs` in `--keep`
+- `.planning/specs/`, `.planning/build/skeleton-spec.md` — only if `specs` in `--keep`
 - `.planning/context-*.md` — only if `context` in `--keep`
 - `.planning/STATE.md` — only if `state` in `--keep`
 
 **REMOVE** (everything under `.planning/` not in KEEP), e.g.:
 - `.planning/STATE.md` (unless kept)
-- `.planning/specs/`, `.planning/skeleton-spec.md` (unless kept)
+- `.planning/specs/`, `.planning/build/skeleton-spec.md` (unless kept)
 - `.planning/context-*.md` (unless kept)
 - `.planning/build/` (agent logs, wave logs)
 - `.planning/audit-*.md`

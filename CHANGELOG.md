@@ -2,6 +2,72 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.35.0 (2026-05-31)
+
+Build-workflow hardening from a delta/update build report (14 issues, all confirmed). The
+`Verb: update` path was largely improvised; this makes it first-class and fixes several
+greenfield-only assumptions, contradictions, and agent-quality gaps.
+
+### Added — `moku-builder` agent (#5)
+- **`agents/builder.md`** — a real builder agent (was inline prose re-derived per run): TDD
+  protocol, hard filesystem isolation, scoped lint, JSON output contract, and a
+  **greenfield/delta mode** toggle. `build-wave-execution.md` now spawns `moku-builder`
+  (`subagent_type: moku-builder`) instead of `general-purpose`.
+
+### Added — first-class delta/update build (#2, #3)
+- **`build-skeleton.md`** — delta-skeleton mode for `Verb: update`: create compiling stubs for
+  NEW files only (from a `## Delta File Structure`, or existing `## File Structure` skipping
+  paths that exist), never overwrite existing files; relaxed section requirements for delta.
+- **`build-wave-execution.md`** — delta builder-prompt variant (read existing → add → keep
+  existing tests green, RED-first only for new behavior) and a **framework-level wave** concept
+  (orchestrator-executed, no sub-agent: `package.json`/`src/index.ts`/`tsdown`/CI), with the
+  wave table allowed to carry framework-target rows.
+
+### Fixed — contradictions & path/format coupling (#1, #4, #8, #9)
+- **`build-skeleton.md`** reads `.planning/build/skeleton-spec.md` with a fallback to
+  `.planning/skeleton-spec.md`; **`clean.md`** path references corrected to `build/` (#1).
+- **`build.md`** declares its per-invocation wave-analysis **STOP authoritative** over
+  `build-wave-execution.md` (which now also stops after presenting the plan) (#4).
+- **`plan-templates.md`** STATE.md template now emits the canonical `| Wave | Plugins | Status |`
+  table that `build` keys its skip-wave-analysis detection off; `build.md` documents the
+  detection (#8). **`plan.md`** State Persistence: each field appears exactly once (no duplicate
+  `## Git Checkpoint:`) (#9).
+
+### Fixed — code reviewer quality (#6, #7)
+- **`agents/code-reviewer.md`** — must always end with the structured findings + SHIP/FIX-FIRST
+  verdict (never mid-analysis) (#6); strict diff-scoping (never review committed-but-unchanged
+  files) (#7a); **grep-before-claiming** any "missing/absent" finding and treat spec "X or Y" as
+  satisfied by either (#7b); optional self-skeptic / `moku-skeptic` pass (#7c).
+
+### Added — guards & cost notes (#10, #11, #12)
+- **`build-wave-execution.md`** — protected/default-branch guard before the first checkpoint
+  commit (offer a feature branch) (#10); builders run scoped `eslint src/plugins/<name>/` so
+  unicorn-style findings are caught at the source, not only at orchestrator post-wave lint
+  (cross-referenced in `build-verification.md`) (#11); `--continue` pre-commit cost note (#12,
+  also pointed to from `build-final.md`).
+
+## 0.34.0 (2026-05-31)
+
+### Added — build validators flag a stale README after a public-API change
+A plugin whose **public API** changes must have its `README.md` updated; the validation
+pipeline now enforces this instead of letting docs silently drift.
+
+- **`agents/plugin-spec-validator.md`** — new check §16 "README Freshness vs Public API".
+  Public API is defined narrowly as the three consumer-facing surfaces (the `api:`/`Api`
+  methods, emitted `events`, and `Config` keys); state/handlers are internal and excluded.
+  For Standard+ plugins (and any plugin already shipping a README), it compares the README's
+  `## API`/`## Events`/`## Config` sections against the source surface and emits a
+  **BLOCKER** (`rule: docs-sync`) when the API moved but the README didn't (or a Standard+
+  plugin has no README). Internal-only refactors do not trigger it.
+- **`build-verification.md`** — Step 4a now also computes a **public-API hash** (api/events/
+  config files only); new **Step 4d3** runs the README-freshness check each wave; Step 4d2
+  records `API Hash` + `README-API Hash` columns so staleness is a precise, internal-change-
+  immune signal (`API Hash` ≠ `README-API Hash` ⇒ stale). Step 4c gap-closure maps the
+  `docs-sync` category to README regeneration (readme-generator), not a code fix.
+- **`build-final.md`** — Step 5.5 records the `README-API Hash` when a README is generated;
+  the Delta Update Checklist now regenerates a plugin README when its **public-API hash**
+  changed (not on any file change), keeping the Step 4d3 gate green on later builds.
+
 ## 0.33.0 (2026-05-31)
 
 Eliminates a data-loss class: two features brainstormed + planned in one session could collide

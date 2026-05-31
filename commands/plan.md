@@ -342,6 +342,8 @@ Every stage reads `.planning/STATE.md` at the start and writes it at the end. Th
 
 All headers use **inline-colon format**: `## HeaderName: value` — the header name, a colon, a space, and the value all on one line. Never use a bare section heading like `## Next Action` with the value on a separate line.
 
+**Each STATE.md field appears exactly once.** When updating STATE.md, edit the existing field in place — never append a second copy of a `## Header:` that already exists. This applies especially to fields written by *both* plan and build (e.g. `## Git Checkpoint:`, `## Phase:`, `## Skeleton:`): there must be exactly one of each. Before writing, if a field is duplicated, collapse to a single canonical line (the last/most-recent value wins). The build command writes `## Git Checkpoint:` to one canonical location and overwrites it each wave.
+
 **On stage entry:**
 1. Read `.planning/STATE.md`
 2. Verify `## Phase:` ends with `/approved` (e.g., `stage1/approved`) — if not, tell user: "Stage N cannot start: the previous stage has not been approved. Resume from the pending-approval stage to approve it first." **Exception:** stages reached via the Jump Table from a `/pending-approval` phase skip this check — they are resuming their own pending state.

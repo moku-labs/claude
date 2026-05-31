@@ -329,8 +329,12 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-framework.md` for 
 
 **CRITICAL: Wave analysis is mandatory before any plugin implementation.** After skeleton is committed, the FIRST action is always Step 1 (wave analysis) from `build-framework.md`. Do NOT skip wave analysis and create plugin implementation files directly. The wave plan determines build order, parallelism, and dependency safety.
 
+**Authoritative stopping point (this file wins).** Wave analysis is a **per-invocation stop**: present the wave plan, update STATE.md, and end the invocation. The next `/moku:build resume` begins at pre-flight + Wave 0. Do NOT roll from wave analysis into building in the same invocation. If `build-wave-execution.md` ever reads as "after approval, proceed to execution," `build.md` is authoritative — stop. (Rationale: fresh context per phase, explicit user approval, cheap re-analyze vs. expensive re-build.)
+
 **Step sequence per invocation:**
 1. Read specs → Wave analysis → **STOP** (present wave plan). **On resume:** if STATE.md already contains a stored wave plan (detect by looking for `| Wave |` in the plugins table header row AND all plugin rows have a numeric value in the Wave column), skip wave analysis and proceed directly to executing the next incomplete wave.
+
+   **Shared wave-table schema (plan ↔ build).** `/moku:plan` emits the canonical `| Wave | Plugins | Status |` table (see `plan-templates.md` → Wave Table and `build-wave-execution.md` → Wave Table Format); build's skip-wave-analysis detection keys off exactly that table. Detection requires the `| Wave |` column fully populated (no empty cells). If the column is missing, contains prose, or has mixed/empty values, treat the plan as malformed and re-run wave analysis rather than trusting it. A row whose Plugins cell is a framework-target label (orchestrator-executed, no sub-agent) is valid.
 2. Build Wave 0 (core plugins) → verify → integrate → tick spec checkboxes → git checkpoint → STATE.md update → **STOP**
 3. Build Wave 1 → verify → integrate → **regression test** → tick spec checkboxes → **STOP**
 4. Build Wave N → ... → **regression test** → ... → **STOP** (one wave per invocation until all waves done)

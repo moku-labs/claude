@@ -239,6 +239,18 @@ Build Status values: `not started` | `building` | `built` | `pipeline-built` | `
 - Wave 1: router (no regular plugin dependencies — parallel build)
 - Wave 2: auth (depends on Wave 1)
 
+## Wave Table
+<!-- Canonical machine-readable wave table. /moku:build detects an existing plan and SKIPS its own
+     wave analysis by finding THIS `| Wave | Plugins | Status |` table — emit it in exactly this shape
+     (see build-wave-execution.md "Wave Table Format"). The prose ## Wave Grouping above is for humans;
+     this table is what build consumes. A row may carry a framework-target label (orchestrator-executed,
+     no sub-agent) instead of plugin names. -->
+| Wave | Plugins | Status |
+|------|---------|--------|
+| 0 | log, env | not started |
+| 1 | router | not started |
+| 2 | auth | not started |
+
 ## Wave Progress
 | Step | Status | Notes |
 |------|--------|-------|

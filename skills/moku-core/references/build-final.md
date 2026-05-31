@@ -34,6 +34,7 @@ For each plugin (fully parallel, batched by `maxParallelAgents`):
 
 After all agents complete:
 - Run `bun run format` to normalize README formatting
+- **Record the README-API hash.** For each plugin whose README was generated, write its current **public-API hash** (api/events/config surface — see `build-verification.md` Step 4a) into the `README-API Hash` column of the STATE.md plugins table. This is the baseline the README-freshness check (build-verification Step 4d3 / plugin-spec-validator §16) compares against — when the public API later changes, `API Hash` ≠ `README-API Hash` flags the README stale.
 - Update STATE.md: mark README wave complete
 - **STOP.** Tell the user: `"README wave complete. Run /moku:build resume for root documentation."`
 
@@ -490,7 +491,7 @@ When a build modifies existing plugins or adds new ones after the initial build 
 
 ### Delta Update Checklist
 
-1. **Plugin READMEs** — regenerate READMEs for changed plugins only. Spawn sub-agents for each changed plugin (same protocol as Step 5.5).
+1. **Plugin READMEs** — regenerate READMEs for plugins whose **public API changed**, not just any changed file. A plugin needs a README regen when its **public-API hash** (api/events/config surface — `build-verification.md` Step 4a) differs from its `README-API Hash` (the value recorded when its README was last generated). Internal-only edits (state/handlers, public-API hash unchanged) do NOT require a README regen. For each plugin that does: spawn a sub-agent (same protocol as Step 5.5), then record the new `README-API Hash`. The README-freshness check (build-verification Step 4d3 / moku-plugin-spec-validator §6) will BLOCKER any plugin whose public API moved without its README — so this delta step is what keeps that gate green.
 2. **Root README** — update the root README to reflect changes: new plugins in the plugin table, updated API references, new config options. Do NOT regenerate from scratch — read the existing README and update the relevant sections.
 3. **LLM Documentation** — regenerate both `llms.txt` and `llms-full.txt` in full. LLM docs are cheap to regenerate and must always reflect the current state exactly.
 4. **Integration tests** — add new integration test scenarios that exercise the changed/added functionality. Run all existing integration tests to verify no regressions. If new cross-plugin interactions were introduced, add scenarios for those.
@@ -504,5 +505,7 @@ The delta update runs as a single pass (not stop-and-resume):
 2. Run updates 1–6 above for changed artifacts only
 3. Run `bun run format` → `bun run lint` → `bunx tsc --noEmit` → `bun run test`
 4. Report what was updated
+
+> **Checkpoint cost (`--continue`):** if the repo's pre-commit hook runs the full gate (build + publint + lint + full test suite), every per-wave checkpoint re-runs it, so a `--continue` build multiplies that cost by the wave count. On large projects, prefer a lighter per-wave checkpoint (`tsc` + changed-scope tests) with the full gate once at the end. See `build-wave-execution.md` → Continue Mode.
 
 This step is referenced by `build.md` rule 2c (the `add` entry point) and by the `update` verb's build flow.
