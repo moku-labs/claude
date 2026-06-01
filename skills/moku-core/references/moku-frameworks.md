@@ -23,9 +23,10 @@ This file is the integration point between three systems:
 `knownVersion` is the last version this toolkit was synced against. `moku-sync` updates it
 after a successful sync; a value behind the upstream latest is exactly the signal that
 "there is something new." **Version-of-truth for detecting new releases is the npm registry
-JSON** (`https://registry.npmjs.org/<npm>` → `dist-tags.latest`) — these packages do NOT
-ship `llms.txt`, so the plugin catalog is rebuilt from `package.json` `exports` + the repo
-README plugin table + `src/plugins/*`.
+JSON** (`https://registry.npmjs.org/<npm>` → `dist-tags.latest`). `@moku-labs/web` ships an
+upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured catalog — which
+`moku-sync` reads and cross-checks against `package.json` `exports` + `src/plugins/*`.
+`@moku-labs/core` ships no `llms.txt`, so its catalog is rebuilt from source.
 
 ```json
 {
@@ -59,7 +60,7 @@ README plugin table + `src/plugins/*`.
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.3.1",
+      "knownVersion": "0.4.0",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -70,7 +71,7 @@ README plugin table + `src/plugins/*`.
         "tagGlob": "v*",
         "releases": "https://github.com/moku-labs/web/releases",
         "packageJson": "https://raw.githubusercontent.com/moku-labs/web/main/package.json",
-        "llms": null
+        "llms": "https://raw.githubusercontent.com/moku-labs/web/main/llms-full.txt"
       },
       "upgrade": { "migrationId": "moku-web-version", "distTagPolicy": "stable->latest,prerelease->next" }
     }
@@ -78,12 +79,15 @@ README plugin table + `src/plugins/*`.
 }
 ```
 
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@0.3.1` (npm `latest`).
-> The plugin/property catalog in `skills/moku-web/references/plugin-index.md` was generated
-> from the source at `../web` (`src/plugins/*`); v0.3.1 vs the 0.3.0 source is CI + JSDoc
-> only — no API change. `@moku-labs/web` pins `@moku-labs/core@0.1.0-alpha.6` exactly, so a
-> consumer that depends only on `@moku-labs/web` gets the right core transitively and must
-> NOT add a direct `@moku-labs/core` dependency.
+> **Provenance of the `web` entry:** synced against `@moku-labs/web@0.4.0` (npm `latest`,
+> published 2026-06-01). The plugin/property catalog in
+> `skills/moku-web/references/plugin-index.md` was generated from the upstream
+> `llms.txt`/`llms-full.txt` (shipped since 0.4.0) cross-checked against the source at `../web`
+> (`src/plugins/*` at tag `v0.4.0`). **0.4.0 is a feature release** over 0.3.1: the SSG→DATA→SPA
+> data flow (new isomorphic `data` plugin + `route.parse()` client-validation gate + `router.mode`
+> switch), and engines moved to node ≥24. `@moku-labs/web` still pins `@moku-labs/core@0.1.0-alpha.6`
+> exactly, so a consumer that depends only on `@moku-labs/web` gets the right core transitively and
+> must NOT add a direct `@moku-labs/core` dependency.
 
 ## Field reference
 
@@ -97,7 +101,7 @@ README plugin table + `src/plugins/*`.
 | `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export). |
 | `dependsOn` | Other moku-family packages it requires (ordering hint: upgrade core before web). |
 | `detect.packageJsonDep` | Presence of this dep in a consumer's `package.json` ⇒ the framework applies to that project. |
-| `releaseSource` | `npm` (version-of-truth via `dist-tags.latest`), `github`/`releases` (notes), `packageJson` (deps/exports). `llms` is `null` — no `llms.txt` upstream. |
+| `releaseSource` | `npm` (version-of-truth via `dist-tags.latest`), `github`/`releases` (notes), `packageJson` (deps/exports), `llms` (upstream `llms-full.txt` when present — `web` since 0.4.0; `null` for `core`). |
 | `upgrade.migrationId` | The `/moku:upgrade` migration that bumps this dependency (see `upgrade-migrations.md`). |
 | `upgrade.distTagPolicy` | Stable → `latest`, prerelease (`-` in version, e.g. `0.1.0-alpha.6`) → its prerelease tag (mirrors `ci-release.md`). |
 

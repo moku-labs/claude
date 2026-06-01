@@ -2,6 +2,33 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.36.0 (2026-06-01)
+
+`moku-sync` of `@moku-labs/web` `0.3.1 → 0.4.0` (npm `latest`, published 2026-06-01).
+Regenerated the framework's teaching material from the upstream `llms.txt`/`llms-full.txt`
+(now shipped) cross-checked against source at tag `v0.4.0`. The headline upstream change is
+the **SSG → DATA → SPA** data flow.
+
+### Added
+- **`skills/moku-web/references/plugin-index.md`** — new `data` plugin row (agnostic isomorphic
+  data provider: `write`/`at`/`urlFor`/`fileFor`, config `outputDir`/`baseUrl`, no events); the
+  `route.parse(unknown → D)` client-validation gate; a SSG → DATA → SPA data-flow diagram;
+  `app.data.*` accessors; default-vs-node-only flags per plugin; RouterApi `clientManifest()` +
+  `mode()`; new build phases (`public`, `not-found`, `locale-redirects`).
+
+### Changed
+- **`skills/moku-web/SKILL.md`** — Framework API section bumped to v0.4.0 with the
+  `plugins: [...]` composition shape, `router.mode` switch, and the SSG → DATA → SPA paragraph
+  (web-patterns guidance untouched).
+- **`skills/moku-core/references/moku-frameworks.md`** — `frameworks[web].knownVersion → 0.4.0`;
+  `releaseSource.llms` now points at the upstream `llms-full.txt`; provenance, preamble, and
+  field reference updated to reflect that `@moku-labs/web` ships an `llms.txt` since 0.4.0.
+  Engines noted as node ≥24 (was ≥22). Core dep unchanged (`@moku-labs/core@0.1.0-alpha.6`).
+- **`skills/moku-core/references/upgrade-migrations.md`** — refreshed the `moku-web-version`
+  illustrative example to `0.4.0` (the migration is registry-driven, so `/moku:upgrade` now
+  offers `0.4.0` automatically).
+- Version bumped to 0.36.0 in plugin.json and marketplace.json.
+
 ## 0.35.0 (2026-05-31)
 
 Build-workflow hardening from a delta/update build report (14 issues, all confirmed). The

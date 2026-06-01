@@ -26,30 +26,48 @@ Enforce the established web patterns from the Moku blog reference implementation
 | TypeScript | Strict mode, `jsxImportSource: "preact"` |
 | Tests | Playwright (visual regression) |
 
-## Framework API (@moku-labs/web v0.3.1)
+## Framework API (@moku-labs/web v0.4.0)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. One entry point;
 `createApp` is **synchronous**, while `start()` / `build.run()` / `deploy.run()` are async.
+**Defaults are isomorphic** (`site, i18n, router, head, spa` + `log`/`env` core); the
+**node-only** plugins (`content, build, deploy, data`) are exported but composed explicitly via
+`plugins: [...]` and tree-shaken out of browser bundles.
 
 ```ts
-import { createApp, defineRoutes, route } from "@moku-labs/web";
+import { createApp, defineRoutes, route, contentPlugin, buildPlugin, dataPlugin } from "@moku-labs/web";
+
+const routes = defineRoutes({
+  home: route("/").load((_p, l) => listCards(l)).parse(r => r as Card[]).render(c => <Home cards={c.data} />),
+  post: route("/blog/{slug}/").load((p) => getPost(p.slug)).parse(r => PostSchema.parse(r)).render(c => <Post post={c.data} />),
+});
 
 const app = createApp({
-  config: { mode: "production" },          // "production" | "development"
-  pluginConfigs: {                          // per-plugin, keyed by plugin name
+  config: { mode: "production" },                   // "production" | "development"
+  plugins: [contentPlugin, buildPlugin, dataPlugin], // node-only, ADDED to the isomorphic defaults
+  pluginConfigs: {                                   // per-plugin, keyed by plugin name
     site:   { name: "My Blog", url: "https://blog.dev", author: "Ada", description: "Notes" },
-    router: { routes: defineRoutes({ home: route("/"), post: route("/blog/{slug}/") }), mode: "ssg" },
+    router: { routes, mode: "hybrid" },              // SINGLE ssg/data/spa switch (default hybrid)
   },
 });
-await app.build.run();                      // SSG → dist/   (or: await app.start())
+await app.build.run();                      // dist/<path>/index.html + (mode!=="ssg") dist/_data/<path>/index.json
 ```
 
-Ships 8 framework plugins — `site, i18n, router, content, head, build, spa, deploy` — plus
-2 core plugins (`log`, `env`) whose APIs are injected flat on every `ctx` (`ctx.log.*`,
-`ctx.env.*`). Author custom plugins with `createPlugin("name", spec)` (types infer from the
-spec; document the export with a directly-preceding JSDoc block — never destructure exports,
-see moku-core "Public Export Shape"). SEO `<head>` helpers (`meta/og/twitter/jsonLd/
-canonical/hreflang/feedLink/buildArticleHead`) and the `route()` builder are top-level exports.
+**SSG → DATA → SPA (new in 0.4.0):** the route is the contract — `route(pattern).load(→D)
+.parse(unknown→D).render(D→VNode).head(→HeadConfig).generate(→params[])`. At build, the SAME
+`load`/`render` produce static HTML *and* (when `router.mode !== "ssg"` + `dataPlugin` composed)
+per-page JSON sidecars via the isomorphic `data` plugin; the browser fetches them for DATA-driven
+navigation, validating each payload through `.parse()` (the client trust boundary — **required**
+for data-navigable routes, else the build fails). One switch governs it all: `router.mode =
+"ssg" | "spa" | "hybrid"`. Requires **node ≥24** (router uses the global `URLPattern`).
+
+Ships 5 isomorphic default plugins — `site, i18n, router, head, spa` — plus node-only
+`content, build, deploy` and the optional isomorphic `data` provider, and 2 core plugins
+(`log`, `env`) whose APIs are injected flat on every `ctx` (`ctx.log.*`, `ctx.env.*`). Author
+custom plugins with `createPlugin("name", spec)` (types infer from the spec; document the export
+with a directly-preceding JSDoc block — never destructure exports, see moku-core "Public Export
+Shape"). SEO `<head>` helpers (`meta/og/twitter/jsonLd/canonical/hreflang/feedLink/
+buildArticleHead`) and the `route()` builder are top-level exports.
 
 **Full catalog — plugins, events, config, the `ctx`/`app` property index, usage:**
 [`references/plugin-index.md`](references/plugin-index.md). Consult it first when wiring an

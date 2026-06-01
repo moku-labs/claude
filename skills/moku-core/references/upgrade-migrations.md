@@ -138,7 +138,7 @@ the block below.
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/web` AND its
   resolved/declared version `< frameworks[web].knownVersion` in `moku-frameworks.md`.
 - **Apply:**
-  1. Read `frameworks[web].knownVersion` from `moku-frameworks.md` (e.g. `0.3.1`).
+  1. Read `frameworks[web].knownVersion` from `moku-frameworks.md` (e.g. `0.4.0`).
   2. `package.json`: set the `@moku-labs/web` dependency to that version (preserve the range
      operator the project already uses — `^`/`~`/exact; default to exact if none).
   3. Do NOT add a direct `@moku-labs/core` dependency — `@moku-labs/web` pins core itself.
