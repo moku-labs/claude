@@ -1,13 +1,17 @@
 ---
-description: Initialize a Moku development environment with full tooling
+description: Initialize a Moku development environment with full tooling. Accepts natural language.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-argument-hint: [project-path]
+argument-hint: natural language, or [project-path]
 disable-model-invocation: true
 ---
 
 ## Moku Core Specification (authoritative)
 
 Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+
+## Input — natural language first
+
+`$ARGUMENTS` may be **natural language** — you don't need the exact flags or patterns. Resolve intent per **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`**: map the request onto this command's documented arguments (a target path), echo a one-line `Interpreting as: …`, then proceed. If a **required** value is missing or the request is ambiguous, ask only for that gap (don't make the user restate everything). Input that is already exact structured syntax is used verbatim (no echo).
 
 Initialize a new Moku development environment at the path specified by `$1` (or current directory if not provided). The environment must be identical to the moku_core project's tooling setup.
 

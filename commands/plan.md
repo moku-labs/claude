@@ -9,6 +9,10 @@ disable-model-invocation: true
 
 Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
 
+## Input — natural language first
+
+`$ARGUMENTS` may be **natural language** — you don't need the exact flags or patterns. Resolve intent per **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`**: map the request onto this command's documented verbs/types/flags/targets, echo a one-line `Interpreting as: …`, then proceed. If a **required** value is missing or the request is ambiguous, ask only for that gap (don't make the user restate everything). Input that is already exact structured syntax is used verbatim (no echo). NL never bypasses this command's own confirmation gates.
+
 ## Project Configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 

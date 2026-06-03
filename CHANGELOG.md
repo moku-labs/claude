@@ -2,6 +2,21 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.39.0 (2026-06-03)
+
+Natural-language arguments for the idea/scaffold entry-point commands — users describe intent in
+plain language instead of memorizing the `verb type "name" --flags` syntax; the command translates
+it (and asks only for genuinely missing pieces). Scoped to `brainstorm`, `plan`, and `init`; the
+other commands take simple args and are unchanged.
+
+### Added
+- **`skills/moku-core/references/nl-args.md`** — shared natural-language argument-resolution protocol:
+  resolution order (empty → no-arg · already-structured → verbatim · NL → map + echo
+  `Interpreting as: …` → proceed), ask-only-for-the-gap rule, a safety clause (NL never bypasses a
+  command's own gates), mapping guidance, and worked examples.
+- **`## Input — natural language first` hook** in `commands/{brainstorm,plan,init}.md`, pointing at
+  the protocol. `init` now also advertises NL in its description + argument-hint.
+
 ## 0.38.0 (2026-06-03)
 
 Retire the self-audit subsystem (command-file stress-testing is better done against real
