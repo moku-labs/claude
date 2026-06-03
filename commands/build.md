@@ -16,14 +16,12 @@ Use configuration values above if present. Validate before using — ignore inva
 
 | Setting | Type | Range | Default | Used By |
 |---------|------|-------|---------|---------|
-| `maxParallelAgents` | integer | 1–8 | 5 | build, plan (validation), audit |
+| `maxParallelAgents` | integer | 1–8 | 5 | build, plan (validation) |
 | `gapClosureMaxRounds` | integer | 0–5 | 2 | build (gap closure in verification) |
 | `skipValidation` | boolean | true/false | false | build (skip validation pipeline) |
 | `skipTriage` | boolean | true/false | false | build (skip interactive findings triage) |
 | `enablePipelining` | boolean | true/false | true | build (wave pipelining) |
 | `leanMode` | boolean / "auto" | true/false/"auto" | "auto" | build (context savings) |
-| `auditMaxScenarios` | integer | 5–50 | 20 | audit (scenario cap) |
-| `auditIterateLimit` | integer | 1–5 | 3 | audit (max re-audit passes) |
 
 This is the **complete configuration schema** for all Moku commands. All settings are read from `.claude/moku.local.md` YAML frontmatter. Commands only read settings from this table — unknown keys are ignored.
 

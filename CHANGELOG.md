@@ -2,6 +2,34 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.38.0 (2026-06-03)
+
+Retire the self-audit subsystem (command-file stress-testing is better done against real
+projects now) and convert the `spec-sync` maintenance command into a prompt-triggered skill that
+syncs the whole moku family's spec + knowledge in one shot.
+
+### Removed
+- **`/moku:audit` command** and its entire subsystem: 7 agents (`moku-audit-scenario-generator`,
+  `-simulator`, `-executor`, `-synthesizer`, `-hooks-analyzer`, `moku-full-cycle-driver`,
+  `-reviewer`), the `moku-audit.js` workflow, and the `audit-framework.md` / `audit-full-cycle.md`
+  references. Also dropped the `auditMaxScenarios` / `auditIterateLimit` config keys and the
+  `.planning/audit-*.md` hook auto-approve pattern.
+- **`commands/spec-sync.md`** — replaced by the new skill (below).
+
+### Added
+- **`skills/spec-sync/` skill** — prompt-triggered (no longer a slash command). Re-vendors the
+  upstream Moku Core spec + curated sandbox from `moku-labs/core` (pinned to a resolved SHA),
+  regenerates `spec-index.md` / `sandbox-index.md`, then **chains the `moku-sync` skill** to refresh
+  every framework's plugin index + skill API form — so one prompt ("new core version, sync all spec
+  and knowledge") brings the whole moku family in sync. `--dry-run`/`--check`/`--no-family` flags;
+  STOPs outside the plugin repo.
+
+### Changed
+- Cross-references cleaned across `README.md`, `.claude-plugin/SKILL-INVENTORY.md`,
+  `commands/{build,init,status}.md`, `workflows/README.md`, and `hooks/approve-planning-writes.sh`.
+  Counts updated: agents 26 → 19, commands → 9, workflows → 3, skills 4 → 5.
+- Version bumped to 0.38.0 in plugin.json and marketplace.json.
+
 ## 0.37.0 (2026-06-03)
 
 `/moku:clean` now carries context into the next iteration instead of silently discarding it.

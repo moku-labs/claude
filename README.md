@@ -4,7 +4,7 @@ Development toolkit for [Moku Core](https://github.com/moku-labs/core) — the m
 
 ## What This Plugin Does
 
-Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 19-agent validation pipeline, lean execution mode (~40-60% context savings), wave pipelining, and a self-auditing system that finds gaps in commands and hooks then proposes improvements.
+Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 19-agent validation pipeline, lean execution mode (~40-60% context savings), and wave pipelining.
 
 ## Commands
 
@@ -17,7 +17,6 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 | `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`, `fix`. |
 | `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
 | `/moku:status [--full\|diagnostics]` | Show consolidated project dashboard — phase, wave progress, agent activity |
-| `/moku:audit <command\|hooks\|all>` | Audit a command or the hooks system — simulate scenarios, find gaps, propose an improved version. |
 
 ### Plan Targets
 
@@ -32,17 +31,6 @@ Provides commands, skills, validation agents, and hooks for building Moku-based 
 ```
 
 Type synonyms: `tool`/`engine`/`library` → framework, `application`/`service`/`server`/`game` → app. Backward-compatible: `moku:plan framework "desc"` still works (infers `create`).
-
-### Audit Targets
-
-```
-/moku:audit plan              # Audit commands/plan.md
-/moku:audit build             # Audit commands/build.md
-/moku:audit hooks             # Audit hooks.json + all hook scripts
-/moku:audit all               # Audit all commands + hooks sequentially
-/moku:audit plan --sim-only   # Skip real execution (faster)
-/moku:audit plan --iterate    # Auto re-audit after applying fixes (up to 3 passes)
-```
 
 ### Build Targets
 
@@ -67,7 +55,9 @@ Type synonyms: `tool`/`engine`/`library` → framework, `application`/`service`/
 
 Skills include dynamic context injection to auto-detect project state and planning phase.
 
-## Agents (19 total)
+## Agents
+
+The validation & review agents below are spawned on demand by the build/plan pipeline. (Brainstorm, builder, and skeptic agents are spawned by their own commands and not listed here.)
 
 ### Structural Validators (4)
 
@@ -103,16 +93,6 @@ Skills include dynamic context injection to auto-detect project state and planni
 | **moku-validation-coordinator** | Orchestrates full validation pipeline (Group A → Group B → architecture) |
 | **moku-researcher** | Pre-implementation research: npm ecosystem, TypeScript patterns |
 
-### Audit Agents (5)
-
-| Agent | Purpose |
-|-------|---------|
-| **moku-audit-scenario-generator** | Reads a command and generates 7–20 test scenarios (valid, edge, error, adversarial) |
-| **moku-audit-simulator** | Simulates a batch of scenarios step-by-step — pure text analysis, identifies gaps |
-| **moku-audit-executor** | Runs high-value scenarios in a real temp project; always cleans up |
-| **moku-audit-synthesizer** | Deduplicates gaps, prioritizes by severity, produces unified diff + complete improved command |
-| **moku-audit-hooks-analyzer** | Tests hook scripts with real inputs, analyzes prompt hook root cause, checks allowlist completeness |
-
 ### Validation Pipeline
 
 After a full framework build, validators run in this order:
@@ -146,8 +126,6 @@ Create `.claude/moku.local.md` with YAML frontmatter for project-specific overri
 ---
 maxParallelAgents: 3
 gapClosureMaxRounds: 2
-auditMaxScenarios: 20
-auditIterateLimit: 3
 ---
 
 Project-specific notes and context here.

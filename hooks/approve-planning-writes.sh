@@ -44,8 +44,6 @@ case "$REL_PATH" in
     ;;
   .planning/archive/*|*/.planning/archive/*)
     ;;
-  .planning/audit-*.md|*/.planning/audit-*.md)
-    ;;
   .planning/moku.md|*/.planning/moku.md)
     ;;
   .planning/brainstorm-*.md|*/.planning/brainstorm-*.md)

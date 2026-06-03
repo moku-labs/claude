@@ -110,4 +110,3 @@ If `$ARGUMENTS` contains `diagnostics`, show ONLY the diagnostics section:
 - Full `.planning/build/diagnostics.log` contents
 - Summary table: count per category (PERM-DENY, ANTIPATTERN, INDEX-RULE, TOOL-FAIL, STOP-BLOCK, STRUCTURE)
 - Top 5 most repeated issues (group by message similarity)
-- Suggestion: "Run `/moku:audit hooks` to analyze patterns and propose fixes"

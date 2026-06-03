@@ -48,18 +48,6 @@ without stopping. Pass `{plugins:[{name,tier,spec}]}` or omit to auto-detect the
 Mechanical repo-wide change: discover sites → transform each file in parallel (one agent owns a
 whole file = disjoint writes) → verify each → report failures. Pass `{pattern, change}`.
 
-### `moku-audit.js` → `/moku-audit`  (plugin maintainers)
-Audits one of the moku **command files** (`commands/<name>.md`): scenario-generation →
-parallel simulation batches → deduped gap report + improved draft. Mirrors `/moku:audit`.
-This targets the plugin's own command files, so it's only meaningful **inside the moku plugin
-repo** — it is *not* installed into consumer projects. Run it from this repo:
-
-```
-Workflow({ scriptPath: "workflows/moku-audit.js", args: "plan" })
-```
-
-or copy it into this repo's local `.claude/workflows/` to get it as a `/moku-audit` slash command.
-
 ## Installing into a project
 
 `/moku:init` copies the consumer-relevant workflow(s) into the project's `.claude/workflows/`,
