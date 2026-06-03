@@ -1,8 +1,8 @@
 # Moku Core Specification — Fast Index
 
 > **Authoritative source of truth.** Source: `github.com/moku-labs/core/specification`
-> Pinned commit: `fdee8c064c034c5faa8ea253ae1c4c9c9aeaa364`
-> Vendored: `2026-05-29` · Files live at `skills/moku-core/references/spec/`
+> Pinned commit: `fe8cc152d88a76454ffc00919454acf2918e7470`
+> Vendored: `2026-06-03` · Files live at `skills/moku-core/references/spec/`
 > Note: there is **no `10-` file** — the sequence jumps `09 → 11`. This is upstream, not a missing download.
 > Refresh with `/moku:spec-sync`.
 

@@ -2,6 +2,27 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.40.1 (2026-06-03)
+
+`/moku:spec-sync` of `@moku-labs/core` to **0.1.1** (npm `latest`, first stable release; published
+2026-06-03, gitHead `fe8cc152`). Vendored spec + sandbox re-pinned to that SHA; family registry synced.
+Pure provenance/registry update — the public API surface is unchanged (`src/index.ts` byte-identical to
+`0.1.0-alpha.6`), so no skill API form or spec/sandbox content changed.
+
+### Changed
+- **`skills/moku-core/references/spec-index.md`** + **`sandbox-index.md`** — re-pinned
+  `fdee8c0 → fe8cc15` (npm v0.1.1 gitHead), vendored date → `2026-06-03`. Verified content byte-identical
+  to v0.1.1 upstream: spec 15/15 files and sandbox 48/48 files unchanged (no drift, no 404s), no H2 or
+  file-numbering changes.
+- **`skills/moku-core/references/moku-frameworks.md`** — `frameworks[core].knownVersion → 0.1.1`;
+  `releaseSource.llms` `null → …/core/main/llms-full.txt` (core ships `llms.txt`/`llms-full.txt` as of
+  0.1.1); corrected the now-stale "core ships no llms.txt" note; added a `core` provenance block (TS 6
+  support, zero deps, engines node ≥22 / bun ≥1.3.8, no GitHub tag — npm trusted-publish only).
+  `@moku-labs/web` stays `0.5.6` (up to date) and still pins `@moku-labs/core@0.1.0-alpha.6` exactly.
+- **`skills/moku-core/references/upgrade-migrations.md`** — refreshed the `moku-core-version` example to
+  `0.1.1` (registry-driven, so `/moku:upgrade` now offers `0.1.1` to projects with a direct core dep).
+- Version bumped to 0.40.1 in plugin.json and marketplace.json.
+
 ## 0.40.0 (2026-06-03)
 
 `moku-sync` of `@moku-labs/web` `0.4.0 → 0.5.6` (npm `latest`, published 2026-06-03). Catalog rebuilt

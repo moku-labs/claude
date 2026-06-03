@@ -26,7 +26,8 @@ after a successful sync; a value behind the upstream latest is exactly the signa
 JSON** (`https://registry.npmjs.org/<npm>` → `dist-tags.latest`). `@moku-labs/web` ships an
 upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured catalog — which
 `moku-sync` reads and cross-checks against `package.json` `exports` + `src/plugins/*`.
-`@moku-labs/core` ships no `llms.txt`, so its catalog is rebuilt from source.
+`@moku-labs/core` ships its own `llms.txt`/`llms-full.txt` since 0.1.1 (cross-check against
+`src/index.ts`, the sole public-surface authority); pre-0.1.1 it had none.
 
 ```json
 {
@@ -39,7 +40,7 @@ upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured c
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "0.1.0-alpha.6",
+      "knownVersion": "0.1.1",
       "skill": "skills/moku-core",
       "pluginIndex": null,
       "dependsOn": [],
@@ -49,7 +50,7 @@ upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured c
         "github": "https://github.com/moku-labs/core",
         "tagGlob": "v*",
         "packageJson": "https://raw.githubusercontent.com/moku-labs/core/main/package.json",
-        "llms": null
+        "llms": "https://raw.githubusercontent.com/moku-labs/core/main/llms-full.txt"
       },
       "upgrade": { "migrationId": "moku-core-version", "distTagPolicy": "stable->latest,prerelease->next" }
     },
@@ -79,6 +80,16 @@ upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured c
 }
 ```
 
+> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.1` (npm `latest`,
+> published 2026-06-03, gitHead `fe8cc152`). **0.1.0-alpha.6 → 0.1.1 delta:** first stable release —
+> TypeScript 6 support (`typescript@6.0.3`), upstream `llms.txt`/`llms-full.txt` added, trusted-publishing
+> CI. The **public API surface is unchanged**: `src/index.ts` (the sole public-surface authority) is
+> byte-identical to alpha.6 — still `createCoreConfig` + `createCorePlugin` plus the type-only exports;
+> the factory chain (`createCoreConfig → createCore → createApp`) is the same. Zero runtime dependencies;
+> engines `node >=22` / `bun >=1.3.8`. The vendored spec + sandbox (`skills/moku-core/references/spec/`,
+> `…/sandbox/`) re-pinned to the same SHA via `/moku:spec-sync` — content-identical, so no spec/sandbox
+> files changed. No GitHub release/tag exists for 0.1.1 (npm trusted-publish only); pin by gitHead SHA.
+>
 > **Provenance of the `web` entry:** synced against `@moku-labs/web@0.5.6` (npm `latest`,
 > published 2026-06-03). The plugin/property catalog in
 > `skills/moku-web/references/plugin-index.md` was generated from the upstream

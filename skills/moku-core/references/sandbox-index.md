@@ -1,8 +1,8 @@
 # Moku Sandbox — Coding-Style Index
 
 > **Reference exemplars** vendored from `github.com/moku-labs/core/tests/sandbox` to inspire
-> coding style during build. Pinned commit: `fdee8c064c034c5faa8ea253ae1c4c9c9aeaa364`
-> Vendored: `2026-05-29` · files live under `skills/moku-core/references/sandbox/`.
+> coding style during build. Pinned commit: `fe8cc152d88a76454ffc00919454acf2918e7470`
+> Vendored: `2026-06-03` · files live under `skills/moku-core/references/sandbox/`.
 > Refresh with `/moku:spec-sync` (it re-vendors both `spec/` and `sandbox/`).
 >
 > These are **read-only style references, not compilable code.** Their imports
