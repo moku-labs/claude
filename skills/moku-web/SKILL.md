@@ -26,15 +26,18 @@ Enforce the established web patterns from the Moku blog reference implementation
 | TypeScript | Strict mode, `jsxImportSource: "preact"` |
 | Tests | Playwright (visual regression) |
 
-## Framework API (@moku-labs/web v0.4.0)
+## Framework API (@moku-labs/web v0.5.6)
 
-`@moku-labs/web` is the Layer-2 framework these web patterns sit on. One entry point;
-`createApp` is **synchronous**, while `start()` / `build.run()` / `deploy.run()` are async.
-**Defaults are isomorphic** (`site, i18n, router, head, spa` + `log`/`env` core); the
-**node-only** plugins (`content, build, deploy, data`) are exported but composed explicitly via
-`plugins: [...]` and tree-shaken out of browser bundles.
+`@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
+points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
+for the client bundle (ESM-only, node-free by construction, `browserEnv()` pre-wired). `createApp` is
+**synchronous**, while `start()` / `build.run()` / `deploy.run()` are async. **Defaults are
+isomorphic** (`site, i18n, router, head, spa` + `log`/`env` core); the **node-only** plugins
+(`content, build, deploy`) are exported only from `.` and composed explicitly via `plugins: [...]`;
+`data` is optional/isomorphic. For the client import from `./browser` — don't rely on tree-shaking `.`.
 
 ```ts
+// Node SSG build — full entry
 import { createApp, defineRoutes, route, contentPlugin, buildPlugin, dataPlugin } from "@moku-labs/web";
 
 const routes = defineRoutes({
@@ -53,7 +56,19 @@ const app = createApp({
 await app.build.run();                      // dist/<path>/index.html + (mode!=="ssg") dist/_data/<path>/index.json
 ```
 
-**SSG → DATA → SPA (new in 0.4.0):** the route is the contract — `route(pattern).load(→D)
+```ts
+// Client bundle — node-free entry, env auto-wired (browserEnv is the default provider)
+import { createApp, dataPlugin } from "@moku-labs/web/browser";
+const app = createApp({ plugins: [dataPlugin], pluginConfigs: { router: { mode: "spa", routes } } });
+await app.start();
+```
+
+**Two entries (new in 0.5.0):** `.` is the full Node-build surface; `@moku-labs/web/browser` is an
+ESM-only client entry whose static import graph references *zero* node-only modules — node code can
+never reach the client bundle, which is stronger than relying on `sideEffects` tree-shaking. `route.layout`
+is now **`(ctx, children)`** (was `(children)`) and is applied in SSG (v0.4.1 breaking change).
+
+**SSG → DATA → SPA:** the route is the contract — `route(pattern).load(→D)
 .parse(unknown→D).render(D→VNode).head(→HeadConfig).generate(→params[])`. At build, the SAME
 `load`/`render` produce static HTML *and* (when `router.mode !== "ssg"` + `dataPlugin` composed)
 per-page JSON sidecars via the isomorphic `data` plugin; the browser fetches them for DATA-driven

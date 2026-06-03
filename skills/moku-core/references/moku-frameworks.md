@@ -60,7 +60,7 @@ upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured c
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.4.0",
+      "knownVersion": "0.5.6",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -79,15 +79,17 @@ upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured c
 }
 ```
 
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@0.4.0` (npm `latest`,
-> published 2026-06-01). The plugin/property catalog in
+> **Provenance of the `web` entry:** synced against `@moku-labs/web@0.5.6` (npm `latest`,
+> published 2026-06-03). The plugin/property catalog in
 > `skills/moku-web/references/plugin-index.md` was generated from the upstream
-> `llms.txt`/`llms-full.txt` (shipped since 0.4.0) cross-checked against the source at `../web`
-> (`src/plugins/*` at tag `v0.4.0`). **0.4.0 is a feature release** over 0.3.1: the SSG→DATA→SPA
-> data flow (new isomorphic `data` plugin + `route.parse()` client-validation gate + `router.mode`
-> switch), and engines moved to node ≥24. `@moku-labs/web` still pins `@moku-labs/core@0.1.0-alpha.6`
-> exactly, so a consumer that depends only on `@moku-labs/web` gets the right core transitively and
-> must NOT add a direct `@moku-labs/core` dependency.
+> `llms.txt`/`llms-full.txt` cross-checked against the source at `../web` (`src/plugins/*` +
+> `src/browser.ts` at tag `v0.5.6`). **0.4.0 → 0.5.6 delta:** a second entry point
+> **`@moku-labs/web/browser`** (ESM-only, node-free by construction, `browserEnv()` pre-wired —
+> v0.5.0); a **breaking `route.layout(ctx, children)`** signature now applied in SSG (v0.4.1); typed
+> `content.shikiTheme` (v0.5.3); plus build/log/spa fixes. The SSG→DATA→SPA model is unchanged.
+> `@moku-labs/web` still pins `@moku-labs/core@0.1.0-alpha.6` exactly, so a consumer that depends only
+> on `@moku-labs/web` gets the right core transitively and must NOT add a direct `@moku-labs/core`
+> dependency.
 
 ## Field reference
 

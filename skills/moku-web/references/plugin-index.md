@@ -7,26 +7,35 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `0.4.0` · **Layer:** 2 (framework) ·
+**Framework:** `@moku-labs/web` · **Synced version:** `0.5.6` · **Layer:** 2 (framework) ·
 **Depends on:** `@moku-labs/core@0.1.0-alpha.6` · **Engines:** node ≥24 (router uses global `URLPattern`), bun ≥1.3.14 ·
-**Single `.` export** (ESM + CJS), `"sideEffects": false` (browser bundles tree-shake node-only plugins) · **No CLI/bin.**
+**Two entry points:** `.` (ESM + CJS, full surface, Node SSG) and **`./browser`** (ESM-only, node-free by construction) · **No CLI/bin.**
 
-> **What's new in 0.4.0 (vs 0.3.1):** the **SSG → DATA → SPA** data flow. A new isomorphic
-> [`data`](#2-plugin-catalog) plugin persists each page's `load()` output as per-URL JSON at
-> build, and `spa` fetches it for client-side **DATA navigation**. The route gains a
-> **`.parse(unknown → D)`** client validation gate (required for data-navigable routes), and
-> `router.mode` (`"ssg" | "spa" | "hybrid"`, default `hybrid`) is the single switch driving it.
-> Engines moved to node ≥24. This index is the catalog to consult first when building or wiring
-> a `@moku-labs/web` app — what plugins exist, what each emits, what API each exposes, what lands
-> on `ctx` / `app`.
+> **What's new in 0.5.x (vs 0.4.0):**
+> - **Two entry points** — `.` (full, dual ESM+CJS, the Node build) and **`@moku-labs/web/browser`**
+>   (ESM-only client entry whose static import graph references *zero* node-only modules, so node code
+>   can never reach the client bundle — stronger than relying on `sideEffects` tree-shaking). `./browser`
+>   pre-wires `browserEnv()` as the default `env` provider, so env works with **zero config** in the
+>   browser. (v0.5.0)
+> - **Breaking: `route.layout(ctx, children)`** — was `(children)`; now receives a `LayoutContext`
+>   (render ctx + `meta`) first and is **applied in SSG** (persists across spa nav). (v0.4.1)
+> - **Typed `content.shikiTheme`** — a `BundledTheme` name union OR a custom theme object. (v0.5.3)
+> - Fixes: build copies co-located article images + correct OG/redirect/asset paths; log production
+>   sink is info+ only; spa second-consecutive-nav swap fix.
+>
+> The earlier **SSG → DATA → SPA** model (isomorphic `data` plugin, `route.parse()` gate, `router.mode`)
+> is unchanged. This index is the catalog to consult first when building or wiring a `@moku-labs/web`
+> app — what plugins exist, what each emits, what API each exposes, what lands on `ctx` / `app`.
 
-## 1. Framework API form (v0.4.0)
+## 1. Framework API form (v0.5.6)
 
-`@moku-labs/web` exposes a single entry point. `createApp` is **synchronous** (per Moku core spec);
-`start()` / `build.run()` / `deploy.run()` are async. **Defaults are isomorphic** (`site, i18n,
-router, head, spa` + the `log`/`env` core); the **node-only** plugins (`content, build, deploy,
-data`) are exported but NOT defaults — add them via `plugins: [...]` for a Node build and omit them
-in a browser bundle (tree-shaken out).
+`@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
+ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed
+node-free, `browserEnv()` pre-wired). `createApp` is **synchronous** (per Moku core spec); `start()` /
+`build.run()` / `deploy.run()` are async. **Defaults are isomorphic** (`site, i18n, router, head, spa`
++ the `log`/`env` core); the **node-only** plugins (`content, build, deploy`) are exported only from
+`.` and composed via `plugins: [...]` for a Node build; `data` is optional/isomorphic (exported from
+both entries). For the client, import from `./browser` — do NOT rely on tree-shaking `.`.
 
 ```ts
 import {
@@ -77,6 +86,23 @@ Top-level exports (`src/index.ts`):
   (`import { type Router } from "@moku-labs/web"` → `Router.RouteDefinition`, etc.). `site` / `i18n` keep types inline.
 - **env providers:** `dotenv()`, `processEnv()`, `cloudflareBindings()` (Node) · `browserEnv()` (browser).
 
+**`@moku-labs/web/browser` exports (`src/browser.ts`)** — the ESM-only client entry, node-free by
+construction. Same `createApp`/`createPlugin` over the same isomorphic defaults, PLUS `dataPlugin`,
+`defineRoutes`, `route`, `createComponent`, `browserEnv`, the SEO head primitives, and the
+browser-relevant type namespaces `Data, Env, Head, Log, Router, Spa`. It **excludes** everything
+node-only: `contentPlugin`/`buildPlugin`/`deployPlugin`, the node providers `dotenv`/`processEnv`/
+`cloudflareBindings`, and the `Build`/`Content`/`Deploy` type namespaces. `browserEnv()` is the
+**pre-wired default** `env` provider here (reads `import.meta.env` + `globalThis.__ENV__`), so no
+`pluginConfigs.env.providers` is needed. A CI gate (`bun run check:bundle`) asserts zero static
+node/native imports and a ~35 kB gzip budget.
+
+```ts
+// client bundle — node-free entry, env auto-wired
+import { createApp, dataPlugin, defineRoutes, route } from "@moku-labs/web/browser";
+const app = createApp({ plugins: [dataPlugin], pluginConfigs: { router: { mode: "spa", routes } } });
+await app.start();
+```
+
 `route(pattern)` builder methods (each returns the builder):
 - `.load((params, locale) => D | Promise<D>)` — data loader; widens `ctx.data` to `D`. **Runs at BUILD only.**
 - `.parse((raw: unknown) => D)` — client validation gate; MUST return `.load`'s type (mismatch = compile error).
@@ -84,7 +110,10 @@ Top-level exports (`src/index.ts`):
   routes in `hybrid`/`spa` mode, else the build fails (`assertDataValidators`).
 - `.render((ctx: { params, data: D, locale }) => VNode)` — Preact render; runs at build (`renderToString`) AND on the client.
 - `.head((ctx) => HeadConfig)` · `.generate((locale) => params[])` (SSG expansion) · `.meta(record)` (JSON bag in `clientManifest`).
-- `.toJson((ctx) => unknown)` (feeds, separate from the data path) · `.toFile((params) => string)` · `.layout((children) => VNode)`.
+- `.toJson((ctx) => unknown)` (feeds, separate from the data path) · `.toFile((params) => string)`.
+- `.layout((ctx, children) => VNode)` — persistent chrome wrapper. `ctx` is a `LayoutContext` (render ctx + `meta`,
+  so chrome can read `ctx.locale` / `ctx.meta.*`). **Applied in SSG** (v0.4.1 breaking change — was `(children)`); on
+  spa navigation the chrome persists and only the inner swap region is replaced.
 
 Pattern syntax: `{name}` required, `{name:?}` optional, `{lang:?}` the locale-prefix slot (excluded from specificity).
 
@@ -104,8 +133,8 @@ Pattern syntax: `{name}` required, `{name:?}` optional, `{lang:?}` the locale-pr
 | `routerPlugin` | regular · default | Type-safe named routes, matching, URL gen, mode | site, i18n | — | `match(pathname) toUrl(name,params) entries() manifest() clientManifest() mode()` | `routes, mode?` (`ssg`\|`spa`\|`hybrid`, default `hybrid`) |
 | `headPlugin` | regular · default | SEO `<head>`: title tmpl, OG, Twitter, canonical, hreflang, JSON-LD | site, i18n, router | — | `render(resolvedRoute, data)` | `titleTemplate?, defaultOgImage?, twitterCard?, twitterHandle?` |
 | `spaPlugin` | regular · default | Client runtime: island hydration + intercepted nav (HTML-over-fetch, or DATA nav when `data` composed); inert on Node | router, head | `spa:navigate`, `spa:navigated`, `spa:component-mount`, `spa:component-unmount` | `register(c) navigate(path) current()` (+ `createComponent(name,hooks)` island helper) | `swapSelector?` (`"main > section"`), `viewTransitions?` (`true`), `progressBar?` (`true`), `components?` |
-| `contentPlugin` | regular · node-only | Markdown→sanitized HTML, frontmatter, reading time, locale model | i18n | `content:ready`, `content:invalidated` | `loadAll() load(slug,locale) renderMarkdown(md) invalidate(paths) articleToCard(a)` | `contentDir, defaultAuthor?, trustedContent?, extraRemarkPlugins?, extraRehypePlugins?, shikiTheme?` |
-| `buildPlugin` | regular · node-only | SSG orchestrator: pages, feeds, sitemap, OG images; persists per-page data when `mode!=="ssg"` + `data` composed | site, i18n, content, router, head | `build:phase`, `build:complete` | `run(opts?) phases()` | `outDir, minify, feeds, sitemap, images, ogImage, injectAssets?, publicDir?, notFound?, localeRedirects?, clientEntry?, template?` |
+| `contentPlugin` | regular · node-only | Markdown→sanitized HTML, frontmatter, reading time, locale model | i18n | `content:ready`, `content:invalidated` | `loadAll() load(slug,locale) renderMarkdown(md) invalidate(paths) articleToCard(a)` | `contentDir, defaultAuthor?, trustedContent?, extraRemarkPlugins?, extraRehypePlugins?, shikiTheme?` (typed: a `BundledTheme` name or a custom theme object) |
+| `buildPlugin` | regular · node-only | SSG orchestrator: pages, feeds, sitemap, OG images, co-located article images; persists per-page data when `mode!=="ssg"` + `data` composed | site, i18n, content, router, head | `build:phase`, `build:complete` | `run(opts?) phases()` | `outDir, minify, feeds, sitemap, images, ogImage, injectAssets?, publicDir?, notFound?, localeRedirects?, clientEntry?, template?` |
 | `deployPlugin` | regular · node-only | Deploy `outDir` to Cloudflare Pages (wrangler) | site | `deploy:complete` | `run(opts?) getLastDeployment() init(opts?)` | `target, outDir, productionBranch?, scrubAllowlist?, compatibilityDate?, ci?` |
 | `dataPlugin` | regular · optional (isomorphic) | Agnostic data provider: persist per-page JSON (Node `write`) + fetch it for DATA nav (browser `at`) | — (no hard depends) | — | `write(entries,opts?) at(path) urlFor(path) fileFor(path)` | `outputDir?` (`"_data"`), `baseUrl?` (`"/_data/"`) |
 | `logPlugin` | **core** | In-memory trace + `expect()` assertion DSL | — | — | `info debug warn error trace() expect() addSink(s) reset()` | `mode` (`test`\|`dev`\|`production`\|`silent`) |
@@ -169,11 +198,12 @@ BUILD (router.mode !== "ssg")              ON DISK                       CLIENT 
 - `route.load` does NOT run on the client; the build already persisted its output. `route.parse` is the client trust boundary.
 - Navigation strategy (spa): `router.mode() !== "ssg"` AND `data` composed → DATA path; otherwise HTML-over-fetch; failure → `location.href`.
 - `node:*` and Preact DOM `render` are isolated behind lazy `import()` (split chunks): a data-composing browser bundle stays node-free; a no-data bundle ships no render layer.
+- **Client bundle:** import from **`@moku-labs/web/browser`** (node-free by construction) rather than `.`; there is no framework `hydrate()` / `./client` export — the client runtime is just your own `createApp(...).start()` over the defaults (+ `dataPlugin` for DATA nav), with `browserEnv()` already wired.
 
 ## 6. Usage snippets
 
-**SSG build (static only):** `createApp({ plugins: [contentPlugin, buildPlugin], pluginConfigs: { site, i18n, content, router: { routes, mode: "ssg" }, head, build } })` then `await app.build.run()`. No `.parse()` required.
-**Hybrid (SSG + DATA nav):** add `dataPlugin` to `plugins` and give every data-navigable route a `.parse()`; build writes `dist/_data/**` sidecars; the browser entry is just `createApp(defaults + dataPlugin).start()`.
+**SSG build (static only):** `import { createApp, contentPlugin, buildPlugin } from "@moku-labs/web"` → `createApp({ plugins: [contentPlugin, buildPlugin], pluginConfigs: { site, i18n, content, router: { routes, mode: "ssg" }, head, build } })` then `await app.build.run()`. No `.parse()` required.
+**Hybrid (SSG + DATA nav):** add `dataPlugin` for the build (`.` entry) and give every data-navigable route a `.parse()`; build writes `dist/_data/**` sidecars. The **client entry** is `import { createApp, dataPlugin } from "@moku-labs/web/browser"` → `createApp({ plugins: [dataPlugin], pluginConfigs: { router: { mode: "hybrid", routes } } }).start()` (env auto-wired, node-free).
 **Custom plugin:** `export const myPlugin = createPlugin("my", { … })` — types infer from the spec; document the export with a directly-preceding JSDoc block (never destructure exports; see moku-core "Public Export Shape").
 **Deploy:** `await app.deploy.run({ build: true })` after configuring `deploy: { target: "cloudflare-pages", outDir: "dist" }`.
 

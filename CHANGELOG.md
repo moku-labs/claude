@@ -2,6 +2,26 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.40.0 (2026-06-03)
+
+`moku-sync` of `@moku-labs/web` `0.4.0 → 0.5.6` (npm `latest`, published 2026-06-03). Catalog rebuilt
+from the upstream `llms.txt`/`llms-full.txt` cross-checked against source at tag `v0.5.6`.
+
+### Changed
+- **`skills/moku-web/references/plugin-index.md`** — `Synced version → 0.5.6`; documents the new
+  **two entry points** (`.` full/dual ESM+CJS for the Node build · **`@moku-labs/web/browser`**
+  ESM-only, node-free by construction, `browserEnv()` pre-wired for zero-config browser env — v0.5.0);
+  the **breaking `route.layout(ctx, children)`** signature now applied in SSG (v0.4.1); typed
+  `content.shikiTheme` (BundledTheme name or theme object — v0.5.3); build copies co-located article
+  images; client-bundle usage snippet. SSG→DATA→SPA model unchanged.
+- **`skills/moku-web/SKILL.md`** — API section → v0.5.6 with both entry examples (`.` and `./browser`)
+  and the two-entry / `route.layout` notes (web-patterns guidance untouched).
+- **`skills/moku-core/references/moku-frameworks.md`** — `frameworks[web].knownVersion → 0.5.6` +
+  provenance delta. Core dep unchanged (`@moku-labs/core@0.1.0-alpha.6`); engines node ≥24.
+- **`skills/moku-core/references/upgrade-migrations.md`** — refreshed the `moku-web-version` example to
+  `0.5.6` (registry-driven, so `/moku:upgrade` now offers `0.5.6` automatically).
+- Version bumped to 0.40.0 in plugin.json and marketplace.json.
+
 ## 0.39.0 (2026-06-03)
 
 Natural-language arguments for the idea/scaffold entry-point commands — users describe intent in
