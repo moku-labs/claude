@@ -457,6 +457,7 @@ Update `.planning/STATE.md`:
    - `.planning/decisions.md`
    - `.planning/learnings.md`
    - `.planning/steering.md`
+   - `.planning/history.md` (newest-first cycle narrative; `/moku:clean` appends to it — see `commands/clean.md`)
 
 ### Reset State for Next Cycle
 

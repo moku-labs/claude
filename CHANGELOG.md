@@ -2,6 +2,35 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.37.0 (2026-06-03)
+
+`/moku:clean` now carries context into the next iteration instead of silently discarding it.
+Previously it kept only `learnings.md`, deleting the decision graph, steering ideas, and all
+cycle history — exactly the "what was done / what was decided / what ideas were used" context a
+fresh effort needs. The fix keeps things **minimal** (a lightweight trace, not heavy snapshots).
+
+### Added
+- **`.planning/history.md`** — a new durable, newest-first **minimal cycle trace**. Before
+  deleting, `/moku:clean` distills a terse entry (Did / Decided / Ideas / Open — 3–4 one-line
+  bullets) from the ephemeral artifacts about to be removed (STATE.md, brainstorm `context-*.md`,
+  build findings), so the next iteration starts informed. Auto-written; `--no-summary` to skip.
+- **`--keep archive`** token on `/moku:clean` to retain `.planning/archive/` when wanted.
+
+### Changed
+- **`commands/clean.md`** — default always-keep set expanded to the cross-cycle durable knowledge
+  (`learnings.md`, `decisions.md`, `steering.md`, `history.md`), aligning `clean` with the build
+  command's cycle-archive contract. Step order is now confirm → write trace → delete (cancel
+  leaves nothing behind). Added `Write`/`Edit` to `allowed-tools` for the history write.
+- **`skills/moku-core/references/memory-schema.md`** — durable-layer table now lists
+  `decisions.md` / `steering.md` / `history.md` (+ `archive/`) with per-file `--keep` behavior.
+- **`skills/moku-core/references/build-final.md`** — build Cycle Archive now preserves
+  `history.md` alongside the other cross-cycle files.
+
+### Removed
+- **`.planning/archive/` from `/moku:clean`'s default keep set** — removed by default now (the
+  minimal `history.md` trace replaces the heavy snapshots); recover with `--keep archive`.
+- Version bumped to 0.37.0 in plugin.json and marketplace.json.
+
 ## 0.36.0 (2026-06-01)
 
 `moku-sync` of `@moku-labs/web` `0.3.1 → 0.4.0` (npm `latest`, published 2026-06-01).
