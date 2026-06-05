@@ -2,6 +2,37 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.41.0 (2026-06-05)
+
+New **`moku-readable-code`** skill + **`moku-readable-code-validator`** agent, wired into the build and
+check validation pipelines. Captures a function-body readability standard — the "story by layout"
+stanza style: blank-line steps with one-line intent comments, guard clauses first, flat primitives,
+named predicates/constants, and balanced helper extraction — plus a validator that flags "wall of text"
+functions. The validator emits **WARNING/INFO only — never BLOCKER**, so it surfaces readability debt
+without ever failing a build.
+
+### Added
+- **`skills/moku-readable-code/SKILL.md`** — the 10-rule stanza style (distilled from Martin's *Clean
+  Code*, Ousterhout's *A Philosophy of Software Design*, Boswell & Foucher's *The Art of Readable Code*,
+  Fowler's *Refactoring*, and Kernighan & Pike), with exemptions, Moku conventions, and a before/after
+  example. Triggers on "readable code", "wall of text", "refactor for readability", "story by layout",
+  "stanza style".
+- **`agents/readable-code-validator.md`** (`moku-readable-code-validator`, model `sonnet`) — flags
+  wall-of-text functions (no blank-line stanzas / intent comments, nested ternaries, deep nesting, fused
+  concerns, magic literals) with a concrete per-finding fix. WARNING/INFO only, precision-over-recall to
+  avoid false positives; the worst it can do is warn.
+
+### Changed
+- **Validation pipeline** — added the validator to Group A (structure + docs) in
+  `agents/validation-coordinator.md`, the post-build pipeline (`build-final.md`), and the plugin/app
+  build pipelines (`build-plugin.md`, `build-app.md`).
+- **`commands/build.md`** — `moku-readable-code-validator` listed in the app, plugin, and `add`
+  validator sets.
+- **`commands/check.md`** — `--full` now spawns it as a 4th parallel validator.
+- **`workflows/moku-verify.js`** — added to the parallel validator fan-out (and its description).
+- **`.claude-plugin/SKILL-INVENTORY.md`** — skills 5 → 6, agents 19 → 20, validation 8 → 9.
+- Version bumped to 0.41.0 in plugin.json and marketplace.json.
+
 ## 0.40.1 (2026-06-03)
 
 `/moku:spec-sync` of `@moku-labs/core` to **0.1.1** (npm `latest`, first stable release; published

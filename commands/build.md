@@ -117,7 +117,7 @@ Parse `$ARGUMENTS`:
    - **Reserved-word guard:** If the plugin name matches a reserved keyword (`resume`, `framework`, `app`, `plugin`, `add`, `fix`), report: "Cannot add a plugin named `{name}` — that is a reserved command keyword. Use a different name." Stop.
    - Resolve the plugin name to a spec file: search `.planning/specs/*-{name}.md`. If not found, stop: "No spec found for plugin `{name}`. Run `/moku:plan add plugin {name}` first to create the spec."
    - Verify `src/config.ts` exists and skeleton is committed — if not, stop: "Framework skeleton must be built first. Run `/moku:build resume`."
-   - Route to the standard plugin build flow from `build-plugin.md`: build the plugin, wire into framework (`src/config.ts`, `src/index.ts`), run verification chain (format, lint, tsc, test), spawn moku-verifier, run targeted validators (plugin-spec-validator, type-validator, jsdoc-validator).
+   - Route to the standard plugin build flow from `build-plugin.md`: build the plugin, wire into framework (`src/config.ts`, `src/index.ts`), run verification chain (format, lint, tsc, test), spawn moku-verifier, run targeted validators (plugin-spec-validator, type-validator, jsdoc-validator, readable-code-validator).
    - **After successful build:** run delta updates (see Step 8: Delta Updates in `build-final.md`):
      - Update root README with the new plugin
      - Regenerate `llms.txt` and `llms-full.txt`
@@ -403,7 +403,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-app.md` for detail
 
 **Summary**: Verify framework availability, build custom consumer-side plugins (if any), create entry point with createApp, validate with the full pipeline.
 
-**Flow**: Read app spec -> Verify framework exports/plugins -> Build custom plugins (following Plugin Build) -> Create entry point (src/main.ts) -> Validate (spec, plugin-spec, jsdoc, test, type validators) -> Report + STATE.md update.
+**Flow**: Read app spec -> Verify framework exports/plugins -> Build custom plugins (following Plugin Build) -> Create entry point (src/main.ts) -> Validate (spec, plugin-spec, jsdoc, readable-code, test, type validators) -> Report + STATE.md update.
 
 **Key rule**: NEVER import from `@moku-labs/core` — only from the framework package. If web app, also enforce moku-web skill patterns.
 
@@ -415,7 +415,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-plugin.md` for det
 
 **Summary**: Determine complexity tier, create tier-appropriate directory structure, implement domain files, write tests, validate.
 
-**Flow**: Understand plugin (from spec, description, or hierarchy) -> Determine tier (Nano/Micro/Standard/Complex/VeryComplex) + domain merge check -> Create directory structure -> Implement domain files (types.ts, state.ts, api.ts, handlers.ts) -> Write index.ts (~30 lines wiring, NO explicit generics) -> Write tests (unit + integration) -> Write README.md -> Validate (verifier, plugin-spec, jsdoc, test, type validators) -> Gap closure if needed (max 2 rounds).
+**Flow**: Understand plugin (from spec, description, or hierarchy) -> Determine tier (Nano/Micro/Standard/Complex/VeryComplex) + domain merge check -> Create directory structure -> Implement domain files (types.ts, state.ts, api.ts, handlers.ts) -> Write index.ts (~30 lines wiring, NO explicit generics) -> Write tests (unit + integration) -> Write README.md -> Validate (verifier, plugin-spec, jsdoc, readable-code, test, type validators) -> Gap closure if needed (max 2 rounds).
 
 **Key rules**: Domain merge check before creating new plugins. No explicit generics on createPlugin. No unnecessary onStart/onStop. Full JSDoc everywhere.
 

@@ -383,6 +383,7 @@ If the coordinator returns FIX disposition, enter gap closure with the **moku-er
 - **moku-spec-validator** agent — specification compliance per plugin
 - **moku-jsdoc-validator** agent — documentation quality per plugin
 - **moku-plugin-spec-validator** agent — structure compliance per plugin
+- **moku-readable-code-validator** agent — function-body readability per plugin (wall-of-text / stanza style; WARNING/INFO only — never blocks)
 
 **Parallel Group B (quality + types):**
 - **moku-test-validator** agent — test quality per plugin

@@ -182,6 +182,7 @@ Run the validation pipeline:
 - **moku-verifier** agent — 3-level artifact check (exists, substantive, wired)
 - **moku-plugin-spec-validator** agent — structure compliance
 - **moku-jsdoc-validator** agent — documentation quality
+- **moku-readable-code-validator** agent — function-body readability (wall-of-text / stanza style; WARNING/INFO only — never blocks)
 
 **After parallel completes:**
 - **moku-test-validator** agent — test quality

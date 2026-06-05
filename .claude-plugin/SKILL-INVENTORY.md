@@ -4,7 +4,7 @@ A discoverability map of what installing **moku** brings into a session, so you 
 component surface (and its rough context cost) before relying on it. Use `claude plugin details moku`
 for the live component list and `/usage` (per-category) to see actual token spend in a session.
 
-## Skills (5) — progressive disclosure; bodies load on trigger, `references/` load on demand
+## Skills (6) — progressive disclosure; bodies load on trigger, `references/` load on demand
 
 | Skill | Triggers on | What it brings |
 |-------|-------------|----------------|
@@ -12,6 +12,7 @@ for the live component list and `/usage` (per-category) to see actual token spen
 | **moku-plugin** | plugin structure, complexity tiers, createPlugin layout | Tiered plugin file organization (nano→very-complex), naming, wiring-harness pattern |
 | **moku-web** | moku web, islands, @scope/@layer, data-* attributes | Preact + Vite island architecture, CSS token system (points at the vendored `sandbox/demo/blog/`) |
 | **moku-testing** | TDD, mock context, moku test patterns | Red→Green→Refactor protocol, mock-ctx + createTestApp scaffolds (points at vendored sandbox tests) |
+| **moku-readable-code** | readable code, wall of text, refactor for readability, story by layout, stanza style | The 10-rule stanza style (blank-line steps + intent comments, guard clauses, named predicates/constants, balanced extraction); paired with the `moku-readable-code-validator` |
 | **spec-sync** *(maintainer)* | "sync moku spec/knowledge", "re-vendor the moku core spec", "new core version" | Re-vendors the upstream Core spec + sandbox from `moku-labs/core`, regenerates `spec-index.md`/`sandbox-index.md`, then chains `moku-sync` to refresh every framework's index. STOPs outside the plugin repo. |
 
 > Only `moku-core` is broad; the other three trigger narrowly. References are Level-3 progressive
@@ -23,9 +24,9 @@ for the live component list and `/usage` (per-category) to see actual token spen
 `brainstorm` · `plan` · `build` (the 3-stage gated core) · `next` · `status` · `check` (incl.
 `check --usage`) · `clean` · `init` · `upgrade` (zero-arg stack migration).
 
-## Agents (19) — spawned on demand by commands/workflows, isolated context
+## Agents (20) — spawned on demand by commands/workflows, isolated context
 
-- **Validation (8):** spec, plugin-spec, type, jsdoc, test, web, architecture validators + validation-coordinator
+- **Validation (9):** spec, plugin-spec, type, jsdoc, test, web, readable-code, architecture validators + validation-coordinator
 - **Review/judgment (5):** verifier, code-reviewer, wave-judge, error-diagnostician, skeptic
 - **Brainstorm (3):** brainstorm-researcher, challenger, synthesizer
 - **Build/plan support (3):** builder, plan-checker, planning-phase `researcher`

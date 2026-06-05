@@ -1,6 +1,6 @@
 export const meta = {
   name: 'moku-verify',
-  description: 'Fan out the full Moku validation pipeline (spec, plugin-structure, jsdoc, types, tests, web, architecture) in parallel, then aggregate one disposition',
+  description: 'Fan out the full Moku validation pipeline (spec, plugin-structure, jsdoc, readability, types, tests, web, architecture) in parallel, then aggregate one disposition',
   whenToUse: 'After a build wave or before shipping — when you want every Moku validator run concurrently and a single pass/fail with deduped findings. Pass {adversarial:true} (or args "adversarial") to add a skeptic pass that downgrades unrefutable-but-weak blockers.',
   phases: [
     { title: 'Discover', detail: 'list plugins to validate' },
@@ -85,6 +85,7 @@ const VALIDATORS = [
   { type: 'moku-spec-validator', focus: 'Moku Core specification compliance (layers, factory chain, config, lifecycle, events, state).' },
   { type: 'moku-plugin-spec-validator', focus: 'plugin structure, complexity tier, file organization, domain-merge detection.' },
   { type: 'moku-jsdoc-validator', focus: 'JSDoc completeness and quality on all exports.' },
+  { type: 'moku-readable-code-validator', focus: 'function-body readability — wall-of-text functions lacking blank-line stanzas / intent comments, nested ternaries, deep nesting, fused concerns. Cite readable-code rule numbers (not spec sections); WARNING/INFO only, never blocks.' },
   { type: 'moku-type-validator', focus: 'TypeScript correctness: tsc --noEmit, type-assertion audit, inference chains, import type.' },
   { type: 'moku-test-validator', focus: 'test quality: mock-context correctness, assertion quality, edge cases, lifecycle.' },
   { type: 'moku-web-validator', focus: 'Moku web patterns (data-* attributes, @scope/@layer, islands, tokens) — skip with PASS if this is not a web project.' },

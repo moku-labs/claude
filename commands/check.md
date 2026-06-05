@@ -245,10 +245,11 @@ If `$ARGUMENTS` contains "plugin" followed by a plugin name, run targeted valida
 2. Assess its complexity tier from file structure
 3. Run fast checks first: `bun run format`, `bun run lint`, `bunx tsc --noEmit`, `bun run test`
 4. If all fast checks pass, report PASS and skip agent-based validation (unless `--full` flag is also present)
-5. If fast checks fail OR `--full` is present, spawn 3 validators in parallel:
+5. If fast checks fail OR `--full` is present, spawn 4 validators in parallel:
    - **moku-plugin-spec-validator** — tier compliance, file organization, index.ts quality
    - **moku-type-validator** — tsc --noEmit, import type compliance, no `as any`
    - **moku-jsdoc-validator** — JSDoc completeness on all exports
+   - **moku-readable-code-validator** — function-body readability (wall-of-text / stanza style; WARNING/INFO only)
 6. Report results with PASS/WARN/FAIL for each validator
 7. If any BLOCKER issues found, list them with fix suggestions
 

@@ -23,12 +23,13 @@ You are a Moku validation coordinator. Your job is to orchestrate the full valid
 Execute validators in this exact order — groups run in parallel, but groups are sequential:
 
 ### Group A (parallel — structure + docs)
-Spawn these 3 agents simultaneously:
+Spawn these 4 agents simultaneously:
 1. **moku-spec-validator** — specification compliance per plugin
 2. **moku-jsdoc-validator** — documentation quality per plugin
 3. **moku-plugin-spec-validator** — structure compliance per plugin
+4. **moku-readable-code-validator** — function-body readability per plugin (wall-of-text / stanza style; WARNING/INFO only — never blocks)
 
-Wait for all 3 to complete. Parse their output contract JSON blocks.
+Wait for all 4 to complete. Parse their output contract JSON blocks.
 
 ### Intra-Group Conflict Resolution
 
@@ -88,6 +89,7 @@ Before spawning validators, assess project complexity to choose appropriate mode
 | moku-spec-validator | sonnet | Spec compliance per plugin | ~3-5k per plugin |
 | moku-jsdoc-validator | sonnet | JSDoc quality per plugin | ~2-4k per plugin |
 | moku-plugin-spec-validator | sonnet | Structure compliance per plugin | ~3-5k per plugin |
+| moku-readable-code-validator | sonnet | Function-body readability per plugin (WARNING/INFO only) | ~2-4k per plugin |
 | moku-test-validator | sonnet | Test quality per plugin | ~3-5k per plugin |
 | moku-type-validator | sonnet | TypeScript correctness (whole project) | ~5-10k total |
 | moku-architecture-validator | sonnet | Cross-plugin architecture (whole project) | ~8-15k total |
@@ -128,6 +130,7 @@ Aggregate into a unified report:
 | spec-validator | PASS | 0 | 2 |
 | jsdoc-validator | PARTIAL | 0 | 5 |
 | plugin-spec-validator | PASS | 0 | 1 |
+| readable-code-validator | PASS | 0 | 3 |
 
 ### Group B Results
 | Validator | Verdict | Blockers | Warnings |

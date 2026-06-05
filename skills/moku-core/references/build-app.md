@@ -61,6 +61,7 @@ Run the post-build validation pipeline:
 - **moku-spec-validator** agent on all source files
 - **moku-plugin-spec-validator** agent on custom plugins
 - **moku-jsdoc-validator** agent on all source files
+- **moku-readable-code-validator** agent on all source files (readability; WARNING/INFO only — never blocks)
 
 **Parallel Group B:**
 - **moku-test-validator** agent on custom plugin tests
