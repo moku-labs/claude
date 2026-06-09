@@ -4,10 +4,38 @@ All notable changes to the Moku Claude Code Plugin will be documented in this fi
 
 ## 0.42.0 (2026-06-10)
 
-**`moku-sync web`:** synced the moku-web teaching material from `@moku-labs/web@0.5.6` to **`1.6.1`**
-(npm `latest`; a patch over 1.6.0 with an identical API surface). Every API claim regenerated from
-and verified against the framework source at `v1.6.1` — the upstream `llms.txt`/`llms-full.txt` lag
-the source (removed `router.set()`, dropped `URLPattern`), so `src/` was treated as authoritative.
+Maintenance + resync release: hook/workflow reliability fixes, the `moku-sync` maintainer skill now
+actually ships, moku-testing/moku-core API corrections — and **`moku-sync web`**: the moku-web
+teaching material synced from `@moku-labs/web@0.5.6` to **`1.6.1`** (npm `latest`; a patch over
+1.6.0 with an identical API surface). Every API claim regenerated from and verified against the
+framework source at `v1.6.1` — the upstream `llms.txt`/`llms-full.txt` lag the source (removed
+`router.set()`, dropped `URLPattern`), so `src/` was treated as authoritative.
+
+### Fixed
+- **`hooks/on-subagent-stop.sh`** — defines `SCRIPT_DIR` before sourcing `notify.sh` (every other
+  hook already did), so desktop notifications for verifier/diagnostician completions fire again.
+- **`hooks/verify-before-commit.sh`** — the "never stage/commit `.planning/`" guard now runs AFTER
+  the Moku-project gate (`.planning/STATE.md` + `moku.md` checks), so plugin users no longer get
+  `git add`/`git commit` hard-blocked in non-Moku repos that legitimately track such a directory;
+  also fixed the `grep -c … || echo` double-line artifact embedded in the BLOCKED message.
+- **`hooks/pre-commit-review.sh`** — the empty-function-body heuristic no longer flags every
+  multi-line TS function as a stub (it now matches real one-line `=> {}` / `) {}` bodies only),
+  and the `grep -c … || echo "0"` double-line output no longer crashes the finding-count arithmetic.
+- **`hooks/check-plugin-antipatterns.sh`** — `as any` is now word-bounded (prose like
+  "as anything" no longer hard-blocks a write) and the legitimate `null as const` assertion is no
+  longer treated as an inline type assertion (`null as` requires an uppercase type-name start).
+- **`workflows/moku-build-wave.js`** — JUDGE schema enum aligned with the wave-judge agent
+  contract: `'retry'` → `'fresh-retry'` (the agent never emits `'retry'`, so a fresh-retry
+  disposition failed schema validation); judge prompt + `workflows/README.md` wording updated.
+- **`agents/builder.md`** — `color: orange` is not a valid agent color (blue/cyan/green/yellow/
+  magenta/red); now `yellow`.
+
+### Added
+- **`skills/moku-sync/`** — the per-framework maintainer skill now SHIPS with the plugin. It lived
+  in gitignored `.claude/skills/moku-sync`, so `skills/spec-sync`'s link to it was broken in every
+  distribution and the chained "Phase B" family pass could never load it. Moved next to its sibling
+  `spec-sync`, internal links + registry pointer rewritten, portable plugin-repo-root precondition;
+  SKILL-INVENTORY 6 → 7 skills.
 
 ### Changed
 - **`skills/moku-web/SKILL.md`** — API form rewritten for 1.6.1: ctx-based route handlers
@@ -36,6 +64,22 @@ the source (removed `router.set()`, dropped `URLPattern`), so `src/` was treated
   rewritten provenance note (0.5.6→1.6.1 delta, core pin now `@moku-labs/core@0.1.1`, llms-lag
   caveat). `/moku:upgrade`'s `moku-web-version` migration needs no body change (it reads the
   registry); only its illustrative version string in `upgrade-migrations.md` was refreshed.
+- **`skills/moku-testing/`** — the mock-context exemplar rebuilt around the REAL `@moku-labs/core`
+  exports: core exports exactly `PluginCtx`/`EmitFn` as plugin-author type utilities — the
+  previously imported `PluginContext`/`MinimalContext`/`TeardownContext` don't exist on the entry
+  point, so any test written from the exemplar failed to compile. Lifecycle-tier mocks now use
+  local structural types (matching the sandbox exemplars), and the nonexistent `app` context field
+  is gone from SKILL.md's tier table.
+- **`skills/moku-core/SKILL.md`** — "one export" → TWO runtime exports (`createCoreConfig` AND
+  `createCorePlugin`, plus the `PluginCtx`/`EmitFn` type utilities), matching `core/src/index.ts`.
+- **Stack descriptions** — moku-web is no longer described as a "Preact + Vite" stack anywhere
+  (its frontmatter description, moku-core's Related Skills, SKILL-INVENTORY): the framework is
+  Vite-free — the `build` plugin bundles via `Bun.build`, the `cli` plugin owns the dev loop.
+- **Counts corrected** — 20 agents (README + plugin.json description + SKILL-INVENTORY claimed
+  19/24); "the other six" skills trigger narrowly now that 7 ship.
+- **Repo hygiene** — stray nested `claude/` (an accidental agent-memory write) and empty
+  `experiments/` trees removed; `experiments/` gitignored as a designated local scratch area.
+- Version bumped to 0.42.0 in plugin.json and marketplace.json.
 
 ## 0.41.0 (2026-06-05)
 
