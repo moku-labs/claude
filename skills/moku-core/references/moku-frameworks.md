@@ -62,7 +62,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "1.6.1",
+      "knownVersion": "1.6.2",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -91,12 +91,18 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > `…/sandbox/`) re-pinned to the same SHA via `/moku:spec-sync` — content-identical, so no spec/sandbox
 > files changed. No GitHub release/tag exists for 0.1.1 (npm trusted-publish only); pin by gitHead SHA.
 >
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.6.1` (npm `latest`,
-> gitHead `39fb5dd0`; 1.6.1 is a patch over 1.6.0 — one spa scroll-timing fix, identical API). The
+> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.6.2` (npm `latest`,
+> published 2026-06-09, gitHead `5521931`; 1.6.2 is a patch over 1.6.1 — one spa behavior fix
+> (PR #56): the nav scroll-to-top now honours the page's `scroll-behavior` when view transitions
+> are OFF, keeping `behavior: "instant"` only when they're ON to protect the VT snapshot.
+> **API surface identical:** the `v1.6.1..v1.6.2` diff touches only `src/plugins/spa/kernel.ts`
+> (private `applyPendingScroll`) + its unit test + the `package.json` version field — no change to
+> `src/index.ts`, `src/browser.ts`, plugin exports, config keys, events, or deps. The
 > plugin/property catalog in `skills/moku-web/references/plugin-index.md` was generated from the
-> source at `../web` (`src/plugins/*` + `src/index.ts` + `src/browser.ts` at tag `v1.6.1`),
-> cross-checked against the upstream `llms.txt`/`llms-full.txt` and `package.json` — note the llms
-> files at 1.6.1 lag the source in two places (they still mention the removed `app.router.set()`
+> source at `../web` (`src/plugins/*` + `src/index.ts` + `src/browser.ts` at tag `v1.6.1`) and
+> verified unchanged at tag `v1.6.2`, cross-checked against the upstream
+> `llms.txt`/`llms-full.txt` and `package.json` — note the llms files at 1.6.1 (byte-identical at
+> 1.6.2) lag the source in two places (they still mention the removed `app.router.set()`
 > and the dropped `URLPattern` requirement), so **`src/` is authoritative**. **0.5.6 → 1.6.1
 > delta:** v1.0.0 was a breaking overhaul — ctx-based route handlers (`.load((ctx) => D)` with
 > `{ params, locale, require, has }`; `.generate((ctx) => params[])`; loaders pull siblings via

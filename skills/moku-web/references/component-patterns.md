@@ -1,6 +1,6 @@
 # Component Patterns Reference
 
-Synced against `@moku-labs/web@1.6.1` (verified: `web/src/plugins/spa/types.ts`) and the blog
+Synced against `@moku-labs/web@1.6.2` (verified: `web/src/plugins/spa/types.ts`) and the blog
 reference implementation (`blog/src/components`, `blog/src/islands`).
 
 ## Preact Components (SSG Rendering)

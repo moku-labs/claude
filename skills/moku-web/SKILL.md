@@ -26,7 +26,7 @@ Enforce the established web patterns from the Moku blog reference implementation
 | TypeScript | Strict mode, `jsxImportSource: "preact"` |
 | Tests | Vitest (unit/integration) + Playwright (visual regression) |
 
-## Framework API (@moku-labs/web v1.6.1)
+## Framework API (@moku-labs/web v1.6.2)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**

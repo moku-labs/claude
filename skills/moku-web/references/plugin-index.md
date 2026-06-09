@@ -7,7 +7,7 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `1.6.1` · **Layer:** 2 (framework) ·
+**Framework:** `@moku-labs/web` · **Synced version:** `1.6.2` · **Layer:** 2 (framework) ·
 **Depends on:** `@moku-labs/core@0.1.1` (exact pin — consumers must NOT add a direct core dep) ·
 **Engines:** node ≥24, bun ≥1.3.14 · **Two entry points:** `.` (ESM + CJS, full surface, Node SSG)
 and **`./browser`** (ESM-only, node-free by construction) · **No `bin`** — the developer CLI ships
@@ -50,11 +50,11 @@ as the node-only **`cliPlugin`** (`app.cli.build/serve/preview/deploy`, driven b
 > - **`@moku-labs/core` is now `0.1.1`** (exact pin; was `0.1.0-alpha.6`). Browser-bundle CI budget
 >   is 50 kB gzip (currently ~45 kB).
 >
-> ⚠️ The upstream `llms.txt`/`llms-full.txt` at 1.6.1 lag the source in two places (they still
+> ⚠️ The upstream `llms.txt`/`llms-full.txt` at 1.6.1 (byte-identical at 1.6.2) lag the source in two places (they still
 > mention `app.router.set()` and the `URLPattern` requirement). This index is generated from
 > `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v1.6.1)
+## 1. Framework API form (v1.6.2)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed

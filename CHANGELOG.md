@@ -2,6 +2,31 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.42.1 (2026-06-10)
+
+`moku-sync web`: `@moku-labs/web` synced **1.6.1 → 1.6.2** (npm `latest`, published 2026-06-09,
+gitHead `5521931`). Pure registry/provenance update — 1.6.2 is the spa scroll-before-VT-snapshot
+follow-up (PR #56): the nav scroll-to-top honours the page's `scroll-behavior` when view transitions
+are off, keeping `behavior: "instant"` only when they're on. The `v1.6.1..v1.6.2` diff touches only
+the spa kernel's private `applyPendingScroll` + its unit test + the version field, so the **public
+API surface is unchanged** (exports, config keys, events, deps all identical — core still pinned
+`0.1.1`) and no skill API form or plugin-index content was regenerated.
+
+### Changed
+- **`skills/moku-core/references/moku-frameworks.md`** — `frameworks[web].knownVersion → 1.6.2`;
+  web provenance note rewritten for 1.6.2 (delta, gitHead, API-identical verification; upstream
+  `llms.txt`/`llms-full.txt` byte-identical at 1.6.2, so the known lag vs source persists —
+  `src/` stays authoritative).
+- **`skills/moku-web/references/plugin-index.md`** — provenance markers only: `Synced version →
+  1.6.2`, API-form heading → v1.6.2, llms-lag note marked byte-identical at 1.6.2. Catalog content
+  verified unchanged against the source at tag `v1.6.2`.
+- **`skills/moku-web/SKILL.md`** + **`skills/moku-web/references/component-patterns.md`** —
+  "synced against" version markers → 1.6.2 (verified surfaces unchanged; `spa/types.ts` untouched
+  by the 1.6.2 diff).
+
+### Plugin
+- Version bumped to 0.42.1 in plugin.json and marketplace.json.
+
 ## 0.42.0 (2026-06-10)
 
 Maintenance + resync release: hook/workflow reliability fixes, the `moku-sync` maintainer skill now
