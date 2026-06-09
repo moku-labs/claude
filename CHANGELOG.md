@@ -2,6 +2,26 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.42.2 (2026-06-10)
+
+Docs-only patch: the validation-coordinator agent's frontmatter description claimed a fully
+sequential pipeline ("Group A → Group B → architecture"), contradicting the agent body, which
+runs the architecture-validator speculatively in parallel with Group B (re-running it only when
+Group B surfaces cross-plugin BLOCKERs). The description now matches the documented behavior.
+Also ships the full README redesign.
+
+### Changed
+- **`agents/validation-coordinator.md`** — frontmatter description updated to "Group A (parallel)
+  → Group B + architecture (parallel, speculative arch start) with a conditional arch re-run when
+  Group B finds cross-plugin blockers". Agent body and `<example>` blocks unchanged.
+- **`README.md`** — full redesign: centered header + badges, corrected install commands
+  (`moku@moku`), mermaid workflow diagram, all 9 commands documented (adds `/moku:brainstorm` +
+  `/moku:clean`), all 20 agents grouped by role, skills/hooks/dynamic-workflows/output-styles
+  sections, and an accurate description of the validation pipeline's speculative arch pass.
+
+### Plugin
+- Version bumped to 0.42.2 in plugin.json and marketplace.json.
+
 ## 0.42.1 (2026-06-10)
 
 `moku-sync web`: `@moku-labs/web` synced **1.6.1 → 1.6.2** (npm `latest`, published 2026-06-09,

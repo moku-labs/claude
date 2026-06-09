@@ -1,7 +1,7 @@
 ---
 name: moku-validation-coordinator
 description: >
-  Orchestrates the full validation pipeline programmatically: Group A → Group B → architecture.
+  Orchestrates the full validation pipeline programmatically: Group A (parallel) → Group B + architecture (parallel, speculative arch start) with a conditional arch re-run when Group B finds cross-plugin blockers.
   Aggregates JSON output contracts into a single validation report.
   <example>Context: Framework build complete. user: "Run the full validation pipeline" assistant: launches moku-validation-coordinator</example>
   <example>Context: Post-build check needed. user: "Validate all plugins" assistant: launches moku-validation-coordinator</example>

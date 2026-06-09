@@ -149,8 +149,8 @@ if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
     BUN_MAJOR=$(echo "$BUN_VER" | cut -d. -f1)
     BUN_MINOR=$(echo "$BUN_VER" | cut -d. -f2)
     BUN_PATCH=$(echo "$BUN_VER" | cut -d. -f3)
-    if [ "${BUN_MAJOR:-0}" -lt 1 ] || { [ "${BUN_MAJOR:-0}" -eq 1 ] && [ "${BUN_MINOR:-0}" -lt 3 ]; } || { [ "${BUN_MAJOR:-0}" -eq 1 ] && [ "${BUN_MINOR:-0}" -eq 3 ] && [ "${BUN_PATCH:-0}" -lt 8 ]; }; then
-      WARNINGS="${WARNINGS}  - Bun $BUN_VER found, but >= 1.3.8 required\n"
+    if [ "${BUN_MAJOR:-0}" -lt 1 ] || { [ "${BUN_MAJOR:-0}" -eq 1 ] && [ "${BUN_MINOR:-0}" -lt 3 ]; } || { [ "${BUN_MAJOR:-0}" -eq 1 ] && [ "${BUN_MINOR:-0}" -eq 3 ] && [ "${BUN_PATCH:-0}" -lt 14 ]; }; then
+      WARNINGS="${WARNINGS}  - Bun $BUN_VER found, but >= 1.3.14 required\n"
     fi
   else
     WARNINGS="${WARNINGS}  - Bun not found (required)\n"

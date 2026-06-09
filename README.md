@@ -1,126 +1,164 @@
-# Moku Claude Code Plugin
+<div align="center">
 
-Development toolkit for [Moku Core](https://github.com/moku-labs/core) — the micro-kernel plugin framework for TypeScript.
+# moku — Claude Code Plugin
 
-## What This Plugin Does
+*The development toolkit for [Moku Core](https://github.com/moku-labs/core).*
 
-Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 20-agent validation pipeline, lean execution mode (~40-60% context savings), and wave pipelining.
+In which one AI orchestrates twenty other AIs to double-check the code a twenty-first AI wrote.
+
+</div>
+
+<div align="center">
+
+[![version](https://img.shields.io/badge/version-0.42.2-1864ab)](./CHANGELOG.md)
+[![claude code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://code.claude.com/docs/en/plugins)
+[![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
+[![changelog](https://img.shields.io/badge/changelog-146%20kB-lightgrey)](./CHANGELOG.md)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+
+[Install](#install) · [Workflow](#the-workflow) · [Commands](#commands) · [Agents](#agents) · [Skills](#skills) · [Hooks](#hooks) · [Workflows](#dynamic-workflows) · [Config](#configuration)
+
+</div>
+
+---
+
+## What this is
+
+Commands, skills, validation agents, and hooks for building Moku frameworks, plugins, and consumer apps with full specification compliance — wave-based parallel builds, a 20-agent validation pipeline, TDD waves, lean execution mode (~40–60% context savings), and cross-session state in `.planning/`.
+
+Yes, it ships a **wall-of-text validator**. No, the irony of its own `plugin.json` description — a 233-word run-on whose longest sentence clocks 142 words — is not lost on anyone.
+
+## Install
+
+```bash
+/plugin marketplace add moku-labs/claude
+/plugin install moku@moku
+```
+
+> [!IMPORTANT]
+> The marketplace is named **`moku`** (see [`.claude-plugin/marketplace.json`](.claude-plugin/marketplace.json)), so it's `moku@moku`. A previous version of this README confidently documented two install commands that did not work. We've all grown.
+
+Local development:
+
+```bash
+/plugin marketplace add ~/Projects/moku/claude
+/plugin install moku@moku
+```
+
+**Requirements:** [Bun](https://bun.sh/) ≥ 1.3.14 · Node ≥ 22 · a project that uses [@moku-labs/core](https://github.com/moku-labs/core) (or the intention to create one).
+
+## The workflow
+
+You describe, it plans, an agent swarm builds, another swarm judges the first swarm, you press Enter occasionally.
+
+```mermaid
+flowchart LR
+  U["You<br/>(natural language)"] --> BS["/moku:brainstorm<br/>research + debate"]
+  BS --> P["/moku:plan<br/>3 gated stages"]
+  P --> B["/moku:build<br/>parallel waves of builders"]
+  B --> V["validation pipeline<br/>spec · types · tests · JSDoc · prose"]
+  V --> R["code review + wave judge"]
+  R -->|"continue"| B
+  R -->|"done"| S["a framework exists"]
+  classDef u fill:#0b7285,stroke:#08525f,color:#fff;
+  classDef m fill:#1864ab,stroke:#0d3d6e,color:#fff;
+  class U,S u
+  class BS,P,B,V,R m
+```
+
+Or skip the ceremony — `/moku:next` figures out where you are and does the next sensible thing.
+
+```text
+1. /moku:init my-framework                           # scaffold
+2. /moku:brainstorm "a static site generator"        # optional: research + debate first
+3. /moku:plan create framework "a static site generator"
+4. /moku:build                                       # no args = auto-resume; waves + validation
+5. /moku:check                                       # health check (graph for mermaid diagrams)
+6. /moku:clean                                       # distill learnings, reset .planning/ for the next cycle
+```
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `/moku:next [--dry-run]` | Auto-detect project state and run the next logical step |
-| `/moku:init [path]` | Scaffold a new Moku development environment with full tooling |
-| `/moku:upgrade` | Upgrade an existing Moku project to the current target stack (TypeScript 6, tooling versions, tsconfig). Zero-arg, gated, resumable — the official migration path for future stack jumps (TS7, etc.). |
-| `/moku:plan [verb] [type] [args]` | Plan a project: create, update, add plugin, or migrate. 3-stage gated workflow with validation. |
-| `/moku:build [target] [spec-or-name]` | Build from specifications with wave-based parallel execution. Supports targeted builds: `plugin #3`, `plugins #3-#5`, `resume`, `fix`. |
-| `/moku:check [verbose\|self-test\|graph]` | Run diagnostics on project state, tooling, plugin health, build status, generate mermaid diagrams, or validate the plugin itself. |
-| `/moku:status [--full\|diagnostics]` | Show consolidated project dashboard — phase, wave progress, agent activity |
+Nine of them — two of which the old README forgot it had. All take free-form natural language; the bracketed syntax is for people who enjoy bracketed syntax.
 
-### Plan Targets
-
-```
-/moku:plan create framework "desc"      # New framework from description
-/moku:plan create app "desc"            # New consumer app
-/moku:plan add plugin auth "JWT auth"   # Create plugin spec (build with /moku:build add auth)
-/moku:plan update plugin router "add X" # Update existing plugin spec
-/moku:plan update app "add caching"     # Update consumer app composition
-/moku:plan migrate framework ~/path     # Migrate existing code
-/moku:plan resume                       # Continue from STATE.md
-```
-
-Type synonyms: `tool`/`engine`/`library` → framework, `application`/`service`/`server`/`game` → app. Backward-compatible: `moku:plan framework "desc"` still works (infers `create`).
-
-### Build Targets
-
-```
-/moku:build framework              # Build all plugins in parallel waves
-/moku:build framework config       # Build only config.ts + index.ts
-/moku:build framework plugins      # Build only plugins
-/moku:build plugin #3              # Build single plugin by number
-/moku:build plugins #3-#5          # Build range of plugins
-/moku:build plugins #3,#5,#7       # Build specific plugins
-/moku:build resume                 # Continue from STATE.md
-/moku:build framework --dry-run    # Preview what would be built
-```
-
-## Skills
-
-| Skill | Triggers On |
-|-------|-------------|
-| **moku-core** | "moku architecture", "moku specification", "createCoreConfig", "createCore", "createApp", "moku factory chain", "three-layer model", "moku kernel", "moku lifecycle", "moku event system", "moku context tiers" |
-| **moku-plugin** | "moku plugin structure", "moku plugin tier", "moku nano/micro/standard/complex plugin", "moku wiring harness", "moku plugin file layout", "moku plugin organization", "createPlugin structure" |
-| **moku-web** | "moku web", "moku component", "moku CSS architecture", "moku island pattern", "moku data attributes", "moku @scope", "moku @layer", "moku design tokens", "moku layout structure" |
-
-Skills include dynamic context injection to auto-detect project state and planning phase.
+| Command | What it does |
+|---|---|
+| `/moku:next [--dry-run]` | Auto-detect project state, run the next logical step |
+| `/moku:init [path]` | Scaffold a Moku dev environment with full tooling |
+| `/moku:brainstorm {idea} [--deep [N]\|--quick]` | Collaborative discovery: parallel research agents + a Present → Challenge → Decide debate loop. Also takes structured `create\|modify\|migrate\|feature` forms. Produces context files for planning |
+| `/moku:plan [create\|update\|add\|migrate\|resume] [type] {req} [--quick] [--context {file}]` | Plan a framework / app / plugin — 3-stage gated workflow. `--context` consumes brainstorm output |
+| `/moku:build [framework\|app\|plugin\|add\|resume\|fix] [name] [--dry-run\|--continue\|--lean]` | Build from specs in parallel waves. No args = auto-resume. `plugin #3`, `plugin #3-#5` work too |
+| `/moku:check [verbose\|self-test\|graph\|status\|plugin <name>\|diff <name>]` | Diagnostics: project state, tooling, plugin health, mermaid graphs, plugin self-test |
+| `/moku:status [--full]` | Consolidated dashboard — phase, wave progress, agent activity |
+| `/moku:upgrade [--dry-run]` | Migrate a Moku project to the current target stack (TypeScript 6 baseline). No version args, gated, resumable |
+| `/moku:clean [--keep …] [--no-summary] [--dry-run] [--force]` | Distill a durable cycle summary into `history.md`, then sweep ephemeral `.planning/` artifacts |
 
 ## Agents
 
-The validation & review agents below are spawned on demand by the build/plan pipeline. (Brainstorm, builder, and skeptic agents are spawned by their own commands and not listed here.)
+Twenty subagents, summoned on demand. Grouped by what they judge:
 
-### Structural Validators (4)
+| Group | Agents |
+|---|---|
+| **Structure** | `moku-spec-validator` · `moku-plugin-spec-validator` · `moku-jsdoc-validator` · `moku-web-validator` |
+| **Quality** | `moku-plan-checker` · `moku-verifier` (3-level: exists → substantive → wired) · `moku-test-validator` · `moku-type-validator` · `moku-architecture-validator` · `moku-readable-code-validator` (the wall-of-text police; warnings only, never blocks) |
+| **Review & judgment** | `moku-code-reviewer` · `moku-wave-judge` (continue / stop-for-review / fresh-retry) · `moku-error-diagnostician` · `moku-skeptic` |
+| **Builders & research** | `moku-builder` · `moku-researcher` (the only agent with web access) · `brainstorm-researcher` · `brainstorm-challenger` · `brainstorm-synthesizer` |
+| **Orchestration** | `moku-validation-coordinator` |
 
-| Agent | Purpose |
-|-------|---------|
-| **moku-spec-validator** | Validates Moku specification compliance (3-layer, factory chain, config, lifecycle, events, state) |
-| **moku-plugin-spec-validator** | Validates plugin structure, tier, file organization, domain merge detection |
-| **moku-jsdoc-validator** | Validates JSDoc documentation quality, examples, completeness |
-| **moku-web-validator** | Validates web patterns: data-* attributes, @scope, @layer, islands, tokens |
+After a full framework build, the coordinator runs spec, plugin-spec, JSDoc, and readable-code validators in parallel; then tests + types in parallel alongside a speculative cross-plugin architecture pass (re-run only if cross-plugin blockers surface). The wave judge decides whether you (the human) need to be involved. Usually not.
 
-### Quality Validators (5)
+## Skills
 
-| Agent | Purpose |
-|-------|---------|
-| **moku-plan-checker** | Validates plan completeness: requirement coverage, dependency graph, event flow, spec sections |
-| **moku-verifier** | 3-level artifact verification: exists, substantive, wired. Runs lint + test. |
-| **moku-test-validator** | Validates test quality: mock context correctness, edge cases, type-level tests |
-| **moku-type-validator** | TypeScript type correctness: `tsc --noEmit`, `as any` audit, inference chain |
-| **moku-architecture-validator** | Cross-plugin analysis: dependency graph, event flow, API consistency |
+Auto-loaded context — they trigger when relevant topics come up, no invocation needed.
 
-### Review & Judgment (3)
-
-| Agent | Purpose |
-|-------|---------|
-| **moku-code-reviewer** | Post-wave code review: logic errors, spec deviations, security, performance |
-| **moku-wave-judge** | Evaluates wave quality, decides continue/stop-for-review/fresh-retry |
-| **moku-error-diagnostician** | Diagnoses build errors, classifies root cause, proposes targeted fixes |
-
-### Supporting (2)
-
-| Agent | Purpose |
-|-------|---------|
-| **moku-validation-coordinator** | Orchestrates full validation pipeline (Group A → Group B → architecture) |
-| **moku-researcher** | Pre-implementation research: npm ecosystem, TypeScript patterns |
-
-### Validation Pipeline
-
-After a full framework build, validators run in this order:
-
-```
-Parallel Group A (structure):     spec-validator + jsdoc-validator + plugin-spec-validator
-Parallel Group B (quality):       test-validator + type-validator
-Sequential (cross-plugin):        architecture-validator
-```
+| Skill | Teaches Claude about |
+|---|---|
+| `moku-core` | Architecture rules, factory chain, lifecycle, events, context tiers |
+| `moku-plugin` | Plugin structure spec, complexity tiers (Nano → VeryComplex), file layout, wiring harness |
+| `moku-web` | `@moku-labs/web` patterns: Preact, CSS `@scope`/`@layer`/tokens, islands, Vite-free bundling — synced against the framework source (the upstream docs lag; `src/` is treated as authoritative) |
+| `moku-testing` | TDD protocol for build waves, mock context factories, integration + type-level test patterns, test layout |
+| `moku-readable-code` | The story-by-layout stanza style — prose structure for code, checked by its validator |
+| `moku-sync` | Maintainer skill: re-syncs each framework's knowledge from its latest npm/GitHub release |
+| `spec-sync` | Maintainer skill: re-vendors the Moku Core spec + sandbox exemplars at a pinned SHA, then chains `moku-sync` across the family |
 
 ## Hooks
 
-| Hook | Event | Purpose |
-|------|-------|---------|
-| **PreToolUse[Write\|Edit]** | PreToolUse | Auto-approves writes to `.planning/` directory; blocks `createPlugin<` anti-pattern; prompt-based validation of plugin index.ts architecture |
-| **PostToolUse[Write\|Edit]** | PostToolUse | Auto-runs `bun run format` after file edits (if format script exists) |
-| **PreCompact** | PreCompact | Re-injects `.planning/STATE.md`, `decisions.md`, `research.md` before context compaction |
-| **SessionStart** | SessionStart | Detects Moku project type, planning state, specifications; validates environment (Bun/Node/tsc versions); reports @moku-labs/core version |
-| **Notification** | Notification | Logs build progress notifications to `.planning/notifications.log` for long operations |
-| **UserPromptSubmit** | UserPromptSubmit | Injects compact Moku project context (type, plugins, planning state) before every prompt |
-| **SubagentStop** | SubagentStop | Auto-logs moku agent completions to `.planning/build/agent-log.md` with timestamp |
-| **SessionEnd** | SessionEnd | Cleans up debug logs and records session end timestamp |
+21 scripts on 12 lifecycle events. A short tour rather than a wall:
+
+| When | What happens |
+|---|---|
+| **Session start / end** | Detects project type + planning state, validates Bun/Node/tsc versions, reports core version; cleans up on exit |
+| **Every prompt** | Injects compact project context (type, plugins, planning phase) |
+| **Before writes** | Auto-approves known `.planning/` writes; blocks plugin anti-patterns (`createPlugin<` generics, `as any`, wire factories, inline casts); validates plugin structure & `index.ts`; during an active brainstorm, blocks writes outside `.planning/` |
+| **Around commits** | `git commit` mid-wave runs tsc + lint first and blocks on failure; commits touching `.planning/` are always rejected; after a commit lands, a lightweight self-review scans the diff |
+| **After writes** | Biome-formats the changed file (async, if the project has a format script) |
+| **Around compaction** | Re-injects `.planning/STATE.md` + decisions + research + memory, so context loss isn't knowledge loss |
+| **Agent + tool events** | Logs moku agent completions and tool failures; desktop notifications with sound when input is needed; auto-permissions; refuses to stop mid-wave, chimes when genuinely done |
+
+Full wiring: [`hooks/hooks.json`](hooks/hooks.json). There's also a custom status line (phase / wave / context / rate-limit) — opt-in via `/statusline` — because a 40-minute build deserves a *ding*.
+
+## Dynamic workflows
+
+Three opt-in [dynamic workflow](https://code.claude.com/docs/en/workflows) scripts (research preview, Claude Code ≥ 2.1.154) for the fan-out-heavy phases — parallel orchestration instead of turn-by-turn:
+
+| Workflow | Does |
+|---|---|
+| `/moku-verify` | The full validation pipeline as one parallel fan-out — adversarial skeptics on by default — then an aggregated report |
+| `/moku-build-wave` | One wave end-to-end without stopping: each plugin verified the moment its builder finishes, then a wave-judge disposition |
+| `/moku-migrate-sweep` | Parallel migration sweep across a repo — one agent per file, disjoint writes |
+
+Caveats (no mid-run gates, agents inherit your allowlist) in [`workflows/README.md`](workflows/README.md). The interactive gated commands stay turn-by-turn on purpose.
+
+## Output styles
+
+Two moods, matched to the phase:
+
+- **`moku-planning`** — verbose, analytical: trade-offs, comparisons, full reasoning.
+- **`moku-building`** — terse, progress-focused: status lines, pass/fail counts, minimal prose. (The style this README aspires to.)
 
 ## Configuration
 
-### Per-Project Settings
-
-Create `.claude/moku.local.md` with YAML frontmatter for project-specific overrides:
+Per-project overrides live in `.claude/moku.local.md`:
 
 ```markdown
 ---
@@ -131,52 +169,10 @@ gapClosureMaxRounds: 2
 Project-specific notes and context here.
 ```
 
-See `skills/moku-core/references/plugin-settings.md` for supported fields. Commands inject these values dynamically via `!` backtick syntax.
+Supported fields: [`skills/moku-core/references/plugin-settings.md`](skills/moku-core/references/plugin-settings.md).
 
-## State Tracking
-
-The plugin maintains `.planning/STATE.md` for cross-session continuity:
-- Records completed phases, plugin status, wave progress
-- Enables `resume` command to continue from last position
-- Updated at plan completion and after each build wave
-- Preserved during context compaction via PreCompact hook
-
-## Typical Workflow
-
-1. `/moku:init my-framework` — Scaffold the project
-2. `/moku:plan create framework "A static site generator"` — Design the framework
-3. `/moku:build framework` — Implement all plugins in parallel waves with verification
-4. `/moku:build resume` — Continue if context was heavy
-5. `/moku:plan add plugin cache "LRU cache with TTL"` — Create a plugin spec, then `/moku:build add cache` to build
-6. `/moku:plan update plugin router "add nested routes"` — Update an existing plugin's spec
-7. `/moku:check` — Verify project health
-8. `/moku:check graph` — Visualize dependency graph and event flow as mermaid diagrams
-9. `/moku:plan migrate framework ~/Projects/my-existing-app` — Migrate existing code to Moku
-10. `/moku:plan create app "A personal blog"` — Plan the consumer app
-11. `/moku:build app` — Build the consumer app
-
-## Installation
-
-### From GitHub
-
-```bash
-/plugin marketplace add moku-labs/claude
-/plugin install moku@moku-labs-claude
-```
-
-### Local development
-
-```bash
-/plugin marketplace add ~/Projects/moku/claude
-/plugin install moku@local
-```
-
-## Requirements
-
-- [Bun](https://bun.sh/) >= 1.3.14
-- Node.js >= 22.0.0
-- [@moku-labs/core](https://github.com/moku-labs/core)
+**State** lives in `.planning/STATE.md` — phases, plugin status, wave progress. It's what makes `resume` work and survives context compaction (via the PreCompact hook). The whole `.planning/` directory is always gitignored, and a hook rejects any commit that touches it.
 
 ## License
 
-MIT
+[MIT](./LICENSE) © [moku-labs](https://github.com/moku-labs) — built by [Oleksandr Kucherenko](https://github.com/AlexTiTanium), reviewed by twenty agents who report to him.
