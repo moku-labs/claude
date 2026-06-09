@@ -42,7 +42,9 @@ if printf '%s\n' "$CONTENT" | grep -q 'createPlugin<'; then
 fi
 
 # Check 2: Unsafe type assertions in plugin source files
-if printf '%s\n' "$CONTENT" | grep -q 'as any'; then
+# Word-bounded: matches the `as any` assertion (incl. `as any[]`, `as any)`), but not
+# prose/identifiers like "as anything" or "has any".
+if printf '%s\n' "$CONTENT" | grep -qE '\bas any\b'; then
   log_diagnostic "ANTIPATTERN" "$FILE_PATH" "as any — unsafe type assertion"
   echo 'BLOCKED: "as any" detected in plugin source. Use proper typing or "as unknown as TargetType" if a cast is truly necessary. Moku plugins rely on type inference — "as any" defeats the type system.' >&2
   exit 2
@@ -69,7 +71,8 @@ if printf '%s\n' "$CONTENT" | grep -qE 'function wire[A-Z]'; then
 fi
 
 # Check 6: Inline type assertions in state/config (null as X, {} as X, [] as X, {content} as Type)
-if printf '%s\n' "$CONTENT" | grep -qE 'null as [A-Za-z_]|\{\} as |\[\] as |\} as [A-Z]'; then
+# `null as` requires an uppercase type-name start so the legitimate `null as const` doesn't match.
+if printf '%s\n' "$CONTENT" | grep -qE 'null as [A-Z]|\{\} as |\[\] as |\} as [A-Z]'; then
   log_diagnostic "ANTIPATTERN" "$FILE_PATH" "inline type assertion (null as X / {} as X / [] as X / {content} as Type)"
   echo "BLOCKED: Inline type assertion detected (e.g. null as Foo, {} as Bar, { key: val } as Record<K,V>). For Standard+ plugins, define a type and use a typed factory. For Nano/Micro, use a return-type annotation. See moku-plugin skill Common Mistakes." >&2
   exit 2
