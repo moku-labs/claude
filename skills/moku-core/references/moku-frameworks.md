@@ -132,4 +132,4 @@ routine version bump only edits `knownVersion` here — not the migration text.
 `moku-sync` loops over `frameworks[]`, resolves each `releaseSource` latest, compares to
 `knownVersion`, and on a newer version regenerates that framework's skill API section +
 `pluginIndex`, then writes back the new `knownVersion` here. See
-`.claude/skills/moku-sync/SKILL.md`.
+`skills/moku-sync/SKILL.md`.

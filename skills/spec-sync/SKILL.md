@@ -16,7 +16,7 @@ description: >
 # spec-sync — keep the vendored Moku spec + all family knowledge current
 
 This is a **local maintainer skill** for the moku plugin. It is the spec-and-knowledge counterpart
-to the per-framework [`moku-sync`](../../.claude/skills/moku-sync/SKILL.md) skill: where `moku-sync`
+to the per-framework [`moku-sync`](../moku-sync/SKILL.md) skill: where `moku-sync`
 refreshes a framework's *teaching material* (plugin index + skill API form) against an npm release,
 `spec-sync` re-vendors the authoritative **Moku Core specification** and **sandbox style exemplars**
 from source — then runs `moku-sync` so a single prompt brings the **whole family** in sync.

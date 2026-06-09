@@ -4,7 +4,7 @@ A discoverability map of what installing **moku** brings into a session, so you 
 component surface (and its rough context cost) before relying on it. Use `claude plugin details moku`
 for the live component list and `/usage` (per-category) to see actual token spend in a session.
 
-## Skills (6) — progressive disclosure; bodies load on trigger, `references/` load on demand
+## Skills (7) — progressive disclosure; bodies load on trigger, `references/` load on demand
 
 | Skill | Triggers on | What it brings |
 |-------|-------------|----------------|
@@ -14,6 +14,7 @@ for the live component list and `/usage` (per-category) to see actual token spen
 | **moku-testing** | TDD, mock context, moku test patterns | Red→Green→Refactor protocol, mock-ctx + createTestApp scaffolds (points at vendored sandbox tests) |
 | **moku-readable-code** | readable code, wall of text, refactor for readability, story by layout, stanza style | The 10-rule stanza style (blank-line steps + intent comments, guard clauses, named predicates/constants, balanced extraction); paired with the `moku-readable-code-validator` |
 | **spec-sync** *(maintainer)* | "sync moku spec/knowledge", "re-vendor the moku core spec", "new core version" | Re-vendors the upstream Core spec + sandbox from `moku-labs/core`, regenerates `spec-index.md`/`sandbox-index.md`, then chains `moku-sync` to refresh every framework's index. STOPs outside the plugin repo. |
+| **moku-sync** *(maintainer)* | "sync moku frameworks", "check for new moku framework releases", "new @moku-labs/web release" | Per-framework counterpart to spec-sync: polls each registry framework's release source, regenerates its plugin index + skill API form, registers new versions with `/moku:upgrade`. Read-only `--check` mode. STOPs outside the plugin repo. |
 
 > Only `moku-core` is broad; the other three trigger narrowly. References are Level-3 progressive
 > disclosure — they cost ~0 tokens until an agent opens them, which is why the vendored spec/sandbox
