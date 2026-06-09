@@ -21,8 +21,11 @@ fi
 
 [ -z "$COMMAND" ] && exit 0
 
-# --- Universal guard: never stage or commit .planning/ ---
-# (Active in any project where a JSON parser was available to extract $COMMAND above.)
+# Only act in a Moku project with active planning state
+[ -f .planning/STATE.md ] || exit 0
+[ -f .planning/moku.md ] || exit 0
+
+# --- Guard (Moku projects only — gated above): never stage or commit .planning/ ---
 # .planning/ is local-only state and is gitignored. It reaches history only via an explicit
 # `git add .planning…`, a force-add bypassing .gitignore, or an explicit commit pathspec.
 # Match `.planning` ONLY as a real path token: strip any -m/--message value first (so a commit
@@ -38,10 +41,6 @@ case "$GITCMD" in
     fi
     ;;
 esac
-
-# Only act in a Moku project with active planning state
-[ -f .planning/STATE.md ] || exit 0
-[ -f .planning/moku.md ] || exit 0
 
 # Only trigger on git commit commands
 case "$COMMAND" in
