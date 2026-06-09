@@ -8,7 +8,7 @@ description: >
   <example>Context: Build wave 1 has 3 plugins to build in parallel. user: "Build the router plugin from its spec" assistant: launches moku-builder</example>
   <example>Context: Delta/update build modifies an existing plugin. user: "Add nested-route support to the existing router plugin" assistant: launches moku-builder in delta mode</example>
 model: sonnet
-color: orange
+color: yellow
 maxTurns: 60
 skills:
   - moku-core
