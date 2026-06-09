@@ -2,6 +2,41 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.42.0 (2026-06-10)
+
+**`moku-sync web`:** synced the moku-web teaching material from `@moku-labs/web@0.5.6` to **`1.6.1`**
+(npm `latest`; a patch over 1.6.0 with an identical API surface). Every API claim regenerated from
+and verified against the framework source at `v1.6.1` — the upstream `llms.txt`/`llms-full.txt` lag
+the source (removed `router.set()`, dropped `URLPattern`), so `src/` was treated as authoritative.
+
+### Changed
+- **`skills/moku-web/SKILL.md`** — API form rewritten for 1.6.1: ctx-based route handlers
+  (`.load((ctx) => D)` / `.generate((ctx) => params[])` with `ctx.require(contentPlugin)` loaders),
+  **`.parse()` removed** (fetched JSON used directly as `ctx.data`), global `{ stage, mode }` config
+  (`mode` is the single ssg/spa/hybrid switch; 3-valued `stage` drives draft visibility),
+  declarative-only routes, the `content` provider shell, the new node-only **`cliPlugin`**
+  (`app.cli.build/serve/preview/deploy`, no `bin`), `createUrls(routes, defaultLocale?)`, island
+  hooks with the real `ComponentContext { el, data }` signature, and the Vite-free stack
+  (framework `build` plugin bundles via `Bun.build`).
+- **`skills/moku-web/references/plugin-index.md`** — full catalog regenerated from
+  `web/src/plugins/*`: header now `1.6.1` / core `0.1.1` / cliPlugin documented; 12-plugin table
+  (incl. `cli` with its config/API and hook-driven progress rendering), updated property/event
+  indexes (`head.siteHead`, `content.contentDir()`, `build.run` incremental options, spa
+  `viewTransitions` default `false`, env providers default `[]`), parse-free SSG→DATA→SPA flow,
+  bare-path default locale (v1.6.0), native-RegExp matcher (v1.4.1).
+- **`skills/moku-web/references/layout-structure.md`** — regenerated from the real blog reference
+  implementation (`@moku-labs/web@1.6.1`): structured `createApp` options, single `routes.tsx`
+  table + `createUrls`, SSG-only `(ctx, children)` layout contract, `app.ts`/`spa.tsx` entry split,
+  thin `app.cli.*` command scripts, bun/node tsconfig. (Previously taught a nonexistent `moku`
+  package with a flat options shape no version ever had.)
+- **`skills/moku-web/references/component-patterns.md`** — island hooks corrected to the six
+  `ComponentContext { el, data }` lifecycle hooks from `@moku-labs/web/browser` (the `moku/spa`
+  import path was fictional); persistent-vs-page-scoped semantics; ctx-based route example.
+- **`skills/moku-core/references/moku-frameworks.md`** — `web.knownVersion` `0.5.6` → `1.6.1` with a
+  rewritten provenance note (0.5.6→1.6.1 delta, core pin now `@moku-labs/core@0.1.1`, llms-lag
+  caveat). `/moku:upgrade`'s `moku-web-version` migration needs no body change (it reads the
+  registry); only its illustrative version string in `upgrade-migrations.md` was refreshed.
+
 ## 0.41.0 (2026-06-05)
 
 New **`moku-readable-code`** skill + **`moku-readable-code-validator`** agent, wired into the build and
