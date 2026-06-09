@@ -25,7 +25,8 @@ after a successful sync; a value behind the upstream latest is exactly the signa
 "there is something new." **Version-of-truth for detecting new releases is the npm registry
 JSON** (`https://registry.npmjs.org/<npm>` → `dist-tags.latest`). `@moku-labs/web` ships an
 upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured catalog — which
-`moku-sync` reads and cross-checks against `package.json` `exports` + `src/plugins/*`.
+`moku-sync` reads and cross-checks against `package.json` `exports` + `src/plugins/*`; when the
+llms files and the source disagree, **the source wins** (observed at 1.6.1).
 `@moku-labs/core` ships its own `llms.txt`/`llms-full.txt` since 0.1.1 (cross-check against
 `src/index.ts`, the sole public-surface authority); pre-0.1.1 it had none.
 
@@ -61,7 +62,7 @@ upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured c
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.5.6",
+      "knownVersion": "1.6.1",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -90,17 +91,27 @@ upstream `llms.txt`/`llms-full.txt` (since 0.4.0) — the preferred structured c
 > `…/sandbox/`) re-pinned to the same SHA via `/moku:spec-sync` — content-identical, so no spec/sandbox
 > files changed. No GitHub release/tag exists for 0.1.1 (npm trusted-publish only); pin by gitHead SHA.
 >
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@0.5.6` (npm `latest`,
-> published 2026-06-03). The plugin/property catalog in
-> `skills/moku-web/references/plugin-index.md` was generated from the upstream
-> `llms.txt`/`llms-full.txt` cross-checked against the source at `../web` (`src/plugins/*` +
-> `src/browser.ts` at tag `v0.5.6`). **0.4.0 → 0.5.6 delta:** a second entry point
-> **`@moku-labs/web/browser`** (ESM-only, node-free by construction, `browserEnv()` pre-wired —
-> v0.5.0); a **breaking `route.layout(ctx, children)`** signature now applied in SSG (v0.4.1); typed
-> `content.shikiTheme` (v0.5.3); plus build/log/spa fixes. The SSG→DATA→SPA model is unchanged.
-> `@moku-labs/web` still pins `@moku-labs/core@0.1.0-alpha.6` exactly, so a consumer that depends only
-> on `@moku-labs/web` gets the right core transitively and must NOT add a direct `@moku-labs/core`
-> dependency.
+> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.6.1` (npm `latest`,
+> gitHead `39fb5dd0`; 1.6.1 is a patch over 1.6.0 — one spa scroll-timing fix, identical API). The
+> plugin/property catalog in `skills/moku-web/references/plugin-index.md` was generated from the
+> source at `../web` (`src/plugins/*` + `src/index.ts` + `src/browser.ts` at tag `v1.6.1`),
+> cross-checked against the upstream `llms.txt`/`llms-full.txt` and `package.json` — note the llms
+> files at 1.6.1 lag the source in two places (they still mention the removed `app.router.set()`
+> and the dropped `URLPattern` requirement), so **`src/` is authoritative**. **0.5.6 → 1.6.1
+> delta:** v1.0.0 was a breaking overhaul — ctx-based route handlers (`.load((ctx) => D)` with
+> `{ params, locale, require, has }`; `.generate((ctx) => params[])`; loaders pull siblings via
+> `ctx.require(contentPlugin)`), **`.parse()` removed** (fetched JSON is used directly as
+> `ctx.data`; miss/malformed → HTML fallback), global `{ stage, mode }` config (3-valued `stage`;
+> `mode` moved out of router config), declarative-only routes (`router.set()` removed), and the
+> content plugin became an isomorphic shell + composable providers
+> (`fileSystemContent({ contentDir, … })`). New since 0.5.6: the node-only **`cliPlugin`**
+> (`app.cli.build/serve/preview/deploy`, boxed Panel TUI, guided deploy wizard, incremental dev
+> rebuilds — no `bin`), `createUrls(routes, defaultLocale?)`, `ctx.url` in render/head,
+> `head.siteHead`, build `ogImage.defaultCard` / `notFound.path` / `template` placeholders, native
+> RegExp route matching (URLPattern dropped, v1.4.1), and default-locale **bare paths** for
+> `{lang:?}` routes (v1.6.0). `@moku-labs/web` now pins **`@moku-labs/core@0.1.1`** exactly (was
+> 0.1.0-alpha.6), so a consumer that depends only on `@moku-labs/web` gets the right core
+> transitively and must NOT add a direct `@moku-labs/core` dependency. Engines: node ≥24, bun ≥1.3.14.
 
 ## Field reference
 
