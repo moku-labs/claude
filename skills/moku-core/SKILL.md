@@ -17,10 +17,10 @@ Enforce strict compliance with Moku Core specifications when generating, reviewi
 
 ## Architecture: Three Layers, Three Steps
 
-Moku is a micro-kernel plugin framework. One export (`createCoreConfig`), three layers, each constraining the layer above.
+Moku is a micro-kernel plugin framework. Two runtime exports (`createCoreConfig`, `createCorePlugin`), three layers, each constraining the layer above.
 
 ### Layer 1 — @moku-labs/core
-Single export: `createCoreConfig`. Zero domain knowledge. Pure machinery: lifecycle, plugin registry, event bus, config resolution, type inference. Runtime < 200 lines. Bundle < 5KB gzipped.
+Two runtime exports: `createCoreConfig` and `createCorePlugin` (plus the type-only utilities `PluginCtx`/`EmitFn`). Zero domain knowledge. Pure machinery: lifecycle, plugin registry, event bus, config resolution, type inference. Runtime < 200 lines. Bundle < 5KB gzipped.
 
 ### Layer 2 — Framework
 Calls `createCoreConfig<Config, Events>(id, { config })`. Defines default plugins, base config shape, event contract. Exports `createApp` and `createPlugin` to consumers.
