@@ -40,7 +40,7 @@ Builds ONE wave non-interactively: builders run in parallel over the wave's plug
 command or `git checkout` from one builder can't clobber a sibling — this happened in a real build);
 single-plugin waves run without isolation. The builder prompt also hard-forbids repo-wide commands and
 git mutations. Each plugin is verified by `moku-verifier` *as it finishes* (pipeline, not barrier), and
-`moku-wave-judge` returns a continue/stop/retry disposition. The gated `/moku:build` (per-wave user
+`moku-wave-judge` returns a continue / stop-for-review / fresh-retry disposition. The gated `/moku:build` (per-wave user
 checkpoint) stays the default; reach for this only when you explicitly want a wave built end-to-end
 without stopping. Pass `{plugins:[{name,tier,spec}]}` or omit to auto-detect the next wave from STATE.md.
 

@@ -111,12 +111,12 @@ const JUDGE = {
   type: 'object',
   required: ['decision'],
   properties: {
-    decision: { type: 'string', enum: ['continue', 'stop-for-review', 'retry'] },
+    decision: { type: 'string', enum: ['continue', 'stop-for-review', 'fresh-retry'] },
     reason: { type: 'string' },
   },
 }
 const judgment = await agent(
-  `Evaluate this build wave and decide continue / stop-for-review / retry. Results: ` +
+  `Evaluate this build wave and decide continue / stop-for-review / fresh-retry. Results: ` +
     `${JSON.stringify(done.map((r) => ({ plugin: r.plugin, build: r.build?.status, verify: r.verify?.verdict })))}`,
   { label: 'wave-judge', phase: 'Judge', agentType: 'moku:moku-wave-judge', schema: JUDGE },
 )
