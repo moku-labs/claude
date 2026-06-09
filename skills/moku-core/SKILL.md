@@ -296,7 +296,7 @@ context-engineering guidance rather than treating the window as scarce:
 ## Related Skills
 
 - **moku-plugin** — Plugin structure, complexity tiers, file organization, wiring harness pattern
-- **moku-web** — Preact + Vite web patterns, island architecture, CSS architecture with @scope/@layer
+- **moku-web** — Preact web patterns (Vite-free, Bun-bundled), island architecture, CSS architecture with @scope/@layer
 
 ### Cross-Skill Example: Router Plugin with Web Integration
 

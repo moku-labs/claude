@@ -1,7 +1,7 @@
 ---
 name: moku-web
 description: >
-  Moku web patterns: Preact + Vite + island architecture. Triggers on:
+  Moku web patterns: Preact + island architecture (Vite-free — the framework build plugin bundles via Bun.build). Triggers on:
   "moku web", "moku component", "moku CSS architecture", "moku island pattern",
   "moku data attributes", "moku @scope", "moku @layer", "moku design tokens",
   "moku layout structure", or building web apps in a Moku project.
