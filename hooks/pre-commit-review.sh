@@ -52,8 +52,9 @@ while IFS= read -r file; do
   # Check for potential undefined references in plugin source
   case "$file" in
     */plugins/*)
-      # Detect empty function bodies (stub indicators)
-      EMPTY_BODIES=$(grep -nE '(=>|{)\s*$' "$file" 2>/dev/null | head -3)
+      # Detect empty function bodies (stub indicators): `=> {}` or `) {}` on one line.
+      # (A line merely ENDING in `{` or `=>` is normal multi-line TS — not a stub.)
+      EMPTY_BODIES=$(grep -nE '(=>|\))[[:space:]]*\{[[:space:]]*\}' "$file" 2>/dev/null | head -3)
       if [ -n "$EMPTY_BODIES" ]; then
         FINDINGS="${FINDINGS}STUB: $file may have empty function bodies\n"
         FINDING_COUNT=$((FINDING_COUNT + 1))
@@ -85,7 +86,10 @@ done <<< "$DIFF"
 TSC_OUTPUT=$(bunx tsc --noEmit 2>&1)
 TSC_EXIT=$?
 if [ $TSC_EXIT -ne 0 ]; then
-  TSC_ERROR_COUNT=$(echo "$TSC_OUTPUT" | grep -c 'error TS' 2>/dev/null || echo "0")
+  # grep -c always prints a count (0 on no match, exiting 1) — an `|| echo` here would
+  # append a SECOND line and crash the arithmetic below. Sanitize via default expansion.
+  TSC_ERROR_COUNT=$(echo "$TSC_OUTPUT" | grep -c 'error TS' 2>/dev/null)
+  TSC_ERROR_COUNT=${TSC_ERROR_COUNT:-0}
   FINDINGS="${FINDINGS}TSC: $TSC_ERROR_COUNT TypeScript error(s) found after commit\n"
   FINDING_COUNT=$((FINDING_COUNT + TSC_ERROR_COUNT))
 fi
@@ -94,7 +98,8 @@ fi
 LINT_OUTPUT=$(bun run lint 2>&1)
 LINT_EXIT=$?
 if [ $LINT_EXIT -ne 0 ]; then
-  LINT_ERROR_COUNT=$(echo "$LINT_OUTPUT" | grep -cE '(error|✖)' 2>/dev/null || echo "0")
+  LINT_ERROR_COUNT=$(echo "$LINT_OUTPUT" | grep -cE '(error|✖)' 2>/dev/null)
+  LINT_ERROR_COUNT=${LINT_ERROR_COUNT:-0}
   FINDINGS="${FINDINGS}LINT: $LINT_ERROR_COUNT lint error(s) found after commit\n"
   FINDING_COUNT=$((FINDING_COUNT + LINT_ERROR_COUNT))
 fi
