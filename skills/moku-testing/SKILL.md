@@ -25,10 +25,10 @@ Every Moku plugin callback receives a specific context tier. Tests MUST mock the
 | Callback | Context Tier | Available Fields |
 |----------|-------------|-----------------|
 | `createState` | MinimalContext | `global`, `config` |
-| `api` factory | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, `app` |
-| `hooks` factory | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, `app` |
-| `onInit` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, `app` |
-| `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, `app` |
+| `api` factory | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
+| `hooks` factory | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
+| `onInit` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
+| `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
 | `onStop` | TeardownContext | `global` |
 
 ## Mock Context Factory
@@ -38,7 +38,9 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/mock-context.md` for 
 **Key rules:**
 - Mock factories accept `Partial<Context>` for test-specific overrides
 - `emit` is always `vi.fn()` — verify with `expect(emit).toHaveBeenCalledWith('event:name', payload)`
-- `require` returns typed mock APIs — must match actual dependency signatures
+- Domain mocks are typed with the exported `PluginCtx<C, S, E>` (`config`/`state`/`emit` only);
+  if a domain file composes its own ctx with `require`, mock it with typed APIs matching the
+  actual dependency signatures
 - Never include fields from a different context tier
 
 ## Unit Test Pattern
