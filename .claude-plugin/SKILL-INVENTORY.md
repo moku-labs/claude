@@ -16,7 +16,7 @@ for the live component list and `/usage` (per-category) to see actual token spen
 | **spec-sync** *(maintainer)* | "sync moku spec/knowledge", "re-vendor the moku core spec", "new core version" | Re-vendors the upstream Core spec + sandbox from `moku-labs/core`, regenerates `spec-index.md`/`sandbox-index.md`, then chains `moku-sync` to refresh every framework's index. STOPs outside the plugin repo. |
 | **moku-sync** *(maintainer)* | "sync moku frameworks", "check for new moku framework releases", "new @moku-labs/web release" | Per-framework counterpart to spec-sync: polls each registry framework's release source, regenerates its plugin index + skill API form, registers new versions with `/moku:upgrade`. Read-only `--check` mode. STOPs outside the plugin repo. |
 
-> Only `moku-core` is broad; the other three trigger narrowly. References are Level-3 progressive
+> Only `moku-core` is broad; the other six trigger narrowly. References are Level-3 progressive
 > disclosure — they cost ~0 tokens until an agent opens them, which is why the vendored spec/sandbox
 > (~6,400 + ~4,000 lines) are *indexed*, not front-loaded.
 
@@ -32,7 +32,7 @@ for the live component list and `/usage` (per-category) to see actual token spen
 - **Brainstorm (3):** brainstorm-researcher, challenger, synthesizer
 - **Build/plan support (3):** builder, plan-checker, planning-phase `researcher`
 - Mechanical validators run at `effort: low` (haiku); deep reviewers (`code-reviewer`, `wave-judge`,
-  `skeptic`) at `effort: high` — to keep the 19-agent surface cost-aware.
+  `skeptic`) at `effort: high` — to keep the 20-agent surface cost-aware.
 
 ## Workflows (3) — opt-in dynamic fan-outs (Claude Code v2.1.154+)
 

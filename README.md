@@ -4,7 +4,7 @@ Development toolkit for [Moku Core](https://github.com/moku-labs/core) — the m
 
 ## What This Plugin Does
 
-Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 19-agent validation pipeline, lean execution mode (~40-60% context savings), and wave pipelining.
+Provides commands, skills, validation agents, and hooks for building Moku-based frameworks, plugins, and consumer applications with full specification compliance. Features wave-based parallel execution, 3-level artifact verification, mermaid diagram generation, a 20-agent validation pipeline, lean execution mode (~40-60% context savings), and wave pipelining.
 
 ## Commands
 
