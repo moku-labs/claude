@@ -70,7 +70,10 @@ ERRORS=""
 TSC_OUTPUT=$(bunx tsc --noEmit 2>&1)
 TSC_EXIT=$?
 if [ $TSC_EXIT -ne 0 ]; then
-  TSC_ERROR_COUNT=$(echo "$TSC_OUTPUT" | grep -c 'error TS' 2>/dev/null || echo "?")
+  # grep -c always prints a count (0 on no match, exiting 1) — an `|| echo` here would
+  # append a SECOND line and embed "0\n?" in the BLOCKED message. Sanitize via default expansion.
+  TSC_ERROR_COUNT=$(echo "$TSC_OUTPUT" | grep -c 'error TS' 2>/dev/null)
+  TSC_ERROR_COUNT=${TSC_ERROR_COUNT:-?}
   ERRORS="${ERRORS}TypeScript: $TSC_ERROR_COUNT error(s). "
 fi
 
@@ -78,7 +81,8 @@ fi
 LINT_OUTPUT=$(bun run lint 2>&1)
 LINT_EXIT=$?
 if [ $LINT_EXIT -ne 0 ]; then
-  LINT_ERROR_COUNT=$(echo "$LINT_OUTPUT" | grep -cE '(error|✖)' 2>/dev/null || echo "?")
+  LINT_ERROR_COUNT=$(echo "$LINT_OUTPUT" | grep -cE '(error|✖)' 2>/dev/null)
+  LINT_ERROR_COUNT=${LINT_ERROR_COUNT:-?}
   ERRORS="${ERRORS}Lint: $LINT_ERROR_COUNT error(s). "
 fi
 
