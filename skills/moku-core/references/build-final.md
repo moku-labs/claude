@@ -373,7 +373,7 @@ Update STATE.md: mark CI/CD wave complete with list of generated workflows.
 
 ## Step 6: Post-Build Validation Pipeline
 
-Spawn the **moku-validation-coordinator** agent to orchestrate the full validation pipeline. It handles Group A → Group B → architecture sequencing, aggregates output contracts, and returns a unified disposition (PASS/FIX/MANUAL).
+Spawn the **moku-validation-coordinator** agent to orchestrate the full validation pipeline. It runs Group A in parallel, then Group B together with a speculative architecture-validator pass (re-run with Group B findings only if Group B surfaces cross-plugin BLOCKERs), aggregates output contracts, and returns a unified disposition (PASS/FIX/MANUAL).
 
 If the coordinator returns FIX disposition, enter gap closure with the **moku-error-diagnostician**. If MANUAL, report to user. If PASS, proceed to Step 7.
 
@@ -385,12 +385,12 @@ If the coordinator returns FIX disposition, enter gap closure with the **moku-er
 - **moku-plugin-spec-validator** agent — structure compliance per plugin
 - **moku-readable-code-validator** agent — function-body readability per plugin (wall-of-text / stanza style; WARNING/INFO only — never blocks)
 
-**Parallel Group B (quality + types):**
+**Parallel Group B + speculative architecture (quality + types + arch):**
 - **moku-test-validator** agent — test quality per plugin
 - **moku-type-validator** agent — TypeScript type correctness (once, whole project)
+- **moku-architecture-validator** agent — cross-plugin architecture (once, whole framework) — speculative start alongside Group B
 
-**Sequential (after A + B complete):**
-- **moku-architecture-validator** agent — cross-plugin architecture (once, whole framework)
+**Conditional architecture re-run:** if Group B reports BLOCKERs in categories `missing-export`, `dependency`, `event-type`, or `cross-plugin`, discard the speculative architecture results and re-run the **moku-architecture-validator** with Group B findings injected. Otherwise the speculative results are final.
 
 If any validator reports BLOCKER issues, enter gap closure. If only WARNINGs, include them in the report.
 

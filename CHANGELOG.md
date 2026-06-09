@@ -2,6 +2,27 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.42.4 (2026-06-10)
+
+Follow-up to 0.42.2: one more stale description of the validation pipeline survived. The
+framework-build reference (`build-final.md` Step 6) still said the validation-coordinator handles
+"Group A → Group B → architecture sequencing", and its manual fallback ran the
+architecture-validator strictly after Groups A + B — both contradicting the coordinator's actual
+pipeline, which starts the architecture-validator speculatively alongside Group B and re-runs it
+only when Group B surfaces cross-plugin BLOCKERs. Historical changelog entries describing the
+old sequential pipeline are left untouched — they were accurate when written.
+
+### Changed
+- **`skills/moku-core/references/build-final.md`** — Step 6 now describes the coordinator's
+  speculative pipeline (Group A parallel → Group B + architecture parallel, conditional arch
+  re-run). The manual fallback (coordinator unavailable) mirrors the same shape: the
+  architecture-validator starts alongside Group B and is re-run with Group B findings injected
+  only if Group B reports BLOCKERs in categories `missing-export`, `dependency`, `event-type`,
+  or `cross-plugin`.
+
+### Plugin
+- Version bumped to 0.42.4 in plugin.json and marketplace.json (README badge synced).
+
 ## 0.42.3 (2026-06-10)
 
 Consistency fix: the SessionStart environment check still enforced the pre-TS6-era Bun floor
