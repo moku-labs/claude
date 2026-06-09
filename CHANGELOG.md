@@ -2,6 +2,23 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.42.3 (2026-06-10)
+
+Consistency fix: the SessionStart environment check still enforced the pre-TS6-era Bun floor
+(`>= 1.3.8`) while `/moku:init` scaffolds `engines.bun: ">=1.3.14"` + `.bun-version` `1.3.14`
+and the README documents Bun ≥ 1.3.14 (floor raised in 0.30.0's tooling-freshness migration,
+but the hook was never updated). The hook now warns below the documented 1.3.14 floor.
+
+### Fixed
+- **`hooks/detect-moku-project.sh`** — Bun version validation now warns when Bun `< 1.3.14`
+  (was `< 1.3.8`); warning message updated to match. Remaining `1.3.8` strings in the repo are
+  intentional: historical changelog entries, the `bun 1.3.8 → 1.3.14` tooling-freshness migration
+  docs (`commands/upgrade.md`, `upgrade-migrations.md`, `target-stack.md` era table), and upstream
+  `@moku-labs/core`'s own engines field quoted in `moku-frameworks.md`.
+
+### Plugin
+- Version bumped to 0.42.3 in plugin.json and marketplace.json (README badge synced).
+
 ## 0.42.2 (2026-06-10)
 
 Docs-only patch: the validation-coordinator agent's frontmatter description claimed a fully
