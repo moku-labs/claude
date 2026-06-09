@@ -3,6 +3,8 @@
 # Captures agent completion with structured decision data into .planning/build/agent-log.md.
 # Extracts verdict, decision, blockers/warnings counts from agent JSON output contracts.
 
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
 # Only act if we're in a Moku project with active planning state
 [ -f .planning/STATE.md ] || exit 0
 
