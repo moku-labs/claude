@@ -2,6 +2,66 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.43.0 (2026-06-10)
+
+`spec-sync` of `@moku-labs/core` to **0.1.2** (npm `latest`, published 2026-06-09, gitHead
+`9d02b96e` = GitHub tag `v0.1.2` — core's first tagged GitHub release). A hardening release from a
+multi-agent audit: guarded `onError` (a throwing handler never aborts hook dispatch, #3),
+`createCoreConfig` `Events` default `Record<string, never> → Record<never, never>` (omitted `Events`
+keeps hook names strict, #6), `CreateCoreOptions.plugins` now `readonly` (accepts `as const` tuples;
+technically a breaking *type* change, #4), `require()` returns a shared frozen `{}` for registered
+api-less plugins (#5), the sandbox suite wired into CI (#2), and a docs-truth pass (#7). Vendored
+spec + sandbox re-pinned `fe8cc15 → 9d02b96` and verified byte-identical to
+`git show v0.1.2:<path>` (spec 15/15, sandbox 48/48 curated files); family registry synced.
+`@moku-labs/web` verified up to date at `1.6.2` (npm `latest` == registry `knownVersion`,
+checked 2026-06-10) — no web changes.
+
+### Changed
+- **`skills/moku-core/references/spec/`** — 5 of 15 files changed upstream (PRs #3/#5/#7):
+  `03-PLUGIN-SYSTEM` + `11-INVARIANTS` (reserved names now include `global`/`state`),
+  `05-CONFIG-SYSTEM` (removed the unimplemented "required configs are compile-time" rule —
+  every `pluginConfigs` entry is optional, overrides shape-checked), `07-COMMUNICATION`
+  (guarded `onError` semantics), `13-KERNEL-PSEUDOCODE` (guarded `combinedOnError`/dispatch +
+  `EMPTY_API` frozen `{}` at all three `require` call sites). No files added/removed; no
+  H2/numbering changes, so routing tables, section maps, and distilled cross-links stand.
+- **`skills/moku-core/references/spec-index.md`** + **`sandbox-index.md`** — re-pinned
+  `fe8cc15 → 9d02b96` (tag `v0.1.2`), vendored date → `2026-06-10`; fixed the sandbox-index
+  raw-URL footer that still pointed at pre-0.1.1 `fdee8c06`. Sandbox: 0 of 48 curated exemplars
+  changed, no upstream 404s; the only upstream sandbox change is the non-vendored
+  `type-gaps.test.ts` (+149 lines of new type-gap sections — candidate for future curation,
+  fetchable on demand via the pinned raw-URL pattern). Style cheat-sheet re-verified, claims hold.
+- **`skills/moku-core/references/moku-frameworks.md`** — `frameworks[core].knownVersion → 0.1.2`;
+  core provenance block rewritten for the 0.1.1 → 0.1.2 delta (public export names unchanged —
+  `src/index.ts` untouched; engines unchanged node ≥22 / bun ≥1.3.8; flags the upstream doc lag:
+  spec `11-INVARIANTS` §1.4 still carries the stale required-configs claim that #7 removed from
+  spec 05/README). Notes `@moku-labs/web@1.6.2` still pins `@moku-labs/core@0.1.1` exactly, so
+  web consumers stay on 0.1.1 until web ships a bump.
+- **`skills/moku-core/references/core-api.md`** — `Events` default `Record<never, never>`;
+  `createCore` `plugins: readonly AnyPluginInstance[]`; `onError` scope (hook-dispatch failures
+  only; lifecycle errors propagate) + guard semantics; reserved-name lists now include
+  `global`/`state` in both `createPlugin` and `createCorePlugin` sections; App-type note that
+  `require()` yields frozen `{}` for registered api-less plugins.
+- **`skills/moku-core/references/communication-context.md`** — guarded error-handler semantics on
+  emit; `require()` api-less resolution documented.
+- **`skills/moku-core/references/invariants.md`** — "Config Completeness" → "Config Shape
+  Checking" (no compile-time required config; sentinel default + runtime `onInit` check is the
+  pattern; cites spec/05 §2/§7–§8 and flags spec/11 §1.4 as stale upstream); `require()` contract
+  updated; reserved-names provenance note.
+- **`skills/moku-core/references/config-lifecycle.md`** — "The Config Rule" table rebuilt per
+  spec/05 §2 (plugin excluded from `pluginConfigs` when no `config`; otherwise optional
+  `Partial<C>` with shape-checked overrides).
+- **`skills/moku-core/SKILL.md`** — Layer-1 claim corrected to "Bundle < 8KB gzipped" (docs-truth
+  pass; was "< 5KB" + "Runtime < 200 lines").
+- **`skills/moku-core/references/build-skeleton.md`** — empty-`Events` skeleton guidance now says
+  `Record<never, never>`, not `Record<string, never>` — the old guidance recreated the exact
+  hook-name-widening bug core #6 fixed.
+- **`skills/moku-core/references/upgrade-migrations.md`** — `moku-core-version` example refreshed
+  to `0.1.2` (registry-driven, so `/moku:upgrade` now offers `0.1.2` to projects with a direct
+  core dep).
+
+### Plugin
+- Version bumped to 0.43.0 in plugin.json and marketplace.json (README badge synced).
+
 ## 0.42.4 (2026-06-10)
 
 Follow-up to 0.42.2: one more stale description of the validation pipeline survived. The
