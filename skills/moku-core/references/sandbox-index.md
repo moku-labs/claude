@@ -1,7 +1,7 @@
 # Moku Sandbox — Coding-Style Index
 
 > **Reference exemplars** vendored from `github.com/moku-labs/core/tests/sandbox` to inspire
-> coding style during build. Pinned commit: `9d02b96e174b4ef3a2603543e1e28bdb7cd65654` (tag `v0.1.2`)
+> coding style during build. Pinned commit: `d928159967e21efc0fe4620844fdf2cba69b191b` (tag `v0.1.3`)
 > Vendored: `2026-06-10` · files live under `skills/moku-core/references/sandbox/`.
 > Refresh with `/moku:spec-sync` (it re-vendors both `spec/` and `sandbox/`).
 >
@@ -67,7 +67,7 @@ plugin's size to decide the file split.
 
 ## Refresh / fetch-on-demand
 
-- Raw URL pattern (pinned): `https://raw.githubusercontent.com/moku-labs/core/9d02b96e174b4ef3a2603543e1e28bdb7cd65654/tests/sandbox/<path>`
+- Raw URL pattern (pinned): `https://raw.githubusercontent.com/moku-labs/core/d928159967e21efc0fe4620844fdf2cba69b191b/tests/sandbox/<path>`
 - Regenerate the resolved SHA: `gh api 'repos/moku-labs/core/commits?path=tests/sandbox&per_page=1' --jq '.[0].sha'`
 - Full upstream tree has ~108 files; only the ~48 highest-signal exemplars are vendored here. To
   study a non-vendored sibling (e.g. `demo/tools/`, the `cms/media/` sub-domain, `type-gaps.test.ts`),

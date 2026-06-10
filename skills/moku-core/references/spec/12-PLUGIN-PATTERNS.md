@@ -326,7 +326,7 @@ LIFECYCLE (3 phases):
 
   All lifecycle methods support async (return void | Promise<void>).
   Execution is sequential -- Plugin A completes before Plugin B begins.
-  createApp returns a Promise -- ALWAYS use await.
+  createApp is synchronous -- no await. app.start()/app.stop() return Promises -- ALWAYS await them.
 
 EVENT SYSTEM:
   Two sources of typed events:
@@ -338,8 +338,11 @@ EVENT SYSTEM:
   Events are notifications. Use ctx.require(pluginInstance) for request/response.
 
 CONFIG RULES:
-  - config present = config key optional in createApp
-  - config absent + non-void config = config key required in createApp
+  - config declares the complete default value; C is inferred from it
+  - pluginConfigs key is ALWAYS optional (Partial<C>) -- defaults fill omissions
+  - Overrides are shape-checked: unknown keys / wrong value types = compile errors
+  - No config field = plugin excluded from pluginConfigs entirely
+  - Consumer-required values: sentinel default + runtime check in onInit
   - Shallow merge: { ...config, ...consumerConfig }
   - Configs are frozen after creation
   - depends: [pluginInstance] declares dependencies (instance-based). Validated at startup. Not a sort.
@@ -361,7 +364,7 @@ RULES:
   - Never put more than ~50 lines of logic in a plugin index.ts.
   - Plugin index.ts is a CONNECTION POINT. Domain code lives in separate files.
   - Use ctx.require(pluginInstance) for dependencies. Use ctx.has('name') for optional deps.
-  - ALWAYS createApp -- it returns a Promise.
+  - createApp is synchronous. ALWAYS await app.start() and app.stop() -- they return Promises.
 
 APP-LEVEL TYPING:
   app.pluginName.method() is fully typed via the plugin's api return type.
