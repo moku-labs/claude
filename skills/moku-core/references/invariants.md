@@ -5,7 +5,7 @@
 ## Invariants (Always True — Breaking Any Is a Bug)
 
 ### Reserved Names
-`start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`, `__proto__`, `constructor`, `prototype` — plugin names using these throw TypeError. Core plugins have the same reserved names.
+`start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`, `__proto__`, `constructor`, `prototype` — plugin names using these throw TypeError. Core plugins have the same reserved names. (Docs listed only 9 of these pre-0.1.2; the kernel always rejected `global`/`state` too.)
 
 ### Name Uniqueness
 Duplicate plugin names throw during init. No silent overwrite. No merge. No "last wins." Core plugin names are cross-checked against regular plugin names — no collisions allowed.
@@ -16,8 +16,8 @@ If `depends: [logger]` is declared:
 - `logger` must appear BEFORE the dependent plugin
 - Validation only — does NOT change order
 
-### Config Completeness
-TypeScript rejects `createApp` without required configs. Compile-time only.
+### Config Shape Checking
+Every `pluginConfigs` key in `createApp` is optional — there is no compile-time "required config", and the runtime never flags a missing one; the plugin's `config` defaults fill the gap. Overrides are shape-checked at compile time: unknown keys and wrong value types reject. Values that must come from the consumer use a sentinel default + a runtime check in `onInit` (spec/05 §2, §7–§8; corrected in 0.1.2 — note spec/11 §1.4 still carries the stale pre-0.1.2 claim upstream).
 
 ### Lifecycle Order
 Forward for init/start. Reverse for stop. Always array order. No auto-reordering. Core plugins init/start BEFORE regular plugins. Regular plugins stop BEFORE core plugins.
@@ -33,7 +33,7 @@ After `createApp`: `app`, global config, and per-plugin configs are all `Object.
 - Repeated calls, concurrent calls, and recovery attempts after lifecycle failure are outside the primary guarantee.
 
 ### require() Contract
-Instance-only. Returns typed API or throws with context-specific error messages.
+Instance-only. Returns the typed API; a registered plugin with no `api` yields a shared frozen `{}` (0.1.2 — agrees with `has()`); an unregistered plugin throws with a context-specific error message.
 
 ### Default Plugin Immutability
 Consumer cannot remove framework defaults. Final list: `[...frameworkDefaults, ...consumerExtras]`.

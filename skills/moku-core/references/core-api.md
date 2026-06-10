@@ -38,7 +38,7 @@ Core plugins are self-contained infrastructure. **NO** `depends`, `events`, or `
 - `onStart?` — async, called before regular plugins start
 - `onStop?` — async, called after regular plugins stop
 
-Reserved names (throw TypeError): same as regular plugins plus `global`, `state`
+Reserved names (throw TypeError): same list as regular plugins — `start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`, `__proto__`, `constructor`, `prototype`
 
 ```typescript
 import { createCorePlugin } from '@moku-labs/core';
@@ -58,7 +58,7 @@ const log = createCorePlugin("log", {
 ```typescript
 function createCoreConfig<
   Config extends Record<string, unknown>,
-  Events extends Record<string, unknown> = Record<string, never>,
+  Events extends Record<string, unknown> = Record<never, never>,
   const CorePlugins extends readonly AnyCorePluginInstance[] = readonly [],
 >(
   id: string,
@@ -74,7 +74,7 @@ function createCoreConfig<
 ```
 
 - `Config` — global config shape (framework author defines)
-- `Events` — event map (defaults to `Record<string, never>`, meaning no events)
+- `Events` — event map (defaults to `Record<never, never>`, meaning no global events; since 0.1.2 — the old `Record<string, never>` default had `keyof = string`, which silently widened hook names and let typo'd hooks compile when `Events` was omitted)
 - `id` — framework name, used in error messages: `"[moku-site] Duplicate plugin name: router"`
 - `options.config` — default values, shallow-merged with consumer overrides
 - `options.plugins` — core plugin instances (self-contained infrastructure)
@@ -110,7 +110,7 @@ export const { createPlugin, createCore } = coreConfig;
 function createCore(
   coreConfig: { readonly createPlugin: BoundCreatePluginFunction<Config, Events> },
   options: {
-    plugins: PluginInstance[];
+    plugins: readonly AnyPluginInstance[];
     pluginConfigs?: Record<string, unknown>;
     onReady?: (ctx: { config: Readonly<Config> }) => void;
     onError?: (error: Error) => void;
@@ -121,10 +121,10 @@ function createCore(
 };
 ```
 
-- `options.plugins` — default plugins that ship with the framework (consumer cannot remove)
+- `options.plugins` — default plugins that ship with the framework (consumer cannot remove). `readonly` since 0.1.2 — accepts `as const` / readonly tuples
 - `options.pluginConfigs` — default config overrides for framework plugins
 - `options.onReady` — optional callback after all plugins init
-- `options.onError` — optional error handler for hook dispatch errors
+- `options.onError` — optional error handler for hook dispatch failures only (lifecycle errors from `start()`/`stop()` propagate to the caller). Guarded since 0.1.2: a throwing framework handler never blocks the consumer `onError`, and errors thrown by either handler are discarded — dispatch never aborts
 
 ```typescript
 // Example: index.ts
@@ -173,7 +173,7 @@ function createPlugin(name: string, spec: PluginSpec): PluginInstance & Helpers;
 
 When `helpers` is present, its functions are spread onto the return value. Consumers call `plugin.route(...)` before `createApp`. The `& Helpers` intersection widens away in constraint positions (`AnyPluginInstance`, `depends`, `plugins` arrays).
 
-Reserved names (throw TypeError): `start`, `stop`, `emit`, `require`, `has`, `config`, `__proto__`, `constructor`, `prototype`
+Reserved names (throw TypeError): `start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`, `__proto__`, `constructor`, `prototype`
 Helper reserved names (throw TypeError): `name`, `spec`, `_phantom`
 
 ## The App Type
@@ -191,6 +191,7 @@ type App<Config, Events, P extends PluginInstance, CoreApis = {}> = {
 - App is frozen after creation
 - Plugin APIs mounted directly: `app.router`, `app.blog`, etc.
 - Core plugin APIs also mounted: `app.log`, `app.env`, etc.
+- `require()` on a registered plugin with no `api` returns a shared frozen `{}` (matches `ExtractApi`, agrees with `has()`); an unregistered plugin throws
 - `start()` throws on second call
 - `stop()` throws if `start()` not called
 

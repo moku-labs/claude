@@ -162,7 +162,7 @@ the block below.
   frameworks only — consumer apps must not) AND its version `< frameworks[core].knownVersion`
   in `moku-frameworks.md`.
 - **Apply:**
-  1. Read `frameworks[core].knownVersion` (e.g. `0.1.1`).
+  1. Read `frameworks[core].knownVersion` (e.g. `0.1.2`).
   2. `package.json`: set `@moku-labs/core` to that version (preserve the range operator;
      note prereleases like `0.1.0-alpha.6` are exact-pinned — keep them exact).
   3. `bun install`.

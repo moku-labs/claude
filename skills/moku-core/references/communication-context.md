@@ -21,7 +21,7 @@ ctx.emit('page:render', { path: '/about', html: '<h1>About</h1>' });  // OK
 ctx.emit('unknown:event', { anything: true });                         // COMPILE ERROR
 ```
 
-**Hook error resilience:** `emit` is fire-and-forget. If a hook throws, error goes to `onError` handlers (framework + consumer). One failing hook does not prevent other hooks from running.
+**Hook error resilience:** `emit` is fire-and-forget. If a hook throws, error goes to `onError` handlers (framework + consumer). One failing hook does not prevent other hooks from running. The handlers themselves are guarded (0.1.2): a throwing framework `onError` does not block the consumer `onError`, and an error thrown by either handler is discarded — it never aborts dispatch and never surfaces as an unhandled rejection.
 
 **No barrier semantics:** lifecycle completion does not imply completion of async hook work triggered by `emit()`. `createApp()` and `app.start()` may finish before those hook promises settle.
 
@@ -83,7 +83,7 @@ const routerApi = ctx.require(routerPlugin);
 //       ^? RouterApi — fully typed, no cast
 routerApi.navigate('/about');
 ```
-Throws with clear error if not registered. Only accepts PluginInstance references, not strings.
+Throws with clear error if not registered. Only accepts PluginInstance references, not strings. A *registered* plugin that exposes no `api` resolves to a shared frozen empty object (0.1.2) — matching its `ExtractApi` type and agreeing with `has()` — instead of throwing.
 
 ### `ctx.has(name)` — String-Based Boolean Check
 ```typescript

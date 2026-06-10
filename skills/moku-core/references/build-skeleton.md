@@ -85,7 +85,7 @@ export type Events = {
 };
 ```
 
-Use `Record<string, never>` as the placeholder payload type for each event. This ensures `ctx.emit()` is type-correct in the skeleton and prevents type errors when plugin implementations call emit. If no plugins declare events, leave `Events` as `Record<string, never>`.
+Use `Record<string, never>` as the placeholder payload type for each event. This ensures `ctx.emit()` is type-correct in the skeleton and prevents type errors when plugin implementations call emit. If no plugins declare events, declare `Events` as `Record<never, never>` — NOT `Record<string, never>`, whose `keyof` is `string` and silently widens hook-name checking so typo'd hook names compile (`Record<never, never>` is also the kernel's own `Events` default as of core 0.1.2; omitting the generic entirely is equivalent).
 
 ### Barrel Structure Verification (Pre-Verification)
 

@@ -9,13 +9,12 @@
 
 ### The Config Rule
 
-| Plugin Config Type C | `config` field | Consumer must provide |
-|---------------------|----------------|----------------------|
-| `void` / `{}` | (ignored) | Nothing |
-| `{ field: string }` | absent | **Required** — full C |
-| `{ field: string }` | present | **Optional** — can omit or partially override |
+| Plugin Config Type C | `pluginConfigs` key in `createApp` |
+|---------------------|------------------------------------|
+| `void` / `{}` (no `config` field) | No key — the plugin is excluded from `pluginConfigs` entirely |
+| `{ field: string }` (inferred from `config`) | **Optional** — omit entirely or override partially (`Partial<C>`). Overrides are shape-checked: unknown keys and wrong value types are compile errors |
 
-**Single rule:** Config key is optional in `createApp` if and only if `config` is provided.
+**Single rule:** `C` is inferred from `config`, which declares the complete default value. Every `pluginConfigs` entry is optional — there is no compile-time "required config". Values that must come from the consumer use a sentinel default + a runtime check in `onInit` (spec/05 §2, §7).
 
 ### Config Resolution — Shallow Merge Only
 

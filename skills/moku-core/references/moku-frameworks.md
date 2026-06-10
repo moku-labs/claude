@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "0.1.1",
+      "knownVersion": "0.1.2",
       "skill": "skills/moku-core",
       "pluginIndex": null,
       "dependsOn": [],
@@ -81,15 +81,32 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.1` (npm `latest`,
-> published 2026-06-03, gitHead `fe8cc152`). **0.1.0-alpha.6 → 0.1.1 delta:** first stable release —
-> TypeScript 6 support (`typescript@6.0.3`), upstream `llms.txt`/`llms-full.txt` added, trusted-publishing
-> CI. The **public API surface is unchanged**: `src/index.ts` (the sole public-surface authority) is
-> byte-identical to alpha.6 — still `createCoreConfig` + `createCorePlugin` plus the type-only exports;
-> the factory chain (`createCoreConfig → createCore → createApp`) is the same. Zero runtime dependencies;
-> engines `node >=22` / `bun >=1.3.8`. The vendored spec + sandbox (`skills/moku-core/references/spec/`,
-> `…/sandbox/`) re-pinned to the same SHA via `/moku:spec-sync` — content-identical, so no spec/sandbox
-> files changed. No GitHub release/tag exists for 0.1.1 (npm trusted-publish only); pin by gitHead SHA.
+> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.2` (npm `latest`,
+> published 2026-06-09, gitHead `9d02b96e` = GitHub tag `v0.1.2` — the first core version with a
+> GitHub release; 0.1.1 had no tag, npm trusted-publish only). **0.1.1 → 0.1.2 delta:** hardening
+> release from a multi-agent audit, shipped as individually reviewed PRs: (#3) **guarded `onError`** —
+> a throwing error handler never aborts hook dispatch or leaks an unhandled rejection from the
+> fire-and-forget `emit`; a throwing framework handler no longer blocks the consumer handler (specs
+> 07/13 updated); (#6) `createCoreConfig`'s **`Events` default changed `Record<string, never>` →
+> `Record<never, never>`** so frameworks that omit `Events` keep strict hook names (typo'd hooks are
+> now compile errors); (#4) **`CreateCoreOptions.plugins` is now `readonly AnyPluginInstance[]`** —
+> accepts `as const` tuples; technically a breaking *type* change for code that read the option as a
+> mutable array; (#5) **`require()` on a registered api-less plugin returns a shared frozen `{}`**
+> (matching `ExtractApi` and agreeing with `has()`) instead of a misleading "not registered" throw —
+> all three call sites (plugin ctx, callback ctx, `app.require`); (#2) the **sandbox vitest suite
+> (500+ tests) now runs in CI** + pre-commit; (#7) **docs-truth pass** — two runtime exports, real
+> bundle size (**< 8KB gzipped**, was "< 5KB"), reserved names now documented to include
+> `global`/`state` (the kernel always rejected them), removed the unimplemented "required configs are
+> a compile-time guarantee" claim, fixed the `onError` JSDoc that promised teardown-failure handling
+> (it handles hook-dispatch failures only; lifecycle errors propagate to the caller). **Public export
+> names are unchanged** (`src/index.ts`, the sole public-surface authority, is untouched) — still
+> `createCoreConfig` + `createCorePlugin` plus the type-only exports; zero runtime dependencies;
+> engines `node >=22` / `bun >=1.3.8`. Known upstream doc lag at v0.1.2: spec `11-INVARIANTS.md`
+> §1.4 still carries the "compile-time required configs" claim that #7 removed from spec 05/README —
+> spec 05 §2/§8 is the corrected rule. The vendored spec + sandbox re-pinned to `9d02b96e` via
+> `spec-sync`: 5 spec files changed (03/05/07/11/13), 0 of the 48 curated sandbox exemplars changed.
+> Note `@moku-labs/web@1.6.2` still pins `@moku-labs/core@0.1.1` exactly — consumers that depend
+> only on web stay on 0.1.1 until web ships a bump (`dependsOn` ordering: core before web).
 >
 > **Provenance of the `web` entry:** synced against `@moku-labs/web@1.6.2` (npm `latest`,
 > published 2026-06-09, gitHead `5521931`; 1.6.2 is a patch over 1.6.1 — one spa behavior fix
