@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "0.1.2",
+      "knownVersion": "0.1.3",
       "skill": "skills/moku-core",
       "pluginIndex": null,
       "dependsOn": [],
@@ -81,32 +81,28 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.2` (npm `latest`,
-> published 2026-06-09, gitHead `9d02b96e` = GitHub tag `v0.1.2` — the first core version with a
-> GitHub release; 0.1.1 had no tag, npm trusted-publish only). **0.1.1 → 0.1.2 delta:** hardening
-> release from a multi-agent audit, shipped as individually reviewed PRs: (#3) **guarded `onError`** —
-> a throwing error handler never aborts hook dispatch or leaks an unhandled rejection from the
-> fire-and-forget `emit`; a throwing framework handler no longer blocks the consumer handler (specs
-> 07/13 updated); (#6) `createCoreConfig`'s **`Events` default changed `Record<string, never>` →
-> `Record<never, never>`** so frameworks that omit `Events` keep strict hook names (typo'd hooks are
-> now compile errors); (#4) **`CreateCoreOptions.plugins` is now `readonly AnyPluginInstance[]`** —
-> accepts `as const` tuples; technically a breaking *type* change for code that read the option as a
-> mutable array; (#5) **`require()` on a registered api-less plugin returns a shared frozen `{}`**
-> (matching `ExtractApi` and agreeing with `has()`) instead of a misleading "not registered" throw —
-> all three call sites (plugin ctx, callback ctx, `app.require`); (#2) the **sandbox vitest suite
-> (500+ tests) now runs in CI** + pre-commit; (#7) **docs-truth pass** — two runtime exports, real
-> bundle size (**< 8KB gzipped**, was "< 5KB"), reserved names now documented to include
-> `global`/`state` (the kernel always rejected them), removed the unimplemented "required configs are
-> a compile-time guarantee" claim, fixed the `onError` JSDoc that promised teardown-failure handling
-> (it handles hook-dispatch failures only; lifecycle errors propagate to the caller). **Public export
-> names are unchanged** (`src/index.ts`, the sole public-surface authority, is untouched) — still
-> `createCoreConfig` + `createCorePlugin` plus the type-only exports; zero runtime dependencies;
-> engines `node >=22` / `bun >=1.3.8`. Known upstream doc lag at v0.1.2: spec `11-INVARIANTS.md`
-> §1.4 still carries the "compile-time required configs" claim that #7 removed from spec 05/README —
-> spec 05 §2/§8 is the corrected rule. The vendored spec + sandbox re-pinned to `9d02b96e` via
-> `spec-sync`: 5 spec files changed (03/05/07/11/13), 0 of the 48 curated sandbox exemplars changed.
-> Note `@moku-labs/web@1.6.2` still pins `@moku-labs/core@0.1.1` exactly — consumers that depend
-> only on web stay on 0.1.1 until web ships a bump (`dependsOn` ordering: core before web).
+> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.3` (npm `latest`,
+> published 2026-06-10, gitHead `d928159` = GitHub tag `v0.1.3`). **0.1.2 → 0.1.3 delta:** a
+> docs-truth + CI release with **no runtime changes** — the only `src/` delta is a stale `await`
+> dropped from a JSDoc `@example` in `app.ts`. (#9) CI workflows moved to Node 24-ready SHA-pinned
+> actions and the **engines floor raised `node >=22` → `node >=24`** (bun `>=1.3.8` unchanged) —
+> the only consumer-visible change, an install-time gate, not an API change; (#10) spec
+> `11-INVARIANTS.md` §1.4 rewritten "Config Completeness" → **"Config Shape Checking"**, finishing
+> the 0.1.2 #7 docs-truth pass (no compile-time required config; every `pluginConfigs` entry is
+> optional; overrides shape-checked against `Partial<C>`; consumer-required values = sentinel
+> default + runtime `onInit` check) and fixing the `12-PLUGIN-PATTERNS.md` CONFIG RULES
+> cheat-sheet — this resolves the upstream doc lag flagged at v0.1.2; (#11) stale
+> **async-`createApp` claims removed** (`12-PLUGIN-PATTERNS.md` LLM guide + `13-KERNEL-PSEUDOCODE.md`:
+> `createApp` is synchronous; `app.start()`/`app.stop()` return Promises and must be awaited) and
+> `01-ARCHITECTURE.md` required-config claims aligned with the optional-`Partial<C>` semantics.
+> **Public API/exports unchanged** (`src/index.ts`, the sole public-surface authority, is
+> untouched) — still `createCoreConfig` + `createCorePlugin` plus the type-only exports; zero
+> runtime dependencies; engines `node >=24` / `bun >=1.3.8`. The vendored spec + sandbox re-pinned
+> to `d928159` via `spec-sync`: 4 spec files changed (01/11/12/13), 0 of the 48 curated sandbox
+> exemplars changed. `@moku-labs/web` re-checked this pass: npm `latest` still `1.6.2` == registry
+> `knownVersion` (checked 2026-06-10) — no web changes; web still pins `@moku-labs/core@0.1.1`
+> exactly, so consumers that depend only on web stay on core 0.1.1 until web ships a bump
+> (`dependsOn` ordering: core before web).
 >
 > **Provenance of the `web` entry:** synced against `@moku-labs/web@1.6.2` (npm `latest`,
 > published 2026-06-09, gitHead `5521931`; 1.6.2 is a patch over 1.6.1 — one spa behavior fix

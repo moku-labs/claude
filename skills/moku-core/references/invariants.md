@@ -17,7 +17,7 @@ If `depends: [logger]` is declared:
 - Validation only — does NOT change order
 
 ### Config Shape Checking
-Every `pluginConfigs` key in `createApp` is optional — there is no compile-time "required config", and the runtime never flags a missing one; the plugin's `config` defaults fill the gap. Overrides are shape-checked at compile time: unknown keys and wrong value types reject. Values that must come from the consumer use a sentinel default + a runtime check in `onInit` (spec/05 §2, §7–§8; corrected in 0.1.2 — note spec/11 §1.4 still carries the stale pre-0.1.2 claim upstream).
+Every `pluginConfigs` key in `createApp` is optional — there is no compile-time "required config", and the runtime never flags a missing one; the plugin's `config` declares the complete default value, and defaults fill whatever the consumer omits. Plugins with no `config` field are excluded from `pluginConfigs` entirely. Config enforcement is compile-time and shape-only: any override is checked against the plugin's declared config type (`Partial<C>`) — unknown keys and wrong value types reject. Values that genuinely must come from the consumer use a sentinel default + a runtime check in `onInit` (spec/05 §2, §7–§8; spec/11 §1.4 "Config Shape Checking" — corrected in 0.1.2, spec/11 aligned upstream in 0.1.3).
 
 ### Lifecycle Order
 Forward for init/start. Reverse for stop. Always array order. No auto-reordering. Core plugins init/start BEFORE regular plugins. Regular plugins stop BEFORE core plugins.
