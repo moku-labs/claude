@@ -118,6 +118,37 @@ and (if it changes the scaffold) update `tooling-config.md`.
 
 ---
 
+## Stack version 3 migrations (Node 24 runtime floor)
+
+### node24-floor
+- **Title:** Raise the declared Node engines floor to 24 (upstream moku-family engines alignment)
+- **Stack:** 3
+- **Applies to:** all
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `package.json.engines.node` floor `< 24.0.0` (e.g. `>=22.0.0`), OR `engines.node`
+  absent.
+- **Apply:**
+  1. `package.json`: set `engines.node` → `">=24.0.0"`. Leave `engines.bun` untouched — the Bun
+     floor is owned by Stack 2's `tooling-freshness`.
+  2. If the project carries a Node version pin file (`.nvmrc` / `.node-version` — not scaffolded
+     by moku, but may exist in migrated projects) pinning `< 24`, surface it and raise it to `24`
+     with the user's confirmation (CI may read it).
+  3. No `bun install` needed — `engines` is declarative metadata, not a dependency.
+- **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (the floor is install-time
+  metadata; the gate confirms nothing else drifted). Advisory: if the local `node --version` is
+  `< 24`, warn that the developer's runtime is now below the project's declared floor — Bun
+  remains the dev runtime, but npm consumers and CI inherit the Node floor.
+- **Risk:** Zero code risk — no API or build change. The intended effect is on consumers and CI
+  still on Node 22: npm `engine-strict` installs and Node-22 CI jobs start failing **by design**,
+  because `@moku-labs/core@0.1.3` (PR #9) and `@moku-labs/web@1.6.2` already declare
+  `node >=24` — a project keeping `>=22` would promise a floor its own dependencies don't honor.
+  Mitigation: the migration is visible at the gate; drop Node 22 from any CI matrix in the same
+  change.
+- **Rollback:** `git checkout -- package.json` (plus `.nvmrc`/`.node-version` if touched).
+
+---
+
 ## Moku-family framework versions (registry-driven)
 
 These migrations bump a **depended-on Moku-family package** to the version recorded in
@@ -179,7 +210,7 @@ the block below.
 Documented so the extension path is concrete; `/moku:upgrade` ignores these until they are promoted
 to an active stack version in `target-stack.md`.
 
-### ts7-native  *(Stack 3 — when TS7 GAs)*
+### ts7-native  *(Stack 4 — when TS7 GAs)*
 - Swap `typescript` → `^7`; make the TS6 deprecation cleanup mandatory (`ignoreDeprecations` is gone
   in TS7); switch `typecheck:fast`/`tsgo` to the primary path; re-validate `.d.ts` emit against the
   native emitter; revisit the `isolatedDeclarations` stance. The `tsgo-fastcheck` opt-in is the

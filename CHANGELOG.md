@@ -2,6 +2,50 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.45.0 (2026-06-10)
+
+**Stack version 3 — Node 24 runtime floor.** Both upstream frameworks now require Node ≥ 24:
+`@moku-labs/core@0.1.3` raised engines to `node >=24.0.0` (PR #9, recorded in the 0.44.0 sync) and
+`@moku-labs/web@1.6.2` already shipped `node >=24` — but the plugin's target stack, scaffold, and
+SessionStart environment check still declared the Node 22 floor, so `/moku:init` produced projects
+whose declared floor sat below what their own dependencies enforce. Per the target-stack convention
+this is a stack bump, not an in-place edit: new stack version + migration, so `/moku:upgrade` can
+raise existing consumer projects' engines (the same path the Bun 1.3.14 floor took via Stack 2's
+`tooling-freshness`; contrast 0.42.3, which was only a lagging-hook consistency fix). The
+TypeScript 6 baseline beneath it is unchanged. Remaining `>=22` strings in the repo are
+intentional: historical changelog entries and the upstream `node >=22 → >=24` delta quoted in
+`moku-frameworks.md` provenance.
+
+### Changed
+- **`skills/moku-core/references/target-stack.md`** — Stack version 2 → **3** (TypeScript 6
+  baseline · Node 24 runtime floor, introduced in v0.45.0); engines table `engines.node`
+  `>=22.0.0 → >=24.0.0` (bun floor unchanged at 1.3.14) with a provenance note pointing at the
+  upstream engines; detection signature retitled "below-target project" and now flags an
+  `engines.node` floor `< 24.0.0` (or absent); history row added for Stack 3; reserved
+  TS7-native stack renumbered 3 → 4.
+- **`skills/moku-core/references/upgrade-migrations.md`** — new "Stack version 3 migrations"
+  section with the **`node24-floor`** migration (detect: `engines.node` floor `< 24` or absent →
+  apply: set `>=24.0.0`, surface any `.nvmrc`/`.node-version` pin, no install needed → verify:
+  tsc/lint/test + advisory warning when the local runtime is `< 24`); reserved `ts7-native`
+  entry renumbered to Stack 4.
+- **`skills/moku-core/references/tooling-config.md`** — canonical `package.json` engines block
+  `node >=22.0.0 → >=24.0.0`; stack-version header → 3.
+- **`commands/upgrade.md`** — hardcoded target → Stack version 3; intro now says "TypeScript 6
+  baseline + Node 24 engines floor"; example plan/report and suggested commit message updated to
+  include `node24-floor` and Stack 3.
+- **`commands/init.md`** — scaffolded engines → `"node": ">=24.0.0"`.
+
+### Fixed
+- **`hooks/detect-moku-project.sh`** — SessionStart Node check now warns when Node `< 24`
+  (was `< 22`), matching the new floor and the upstream engines gates.
+- **`README.md`** — Requirements line now says Node ≥ 24; `/moku:upgrade` table row says
+  "TS6 baseline · Node 24 floor".
+
+### Plugin
+- Version bumped to 0.45.0 in plugin.json and marketplace.json (README badges synced); the
+  plugin.json `/moku:upgrade` description now reads "TypeScript 6 baseline + Node 24 engines
+  floor".
+
 ## 0.44.0 (2026-06-10)
 
 `spec-sync` of `@moku-labs/core` to **0.1.3** (npm `latest`, published 2026-06-10, gitHead

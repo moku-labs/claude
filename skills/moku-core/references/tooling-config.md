@@ -2,7 +2,7 @@
 
 Exact configurations from moku_core. Use these as the reference when scaffolding new projects.
 
-> **Stack version: 2** (TypeScript 6 baseline). This file is the canonical target stack that
+> **Stack version: 3** (TypeScript 6 baseline · Node 24 runtime floor). This file is the canonical target stack that
 > `/moku:init` scaffolds and `/moku:upgrade` migrates existing projects toward. A machine-readable
 > summary lives in `target-stack.md`; the per-version migration steps live in
 > `upgrade-migrations.md`. When you change a pinned version or a tsconfig default here, bump the
@@ -29,7 +29,7 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
     }
   },
   "files": ["dist", "LICENSE", "README.md"],
-  "engines": { "node": ">=22.0.0", "bun": ">=1.3.14" },
+  "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.3",
     "@arethetypeswrong/core": "0.18.3",

@@ -68,7 +68,7 @@ Then configure all tooling files (these are **identical across all project types
 
 1. **package.json** — Set up with:
    - `"type": "module"`
-   - `"engines": { "node": ">=22.0.0", "bun": ">=1.3.14" }`
+   - `"engines": { "node": ">=24.0.0", "bun": ">=1.3.14" }`
    - `main`, `module`, `types`, `exports`, `files` fields for publishable packages (copy from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`). Consumer apps can omit these if not publishing.
    - Dependencies vary by project type (see Step 4)
    - Add all devDependencies with exact versions from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` (you read this in Step 0)

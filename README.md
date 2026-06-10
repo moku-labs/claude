@@ -10,10 +10,10 @@ In which one AI orchestrates twenty other AIs to double-check the code a twenty-
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.44.0-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.45.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
-[![changelog](https://img.shields.io/badge/changelog-156%20kB-lightgrey)](./CHANGELOG.md)
+[![changelog](https://img.shields.io/badge/changelog-159%20kB-lightgrey)](./CHANGELOG.md)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 [Install](#install) · [Workflow](#the-workflow) · [Commands](#commands) · [Agents](#agents) · [Skills](#skills) · [Hooks](#hooks) · [Workflows](#dynamic-workflows) · [Config](#configuration)
@@ -45,7 +45,7 @@ Local development:
 /plugin install moku@moku
 ```
 
-**Requirements:** [Bun](https://bun.sh/) ≥ 1.3.14 · Node ≥ 22 · a project that uses [@moku-labs/core](https://github.com/moku-labs/core) (or the intention to create one).
+**Requirements:** [Bun](https://bun.sh/) ≥ 1.3.14 · Node ≥ 24 · a project that uses [@moku-labs/core](https://github.com/moku-labs/core) (or the intention to create one).
 
 ## The workflow
 
@@ -90,7 +90,7 @@ Nine of them — two of which the old README forgot it had. All take free-form n
 | `/moku:build [framework\|app\|plugin\|add\|resume\|fix] [name] [--dry-run\|--continue\|--lean]` | Build from specs in parallel waves. No args = auto-resume. `plugin #3`, `plugin #3-#5` work too |
 | `/moku:check [verbose\|self-test\|graph\|status\|plugin <name>\|diff <name>]` | Diagnostics: project state, tooling, plugin health, mermaid graphs, plugin self-test |
 | `/moku:status [--full]` | Consolidated dashboard — phase, wave progress, agent activity |
-| `/moku:upgrade [--dry-run]` | Migrate a Moku project to the current target stack (TypeScript 6 baseline). No version args, gated, resumable |
+| `/moku:upgrade [--dry-run]` | Migrate a Moku project to the current target stack (TS6 baseline · Node 24 floor). No version args, gated, resumable |
 | `/moku:clean [--keep …] [--no-summary] [--dry-run] [--force]` | Distill a durable cycle summary into `history.md`, then sweep ephemeral `.planning/` artifacts |
 
 ## Agents

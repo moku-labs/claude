@@ -12,10 +12,11 @@ When you change the prescribed stack, do all three in the same release:
 
 ---
 
-## Current target — Stack version 2 (TypeScript 6 baseline)
+## Current target — Stack version 3 (TypeScript 6 baseline · Node 24 runtime floor)
 
-Introduced in moku Claude **v0.30.0**. The hardcoded target for `/moku:upgrade` shipped in this
-plugin version.
+Introduced in moku Claude **v0.45.0**. Stack 3 raises the declared Node engines floor to 24 on
+top of the Stack 2 TypeScript 6 baseline (v0.30.0), which is otherwise unchanged. The hardcoded
+target for `/moku:upgrade` ships with the installed plugin version.
 
 ### Pinned tool versions (devDependencies)
 
@@ -42,9 +43,15 @@ plugin version.
 
 | Field | Value |
 |-------|-------|
-| `engines.node` | `>=22.0.0` |
+| `engines.node` | `>=24.0.0` |
 | `engines.bun` | `>=1.3.14` |
 | `.bun-version` | `1.3.14` |
+
+The Node floor follows the upstream moku-family engines: `@moku-labs/core@0.1.3` raised its floor
+to `node >=24.0.0` (PR #9) and `@moku-labs/web@1.6.2` already requires `node >=24` — see the
+provenance blocks in [moku-frameworks.md](moku-frameworks.md). Bun is the dev runtime; the Node
+floor is what npm consumers and CI inherit, so a scaffolded project must not declare a floor
+below what its own dependencies enforce.
 
 ### tsconfig deltas vs Stack version 1
 
@@ -59,7 +66,7 @@ Already-correct (no change needed): `module: Preserve`, `moduleResolution: bundl
 `verbatimModuleSyntax`, `target/lib: ESNext`, `strict`, `exactOptionalPropertyTypes`,
 `noUncheckedIndexedAccess`, `skipLibCheck`. None of these are on the TS6 removal/deprecation list.
 
-### Detection signature (how `/moku:upgrade` recognizes a Stack v1 project)
+### Detection signature (how `/moku:upgrade` recognizes a below-target project)
 
 A project is **below** the current target if ANY of these hold:
 
@@ -69,6 +76,7 @@ A project is **below** the current target if ANY of these hold:
 - `tsconfig.json` → `compilerOptions.types` is absent (TS6 needs it explicit).
 - `tsconfig.build.json` → `compilerOptions.rootDir` is absent.
 - `.bun-version` `< 1.3.14` (freshness, advisory).
+- `package.json` → `engines.node` floor `< 24.0.0`, or `engines.node` absent (Stack 3 signature).
 
 ---
 
@@ -88,6 +96,7 @@ maintainer skill.
 
 | Stack | moku Claude | Headline | Migration id(s) |
 |-------|-------------|----------|-----------------|
+| **3** | v0.45.0 | Node 24 runtime floor — `engines.node` `>=22` → `>=24`, aligning with `@moku-labs/core@0.1.3` / `@moku-labs/web@1.6.2` engines | `node24-floor` |
 | **2** | v0.30.0 | TypeScript 6 baseline + tooling freshness; opt-in `tsgo` fast-check | `ts6-core`, `tooling-freshness`, `tsgo-fastcheck` (opt-in) |
 | **1** | ≤ v0.29.0 | TypeScript 5.9.3 baseline (tsdown 0.20.x, typescript-eslint 8.56, Bun 1.3.8) | — (initial) |
 
@@ -96,12 +105,12 @@ maintainer skill.
 ## Reserved / on the horizon (not yet active)
 
 These are documented so the registry's extension path is obvious; they are **not** part of Stack
-version 2 and `/moku:upgrade` does not apply them yet.
+version 3 and `/moku:upgrade` does not apply them yet.
 
-- **Stack version 3 — TypeScript 7 native (`tsc`/Corsa GA).** When TS7 ships stable (it was Beta as
+- **Stack version 4 — TypeScript 7 native (`tsc`/Corsa GA).** When TS7 ships stable (it was Beta as
   of mid-2026), the target swaps `typescript` to `^7`, makes the deprecation cleanup mandatory
   (`ignoreDeprecations` stops working in TS7), and may revisit the `isolatedDeclarations` stance for
-  the native declaration emitter. The `tsgo-fastcheck` opt-in in Stack v2 is the on-ramp.
+  the native declaration emitter. The `tsgo-fastcheck` opt-in from Stack v2 is the on-ramp.
 - **De-vibecoding migrations.** A future class of migrations that detect and repair patterns flagged
   in `invariants.md` / `house-style.md` (e.g. explicit generics on `createPlugin`, inline logic in
   `index.ts`, missing JSDoc). Each becomes a registry entry with detect → transform → verify.

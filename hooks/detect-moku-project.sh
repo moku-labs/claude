@@ -157,8 +157,8 @@ if [ -f package.json ] && grep -q '@moku-labs' package.json 2>/dev/null; then
   fi
   if command -v node &>/dev/null; then
     NODE_MAJOR=$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)
-    if [ "${NODE_MAJOR:-0}" -lt 22 ]; then
-      WARNINGS="${WARNINGS}  - Node $(node --version) found, but >= 22 required\n"
+    if [ "${NODE_MAJOR:-0}" -lt 24 ]; then
+      WARNINGS="${WARNINGS}  - Node $(node --version) found, but >= 24 required\n"
     fi
   else
     WARNINGS="${WARNINGS}  - Node not found (required)\n"

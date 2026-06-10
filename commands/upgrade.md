@@ -11,11 +11,11 @@ Before any decision about architecture, the core API, factory chain, config, lif
 
 ## What this command does
 
-`/moku:upgrade` brings an **existing Moku project** (framework, consumer app, plugin, or web project) up to the **target stack hardcoded into this version of the moku plugin**. It is the official, version-agnostic migration path: today it delivers the TypeScript 6 baseline; the same command will deliver TypeScript 7, build-tool swaps, and de-vibecoding migrations in future plugin versions, because the work is defined by a registry, not by this command's prose.
+`/moku:upgrade` brings an **existing Moku project** (framework, consumer app, plugin, or web project) up to the **target stack hardcoded into this version of the moku plugin**. It is the official, version-agnostic migration path: today it delivers the TypeScript 6 baseline + Node 24 engines floor; the same command will deliver TypeScript 7, build-tool swaps, and de-vibecoding migrations in future plugin versions, because the work is defined by a registry, not by this command's prose.
 
 **The target is hardcoded — there are no version arguments.** You run `/moku:upgrade` and it migrates the project to whatever the installed moku plugin's target stack is.
 
-- **Target stack:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md` (current: **Stack version 2**).
+- **Target stack:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md` (current: **Stack version 3**).
 - **Migration registry:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/upgrade-migrations.md`.
 - **Canonical configs:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
@@ -67,13 +67,14 @@ Print a concise upgrade plan, for example:
 Moku Upgrade Plan
 =================
 Project: my-framework (Framework, Layer 2)
-Current stack: 1 (TypeScript 5.9.3)  →  Target: 2 (TypeScript 6 baseline)
+Current stack: 1 (TypeScript 5.9.3)  →  Target: 3 (TS6 baseline · Node 24 floor)
 
 Will apply (default):
   ts6-core           typescript 5.9.3 → 6.0.3 · typescript-eslint 8.56.0 → 8.58.0
                      · tsdown 0.20.3 → 0.22.1 · tsconfig +types:["bun"] · build +rootDir
   tooling-freshness  bun 1.3.8 → 1.3.14 · biome 2.4.2 → 2.4.16 · @types/bun → 1.3.14
                      · publint → 0.3.21 · attw → 0.18.3
+  node24-floor       engines.node >=22.0.0 → >=24.0.0 (aligns with core 0.1.3 / web 1.6.2 engines)
 
 Optional (off by default):
   tsgo-fastcheck     add @typescript/native-preview + `typecheck:fast` (TS7 native, side-by-side
@@ -108,13 +109,13 @@ For a large project, it is fine to apply one migration per invocation and stop-a
 ```
 Moku Upgrade Report
 ===================
-my-framework: Stack 1 → 2 (TypeScript 6 baseline)
-Applied: ts6-core, tooling-freshness   (tsgo-fastcheck: skipped)
+my-framework: Stack 1 → 3 (TypeScript 6 baseline · Node 24 floor)
+Applied: ts6-core, tooling-freshness, node24-floor   (tsgo-fastcheck: skipped)
 Verification: tsc ✓  lint ✓  test ✓  build ✓  publint ✓  attw ✓
 Files changed: package.json, tsconfig.json, tsconfig.build.json, biome.json, .bun-version, bun.lock
 
 Next: review the diff (`git diff`) and commit, e.g.
-  git add -A && git commit -m "chore: upgrade to Moku stack v2 (TypeScript 6)"
+  git add -A && git commit -m "chore: upgrade to Moku stack v3 (TypeScript 6 + Node 24)"
 ```
 
 4. **Do not commit.** Leave the commit to the user (or `/ship`). Surface a suggested message only.
