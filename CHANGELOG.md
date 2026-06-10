@@ -2,6 +2,49 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.44.0 (2026-06-10)
+
+`spec-sync` of `@moku-labs/core` to **0.1.3** (npm `latest`, published 2026-06-10, gitHead
+`d928159` = GitHub tag `v0.1.3`). A docs-truth + CI release with **no runtime changes** (the only
+`src/` delta is a stale `await` dropped from a JSDoc `@example`): Node 24 engines floor —
+`node >=22 → >=24`, bun unchanged; CI moved to Node 24-ready SHA-pinned actions (#9) — spec
+`11-INVARIANTS` §1.4 rewritten "Config Completeness" → "Config Shape Checking" + the
+`12-PLUGIN-PATTERNS` CONFIG RULES cheat-sheet fixed (#10), and stale async-`createApp` claims
+removed + `01-ARCHITECTURE` required-config claims aligned (#11). Public API/exports unchanged
+(`src/index.ts` untouched). Vendored spec + sandbox re-pinned `9d02b96 → d928159` and verified
+byte-identical to `git show v0.1.3:<path>` (spec 15/15, sandbox 48/48 curated files); family
+registry synced. `@moku-labs/web` verified up to date at `1.6.2` (npm `latest` == registry
+`knownVersion`, checked 2026-06-10) — no web changes.
+
+### Changed
+- **`skills/moku-core/references/spec/`** — 4 of 15 files changed upstream (PRs #10/#11):
+  `11-INVARIANTS` (§1.4 "Config Completeness" → "Config Shape Checking" — no compile-time required
+  config; every `pluginConfigs` entry optional; overrides shape-checked against `Partial<C>`;
+  consumer-required values = sentinel default + runtime `onInit` check — finishes the 0.1.2 #7
+  docs-truth pass and resolves the doc lag flagged at v0.1.2), `12-PLUGIN-PATTERNS` (CONFIG RULES
+  cheat-sheet rebuilt per the corrected rule; "createApp returns a Promise" → "createApp is
+  synchronous; await `app.start()`/`app.stop()`"), `01-ARCHITECTURE` (required-config claims
+  aligned with optional-`Partial<C>` semantics), `13-KERNEL-PSEUDOCODE` (stale
+  `async function createApp` dropped from the createCore pseudocode). No files added/removed; no
+  H2/numbering changes, so routing tables, section maps, and distilled cross-links stand.
+- **`skills/moku-core/references/spec-index.md`** + **`sandbox-index.md`** — re-pinned
+  `9d02b96 → d928159` (tag `v0.1.3`), vendored date `2026-06-10`. Sandbox: 0 of 48 curated
+  exemplars changed, no upstream 404s, no new upstream sandbox files since v0.1.2; style
+  cheat-sheet claims hold.
+- **`skills/moku-core/references/moku-frameworks.md`** — `frameworks[core].knownVersion → 0.1.3`;
+  core provenance block rewritten for the 0.1.2 → 0.1.3 delta (Node 24 engines floor, spec
+  docs-truth fixes, public API/exports unchanged; records the web re-check and that
+  `@moku-labs/web@1.6.2` still pins `@moku-labs/core@0.1.1` exactly, so web consumers stay on
+  core 0.1.1 until web ships a bump).
+- **`skills/moku-core/references/invariants.md`** — "Config Shape Checking" stale-flag resolved:
+  spec/11 §1.4 no longer carries the pre-0.1.2 required-configs claim upstream (fixed in 0.1.3
+  #10), so the "still stale upstream" note is gone; text aligned with the new §1.4 wording
+  (config declares the complete default value; no-`config` plugins excluded from `pluginConfigs`;
+  overrides checked against `Partial<C>`).
+- **`skills/moku-core/references/upgrade-migrations.md`** — `moku-core-version` example refreshed
+  to `0.1.3` (registry-driven, so `/moku:upgrade` now offers `0.1.3` to projects with a direct
+  core dep).
+
 ## 0.43.0 (2026-06-10)
 
 `spec-sync` of `@moku-labs/core` to **0.1.2** (npm `latest`, published 2026-06-09, gitHead

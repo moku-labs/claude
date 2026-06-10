@@ -10,10 +10,10 @@ In which one AI orchestrates twenty other AIs to double-check the code a twenty-
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.43.0-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.44.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
-[![changelog](https://img.shields.io/badge/changelog-152%20kB-lightgrey)](./CHANGELOG.md)
+[![changelog](https://img.shields.io/badge/changelog-156%20kB-lightgrey)](./CHANGELOG.md)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 [Install](#install) · [Workflow](#the-workflow) · [Commands](#commands) · [Agents](#agents) · [Skills](#skills) · [Hooks](#hooks) · [Workflows](#dynamic-workflows) · [Config](#configuration)
