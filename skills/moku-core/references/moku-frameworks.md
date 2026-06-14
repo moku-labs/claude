@@ -62,7 +62,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "1.6.2",
+      "knownVersion": "1.8.0",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -99,24 +99,34 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > untouched) — still `createCoreConfig` + `createCorePlugin` plus the type-only exports; zero
 > runtime dependencies; engines `node >=24` / `bun >=1.3.8`. The vendored spec + sandbox re-pinned
 > to `d928159` via `spec-sync`: 4 spec files changed (01/11/12/13), 0 of the 48 curated sandbox
-> exemplars changed. `@moku-labs/web` re-checked this pass: npm `latest` still `1.6.2` == registry
-> `knownVersion` (checked 2026-06-10) — no web changes; web still pins `@moku-labs/core@0.1.1`
-> exactly, so consumers that depend only on web stay on core 0.1.1 until web ships a bump
-> (`dependsOn` ordering: core before web).
+> exemplars changed. `@moku-labs/web` re-checked this pass: npm `latest` was still `1.6.2` at the
+> time (2026-06-10); web has since shipped 1.7.0/1.8.0 and now pins `@moku-labs/core@0.1.3` exactly
+> — see the web provenance below (`dependsOn` ordering: core before web).
 >
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.6.2` (npm `latest`,
-> published 2026-06-09, gitHead `5521931`; 1.6.2 is a patch over 1.6.1 — one spa behavior fix
-> (PR #56): the nav scroll-to-top now honours the page's `scroll-behavior` when view transitions
-> are OFF, keeping `behavior: "instant"` only when they're ON to protect the VT snapshot.
-> **API surface identical:** the `v1.6.1..v1.6.2` diff touches only `src/plugins/spa/kernel.ts`
-> (private `applyPendingScroll`) + its unit test + the `package.json` version field — no change to
-> `src/index.ts`, `src/browser.ts`, plugin exports, config keys, events, or deps. The
-> plugin/property catalog in `skills/moku-web/references/plugin-index.md` was generated from the
-> source at `../web` (`src/plugins/*` + `src/index.ts` + `src/browser.ts` at tag `v1.6.1`) and
-> verified unchanged at tag `v1.6.2`, cross-checked against the upstream
-> `llms.txt`/`llms-full.txt` and `package.json` — note the llms files at 1.6.1 (byte-identical at
-> 1.6.2) lag the source in two places (they still mention the removed `app.router.set()`
-> and the dropped `URLPattern` requirement), so **`src/` is authoritative**. **0.5.6 → 1.6.1
+> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.8.0` (npm `latest`,
+> published 2026-06-11, gitHead `c914049` = GitHub tag `v1.8.0`). The catalog was regenerated from
+> the source at tag `v1.8.0` (via a clean worktree of `../web` — the working copy itself was dirty
+> with in-flight content-plugin work at sync time), cross-checked against release notes
+> (`v1.6.2..v1.8.0`) + `package.json`. **1.6.2 → 1.7.0 delta (fix wave, 22 PRs):** `preact` +
+> `preact-render-to-string` moved to **peerDependencies** (`^10.29.2` / `^6.6.0` — the app installs
+> them); bundle **code splitting enabled** (dynamic imports become lazy `assets/chunk-*.js`);
+> content sanitize hardening (untrusted schema drops the global `style` allowlist;
+> `trustedContent: true` keeps inline styles) + `load()` served from the article cache; spa nav
+> fixes (native same-page hash jumps, query strings carried through interception, superseded navs
+> aborted via `navEvent.signal` + History fallback, full-reload fallback when the swap region is
+> missing); router percent-encoding (`toUrl` encodes params, matcher decodes groups); feeds
+> absolutize root-relative URLs; sitemap XML-escapes `<loc>`; clean-phase `outDir` safety guard;
+> core bumped 0.1.1 → **0.1.3** (exact pin, == registry core version); browser-bundle gzip budget
+> 50 → 60 kB. **1.7.0 → 1.8.0 delta (one feature, PR #62):** CDN cache protection —
+> **content-hashed bundle filenames** (entry points included, via `Bun.build` `naming`), a new
+> `cache-headers` build phase emitting `outDir/_headers` (per-file `immutable, max-age=1y` per
+> fingerprinted bundle + catch-all `max-age=0, must-revalidate`, app `<publicDir>/_headers`
+> appended after), new config `build.cacheHeaders?: boolean | { assets?, pages? }` (default ON,
+> also a `run()` override), asset-placeholder substitution in the 404 page, and split
+> `<!--moku:assets:css-->` / `<!--moku:assets:js-->` shell placeholders. New `PhaseName`:
+> `cache-headers`. No other export/event changes; engines unchanged (node ≥24, bun ≥1.3.14). The
+> upstream `llms.txt`/`llms-full.txt` were re-synced at 1.7.0 (PR #55) but at 1.8.0 lack the cache
+> feature, so **`src/` remains authoritative**. **0.5.6 → 1.6.1
 > delta:** v1.0.0 was a breaking overhaul — ctx-based route handlers (`.load((ctx) => D)` with
 > `{ params, locale, require, has }`; `.generate((ctx) => params[])`; loaders pull siblings via
 > `ctx.require(contentPlugin)`), **`.parse()` removed** (fetched JSON is used directly as

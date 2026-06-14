@@ -7,8 +7,9 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `1.6.2` · **Layer:** 2 (framework) ·
-**Depends on:** `@moku-labs/core@0.1.1` (exact pin — consumers must NOT add a direct core dep) ·
+**Framework:** `@moku-labs/web` · **Synced version:** `1.8.0` · **Layer:** 2 (framework) ·
+**Depends on:** `@moku-labs/core@0.1.3` (exact pin — consumers must NOT add a direct core dep) ·
+**Peer deps (since 1.7.0):** `preact@^10.29.2` + `preact-render-to-string@^6.6.0` — the APP installs them ·
 **Engines:** node ≥24, bun ≥1.3.14 · **Two entry points:** `.` (ESM + CJS, full surface, Node SSG)
 and **`./browser`** (ESM-only, node-free by construction) · **No `bin`** — the developer CLI ships
 as the node-only **`cliPlugin`** (`app.cli.build/serve/preview/deploy`, driven by thin per-command scripts).
@@ -47,14 +48,32 @@ as the node-only **`cliPlugin`** (`app.cli.build/serve/preview/deploy`, driven b
 >   content-identical alias whose canonical points to bare. No config flag.
 > - **Router matcher is native RegExp (v1.4.1)** — `URLPattern` dropped, so client matching works in
 >   Safari < 18.4 / older Firefox. (`engines.node >=24` still applies.)
-> - **`@moku-labs/core` is now `0.1.1`** (exact pin; was `0.1.0-alpha.6`). Browser-bundle CI budget
->   is 50 kB gzip (currently ~45 kB).
+> - **`@moku-labs/core` is now `0.1.3`** (exact pin; was `0.1.0-alpha.6` pre-1.x, `0.1.1` at 1.6.x).
+>   Browser-bundle CI budget is 60 kB gzip (currently ~50 kB).
+> - **v1.7.0 (fix wave, 22 PRs).** `preact` + `preact-render-to-string` moved to
+>   **peerDependencies** (the app must install them); bundle **code splitting ON** (dynamic
+>   imports become lazy `assets/chunk-*.js`); content sanitize hardening (the UNTRUSTED schema
+>   drops the global `style` allowlist — pass `trustedContent: true` on `fileSystemContent` to
+>   keep inline styles, e.g. Shiki token colors) and `load()` now serves from the article cache;
+>   spa nav fixes (same-page hash links jump natively, query strings carried through interception,
+>   superseded navigations aborted via `navEvent.signal` + History fallback, full-reload fallback
+>   when the swap region is missing); router `toUrl` percent-encodes params / matcher decodes
+>   groups; feeds absolutize root-relative URLs; sitemap XML-escapes `<loc>`; the clean phase
+>   refuses a catastrophic `outDir`.
+> - **Cache protection (v1.8.0).** Bundle filenames are **content-hashed** (`assets/main-<hash>.css`,
+>   `assets/spa-<hash>.js` — entry points included), and a new `cache-headers` build phase emits
+>   `outDir/_headers` (Cloudflare Pages rules): a per-file `immutable, max-age=1y` rule per
+>   fingerprinted bundle + a catch-all `max-age=0, must-revalidate` for every other URL, with the
+>   app's `<publicDir>/_headers` content appended after (app rules can override). Config:
+>   `build.cacheHeaders?: boolean | { assets?, pages? }` (default ON). The 404 page now gets the
+>   `<!--moku:assets-->` placeholder family substituted (it can't hardcode a hashed bundle URL),
+>   and shells gained split `<!--moku:assets:css-->` / `<!--moku:assets:js-->` placeholders.
 >
-> ⚠️ The upstream `llms.txt`/`llms-full.txt` at 1.6.1 (byte-identical at 1.6.2) lag the source in two places (they still
-> mention `app.router.set()` and the `URLPattern` requirement). This index is generated from
-> `src/` — **the source is authoritative**.
+> ⚠️ The upstream `llms.txt`/`llms-full.txt` were re-synced at 1.7.0 (PR #55) but at 1.8.0 do not
+> yet mention `cacheHeaders` / fingerprinted bundle naming. This index is generated from `src/` —
+> **the source is authoritative**.
 
-## 1. Framework API form (v1.6.2)
+## 1. Framework API form (v1.8.0)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed
@@ -141,7 +160,7 @@ everything node-only: `buildPlugin`/`deployPlugin`/`cliPlugin`, `fileSystemConte
 providers `dotenv`/`processEnv`/`cloudflareBindings`, and the `Build`/`Cli`/`Deploy` type namespaces.
 `browserEnv()` is the **pre-wired default** `env` provider here (reads `import.meta.env` +
 `globalThis.__ENV__`), so no `pluginConfigs.env.providers` is needed. A CI gate
-(`bun run check:bundle`) asserts zero static node/native imports and a 50 kB gzip budget.
+(`bun run check:bundle`) asserts zero static node/native imports and a 60 kB gzip budget.
 
 ```ts
 // client bundle — node-free entry, env auto-wired
@@ -192,7 +211,7 @@ URLs for it, and `/{defaultLocale}/…` is built as a content-identical alias (c
 | `headPlugin` | regular · default | SEO `<head>`: title tmpl, OG, Twitter, canonical, hreflang, JSON-LD; site-level head for bare-path redirects | site, i18n, router | — | `render(resolvedRoute, data) siteHead({url, locale?})` | `titleTemplate?, defaultOgImage?, twitterCard?, twitterHandle?` |
 | `spaPlugin` | regular · default | Client runtime: island hydration + intercepted nav (HTML-over-fetch, or DATA nav when `data` composed); inert on Node | router, head | `spa:navigate`, `spa:navigated`, `spa:component-mount`, `spa:component-unmount` | `register(c) navigate(path) current()` (+ top-level `createComponent(name,hooks)` island helper) | `swapSelector?` (`"main > section"`), `viewTransitions?` (`false`), `progressBar?` (`true`), `components?` (`[]`) |
 | `contentPlugin` | regular · explicit (isomorphic SHELL) | Provider-driven Markdown model: sanitized HTML, frontmatter, reading time, locale fallback, per-build memo; drafts hidden only when global `stage === "production"` | i18n | `content:ready`, `content:invalidated` | `loadAll(opts?) load(slug,locale) renderMarkdown(md) invalidate(paths) articleToCard(a) contentDir()` | `providers: ContentProvider[]` — compose `fileSystemContent({ contentDir, defaultAuthor?, trustedContent?, extraRemarkPlugins?, extraRehypePlugins?, shikiTheme? })` (node; `shikiTheme` = `BundledTheme` name OR custom theme object) |
-| `buildPlugin` | regular · node-only | SSG orchestrator: pages, feeds, sitemap, OG images (+ default OG card), co-located article images, custom shell/404; persists per-page data when `mode!=="ssg"` + `data` composed; incremental dev rebuilds | site, i18n, content, router, head | `build:phase`, `build:complete` | `run(opts?: {outDir?, skipClean?, overrides?, changed?}) phases()` | `outDir, minify, feeds, sitemap, images, ogImage` (`OgImageConfig \| false`; incl. `fontDir, template?, size?, fonts?, render?, defaultCard?`), `injectAssets?` (`true`), `publicDir?` (`"public"`), `notFound?` (`boolean \| { body?, path? }`), `localeRedirects?` (`false`), `clientEntry?, template?` (shell w/ `<!--moku:lang/head/assets/body-->` placeholders) |
+| `buildPlugin` | regular · node-only | SSG orchestrator: pages, feeds, sitemap, OG images (+ default OG card), co-located article images, custom shell/404; **content-hashed bundle filenames + Cloudflare `_headers` cache rules (v1.8.0)**; persists per-page data when `mode!=="ssg"` + `data` composed; incremental dev rebuilds | site, i18n, content, router, head | `build:phase`, `build:complete` | `run(opts?: {outDir?, skipClean?, overrides?, changed?}) phases()` | `outDir, minify, feeds, sitemap, images, ogImage` (`OgImageConfig \| false`; incl. `fontDir, template?, size?, fonts?, render?, defaultCard?`), `injectAssets?` (`true`), `publicDir?` (`"public"`), `notFound?` (`boolean \| { body?, path? }` — asset placeholders substituted, v1.8.0), `localeRedirects?` (`false`), `clientEntry?, template?` (shell w/ `<!--moku:lang/head/assets/body-->` + split `<!--moku:assets:css/js-->` placeholders), `cacheHeaders?` (`boolean \| { assets?, pages? }`, default `true` — emits `outDir/_headers`) |
 | `deployPlugin` | regular · node-only | Deploy `outDir` to Cloudflare Pages (wrangler); scaffolds `wrangler.jsonc` (+ optional GH Actions workflow) | site | `deploy:complete` | `run(opts?) getLastDeployment() init(opts?)` | `target` (`"cloudflare-pages"`), `outDir`, `productionBranch?` (`"main"`), `scrubAllowlist`, `compatibilityDate?, ci?` |
 | `cliPlugin` | regular · node-only | Developer CLI: `build`/`serve`/`preview`/`deploy` with boxed Panel TUI + live progress; driven from thin per-command scripts (no argv parser / no `bin`) | build, deploy | — (listens: `build:phase`, `build:complete`, `deploy:complete`) | `build(opts?) serve(opts?) preview(opts?) deploy(opts?)` (`deploy({ guided: true })` = interactive wizard; non-TTY/CI never prompts) | `outDir` (`"dist"`), `port` (`4173`), `watchDirs` (`["content","src"]`), `debounceMs` (`150`), `notFoundFile` (`"404.html"`), `liveReload` (`true`) |
 | `dataPlugin` | regular · optional (isomorphic) | Agnostic data provider: persist per-page JSON (Node `write`) + fetch it for DATA nav (browser `at`) | — (no hard depends) | — | `write(entries,opts?) at(path) urlFor(path) fileFor(path)` | `outputDir?` (`"_data"`), `baseUrl?` (`"/_data/"`) |
@@ -243,7 +262,8 @@ swap region are persistent across navigations (they get `onNavStart`/`onNavEnd`,
 | `deploy:complete` | `{ url: string; deploymentId: string; branch: string; durationMs: number }` | deploy |
 
 `build` phase names (`PhaseName`, execution order): `bundle, content, images, pages, content-images,
-feeds, sitemap, og-images, public, not-found, locale-redirects, root-index`.
+feeds, sitemap, og-images, public, not-found, locale-redirects, cache-headers, root-index`
+(`cache-headers` since v1.8.0; gated by `cacheHeaders`, default on).
 The `data` plugin is notification-free (a transport, driven synchronously by `build`). The `cli`
 plugin emits nothing — it CONSUMES `build:phase`/`build:complete`/`deploy:complete` via `hooks` to
 render live progress (the in-repo example of the hooks mechanism).
@@ -288,4 +308,5 @@ is the version-of-truth**; `dist-tags.latest`), then reads the upstream `llms.tx
 and `src/plugins/*/{index,events,config,types,api}.ts`, refreshes every section above and the header
 `Synced version`, then writes the new version back to `knownVersion` in
 `skills/moku-core/references/moku-frameworks.md`. When the llms files and `src/` disagree, **`src/`
-wins** (verified at 1.6.1: llms still mentioned the removed `router.set()` and `URLPattern`).
+wins** (verified at 1.6.1: llms still mentioned the removed `router.set()` and `URLPattern`;
+re-verified at 1.8.0: llms re-synced at 1.7.0 but missing `cacheHeaders` / fingerprinted naming).

@@ -26,7 +26,7 @@ Enforce the established web patterns from the Moku blog reference implementation
 | TypeScript | Strict mode, `jsxImportSource: "preact"` |
 | Tests | Vitest (unit/integration) + Playwright (visual regression) |
 
-## Framework API (@moku-labs/web v1.6.2)
+## Framework API (@moku-labs/web v1.8.0)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
@@ -92,7 +92,12 @@ composed) per-page JSON sidecars via the isomorphic `data` plugin; the browser f
 DATA-driven navigation and runs the same `render`. One switch governs it all: `config.mode = "ssg" |
 "spa" | "hybrid"` (default `hybrid`). Engines: **node ≥24, bun ≥1.3.14** (route matching is a native
 RegExp — `URLPattern` was dropped in v1.4.1). Since v1.6.0 the **default locale is served at bare
-paths** for `{lang:?}` routes.
+paths** for `{lang:?}` routes. Since v1.7.0 **`preact` + `preact-render-to-string` are
+peerDependencies** — the app installs them. Since v1.8.0 **bundle filenames are content-hashed**
+(`assets/main-<hash>.css`) and the build emits Cloudflare `_headers` cache rules
+(`build.cacheHeaders`, default on; immutable per-bundle + revalidate catch-all) — never hardcode a
+bundle URL (a custom 404/shell uses the `<!--moku:assets-->` placeholders, incl. the split
+`<!--moku:assets:css-->`/`<!--moku:assets:js-->` variants).
 
 Ships 5 isomorphic default plugins — `site, i18n, router, head, spa` — plus the explicit-compose
 `content` (isomorphic shell), node-only `build, deploy, cli` (the developer CLI:
