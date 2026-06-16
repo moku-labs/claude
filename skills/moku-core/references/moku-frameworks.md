@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "0.1.3",
+      "knownVersion": "0.1.4",
       "skill": "skills/moku-core",
       "pluginIndex": null,
       "dependsOn": [],
@@ -62,7 +62,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "1.8.0",
+      "knownVersion": "1.12.2",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -81,66 +81,72 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.3` (npm `latest`,
-> published 2026-06-10, gitHead `d928159` = GitHub tag `v0.1.3`). **0.1.2 → 0.1.3 delta:** a
-> docs-truth + CI release with **no runtime changes** — the only `src/` delta is a stale `await`
-> dropped from a JSDoc `@example` in `app.ts`. (#9) CI workflows moved to Node 24-ready SHA-pinned
-> actions and the **engines floor raised `node >=22` → `node >=24`** (bun `>=1.3.8` unchanged) —
-> the only consumer-visible change, an install-time gate, not an API change; (#10) spec
-> `11-INVARIANTS.md` §1.4 rewritten "Config Completeness" → **"Config Shape Checking"**, finishing
-> the 0.1.2 #7 docs-truth pass (no compile-time required config; every `pluginConfigs` entry is
-> optional; overrides shape-checked against `Partial<C>`; consumer-required values = sentinel
-> default + runtime `onInit` check) and fixing the `12-PLUGIN-PATTERNS.md` CONFIG RULES
-> cheat-sheet — this resolves the upstream doc lag flagged at v0.1.2; (#11) stale
-> **async-`createApp` claims removed** (`12-PLUGIN-PATTERNS.md` LLM guide + `13-KERNEL-PSEUDOCODE.md`:
-> `createApp` is synchronous; `app.start()`/`app.stop()` return Promises and must be awaited) and
-> `01-ARCHITECTURE.md` required-config claims aligned with the optional-`Partial<C>` semantics.
-> **Public API/exports unchanged** (`src/index.ts`, the sole public-surface authority, is
-> untouched) — still `createCoreConfig` + `createCorePlugin` plus the type-only exports; zero
-> runtime dependencies; engines `node >=24` / `bun >=1.3.8`. The vendored spec + sandbox re-pinned
-> to `d928159` via `spec-sync`: 4 spec files changed (01/11/12/13), 0 of the 48 curated sandbox
-> exemplars changed. `@moku-labs/web` re-checked this pass: npm `latest` was still `1.6.2` at the
-> time (2026-06-10); web has since shipped 1.7.0/1.8.0 and now pins `@moku-labs/core@0.1.3` exactly
-> — see the web provenance below (`dependsOn` ordering: core before web).
+> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.4` (npm `latest`,
+> published 2026-06-11, gitHead `dd723ce` = GitHub tag `v0.1.4`). **0.1.3 → 0.1.4 delta:** a
+> **type-only fix** with no runtime/behavior change — (#13) `fix(types): PluginLike admits
+> core-plugin instances` widens the INTERNAL `PluginLike` constraint so a `createCorePlugin`
+> instance satisfies it, plus (#14) the release chore. `PluginLike` is **not** in the public
+> surface (`src/index.ts`), so the **public API/exports are unchanged** — `src/index.ts` is
+> byte-identical, still `createCoreConfig` + `createCorePlugin` plus the type-only exports; zero
+> runtime dependencies; engines `node >=24` / `bun >=1.3.8` (unchanged). **No skill edit:** the
+> `moku-core` SKILL.md documents the unchanged API form and pins no version — only `knownVersion`
+> moved here. (The vendored spec + sandbox are re-pinned separately by `spec-sync`, not this skill.)
+> `@moku-labs/web` re-checked this pass still pins `@moku-labs/core@0.1.3` **exactly** — one patch
+> behind core latest 0.1.4 — so the two are not lockstep; `dependsOn` ordering (core before web)
+> still holds. See the web provenance below.
 >
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.8.0` (npm `latest`,
-> published 2026-06-11, gitHead `c914049` = GitHub tag `v1.8.0`). The catalog was regenerated from
-> the source at tag `v1.8.0` (via a clean worktree of `../web` — the working copy itself was dirty
-> with in-flight content-plugin work at sync time), cross-checked against release notes
-> (`v1.6.2..v1.8.0`) + `package.json`. **1.6.2 → 1.7.0 delta (fix wave, 22 PRs):** `preact` +
-> `preact-render-to-string` moved to **peerDependencies** (`^10.29.2` / `^6.6.0` — the app installs
-> them); bundle **code splitting enabled** (dynamic imports become lazy `assets/chunk-*.js`);
-> content sanitize hardening (untrusted schema drops the global `style` allowlist;
-> `trustedContent: true` keeps inline styles) + `load()` served from the article cache; spa nav
-> fixes (native same-page hash jumps, query strings carried through interception, superseded navs
-> aborted via `navEvent.signal` + History fallback, full-reload fallback when the swap region is
-> missing); router percent-encoding (`toUrl` encodes params, matcher decodes groups); feeds
-> absolutize root-relative URLs; sitemap XML-escapes `<loc>`; clean-phase `outDir` safety guard;
-> core bumped 0.1.1 → **0.1.3** (exact pin, == registry core version); browser-bundle gzip budget
-> 50 → 60 kB. **1.7.0 → 1.8.0 delta (one feature, PR #62):** CDN cache protection —
-> **content-hashed bundle filenames** (entry points included, via `Bun.build` `naming`), a new
-> `cache-headers` build phase emitting `outDir/_headers` (per-file `immutable, max-age=1y` per
-> fingerprinted bundle + catch-all `max-age=0, must-revalidate`, app `<publicDir>/_headers`
-> appended after), new config `build.cacheHeaders?: boolean | { assets?, pages? }` (default ON,
-> also a `run()` override), asset-placeholder substitution in the 404 page, and split
-> `<!--moku:assets:css-->` / `<!--moku:assets:js-->` shell placeholders. New `PhaseName`:
-> `cache-headers`. No other export/event changes; engines unchanged (node ≥24, bun ≥1.3.14). The
-> upstream `llms.txt`/`llms-full.txt` were re-synced at 1.7.0 (PR #55) but at 1.8.0 lack the cache
-> feature, so **`src/` remains authoritative**. **0.5.6 → 1.6.1
-> delta:** v1.0.0 was a breaking overhaul — ctx-based route handlers (`.load((ctx) => D)` with
-> `{ params, locale, require, has }`; `.generate((ctx) => params[])`; loaders pull siblings via
-> `ctx.require(contentPlugin)`), **`.parse()` removed** (fetched JSON is used directly as
-> `ctx.data`; miss/malformed → HTML fallback), global `{ stage, mode }` config (3-valued `stage`;
-> `mode` moved out of router config), declarative-only routes (`router.set()` removed), and the
-> content plugin became an isomorphic shell + composable providers
-> (`fileSystemContent({ contentDir, … })`). New since 0.5.6: the node-only **`cliPlugin`**
-> (`app.cli.build/serve/preview/deploy`, boxed Panel TUI, guided deploy wizard, incremental dev
-> rebuilds — no `bin`), `createUrls(routes, defaultLocale?)`, `ctx.url` in render/head,
-> `head.siteHead`, build `ogImage.defaultCard` / `notFound.path` / `template` placeholders, native
-> RegExp route matching (URLPattern dropped, v1.4.1), and default-locale **bare paths** for
-> `{lang:?}` routes (v1.6.0). `@moku-labs/web` now pins **`@moku-labs/core@0.1.1`** exactly (was
-> 0.1.0-alpha.6), so a consumer that depends only on `@moku-labs/web` gets the right core
-> transitively and must NOT add a direct `@moku-labs/core` dependency. Engines: node ≥24, bun ≥1.3.14.
+> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.12.2` (npm `latest`,
+> published 2026-06-14, gitHead `9ec62e6` = GitHub tag `v1.12.2`). The catalog was regenerated from
+> the source at tag `v1.12.2` (via a clean `/tmp` worktree of `../web` — the working copy was at
+> `v1.10.0+10`), cross-checked against release notes (`v1.8.0..v1.12.2`) + `package.json`.
+> **1.8.0 → 1.12.2 delta — four content features + SPA/build fixes (8 releases):**
+> - **Build-time Mermaid (v1.9.0, #69).** Fenced ` ```mermaid ` blocks render to static inline SVG
+>   at build (zero client JS). Provider option `mermaid?: boolean | { mermaidConfig?,
+>   renderDiagrams? (test-only seam) }`; requires `trustedContent: true` and the **OPTIONAL peer dep
+>   `mermaid-isomorphic@^3.0.0`** (+ playwright/browser).
+> - **`::embed` lazy iframe facades + `lazyEmbed` island (v1.10.0, #70; enhanced v1.11.0, #71).**
+>   `::embed{src="…" title="…" width? height?}` leaf directives rewrite to a static
+>   click-to-activate `<figure data-component="lazy-embed">` — NO iframe (or its network/JS cost)
+>   until the reader clicks, when the new **`lazyEmbed`** SPA island swaps in the real
+>   `<iframe loading="lazy">`. `src` may be http(s), root-relative, or a co-located relative path
+>   resolved to the shared `/<slug>/…` URL; `width`×`height` reserve the box aspect-ratio. Provider
+>   option `embed?: boolean | { facade }` (consumer Preact facade; default `EmbedFacadeButton`);
+>   requires `trustedContent: true`.
+> - **`::gallery` folder galleries (v1.12.0, #72).** `::gallery{src="./images/dir/" caption="…"}`
+>   reads the co-located folder at build, sorts its images, rewrites each to its shared `/<slug>/…`
+>   URL, and renders them through a Preact component (default `GalleryTrack`, or consumer
+>   `gallery.component`) into `<div data-component="gallery">`; the swipe/keyboard/lightbox island is
+>   **consumer-provided**. Provider option `gallery?: boolean | { component }`; requires
+>   `trustedContent: true`.
+> - **SPA/build fixes.** v1.8.1 (#64) titleTemplate applied on DATA-path client nav; v1.8.2 (#67/#68)
+>   `llms.txt`/`llms-full.txt` synced to the v1.8.0 cache feature + leave font `url()`s external in
+>   the CSS bundle pass; v1.12.1 (#73) always scroll-to-top instant on a nav swap (never CSS smooth);
+>   v1.12.2 (#74) announce the nav before the data fetch (feedback during JSON load).
+>
+> **New public exports (`.`):** runtime `EmbedFacadeButton`, `GalleryTrack`; types
+> `EmbedFacade` / `EmbedFacadeProps` / `EmbedOptions` and `GalleryComponent` / `GalleryOptions` /
+> `GalleryProps` / `GallerySlide`. **`lazyEmbed`** (+ `createComponent`) is exported from **both** `.`
+> and `./browser` (the island runs client-side); the facade/gallery **components + named types are
+> `.`-only** build-time concerns (also reachable as `Content.*` via the `Content` namespace on
+> `./browser`). **New optional `peerDependency` `mermaid-isomorphic@^3.0.0`** (only when `mermaid` is
+> enabled); `preact` / `preact-render-to-string` peers unchanged. No change to
+> site/i18n/router/head/build/deploy/cli/data/log/env APIs, events, or config; `PhaseName` unchanged
+> (13 phases, incl. `cache-headers`); still pins **`@moku-labs/core@0.1.3`** exactly (one patch
+> behind core latest); engines node ≥24, bun ≥1.3.14 (unchanged). ⚠️ The upstream
+> `llms.txt`/`llms-full.txt` (last synced v1.8.2 for the cache feature) still describe `content` as
+> the plain markdown pipeline — **no** Mermaid/`::embed`/`::gallery` — so **`src/` is authoritative**
+> (the index below is generated from source).
+>
+> **Earlier deltas (compressed).** **1.6.2 → 1.8.0:** `preact`+`preact-render-to-string` → peer deps;
+> bundle code-splitting; sanitize hardening (`trustedContent` keeps inline styles); router
+> percent-encoding; core 0.1.1 → 0.1.3; then **cache protection (v1.8.0, #62)** —
+> content-hashed bundle filenames + a `cache-headers` build phase emitting `outDir/_headers`
+> (`build.cacheHeaders?: boolean | { assets?, pages? }`, default ON) + split `<!--moku:assets:css/js-->`
+> shell placeholders. **0.5.6 → 1.6.1:** the v1.0.0 breaking overhaul — ctx-based route handlers
+> (`.load((ctx) => D)`, `ctx.require(contentPlugin)`), **`.parse()` removed**, global `{ stage, mode }`
+> config, declarative-only routes (`router.set()` removed), content → isomorphic shell + composable
+> providers (`fileSystemContent`); plus the node-only **`cliPlugin`**, `createUrls`, `ctx.url`,
+> `head.siteHead`, native RegExp matching (v1.4.1), and default-locale **bare paths** (v1.6.0).
 
 ## Field reference
 
@@ -154,7 +160,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 | `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export). |
 | `dependsOn` | Other moku-family packages it requires (ordering hint: upgrade core before web). |
 | `detect.packageJsonDep` | Presence of this dep in a consumer's `package.json` ⇒ the framework applies to that project. |
-| `releaseSource` | `npm` (version-of-truth via `dist-tags.latest`), `github`/`releases` (notes), `packageJson` (deps/exports), `llms` (upstream `llms-full.txt` when present — `web` since 0.4.0; `null` for `core`). |
+| `releaseSource` | `npm` (version-of-truth via `dist-tags.latest`), `github`/`releases` (notes), `packageJson` (deps/exports), `llms` (upstream `llms-full.txt` — `web` since 0.4.0, `core` since 0.1.1; cross-checked against `src/`, which wins on disagreement). |
 | `upgrade.migrationId` | The `/moku:upgrade` migration that bumps this dependency (see `upgrade-migrations.md`). |
 | `upgrade.distTagPolicy` | Stable → `latest`, prerelease (`-` in version, e.g. `0.1.0-alpha.6`) → its prerelease tag (mirrors `ci-release.md`). |
 

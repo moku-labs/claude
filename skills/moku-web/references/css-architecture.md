@@ -1,161 +1,190 @@
+<!--
+  CSS architecture for any @moku-labs/web app. Pure CSS — NO preprocessor, NO PostCSS, NO Vite.
+  Bundled by the framework build plugin's `bundle` phase (Bun.build). Framework-level guidance,
+  verified against @moku-labs/web@1.12.2. Pair with project-spec.md.
+-->
+
 # CSS Architecture Reference
 
-## Two-Layer Token System
+A moku-web project styles with **pure CSS** — `@layer` for cascade order, `@scope` for component
+encapsulation, custom properties for tokens, `light-dark()` for theming. **No SCSS/Less, no
+PostCSS, no Vite, no preprocessor.** The framework `build` plugin's `bundle` phase (`Bun.build`)
+collects `src/styles/main.css` and the per-component sheets into a content-hashed
+`assets/main-<hash>.css`. This scales cleanly to dozens of components + global styles with zero
+naming collisions. (Verified against `@moku-labs/web@1.12.2`.) For the surrounding project structure
+and rules see [project-spec.md](project-spec.md).
 
-### Layer 1: Primitive Tokens (Raw Values)
+## Assembly: `main.css` is the entry
+
+`src/styles/main.css` declares the layer order ONCE and `@import`s the rest. There is no
+`index.css` and no bundler-specific entry — `build.clientEntry`'s module graph reaches `main.css`,
+and the bundle phase emits the fingerprinted stylesheet.
+
 ```css
-:root {
-  /* Colors — Stone palette for neutrals */
-  --color-stone-50: #fafaf9;
-  --color-stone-100: #f5f5f4;
-  --color-stone-200: #e7e5e4;
-  --color-stone-800: #292524;
-  --color-stone-900: #1c1917;
-  --color-stone-950: #0c0a09;
-
-  /* Accent colors */
-  --color-amber-500: #f59e0b;
-  --color-orange-500: #f97316;
-  --color-rose-500: #f43f5e;
-  --color-lime-500: #84cc16;
-
-  /* Spacing (4px base) */
-  --space-1: 0.25rem;   /* 4px */
-  --space-2: 0.5rem;    /* 8px */
-  --space-4: 1rem;      /* 16px */
-  --space-6: 1.5rem;    /* 24px */
-  --space-8: 2rem;      /* 32px */
-
-  /* Typography scale */
-  --text-xs: 0.6rem;
-  --text-sm: 0.7rem;
-  --text-base: 0.78rem;
-  --text-md: 0.85rem;
-  --text-lg: 1rem;
-  --text-xl: 1.2rem;
-  --text-2xl: 1.4rem;
-  --text-3xl: 1.8rem;
-  --text-4xl: 2.5rem;
-
-  /* Animation */
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-out-back: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --duration-fast: 150ms;
-  --duration-normal: 300ms;
-  --duration-slow: 500ms;
-  --duration-enter: 600ms;
-  --stagger-delay: 80ms;
-}
-```
-
-### Layer 2: Semantic Tokens (Purpose-Based)
-```css
-:root {
-  --surface-page: light-dark(var(--color-stone-100), var(--color-stone-950));
-  --surface-card: light-dark(var(--color-stone-50), var(--color-stone-900));
-  --text-primary: light-dark(var(--color-stone-950), var(--color-stone-100));
-  --text-secondary: light-dark(var(--color-stone-600), var(--color-stone-400));
-  --border-default: light-dark(var(--color-stone-200), var(--color-stone-800));
-  --accent-primary: var(--color-amber-500);
-}
-```
-
-Uses `light-dark()` CSS function for native theme support. No polyfill needed.
-
-## @layer System
-
-Defined in `styles/index.css`:
-```css
+/* src/styles/main.css */
 @layer reset, tokens, base, components, animations, utilities;
+
+@import "./reset.css"      layer(reset);
+@import "./tokens.css"     layer(tokens);
+@import "./base.css"       layer(base);
+@import "./components.css" layer(components);   /* aggregator → per-component sheets */
+@import "./animations.css" layer(animations);
+@import "./utilities.css"  layer(utilities);
+@import "./fonts.css";                          /* @font-face — intentionally NOT layered */
 ```
 
-| Layer | Purpose | Files |
-|-------|---------|-------|
-| reset | Browser reset | `reset.css` |
-| tokens | CSS custom properties | `tokens.css` |
-| base | Element defaults | `base.css` |
-| components | Component styles | `components.css` + per-component files |
-| animations | Keyframes | `animations.css` |
-| utilities | Utility classes | `utilities.css` |
+`components.css` is the aggregator that `@import`s every per-component sheet plus the content
+sheets (`article.css`, `code.css`, `Gallery.css`, `lightbox.css`, `hero.css`, …). Adding a
+component = create `Foo.tsx` + `Foo.css`, then add one `@import "../components/Foo.css"` line.
 
-## @scope for Component Encapsulation
+| layer | file(s) | holds |
+|---|---|---|
+| `reset` | `reset.css` | minimal reset (`* { margin/padding/box-sizing }`, `html` scrollbar-gutter + text-size-adjust, `a` inherit/no-underline) — NOT a heavy reset |
+| `tokens` | `tokens.css` | primitive + semantic custom properties |
+| `base` | `base.css` | element defaults (body, h1–h6, main, img, lists) |
+| `components` | `components.css` → per-component `*.css` | every `@scope`d component sheet + content typography |
+| `animations` | `animations.css` | `@keyframes` (card-enter, pulse, blink-cursor) + hover/focus interactions |
+| `utilities` | `utilities.css` | highest-priority overrides — e.g. `prefers-reduced-motion` killing transitions/animations (no `!important` needed, the layer wins) |
+| (unlayered) | `fonts.css` | `@font-face` — kept out of layers so font loading is independent |
 
-Each component has a colocated CSS file using `@scope`:
+## Two-layer token system (`tokens.css`)
+
+**Primitives** (raw values, named by material) → **semantics** (purpose aliases, themed). Both in
+`:root`.
 
 ```css
-/* DashboardGrid.css */
+:root {
+  /* — Primitives — */
+  --color-stone-950: #1c1917;  --color-stone-100: #f5f5f4;   /* 11-step warm-neutral scale */
+  --color-amber-500: #f59e0b;  --color-orange-500: #f97316;  /* fixed accents (no theming) */
+  --color-rose-500:  #f43f5e;  --color-lime-500:   #84cc16;
+  --font-sans: "IBM Plex Sans Variable", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+  --font-code: "Fira Code Variable", "IBM Plex Mono", monospace;
+  --space-1: 0.25rem; /* 4px base */    --space-12: 3rem;
+  --text-xs: 0.6rem;  --text-base: 0.78rem;  --text-4xl: 2.5rem;   /* modular scale */
+  --tracking-normal: 0.05em;  --tracking-widest: 0.15em;
+  /* paired easings: expo ENTERS (decelerates), ease-in EXITS (accelerates) — a reversal
+     mid-flight hands off at near-zero velocity, so a collapse interrupting an expand never jumps */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:       cubic-bezier(0.4, 0, 1, 1);
+  --duration-fast: 150ms;  --duration-normal: 300ms;  --duration-enter: 600ms;
+  --stagger-delay: 80ms;   --width-content: 1100px;
+}
+
+:root {
+  /* — Semantics (themed via light-dark) — */
+  color-scheme: dark;
+  --surface-page:  light-dark(var(--color-stone-100), var(--color-stone-950));
+  --surface-card:  light-dark(var(--color-stone-300), var(--color-stone-850));
+  --text-primary:  light-dark(var(--color-stone-950), var(--color-stone-100));
+  --text-body:     light-dark(var(--color-stone-700), var(--color-stone-300));
+  --border-default: var(--color-stone-800);
+  --accent-primary: var(--color-amber-500);   /* accents are FIXED across themes (no light-dark) */
+  --accent-success: var(--color-lime-500);
+  --hover-glow: color-mix(in srgb, var(--color-amber-500) 4%, transparent);  /* derived w/ color-mix */
+}
+```
+
+- **`light-dark()`** drives theming natively (no JS, no polyfill) — applied to surfaces + text;
+  **accents stay fixed** (saturated, theme-invariant).
+- **`color-mix(in srgb, … N%, transparent)`** derives hover glows / soft fills from a token (works
+  across themes because it mixes fixed primitives).
+- **Breakpoints are reference-only** (a comment in `tokens.css`) — custom properties can't be used
+  in `@media`, so pixel values are written directly in queries.
+- No `@property` declarations.
+
+## `@scope` for component encapsulation
+
+Each component sheet scopes everything to its `[data-component="…"]` root, so generic element
+selectors (`article`, `h2`, `time`) never collide across components.
+
+```css
+/* components/DashboardGrid.css */
 @scope ([data-component="dashboard"]) {
-  :scope {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-  }
+  :scope { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
 
   article {
     background: var(--surface-card);
     border: 1px solid var(--border-default);
-    border-radius: 0.5rem;
-    padding: var(--space-4);
+    animation: card-enter var(--duration-enter) var(--ease-out-expo) both;
+    &:nth-child(2) { animation-delay: calc(1 * var(--stagger-delay)); }   /* nesting OK inside @scope */
   }
+  :scope[data-entered] article { animation: none; }   /* island sets [data-entered] post-play */
 
-  h2 {
-    font-family: var(--font-display);
-    font-size: var(--text-lg);
+  h2 { font-family: var(--font-display); a { color: var(--text-secondary); } }
+  [data-tags] { display: flex; gap: 0.35rem; margin-top: auto; }
 
-    a {
-      color: var(--text-secondary);
-      transition: color var(--duration-normal);
-
-      &:hover {
-        color: var(--accent-primary);
-      }
-    }
-  }
+  @media (max-width: 600px) { :scope { grid-template-columns: 1fr; } }   /* breakpoints stay scoped */
 }
 ```
 
-### @scope Rules
-- **Selector:** `@scope ([data-component="name"])` — matches the data attribute
-- **:scope** refers to the scoped element itself
-- **No classes in selectors** — use element selectors and data attributes
-- **Nesting allowed** — CSS nesting inside @scope
-- **Use semantic tokens** — never hardcode colors
+Two refinements the reference uses:
 
-## Responsive Design
+- **Donut scope** — exclude a nested self-scoping child:
+  ```css
+  @scope ([data-component="tab-nav"]) to ([data-component="lang-switcher"]) { a { /* tab-nav links, NOT lang-switcher's */ } }
+  ```
+- **Intentional global atoms** — a reusable leaf that must look identical everywhere is styled
+  **without** `@scope` (e.g. `GitTag.css` styles bare `[data-tag]`), so it renders the same inside
+  any component's scope. Use sparingly, only for true cross-context atoms.
+
+### `@scope` rules
+- Selector: `@scope ([data-component="name"])`; `:scope` is the scoped root.
+- **No classes** — element selectors + `data-*` attributes only (matches the no-`className` markup rule).
+- CSS nesting is allowed inside `@scope`.
+- Always use semantic tokens; never hardcode colors.
+- Keep media queries inside the scope so a component owns its responsive behavior.
+
+## Content & OG typography
+
+Long-form article HTML (from the Markdown pipeline) is styled by content sheets scoped to the
+content root, so generic tags (`h2`, `p`, `table`, `pre code`, `img`) are safe:
 
 ```css
-/* Breakpoints (reference, hardcoded in @media) */
---bp-desktop: 900px;
---bp-tablet: 768px;
---bp-mobile: 600px;
---bp-small: 375px;
---bp-tiny: 320px;
-
-@media (max-width: 900px) { /* tablet */ }
-@media (max-width: 600px) { /* mobile */ }
-@media (max-width: 375px) { /* small phone */ }
-@media (max-width: 320px) { /* tiny */ }
+@scope ([data-content]) { h2 { /* … */ } pre code { /* Shiki tokens via inline styles */ } }
 ```
 
-## PostCSS Configuration
+Shiki emits **inline `style` colors** on code tokens. Since web 1.7.0 the default sanitize pass
+strips `style` — so a syntax-highlighted content site sets `trustedContent: true` on `fileSystemContent`
+(author-controlled content), keeping those colors. `code.css` documents that the syntax colors
+come from those inline styles.
 
-```javascript
-export default {
-  plugins: {
-    'postcss-preset-env': {
-      stage: 2,
-      features: {
-        'nesting-rules': true,
-        'custom-media-queries': true,
-        'cascade-layers': false,      // Native CSS, no polyfill
-        'light-dark-function': false,  // Native, no polyfill
-        'custom-properties': false,    // Native, no polyfill
-      },
-    },
-  },
-};
+## Font loading (self-hosted, subset, swap)
+
+Fonts are **vendored** under `public/fonts/` (no font npm deps) and declared in `src/styles/*.css`
+with root-relative URLs. The build leaves font `url()`s **external** (never base64-inlined into the
+CSS bundle); `public/_headers` carries their immutable cache rule.
+
+```css
+@font-face {
+  font-family: "IBM Plex Sans Variable";
+  font-style: normal;
+  font-display: swap;                 /* show fallback immediately, swap when loaded */
+  font-weight: 100 700;               /* variable range */
+  src: url(/fonts/ibm-plex-sans/…-cyrillic-ext-wght-normal.woff2) format("woff2-variations");
+  unicode-range: U+0460-052F, U+1C80-1C8A, …;   /* subset per script → smaller files */
+}
 ```
 
-## Bundle Targets
-- CSS: < 10KB gzipped (enforced via vite-plugin-bundlesize)
-- JS: < 8KB gzipped
+OG-render fonts are a **separate, build-time-only** set in `assets/fonts/og/` (woff, passed to
+`build.ogImage.fonts`) — not the site's `public/fonts/` woff2.
+
+## Conventions
+
+- **Data-attribute styling, never classes** — `[data-component]`, `[data-variant]`, `[data-status]`,
+  runtime state flags like `[data-entered]`/`[data-expanded]` (islands set `el.dataset.x`, never
+  `classList`). This rule extends to island code and JSDoc `@example` blocks.
+- **Responsive = scoped media queries** at reference breakpoints (≈900 / 600 / 375 / 320 px); no
+  container queries in the reference.
+- **Reduced motion** is a single `utilities`-layer rule disabling all transitions/animations — the
+  layer's priority means no `!important`.
+- **Gotchas the reference documents in-file** (keep when copying): use `margin-inline-end` (not flex
+  `gap`) for a dot↔label pair (a real-Safari flex-gap quirk Playwright's WebKit doesn't reproduce);
+  keep root scrolling instant (never `scroll-behavior: smooth` on `html` — it strands SPA
+  scroll-to-top); `spa.viewTransitions: false` keeps a sticky header rock-solid (motion comes from a
+  CSS/WAAPI animation on incoming content via the `page-fx` island, not a View Transition).
+
+## Bundle targets
+- CSS: < 10 KB gzipped · JS: < 8 KB gzipped per island bundle. (The framework's browser-bundle CI
+  budget is 60 kB gzip; aim well under it.)

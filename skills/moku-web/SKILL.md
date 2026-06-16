@@ -12,7 +12,20 @@ description: >
 ## Current Project State
 !`test -f package.json && grep -E '"(@moku-labs/web|preact)"' package.json 2>/dev/null || true`
 
-Enforce the established web patterns from the Moku blog reference implementation. Keep structure clear, documented, and simple. The blog reference is vendored — open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox/demo/blog/` (`index.html`, `spa.ts` vs `main.ts` entry split, `islands/lightbox`, `islands/share-buttons`, `plugins/feed`) for the canonical island + SSG-vs-SPA structure. See `sandbox-index.md`.
+Enforce the established Moku web patterns; keep structure clear, documented, and simple. The
+framework-level **specification, rules, and recommendations for any web project** (static site,
+SPA/web app, PWA, embeddable widget, docs portal, internal tool, dashboard, e-commerce, content
+site) live in [`references/project-spec.md`](references/project-spec.md) — start there. A vendored
+**worked example** (one concrete app) is available at `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox/demo/blog/` (`index.html`, `spa.ts` vs `main.ts` entry split, `islands/`, `plugins/feed`) to see island + SSG-vs-SPA structure in practice; see `sandbox-index.md`.
+
+**Generating or scaffolding a project?** [`references/project-spec.md`](references/project-spec.md)
+is the framework-level **specification, rules, and recommendations** for building *any* web project
+on `@moku-labs/web` — static site, SPA/web app, PWA, embeddable widget, documentation portal,
+internal tool, dashboard, e-commerce, or content site. It defines the standard directory structure,
+the root-config inventory, the data-layer strategies, routing patterns, the hard **Rules (MUST)** +
+**Recommendations (SHOULD)**, a **project-type matrix**, and a step-by-step **scaffold sequence**;
+[`references/deploy-and-ci.md`](references/deploy-and-ci.md) covers shipping. Start there for any
+"create a project" task.
 
 ## Stack
 
@@ -22,11 +35,12 @@ Enforce the established web patterns from the Moku blog reference implementation
 | Build | Framework `build` plugin (`Bun.build` bundle phase) + `cli` plugin dev loop — no Vite |
 | CSS | Vanilla CSS + @scope + @layer |
 | Interactivity | Island architecture (vanilla TS, `createComponent`) |
-| Package Manager | Bun |
-| TypeScript | Strict mode, `jsxImportSource: "preact"` |
-| Tests | Vitest (unit/integration) + Playwright (visual regression) |
+| Package Manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
+| TypeScript | Strict mode, `jsxImportSource: "preact"`, `types: ["bun","node"]` (TS6) |
+| Tests | Vitest (unit/integration, coverage on `lib/`+`i18n/`) + Playwright (e2e + visual, frozen fixture corpus) |
+| Deploy | Cloudflare Pages (`deploy` plugin + `wrangler`); GitHub Actions CI gates deploy |
 
-## Framework API (@moku-labs/web v1.8.0)
+## Framework API (@moku-labs/web v1.12.2)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
@@ -97,7 +111,12 @@ peerDependencies** — the app installs them. Since v1.8.0 **bundle filenames ar
 (`assets/main-<hash>.css`) and the build emits Cloudflare `_headers` cache rules
 (`build.cacheHeaders`, default on; immutable per-bundle + revalidate catch-all) — never hardcode a
 bundle URL (a custom 404/shell uses the `<!--moku:assets-->` placeholders, incl. the split
-`<!--moku:assets:css-->`/`<!--moku:assets:js-->` variants).
+`<!--moku:assets:css-->`/`<!--moku:assets:js-->` variants). **v1.9.0–v1.12.0 add three opt-in
+build-time `content` directives** on the node `fileSystemContent` provider, each requiring
+`trustedContent: true`: `mermaid` (fenced ` ```mermaid ` → static inline SVG; optional peer dep
+`mermaid-isomorphic`), `::embed` (lazy click-to-activate iframe facades — pair the built-in
+`lazyEmbed` island), and `::gallery` (co-located folder galleries via `GalleryTrack` or a custom
+component). See `references/plugin-index.md` §2.1.
 
 Ships 5 isomorphic default plugins — `site, i18n, router, head, spa` — plus the explicit-compose
 `content` (isomorphic shell), node-only `build, deploy, cli` (the developer CLI:
@@ -107,13 +126,17 @@ custom plugins with `createPlugin("name", spec)` (types infer from the spec; doc
 with a directly-preceding JSDoc block — never destructure exports, see moku-core "Public Export
 Shape"). SEO `<head>` helpers (`meta/og/twitter/jsonLd/canonical/hreflang/feedLink/
 buildArticleHead`), the `route()`/`defineRoutes()` builders, `createUrls(routes, defaultLocale?)`,
-and `createComponent` (islands) are top-level exports.
+`createComponent` + the built-in `lazyEmbed` island, and the `::embed`/`::gallery` default components
+`EmbedFacadeButton`/`GalleryTrack` are top-level exports.
 
 **Full catalog — plugins, events, config, the `ctx`/`app` property index, usage:**
 [`references/plugin-index.md`](references/plugin-index.md). Consult it first when wiring an
 app; it is regenerated from upstream by the `moku-sync` maintainer skill.
 
 ## Project Structure
+
+> Full annotated tree, root-config inventory, data-layer strategies, testing, rules, and the
+> scaffold sequence: [`references/project-spec.md`](references/project-spec.md). Quick view:
 
 ```
 src/
@@ -132,8 +155,9 @@ src/
     index.css         # Layer entry point
     tokens.css        # Design system tokens
     reset.css, base.css, components.css, ...
-  lib/               # Helper functions (content access, head builders, urls)
+  lib/               # Pure browser-safe helpers (content access, head builders, urls, themes)
   i18n/              # Locales + translations (pluginConfigs.i18n)
+  og/                # OG card components (template/default-card/chrome) → build.ogImage
   config.ts          # Site identity constants (SITE)
   routes.tsx         # THE single route table (+ createUrls) — build, SPA, links
   app.ts             # Node SSG composition (createApp + node-only plugins)
@@ -250,13 +274,16 @@ article { padding: 1rem; }              // WRONG — global pollution
 
 ## References
 
-- `references/component-patterns.md` — Preact components, islands, naming conventions
-- `references/css-architecture.md` — Tokens, @scope, @layer, responsive design
-- `references/layout-structure.md` — SiteLayout, pages, routing, entry point
+- `references/project-spec.md` — **how to build any web project**: specification, hard Rules (MUST) + Recommendations (SHOULD), standard directory structure, root-config inventory, data-layer strategies, routing patterns, project-type matrix, and the step-by-step scaffold sequence
+- `references/deploy-and-ci.md` — Cloudflare Pages deploy (`wrangler`, guided wizard), GitHub Actions (CI gates deploy), `public/_headers`, the app-owned 404 requirement, secrets
+- `references/component-patterns.md` — Preact components, islands, lifecycle, component taxonomy + component↔island pairing
+- `references/css-architecture.md` — `@layer`/`@scope`, two-layer tokens (`light-dark`), `main.css` assembly, font loading (pure CSS — no PostCSS/Vite)
+- `references/layout-structure.md` — SiteLayout, pages, routing, entry points (`app.ts`/`spa.tsx`)
 - `references/plugin-index.md` — **@moku-labs/web plugin & property index** (every plugin, event, config key, `ctx`/`app` accessor + API form); the catalog to consult when wiring an app
 
 ## Advanced References (load when needed)
 
+For **generating/scaffolding any web project** (or understanding the full structure of a complex one), read `references/project-spec.md` — then `references/deploy-and-ci.md` for shipping it.
 For projects with a `src/styles/` directory or multiple CSS files, read `references/css-architecture.md` (token system and @layer ordering).
 For projects using island components (`*Island.ts`), read `references/component-patterns.md` (island lifecycle: onCreate/onDestroy/onNavEnd).
 

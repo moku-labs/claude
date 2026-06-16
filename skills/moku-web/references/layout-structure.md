@@ -1,7 +1,8 @@
 # Layout Structure Reference
 
-Regenerated from the blog reference implementation (`blog/src` on `@moku-labs/web@1.6.1`). Every
-snippet below is the real shape that ships — verified against `web/src` (router/spa/build types).
+Framework-level layout + entry/route wiring for any web project. Every snippet below is the real
+shape that ships — verified against `@moku-labs/web` source (`web/src` router/spa/build types). For
+the full project skeleton + rules see [project-spec.md](project-spec.md).
 
 ## Master Layout: SiteLayout + the `.layout()` contract
 

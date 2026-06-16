@@ -7,14 +7,40 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `1.8.0` · **Layer:** 2 (framework) ·
-**Depends on:** `@moku-labs/core@0.1.3` (exact pin — consumers must NOT add a direct core dep) ·
-**Peer deps (since 1.7.0):** `preact@^10.29.2` + `preact-render-to-string@^6.6.0` — the APP installs them ·
-**Engines:** node ≥24, bun ≥1.3.14 · **Two entry points:** `.` (ESM + CJS, full surface, Node SSG)
-and **`./browser`** (ESM-only, node-free by construction) · **No `bin`** — the developer CLI ships
-as the node-only **`cliPlugin`** (`app.cli.build/serve/preview/deploy`, driven by thin per-command scripts).
+**Framework:** `@moku-labs/web` · **Synced version:** `1.12.2` · **Layer:** 2 (framework) ·
+**Depends on:** `@moku-labs/core@0.1.3` (exact pin — consumers must NOT add a direct core dep; note web
+pins 0.1.3 while core's own registry version is 0.1.4) · **Peer deps (since 1.7.0):** `preact@^10.29.2` +
+`preact-render-to-string@^6.6.0` — the APP installs them; **optional** `mermaid-isomorphic@^3.0.0` (since
+1.9.0, only when content `mermaid` is enabled) · **Engines:** node ≥24, bun ≥1.3.14 · **Two entry
+points:** `.` (ESM + CJS, full surface, Node SSG) and **`./browser`** (ESM-only, node-free by
+construction) · **No `bin`** — the developer CLI ships as the node-only **`cliPlugin`**
+(`app.cli.build/serve/preview/deploy`, driven by thin per-command scripts).
 
 > **What's new in 1.x (vs 0.5.6):**
+> - **Content directives — build-time, zero-JS-by-default (v1.9.0–v1.12.0).** Three opt-in
+>   `fileSystemContent` features, each rendered to STATIC markup at build and each requiring
+>   `trustedContent: true` (they emit raw HTML the sanitize pass would otherwise strip):
+>   - **`mermaid` (v1.9.0).** Fenced ` ```mermaid ` code blocks → static inline SVG at build (no
+>     client JS). `mermaid: boolean | { mermaidConfig?, renderDiagrams? }`. Needs the **optional peer
+>     dep `mermaid-isomorphic@^3.0.0`** (+ playwright/browser).
+>   - **`::embed` + `lazyEmbed` island (v1.10.0, enhanced v1.11.0).** `::embed{src title width? height?}`
+>     → a click-to-activate `<figure data-component="lazy-embed">` facade; **no iframe** (or its
+>     network/JS cost) until the reader clicks, when the new **`lazyEmbed`** SPA island swaps in the
+>     real `<iframe loading="lazy">`. `src` = http(s) | root-relative | co-located relative (resolved
+>     to `/<slug>/…`); `width`×`height` reserve the box. `embed: boolean | { facade }` (default
+>     `EmbedFacadeButton`).
+>   - **`::gallery` (v1.12.0).** `::gallery{src="./images/dir/" caption?}` reads the co-located folder
+>     at build, sorts its images, and renders them through a Preact component (default `GalleryTrack`,
+>     or `gallery.component`) into `<div data-component="gallery">`. The swipe/keyboard island is
+>     **consumer-provided**. `gallery: boolean | { component }`.
+> - **SPA/build fixes (v1.8.1–v1.12.2).** titleTemplate applied on DATA-path client nav (1.8.1);
+>   `llms.txt` synced + font `url()`s kept external in the CSS bundle pass (1.8.2); nav swap always
+>   scrolls to top instant — never CSS smooth (1.12.1); nav announced before the data fetch so a
+>   screen reader gets feedback during the JSON load (1.12.2).
+> - **New top-level exports:** runtime `EmbedFacadeButton`, `GalleryTrack`, `lazyEmbed`; types
+>   `EmbedFacade`/`EmbedFacadeProps`/`EmbedOptions`, `GalleryComponent`/`GalleryOptions`/`GalleryProps`/`GallerySlide`.
+>   `@moku-labs/core` stays pinned `0.1.3` (core's own latest is `0.1.4` — a type-only fix; web is one
+>   patch behind, not lockstep). `PhaseName` unchanged; events unchanged.
 > - **BREAKING — ctx-based route handlers (v1.0.0).** `.load((ctx) => D)` takes a single
 >   `LoadContext` `{ params, locale, require, has }` (was `(params, locale)`); `.generate((ctx) =>
 >   params[])` takes a `GenerateContext` `{ locale, require, has }` (was `(locale)`). Loaders pull
@@ -69,11 +95,12 @@ as the node-only **`cliPlugin`** (`app.cli.build/serve/preview/deploy`, driven b
 >   `<!--moku:assets-->` placeholder family substituted (it can't hardcode a hashed bundle URL),
 >   and shells gained split `<!--moku:assets:css-->` / `<!--moku:assets:js-->` placeholders.
 >
-> ⚠️ The upstream `llms.txt`/`llms-full.txt` were re-synced at 1.7.0 (PR #55) but at 1.8.0 do not
-> yet mention `cacheHeaders` / fingerprinted bundle naming. This index is generated from `src/` —
-> **the source is authoritative**.
+> ⚠️ The upstream `llms.txt`/`llms-full.txt` were last re-synced at 1.8.2 (for the v1.8.0 cache
+> feature) and still describe `content` as the plain markdown pipeline — they do NOT mention the
+> v1.9.0–v1.12.0 content directives (`mermaid`/`::embed`/`::gallery`) or `cacheHeaders`/fingerprinted
+> bundle naming. This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v1.8.0)
+## 1. Framework API form (v1.12.2)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed
@@ -143,21 +170,32 @@ Top-level exports (`src/index.ts`):
   defaults) · `contentPlugin` (isomorphic shell, compose explicitly) · `buildPlugin, deployPlugin,
   cliPlugin` (node-only) · `dataPlugin` (optional/isomorphic) · `logPlugin, envPlugin` (core).
 - **Routing DSL:** `defineRoutes`, `route` (builder methods below), `createUrls(routes, defaultLocale?)`.
-- **Islands:** `createComponent(name, hooks)`.
+- **Islands:** `createComponent(name, hooks)` · `lazyEmbed` (built-in `::embed` activation island — see §2.1).
+- **Content directive components** (`.`-only, build-time SSR'd to static markup; swap via content
+  `embed.facade` / `gallery.component`): `EmbedFacadeButton` (default `::embed` facade — a labelled
+  `<button>`), `GalleryTrack` (default `::gallery` component — a horizontal slide track). Both also
+  serve as composable building blocks for a custom facade/component.
 - **Head/SEO helpers:** `meta, og, twitter, jsonLd, canonical, hreflang, feedLink, buildArticleHead`.
 - **Providers:** env — `dotenv()`, `processEnv()`, `cloudflareBindings()` (Node), `browserEnv()`
   (browser) · content — `fileSystemContent({ contentDir, … })` (Node).
 - **Type namespaces:** `Build, Cli, Content, Data, Deploy, Env, Head, Log, Router, Spa`
   (`import { type Router } from "@moku-labs/web"` → `Router.RouteDefinition`, `Router.LoadContext`,
   etc.). `site` / `i18n` keep types inline — there are NO `Site`/`I18n` namespaces.
+- **Content directive types** (top-level type exports; also reachable as `Content.*`):
+  `EmbedFacade`, `EmbedFacadeProps`, `EmbedOptions`, `GalleryComponent`, `GalleryOptions`,
+  `GalleryProps`, `GallerySlide`.
 
 **`@moku-labs/web/browser` exports (`src/browser.ts`)** — the ESM-only client entry, node-free by
 construction. Same `createApp`/`createPlugin` over the same isomorphic defaults, PLUS `dataPlugin`,
 `contentPlugin` (the browser-safe SHELL, so route modules can reference it for `ctx.require` in
-build-only loaders), `defineRoutes`, `route`, `createUrls`, `createComponent`, `browserEnv`, the SEO
-head primitives, and the type namespaces `Content, Data, Env, Head, Log, Router, Spa`. It **excludes**
-everything node-only: `buildPlugin`/`deployPlugin`/`cliPlugin`, `fileSystemContent`, the node
-providers `dotenv`/`processEnv`/`cloudflareBindings`, and the `Build`/`Cli`/`Deploy` type namespaces.
+build-only loaders), `defineRoutes`, `route`, `createUrls`, `createComponent`, **`lazyEmbed`** (the
+`::embed` island runs client-side), `browserEnv`, the SEO head primitives, and the type namespaces
+`Content, Data, Env, Head, Log, Router, Spa`. It **excludes** everything node-only:
+`buildPlugin`/`deployPlugin`/`cliPlugin`, `fileSystemContent`, the node providers
+`dotenv`/`processEnv`/`cloudflareBindings`, the `Build`/`Cli`/`Deploy` type namespaces, **and the
+`.`-only build-time content-directive components `EmbedFacadeButton`/`GalleryTrack`** (their named
+types are still reachable as `Content.EmbedFacade`, `Content.GalleryProps`, … via the `Content`
+namespace).
 `browserEnv()` is the **pre-wired default** `env` provider here (reads `import.meta.env` +
 `globalThis.__ENV__`), so no `pluginConfigs.env.providers` is needed. A CI gate
 (`bun run check:bundle`) asserts zero static node/native imports and a 60 kB gzip budget.
@@ -209,14 +247,60 @@ URLs for it, and `/{defaultLocale}/…` is built as a content-identical alias (c
 | `i18nPlugin` | regular · default | Locales + translations w/ default fallback; default locale served at BARE paths (v1.6.0) | — | — | `locales() defaultLocale() isLocale(x) localeName(l) ogLocale(l) t(locale,key)` | `locales, defaultLocale, localeNames?, ogLocaleMap?, translations?` |
 | `routerPlugin` | regular · default | Typed route DSL, RegExp matching, URL gen; routes from config ONLY (no `set()`) | site, i18n | — | `match(pathname) toUrl(name,params) entries() manifest() clientManifest() mode()` | `routes?` — the render mode is GLOBAL `config.mode` (`ssg`\|`spa`\|`hybrid`, default `hybrid`) |
 | `headPlugin` | regular · default | SEO `<head>`: title tmpl, OG, Twitter, canonical, hreflang, JSON-LD; site-level head for bare-path redirects | site, i18n, router | — | `render(resolvedRoute, data) siteHead({url, locale?})` | `titleTemplate?, defaultOgImage?, twitterCard?, twitterHandle?` |
-| `spaPlugin` | regular · default | Client runtime: island hydration + intercepted nav (HTML-over-fetch, or DATA nav when `data` composed); inert on Node | router, head | `spa:navigate`, `spa:navigated`, `spa:component-mount`, `spa:component-unmount` | `register(c) navigate(path) current()` (+ top-level `createComponent(name,hooks)` island helper) | `swapSelector?` (`"main > section"`), `viewTransitions?` (`false`), `progressBar?` (`true`), `components?` (`[]`) |
-| `contentPlugin` | regular · explicit (isomorphic SHELL) | Provider-driven Markdown model: sanitized HTML, frontmatter, reading time, locale fallback, per-build memo; drafts hidden only when global `stage === "production"` | i18n | `content:ready`, `content:invalidated` | `loadAll(opts?) load(slug,locale) renderMarkdown(md) invalidate(paths) articleToCard(a) contentDir()` | `providers: ContentProvider[]` — compose `fileSystemContent({ contentDir, defaultAuthor?, trustedContent?, extraRemarkPlugins?, extraRehypePlugins?, shikiTheme? })` (node; `shikiTheme` = `BundledTheme` name OR custom theme object) |
+| `spaPlugin` | regular · default | Client runtime: island hydration + intercepted nav (HTML-over-fetch, or DATA nav when `data` composed); inert on Node | router, head | `spa:navigate`, `spa:navigated`, `spa:component-mount`, `spa:component-unmount` | `register(c) navigate(path) current()` (+ top-level island helpers `createComponent(name,hooks)` and the built-in `lazyEmbed` island for `::embed` facades — register it in `components`) | `swapSelector?` (`"main > section"`), `viewTransitions?` (`false`), `progressBar?` (`true`), `components?` (`[]`) |
+| `contentPlugin` | regular · explicit (isomorphic SHELL) | Provider-driven Markdown model: sanitized HTML, frontmatter, reading time, locale fallback, per-build memo; drafts hidden only when global `stage === "production"`; build-time directives (`mermaid`/`::embed`/`::gallery`) on the node provider — see §2.1 | i18n | `content:ready`, `content:invalidated` | `loadAll(opts?) load(slug,locale) renderMarkdown(md) invalidate(paths) articleToCard(a) contentDir()` | `providers: ContentProvider[]` — compose `fileSystemContent({ contentDir, defaultAuthor?, trustedContent?, extraRemarkPlugins?, extraRehypePlugins?, shikiTheme?, mermaid?, embed?, gallery? })` (node; `shikiTheme` = `BundledTheme` name OR custom theme object; `mermaid`/`embed`/`gallery` each `boolean \| options` and each REQUIRE `trustedContent: true` — see §2.1) |
 | `buildPlugin` | regular · node-only | SSG orchestrator: pages, feeds, sitemap, OG images (+ default OG card), co-located article images, custom shell/404; **content-hashed bundle filenames + Cloudflare `_headers` cache rules (v1.8.0)**; persists per-page data when `mode!=="ssg"` + `data` composed; incremental dev rebuilds | site, i18n, content, router, head | `build:phase`, `build:complete` | `run(opts?: {outDir?, skipClean?, overrides?, changed?}) phases()` | `outDir, minify, feeds, sitemap, images, ogImage` (`OgImageConfig \| false`; incl. `fontDir, template?, size?, fonts?, render?, defaultCard?`), `injectAssets?` (`true`), `publicDir?` (`"public"`), `notFound?` (`boolean \| { body?, path? }` — asset placeholders substituted, v1.8.0), `localeRedirects?` (`false`), `clientEntry?, template?` (shell w/ `<!--moku:lang/head/assets/body-->` + split `<!--moku:assets:css/js-->` placeholders), `cacheHeaders?` (`boolean \| { assets?, pages? }`, default `true` — emits `outDir/_headers`) |
 | `deployPlugin` | regular · node-only | Deploy `outDir` to Cloudflare Pages (wrangler); scaffolds `wrangler.jsonc` (+ optional GH Actions workflow) | site | `deploy:complete` | `run(opts?) getLastDeployment() init(opts?)` | `target` (`"cloudflare-pages"`), `outDir`, `productionBranch?` (`"main"`), `scrubAllowlist`, `compatibilityDate?, ci?` |
 | `cliPlugin` | regular · node-only | Developer CLI: `build`/`serve`/`preview`/`deploy` with boxed Panel TUI + live progress; driven from thin per-command scripts (no argv parser / no `bin`) | build, deploy | — (listens: `build:phase`, `build:complete`, `deploy:complete`) | `build(opts?) serve(opts?) preview(opts?) deploy(opts?)` (`deploy({ guided: true })` = interactive wizard; non-TTY/CI never prompts) | `outDir` (`"dist"`), `port` (`4173`), `watchDirs` (`["content","src"]`), `debounceMs` (`150`), `notFoundFile` (`"404.html"`), `liveReload` (`true`) |
 | `dataPlugin` | regular · optional (isomorphic) | Agnostic data provider: persist per-page JSON (Node `write`) + fetch it for DATA nav (browser `at`) | — (no hard depends) | — | `write(entries,opts?) at(path) urlFor(path) fileFor(path)` | `outputDir?` (`"_data"`), `baseUrl?` (`"/_data/"`) |
 | `logPlugin` | **core** | In-memory trace + `expect()` assertion DSL; console sink by mode (production = info+) | — | — | `info debug warn error trace() expect() addSink(s) reset()` | `mode` (`test`\|`dev`\|`production`\|`silent`; framework default `production`) |
 | `envPlugin` | **core** | Schema-validated, frozen env access | — | — | `get(k) require(k) has(k) getPublic() getPublicMap()` | `schema, providers, publicPrefix` (`"PUBLIC_"`). Providers default to `[]` — the consumer wires them per target (`[processEnv(), dotenv()]` on Node); ONLY `./browser` pre-wires `browserEnv()` |
+
+## 2.1 Content directives (build-time; node `fileSystemContent` provider only)
+
+Three opt-in `fileSystemContent` options (since v1.9.0–v1.12.0). Each renders to **static markup at
+build** (no client JS by default) and each **REQUIRES `trustedContent: true`** — they emit raw HTML the
+untrusted-content sanitize pass would otherwise strip, so `fileSystemContent` fails fast at construction
+if the flag is missing (`validate.ts`). All three default OFF. None add events or build phases (the
+co-located embed bundles / gallery folders are copied by the existing `content-images` phase).
+
+**Mermaid diagrams** — `mermaid?: boolean | MermaidDiagramOptions`
+- Fenced ` ```mermaid ` code blocks → static inline SVG at build (no runtime Mermaid, zero client JS).
+- `MermaidDiagramOptions = { mermaidConfig?: Record<string,unknown>` (passed straight through, e.g.
+  `{ theme: "dark" }`)`, renderDiagrams?: (sources, mermaidConfig) => Promise<string[]> }` — `renderDiagrams`
+  is a **TEST-ONLY** seam (deterministic SVG without a headless browser); never set it in an app.
+- Needs the **optional peer dep `mermaid-isomorphic@^3.0.0`** (+ playwright with an installed browser).
+
+**`::embed` lazy iframe facades** — `embed?: boolean | EmbedOptions` + the `lazyEmbed` SPA island
+- Leaf directive: `::embed{src="…" title="…" width? height?}`. `src` = http(s) URL · root-relative `/…` ·
+  or co-located relative (`./game/index.html`, resolved to the shared `/<slug>/…` URL the
+  `content-images` phase copies the bundle to); protocol-relative / `javascript:` / `data:` are rejected.
+  `src` + `title` are required; `width`+`height` (positive integer px, both-or-neither) reserve the box
+  aspect-ratio so the embed never shifts layout.
+- Renders `<figure class="lazy-embed" data-component="lazy-embed" data-embed-src data-embed-title
+  [data-embed-width/height + inline aspect-ratio style]>` wrapping the facade's inner content, SSR'd from a
+  Preact component: the built-in **`EmbedFacadeButton`** (a labelled `<button>`) or a consumer
+  `facade`. **No iframe is built** — the page costs nothing (no request, no third-party JS) until a click.
+- The built-in **`lazyEmbed` island** (register in `pluginConfigs.spa.components`) listens for a click
+  anywhere on the facade and swaps it for the real `<iframe loading="lazy" allow="fullscreen; autoplay;
+  gamepad">`, marking `data-embed-active`. All `.lazy-embed*` chrome is consumer CSS.
+- `EmbedOptions = { facade?: EmbedFacade }` · `EmbedFacade = FunctionComponent<EmbedFacadeProps>` ·
+  `EmbedFacadeProps = { src, title, width?, height?, attributes: Readonly<Record<string,string>> }` —
+  `attributes` is the full raw directive bag, so a custom facade can read extra options
+  (e.g. `::embed{… poster="/p.jpg"}`).
+
+**`::gallery` folder galleries** — `gallery?: boolean | GalleryOptions`
+- Leaf directive: `::gallery{src="./images/dir/" caption?}`. Unlike `::embed`, `src` is a co-located
+  **folder** read at build: the framework lists it (`.webp/.jpg/.jpeg/.png/.gif/.avif`), sorts
+  alphabetically, and rewrites each image to its shared `/<slug>/<dir>/<file>` URL. `src` required; a
+  missing/empty folder fails the build. Skipped on the standalone `renderMarkdown()` path (no slug context).
+- Renders `<div class="gallery" data-component="gallery">` wrapping inner content SSR'd from a Preact
+  component: the built-in **`GalleryTrack`** (a horizontal `<img>` track, usable bare) or a consumer
+  `component`. The swipe/keyboard/lightbox island is **consumer-provided** (mount on
+  `[data-component="gallery"]`) — the framework ships only the static track.
+- `GalleryOptions = { component?: GalleryComponent }` · `GalleryComponent = FunctionComponent<GalleryProps>` ·
+  `GalleryProps = { slides: readonly GallerySlide[], caption: string, attributes }` ·
+  `GallerySlide = { src, alt }` (alt = `"<caption> · N"`, or just `"N"` when no caption).
 
 ## 3. Property index (what lands on `ctx` / `app`)
 
@@ -246,6 +330,8 @@ where `data` is the page payload from `script#__DATA__`) and registered via `plu
 or `app.spa.register` — see the moku-web skill's Island Architecture section and
 `references/component-patterns.md`. Match elements via `data-component="name"`; islands OUTSIDE the
 swap region are persistent across navigations (they get `onNavStart`/`onNavEnd`, never nav-unmounts).
+The framework ships one built-in island, **`lazyEmbed`** (`data-component="lazy-embed"`, for `::embed`
+facades — see §2.1); register it like any other in `pluginConfigs.spa.components`.
 
 ## 4. Event index
 
@@ -295,6 +381,15 @@ BUILD (router.mode !== "ssg")              ON DISK                       CLIENT 
 **SSG build (static only):** `import { createApp, contentPlugin, fileSystemContent, buildPlugin } from "@moku-labs/web"` → `createApp({ config: { mode: "ssg" }, plugins: [contentPlugin, buildPlugin], pluginConfigs: { site, i18n, content: { providers: [fileSystemContent({ contentDir })] }, router: { routes }, head, build } })` then `await app.build.run()`.
 **Hybrid (SSG + DATA nav):** add `dataPlugin` for the build (`.` entry); build writes `dist/_data/**` sidecars. The **client entry** is `import { createApp, dataPlugin } from "@moku-labs/web/browser"` → `createApp({ plugins: [dataPlugin], config: { mode: "hybrid" }, pluginConfigs: { site, i18n, router: { routes }, spa: { components: islands } } }).start()` (env auto-wired, node-free).
 **Dev loop / scripts:** compose `cliPlugin` (+ build/deploy) and write thin per-command scripts — `scripts/build.ts` is just `import { app } from "../src/app"; await app.cli.build();`; likewise `app.cli.serve()` (watch + debounced incremental rebuild + live reload), `app.cli.preview()`, `app.cli.deploy()`.
+**Content directives (`mermaid` · `::embed` · `::gallery`):** enable on the node provider —
+`fileSystemContent({ contentDir: "./content", trustedContent: true, mermaid: true, embed: true, gallery: true })`
+(all three REQUIRE `trustedContent: true`; `mermaid` also needs the optional `mermaid-isomorphic` peer).
+Authors then write ` ```mermaid ` fences, `::embed{src="https://…" title="…" width="400" height="711"}`,
+and `::gallery{src="./images/dir/" caption="…"}`. Register the built-in embed island —
+`import { lazyEmbed } from "@moku-labs/web/browser"` → `pluginConfigs.spa.components: [lazyEmbed]` — and
+supply your own `[data-component="gallery"]` island for swipe/lightbox. Swap the rendered components via
+`embed: { facade: MyFacade }` / `gallery: { component: MyGallery }` (compose `EmbedFacadeButton` /
+`GalleryTrack` inside a richer one).
 **Custom plugin:** `export const myPlugin = createPlugin("my", { … })` — types infer from the spec; document the export with a directly-preceding JSDoc block (never destructure exports; see moku-core "Public Export Shape").
 **Deploy:** `await app.cli.deploy()` (TTY confirm; `{ yes: true }` skips; `{ guided: true }` wizard) or `await app.deploy.run({ build: true })` after configuring `deploy: { target: "cloudflare-pages", outDir: "dist" }`.
 
@@ -305,8 +400,10 @@ BUILD (router.mode !== "ssg")              ON DISK                       CLIENT 
 `moku-sync web` resolves the latest version from the registry's `releaseSource` (**npm registry JSON
 is the version-of-truth**; `dist-tags.latest`), then reads the upstream `llms.txt`/`llms-full.txt`
 (structured catalog, present since 0.4.0) plus `package.json` `exports`/`engines`/`dependencies`
-and `src/plugins/*/{index,events,config,types,api}.ts`, refreshes every section above and the header
-`Synced version`, then writes the new version back to `knownVersion` in
-`skills/moku-core/references/moku-frameworks.md`. When the llms files and `src/` disagree, **`src/`
-wins** (verified at 1.6.1: llms still mentioned the removed `router.set()` and `URLPattern`;
-re-verified at 1.8.0: llms re-synced at 1.7.0 but missing `cacheHeaders` / fingerprinted naming).
+and `src/plugins/*/{index,events,config,types,api,validate}.ts` + `src/plugins/content/pipeline/*` +
+`src/plugins/spa/lazy-embed.ts`, refreshes every section above and the header `Synced version`, then
+writes the new version back to `knownVersion` in `skills/moku-core/references/moku-frameworks.md`. When
+the llms files and `src/` disagree, **`src/` wins** (verified at 1.6.1: llms still mentioned the removed
+`router.set()` and `URLPattern`; at 1.8.0: llms missing `cacheHeaders` / fingerprinted naming;
+re-verified at 1.12.2: llms last synced 1.8.2, missing the `mermaid`/`::embed`/`::gallery` content
+directives — all read from `src/` here).

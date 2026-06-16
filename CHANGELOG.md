@@ -2,6 +2,97 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.0 (2026-06-16)
+
+**`moku-web` skill — project specification, rules & recommendations.** Added framework-level
+guidance for building **any web-technology project** on `@moku-labs/web` (verified against
+`@moku-labs/web@1.12.2`) — static site, SPA/web app, PWA, embeddable widget, documentation portal,
+internal tool, dashboard, e-commerce, or content site — so the toolkit can scaffold and build full
+projects, not just call the API. The guidance is framework-level (no dependency on any one example
+app or external repo): standard structure, hard rules, recommended practices, and a project-type
+matrix that adapts the same skeleton across project types.
+
+### Added
+- **`skills/moku-web/references/project-spec.md`** (new) — the project **specification**: the
+  architecture model (two compositions over one route table), the standard directory structure
+  (required vs project-type-conditional), the root-config inventory, the three **data-layer
+  strategies** (markdown `content` / custom loaders + `data` / static), routing patterns, rendering
+  mode by project type, the UI/i18n/SEO layers, the testing strategy, explicit **Rules (MUST)** +
+  **Recommendations (SHOULD)**, a **project-type matrix** (incl. web app/PWA, embeddable widget,
+  internal tool, design-system showcase — with minimal compositions), and a 10-step **scaffold
+  sequence**.
+- **`skills/moku-web/references/deploy-and-ci.md`** (new) — Cloudflare Pages deploy (`wrangler.jsonc`,
+  the guided `app.cli.deploy({ guided })` wizard + `--cli` + `deploy.init({ ci })`), `public/_headers`
+  (security + cache), the app-owned 404 requirement (or CF flips to SPA mode), and the two GitHub
+  Actions workflows — CI gates deploy via `workflow_run`, with the non-obvious requirements baked in
+  (pin Node 24 for `URLPattern`/vitest, install Playwright browsers before the build because
+  `mermaid-isomorphic` renders at build time, SHA-pin actions, `--branch main` on the detached-HEAD
+  checkout), plus secrets + the dev/preview loop.
+
+### Changed
+- **`skills/moku-web/references/css-architecture.md`** — rewritten to match reality. **Removed stale
+  content**: the `postcss-preset-env` "PostCSS Configuration" block, `vite-plugin-bundlesize`, and the
+  non-existent `styles/index.css` entry (a moku-web project is pure CSS, Vite-free — assembled from
+  `main.css` via `@layer`/`@import`, bundled by `Bun.build`). Added the real two-layer token system
+  (`light-dark()` + `color-mix()` + paired easings), `@scope` refinements (donut `to ()` + intentional
+  global leaf atoms), self-hosted font loading (woff2 + `unicode-range` + `font-display: swap`), the
+  reduced-motion utilities layer, and the documented browser-quirk gotchas.
+- **`skills/moku-web/references/component-patterns.md`** — synced to 1.12.2; added the role-based
+  component taxonomy (chrome / views / items / atoms / interactive facades) and component↔island
+  pairing — including how a project customizes the `::embed`/`::gallery` framework directives
+  (`content.embed.facade` / `content.gallery.component`) and pairs them with the framework `lazyEmbed`
+  island.
+- **`skills/moku-web/references/layout-structure.md`** — provenance generalized (framework source, no
+  example-app anchor).
+- **`skills/moku-web/SKILL.md`** — points at `project-spec.md` for any "create a project" task; Stack
+  table gained a Deploy row + pinned-deps/TS6-types notes; Project Structure links the spec and lists
+  `og/`; both reference lists updated.
+
+### Plugin
+- Version bumped to 0.47.0 in plugin.json and marketplace.json (README badge synced).
+
+## 0.46.0 (2026-06-16)
+
+`moku-sync` of both moku-family frameworks. **`@moku-labs/web` 1.8.0 → 1.12.2** (npm `latest`,
+published 2026-06-14, gitHead `9ec62e6` = tag `v1.12.2`) — eight releases adding **four opt-in,
+build-time `content` directives** (each rendered to static markup, each requiring
+`trustedContent: true`) plus SPA/build fixes: **`mermaid`** (v1.9.0 — fenced ` ```mermaid ` → inline
+SVG, optional peer dep `mermaid-isomorphic@^3.0.0`), **`::embed`** lazy iframe facades + the new
+**`lazyEmbed`** SPA island (v1.10.0, enhanced v1.11.0 — co-located `src`, `width`×`height`,
+swappable facade), and **`::gallery`** folder galleries (v1.12.0 — `GalleryTrack` or a custom
+component). New top-level exports `EmbedFacadeButton`, `GalleryTrack`, `lazyEmbed` + the
+`EmbedFacade*`/`Gallery*` types. Web still pins `@moku-labs/core@0.1.3` exactly (no other plugin
+API/event/config change; `PhaseName` unchanged; engines unchanged). **`@moku-labs/core` 0.1.3 →
+0.1.4** (gitHead `dd723ce` = tag `v0.1.4`) — a **type-only fix** (#13 `PluginLike admits core-plugin
+instances`, an internal constraint) with no public-API/runtime change, so `src/index.ts` is
+byte-identical and the `moku-core` skill needs no edit. The upstream `llms.txt`/`llms-full.txt` still
+lag the content directives (last synced web 1.8.2), so the catalog was regenerated from `src/` at tag
+`v1.12.2` — source is authoritative.
+
+### Changed
+- **`skills/moku-core/references/moku-frameworks.md`** — `frameworks[web].knownVersion 1.8.0 →
+  1.12.2` and `frameworks[core].knownVersion 0.1.3 → 0.1.4`; both provenance blocks rewritten for
+  the deltas (web's four content features + new exports + optional `mermaid-isomorphic` peer + the
+  core-0.1.3-pin/core-latest-0.1.4 lag note; core's type-only fix). Field-reference `llms` row
+  corrected — core ships `llms` since 0.1.1 (was wrongly noted `null`).
+- **`skills/moku-web/references/plugin-index.md`** — regenerated for 1.12.2: header `Synced version`
+  + §1 title → 1.12.2; new "What's new" block; new **§2.1 Content directives** (Mermaid · `::embed` ·
+  `::gallery` — directive syntax, config, components, the `lazyEmbed` island, required
+  `trustedContent`); `contentPlugin`/`spaPlugin` catalog rows, top-level + `./browser` export lists,
+  island note, and a usage snippet updated; llms-lag + generation-contract notes refreshed.
+- **`skills/moku-web/SKILL.md`** — API-form header → v1.12.2; surgical note on the three new
+  build-time content directives + the new exports (`lazyEmbed`, `EmbedFacadeButton`, `GalleryTrack`),
+  linking `references/plugin-index.md` §2.1. Unrelated guidance untouched.
+
+### Unchanged (verified)
+- The `moku-web-version` / `moku-core-version` `/moku:upgrade` migrations are registry-driven (read
+  `knownVersion`), so a routine version bump touches only the registry — no migration text changed.
+  Web's required `@moku-labs/core` range is still `0.1.3` exact, so the `dependsOn` (core-before-web)
+  ordering holds.
+
+### Plugin
+- Version bumped to 0.46.0 in plugin.json and marketplace.json (README badge synced).
+
 ## 0.45.0 (2026-06-10)
 
 **Stack version 3 — Node 24 runtime floor.** Both upstream frameworks now require Node ≥ 24:

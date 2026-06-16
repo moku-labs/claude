@@ -1,7 +1,9 @@
 # Component Patterns Reference
 
-Synced against `@moku-labs/web@1.6.2` (verified: `web/src/plugins/spa/types.ts`) and the blog
-reference implementation (`blog/src/components`, `blog/src/islands`).
+Synced against `@moku-labs/web@1.12.2` (verified: `web/src/plugins/spa/types.ts`). Framework-level
+patterns for any web project. For the full project skeleton + rules see
+[project-spec.md](project-spec.md); for layout/route wiring see
+[layout-structure.md](layout-structure.md).
 
 ## Preact Components (SSG Rendering)
 
@@ -139,3 +141,50 @@ export const homeRoute = route('/{lang:?}/')
 
 There is no `.parse()` step — on a client DATA navigation the fetched JSON is fed straight in as
 `ctx.data` and the same `render` runs (miss/malformed falls back to HTML-over-fetch).
+
+## Component taxonomy (organize by role, not by feature)
+
+Group components by role; each renders a `data-component="…"` root (its CSS scope). Names below are
+generic roles — use whatever your project needs:
+
+| role | what it is | scope/notes |
+|---|---|---|
+| **Chrome** (persistent, outside swap region) | header, primary nav, footer, locale switcher | mounted by the layout; kept in sync after nav by islands, NOT re-rendered by the framework |
+| **Views** (inside swap region) | one top-level view per page family (detail view, list/grid view, section blocks) | pages are thin wrappers around a view |
+| **Items / cards** | repeated list item, card, pagination control, status strip | a child component can have NO own CSS and be styled by its parent's `@scope` |
+| **Atoms** | badge, tag, button, chip | a reusable atom that must look identical everywhere is styled **without** `@scope` (global `[data-x]`) — use sparingly |
+| **Interactive facades** | media player, embed, gallery, form, share control | static markup at build, paired with an island (below) |
+
+## Component ↔ island pairing
+
+A static Preact component renders markup at build; a same-named island (`data-component="name"`)
+adds client behavior. Three general patterns:
+
+- **Plain pairing.** A component renders markup carrying its data (e.g. a copy button with
+  `data-copy-url`); a same-named island reads `el`/`el.dataset` and wires the behavior (Clipboard,
+  fetch, observers). No framework involvement.
+- **Customizing the framework `::gallery` directive.** The Markdown directive
+  `::gallery{src="./images/dir/"}` is rendered by YOUR Preact component (wired via
+  `content.gallery: { component: MyGallery }`); the framework wraps it in
+  `<div data-component="gallery">`. Pair it with your own gallery island for paging/lightbox — the
+  framework ships only the static markup. (Content-pipeline projects only.)
+- **Customizing the framework `::embed` directive.** `::embed{src title}` renders YOUR facade
+  component (wired via `content.embed: { facade: MyFacade }`) — a static click-to-activate
+  placeholder. The activation island is the **framework-provided `lazyEmbed`** (imported from
+  `@moku-labs/web/browser`), placed in the registry alongside your islands; on click it swaps the
+  facade for the real `<iframe loading="lazy">`. (Content-pipeline projects only.)
+
+```ts
+// islands/index.ts — registry mixes your islands + framework islands (e.g. lazyEmbed)
+import { lazyEmbed } from "@moku-labs/web/browser";
+import { myGallery } from "./gallery";
+import { myWidget } from "./widget";
+export const islands = [myWidget, myGallery, lazyEmbed /* … */];
+```
+
+**Conventions that generalize:**
+- **Coordinate via shared module exports, not events.** A shared module exports a function (e.g.
+  `openLightbox(...)`) that several islands import + call; islands never message each other directly.
+- **Persistent perf islands** mount on a node OUTSIDE the swap region (e.g. `<body>`) so they survive
+  navigation — a useful one to adopt: a link-prefetch island that warms a page's `_data` JSON on
+  `pointerover`/`touchstart` before the click.
