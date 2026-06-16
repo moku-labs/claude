@@ -7,9 +7,12 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `1.12.3` · **Layer:** 2 (framework) ·
+**Framework:** `@moku-labs/web` · **Synced version:** `1.12.4` · **Layer:** 2 (framework) ·
 **Depends on:** `@moku-labs/core@0.1.4` (exact pin — consumers must NOT add a direct core dep; now
-lockstep with core's own registry version 0.1.4) · **Peer deps (since 1.7.0):** `preact@^10.29.2` +
+lockstep with core's own registry version 0.1.4) + `@moku-labs/common@0.1.1` (**since 1.12.4** — the
+`log`/`env` core plugins are authored in `@moku-labs/common` and re-exported by `web`; public API
+byte-identical, so consumers use `ctx.log`/`ctx.env` and import the env providers from
+`@moku-labs/web` exactly as before) · **Peer deps (since 1.7.0):** `preact@^10.29.2` +
 `preact-render-to-string@^6.6.0` — the APP installs them; **optional** `mermaid-isomorphic@^3.0.0` (since
 1.9.0, only when content `mermaid` is enabled) · **Engines:** node ≥24, bun ≥1.3.14 · **Two entry
 points:** `.` (ESM + CJS, full surface, Node SSG) and **`./browser`** (ESM-only, node-free by
@@ -100,7 +103,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 > v1.9.0–v1.12.0 content directives (`mermaid`/`::embed`/`::gallery`) or `cacheHeaders`/fingerprinted
 > bundle naming. This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v1.12.3)
+## 1. Framework API form (v1.12.4)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed
@@ -405,5 +408,5 @@ and `src/plugins/*/{index,events,config,types,api,validate}.ts` + `src/plugins/c
 writes the new version back to `knownVersion` in `skills/moku-core/references/moku-frameworks.md`. When
 the llms files and `src/` disagree, **`src/` wins** (verified at 1.6.1: llms still mentioned the removed
 `router.set()` and `URLPattern`; at 1.8.0: llms missing `cacheHeaders` / fingerprinted naming;
-re-verified at 1.12.3: llms last synced 1.8.2, missing the `mermaid`/`::embed`/`::gallery` content
+re-verified at 1.12.4: llms last synced 1.8.2, missing the `mermaid`/`::embed`/`::gallery` content
 directives — all read from `src/` here).

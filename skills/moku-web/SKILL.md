@@ -40,7 +40,7 @@ the root-config inventory, the data-layer strategies, routing patterns, the hard
 | Tests | Vitest (unit/integration, coverage on `lib/`+`i18n/`) + Playwright (e2e + visual, frozen fixture corpus) |
 | Deploy | Cloudflare Pages (`deploy` plugin + `wrangler`); GitHub Actions CI gates deploy |
 
-## Framework API (@moku-labs/web v1.12.3)
+## Framework API (@moku-labs/web v1.12.4)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
