@@ -62,7 +62,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "1.12.2",
+      "knownVersion": "1.12.3",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -91,14 +91,17 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > runtime dependencies; engines `node >=24` / `bun >=1.3.8` (unchanged). **No skill edit:** the
 > `moku-core` SKILL.md documents the unchanged API form and pins no version — only `knownVersion`
 > moved here. (The vendored spec + sandbox are re-pinned separately by `spec-sync`, not this skill.)
-> `@moku-labs/web` re-checked this pass still pins `@moku-labs/core@0.1.3` **exactly** — one patch
-> behind core latest 0.1.4 — so the two are not lockstep; `dependsOn` ordering (core before web)
-> still holds. See the web provenance below.
+> `@moku-labs/web` now pins `@moku-labs/core@0.1.4` **exactly** (bumped from 0.1.3 in web v1.12.3,
+> PR moku-labs/web#75) — so core and web are now **lockstep** on 0.1.4; `dependsOn` ordering (core
+> before web) still holds. See the web provenance below.
 >
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.12.2` (npm `latest`,
-> published 2026-06-14, gitHead `9ec62e6` = GitHub tag `v1.12.2`). The catalog was regenerated from
-> the source at tag `v1.12.2` (via a clean `/tmp` worktree of `../web` — the working copy was at
-> `v1.10.0+10`), cross-checked against release notes (`v1.8.0..v1.12.2`) + `package.json`.
+> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.12.3` (npm `latest`,
+> published 2026-06-16, GitHub tag `v1.12.3`). **1.12.2 → 1.12.3 is a dep-only release** — it bumped
+> `@moku-labs/core` `0.1.3 → 0.1.4` (PR moku-labs/web#75) with **no `src/` change**, so the API form,
+> plugin catalog, events, and exports are byte-identical to 1.12.2; only the core pin and version stamp
+> moved. The 1.12.2 catalog below remains authoritative — it was regenerated from the source at tag
+> `v1.12.2` (via a clean `/tmp` worktree of `../web`), cross-checked against release notes
+> (`v1.8.0..v1.12.2`) + `package.json`.
 > **1.8.0 → 1.12.2 delta — four content features + SPA/build fixes (8 releases):**
 > - **Build-time Mermaid (v1.9.0, #69).** Fenced ` ```mermaid ` blocks render to static inline SVG
 >   at build (zero client JS). Provider option `mermaid?: boolean | { mermaidConfig?,
@@ -131,8 +134,8 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > `./browser`). **New optional `peerDependency` `mermaid-isomorphic@^3.0.0`** (only when `mermaid` is
 > enabled); `preact` / `preact-render-to-string` peers unchanged. No change to
 > site/i18n/router/head/build/deploy/cli/data/log/env APIs, events, or config; `PhaseName` unchanged
-> (13 phases, incl. `cache-headers`); still pins **`@moku-labs/core@0.1.3`** exactly (one patch
-> behind core latest); engines node ≥24, bun ≥1.3.14 (unchanged). ⚠️ The upstream
+> (13 phases, incl. `cache-headers`); pins **`@moku-labs/core@0.1.4`** exactly (bumped from 0.1.3 in
+> v1.12.3, now lockstep with core); engines node ≥24, bun ≥1.3.14 (unchanged). ⚠️ The upstream
 > `llms.txt`/`llms-full.txt` (last synced v1.8.2 for the cache feature) still describe `content` as
 > the plain markdown pipeline — **no** Mermaid/`::embed`/`::gallery` — so **`src/` is authoritative**
 > (the index below is generated from source).

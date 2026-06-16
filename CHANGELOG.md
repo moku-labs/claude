@@ -2,6 +2,22 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.2 (2026-06-16)
+
+**Sync `moku-web` skill to `@moku-labs/web@1.12.3`.** Web 1.12.3 is a dependency-only release that
+bumps `@moku-labs/core` `0.1.3 → 0.1.4` (no `src/` change — the API form, plugin catalog, events, and
+exports are identical to 1.12.2). The teaching material is updated to match: version stamps move to
+1.12.3 and every "web pins core 0.1.3" fact is corrected to **0.1.4**, so the toolkit now reflects the
+family being **lockstep on `@moku-labs/core@0.1.4`** (core, web, and the new common repo all on 0.1.4).
+
+### Changed
+- **`skills/moku-core/references/moku-frameworks.md`** — `web` registry `knownVersion` `1.12.2 → 1.12.3`;
+  core/web provenance notes record web now pinning core 0.1.4 (lockstep) and the dep-only delta.
+- **`skills/moku-web/references/plugin-index.md`** — synced-version stamp → 1.12.3; all four
+  `@moku-labs/core` pin facts corrected `0.1.3 → 0.1.4`; API-form + re-verification stamps → 1.12.3.
+- **`skills/moku-web/SKILL.md`** — Framework API heading stamp → v1.12.3.
+- Version bumped to 0.47.2 in plugin.json and marketplace.json.
+
 ## 0.47.1 (2026-06-16)
 
 **Drop bundled TypeScript LSP registration.** Removed `.lsp.json`, which registered a `typescript`
