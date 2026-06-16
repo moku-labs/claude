@@ -2,6 +2,21 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.1 (2026-06-16)
+
+**Drop bundled TypeScript LSP registration.** Removed `.lsp.json`, which registered a `typescript`
+language server for `.ts`/`.tsx`. The dedicated `typescript-lsp` plugin already claims those
+extensions, so moku's registration was ignored (Claude Code allows one server per extension) and
+surfaced a `/doctor` "LSP server not used" note. Removing it resolves the note. Note: moku projects
+that relied on moku for built-in TS LSP should install the `typescript-lsp` plugin.
+
+### Removed
+- **`.lsp.json`** — redundant TypeScript language-server registration (superseded by the dedicated
+  `typescript-lsp` plugin).
+
+### Changed
+- Version bumped to 0.47.1 in plugin.json and marketplace.json.
+
 ## 0.47.0 (2026-06-16)
 
 **`moku-web` skill — project specification, rules & recommendations.** Added framework-level
