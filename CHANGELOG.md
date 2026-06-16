@@ -2,6 +2,19 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.4 (2026-06-16)
+
+**Sync the `moku-web` skill to `@moku-labs/web@1.12.4`.** web 1.12.4 sources its `log` and `env`
+core plugins from the new `@moku-labs/common@0.1.1` catalog (authored in common, re-exported by web;
+public API byte-identical). Routine teaching-material sync — no consumer-facing API change.
+
+### Changed
+- **`skills/moku-web/SKILL.md`** + **`skills/moku-web/references/plugin-index.md`** — synced version
+  `1.12.3` → `1.12.4`; noted that the `log`/`env` core plugins are now authored in
+  `@moku-labs/common@0.1.1` and re-exported by web (consumers still use `ctx.log`/`ctx.env` and import
+  the env providers from `@moku-labs/web` exactly as before).
+- **`skills/moku-core/references/moku-frameworks.md`** — web `knownVersion` `1.12.3` → `1.12.4`.
+
 ## 0.47.3 (2026-06-16)
 
 **Encourage & organize Layer-3 (consumer) plugin creation.** The toolkit contradicted the Moku Core
