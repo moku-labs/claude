@@ -109,7 +109,7 @@ Then configure all tooling files (these are **identical across all project types
     - **Architecture:** Framework shows 3-layer model; Consumer shows `createApp` usage; Tools/Library omit this section.
     - **Moku Development Toolkit:** Adapt commands and workflows per project type:
       - **Framework:** Include `plan` and `build` commands, all skills, all agents, framework workflow.
-      - **Consumer App:** Include `plan` and `build` commands. Include `moku-core` and `moku-plugin` skills. Include all agents. Show consumer workflow.
+      - **Consumer App:** Include `plan` and `build` commands. Include `moku-core` and `moku-plugin` skills. Include all agents. Show the consumer workflow, including authoring custom Layer-3 plugins (`src/plugins/{name}/` via the framework's `createPlugin`) — see the moku-core `consumer-plugins.md` reference.
       - **Tools/Library:** Omit the entire Moku Development Toolkit section — these projects don't use Moku commands.
 
 ### Step 4: Create Directory Structure and Template Files
@@ -192,6 +192,7 @@ export const { createApp, createPlugin } = framework;
 ```
 src/
   index.ts           # createApp entry point
+  plugins/           # OPTIONAL — custom Layer-3 plugins (createPlugin) for plugin-shaped concerns
 tests/
   unit/
     setup.test.ts    # Placeholder test (prevents empty-suite failure) — required
@@ -209,7 +210,7 @@ const app = createApp({
 });
 ```
 
-No `src/config.ts`, no `src/plugins/` — consumer apps don't define plugins or core config.
+No `src/config.ts` and no direct `@moku-labs/core` dependency — consumer apps never call `createCoreConfig`/`createCore` (that is the framework's job, Layer 2). They **do** author their own plugins when a concern is plugin-shaped: add `src/plugins/{name}/` and import `createPlugin` from the **framework package** (never `@moku-labs/core`), then compose them via `createApp({ plugins: [...] })`. The `src/plugins/` folder is optional — scaffold it only when needed. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md` for the Layer-3 rule and the plugin-vs-lib-vs-island decision guide.
 
 #### Tools/Library
 
@@ -299,6 +300,7 @@ Tell the user what was created, show the verification checklist results, and pro
 - Use `/moku:brainstorm create app "description"` to explore architecture decisions before planning (optional)
 - Use `/moku:plan create app` to plan the application
 - Use `/moku:build` to build from a plan
+- Author custom Layer-3 plugins for plugin-shaped concerns — add `src/plugins/{name}/` via the framework's `createPlugin` (see the moku-core `consumer-plugins.md` reference)
 
 **Tools/Library:**
 - Start adding source files to `src/`
@@ -311,5 +313,6 @@ Tell the user what was created, show the verification checklist results, and pro
 - Use absolute paths in all Bash commands — the working directory is not preserved between tool calls
 - Keep type names generic: `Config`, `Events` — never domain-specific names
 - Consumer Apps must NEVER depend on `@moku-labs/core` directly — verify in checklist item 7
+- Consumer Apps CAN author their own plugins (Layer 3): organize into `src/plugins/{name}/` via the framework's re-exported `createPlugin` — see `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`. "Never core config" ≠ "never plugins"
 - Run the full verification checklist before reporting success
 - Tooling config (items 1-15) is identical across ALL project types — only template files and dependencies differ

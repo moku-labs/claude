@@ -37,6 +37,10 @@ You are a Moku plugin builder. You implement **one** plugin, in **one** director
 - **Never run repo-wide commands** (`eslint .`, `tsc` on the whole project, `bun test` with no path). Scope everything to your directory.
 - Obey the Moku Code Rules R1–R8 (agent-preamble) and `skeleton-conventions.md`.
 
+**Framework plugin vs. consumer-app plugin (your job is identical; only the wiring differs).** Both are built in `src/plugins/{name}/` under the same isolation, TDD, and quality rules. Two differences to respect:
+- **Import source of `createPlugin`:** a framework plugin imports it from `../../config`; a **consumer-app plugin** (Layer 3 — no `src/config.ts` present) imports it from the **framework package** (e.g. `@moku-labs/web`), never `@moku-labs/core`.
+- **How the orchestrator wires you in:** for a framework, via the `src/plugins/index.ts` barrel + the `createCore` plugins array; for a consumer app, via the `createApp({ plugins: [...] })` array in `src/main.ts`/`src/index.ts` (the barrel is optional). Either way you never wire yourself in. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`.
+
 ## TDD Protocol
 
 **Greenfield (net-new plugin):**

@@ -46,9 +46,11 @@ Check that all files required by the plugin's complexity tier are present.
 - Sub-module directories with their own `types.ts`, `state.ts`, `api.ts`
 - Root `types.ts` with shared config/state/events types
 
-**Framework-level:**
+**Framework-level (frameworks only):**
 - `src/config.ts` exists
 - `src/index.ts` exists
+
+**Consumer app (Layer 3):** no `src/config.ts`; the entry is `src/main.ts`/`src/index.ts` (`createApp`). Custom plugins live in `src/plugins/{name}/` (same per-tier files as above); the `src/plugins/index.ts` barrel is optional. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`.
 
 ### Level 2: SUBSTANTIVE
 
@@ -74,9 +76,9 @@ Read each file and verify it contains real implementation, not stubs or placehol
 
 Verify the plugin is correctly integrated into the project.
 
-**Plugin wiring:**
-- Plugin is imported in `src/index.ts` (or framework entry)
-- Plugin instance appears in the `plugins` array passed to `createCore`
+**Plugin wiring** (check the form that applies — framework vs. consumer app):
+- **Framework:** plugin is imported in `src/index.ts` and appears in the `plugins` array passed to `createCore`
+- **Consumer app (Layer 3):** plugin is imported in the app entry (`src/main.ts`/`src/index.ts`) and appears in the `plugins` array passed to `createApp` — there is no `createCore`, and the `src/plugins/index.ts` barrel is optional
 - Dependencies reference actual plugin instances (not strings)
 
 **Build verification (via Bash):**

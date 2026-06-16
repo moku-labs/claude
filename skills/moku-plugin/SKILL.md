@@ -4,7 +4,8 @@ description: >
   Moku plugin structure and complexity tiers. Triggers on: "moku plugin structure",
   "moku plugin tier", "moku nano/micro/standard/complex plugin", "moku wiring harness",
   "moku plugin file layout", "moku plugin organization", "createPlugin structure",
-  or organizing plugin code in a Moku framework project.
+  "moku consumer plugin", "Layer-3 plugin", or organizing plugin code in a Moku
+  framework OR consumer app (Layer 3) project.
 ---
 
 # Moku Plugin Structure
@@ -18,6 +19,14 @@ Enforce strict compliance with Moku plugin structure specification. Follow all p
 ## The Rule
 
 **A plugin file is a wiring harness, not business logic.** The `index.ts` connects domain code to the system. It is NOT where you write business logic. Domain logic lives in separate files (`api.ts`, `state.ts`, `handlers.ts`).
+
+## Framework plugins vs. consumer plugins (same structure, different home)
+
+Plugins are authored at **two layers**, with identical structure, tiers, and quality bars:
+- **Framework plugins (Layer 2)** ship inside a framework. They import `createPlugin` from `../../config` and are wired via the `src/plugins/index.ts` barrel + the `createCore` plugins array.
+- **Consumer plugins (Layer 3)** are authored by an app that depends on a framework. They import `createPlugin` from the **framework package** (e.g. `@moku-labs/web`, never `@moku-labs/core`), live in the app's `src/plugins/{name}/`, and are composed via `createApp({ plugins: [...] })` (the barrel is optional). Author one for a plugin-shaped concern; keep pure helpers in `lib/` and DOM behavior in islands.
+
+Everything below (tiers, file layout, the wiring-harness rule) applies to **both**. Full Layer-3 guidance + the plugin-vs-`lib`-vs-island decision guide: [`consumer-plugins.md`](../moku-core/references/consumer-plugins.md).
 
 ## CRITICAL: No Explicit Generics on createPlugin
 

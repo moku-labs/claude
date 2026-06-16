@@ -155,9 +155,10 @@ Read all relevant source files to understand what's available.
 #### Step 3: Gap Analysis
 
 Compare requirements against available plugins:
-- Which requirements are covered by existing plugins?
-- Which requirements need new consumer-side plugins?
-- Which requirements need framework extensions?
+- Which requirements are covered by existing plugins (config / `pluginConfigs` only)?
+- Which requirements are **plugin-shaped** and need a new **custom Layer-3 plugin**? A requirement is plugin-shaped when it needs a typed `app.<x>.method()` API, custom events, lifecycle (`onInit`/`onStart`), shared cross-cutting state, or a dependency on another plugin. Author these in `src/plugins/{name}/` via the framework's `createPlugin` — see `consumer-plugins.md`.
+- Which requirements are better as a `lib/` helper (pure build-time data access / pure functions) or an island (client-only DOM behavior)? Do NOT turn these into plugins.
+- Which requirements need framework extensions (i.e. belong in Layer 2, not this app)?
 - Are there missing dependencies?
 
 #### Step 4: Design the Application
@@ -165,7 +166,7 @@ Compare requirements against available plugins:
 1. **Plugin Composition** — Which plugins to include, in what order
 2. **Config Overrides** — What global config values to set
 3. **Plugin Configs** — Per-plugin configuration
-4. **Custom Plugins** — Consumer-side plugins needed (with full specs)
+4. **Custom Plugins** — The plugin-shaped concerns from Step 3, each authored as a custom Layer-3 plugin in `src/plugins/{name}/` (full specs; tier per the moku-plugin skill). Keep pure helpers in `lib/` and DOM behavior in islands — see `consumer-plugins.md`
 5. **Entry Point** — `createApp` call structure
 
 #### Step 5: Plan Documentation

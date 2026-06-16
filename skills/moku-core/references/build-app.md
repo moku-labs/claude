@@ -20,11 +20,13 @@ Check that the framework package is available:
 
 ## Step 3: Build Custom Plugins
 
-If the plan includes custom consumer-side plugins, build each one following the **Plugin Build** process (see `build-plugin.md` reference).
+Layer-3 consumer apps author their own plugins for plugin-shaped concerns (a typed `app.<x>.method()` API, custom events, lifecycle, shared state, or a dependency on another plugin). If the plan includes custom plugins, build each one in `src/plugins/{name}/` following the **Plugin Build** process (see `build-plugin.md` reference), importing `createPlugin` from the **framework package** (never `@moku-labs/core`).
 
 Each plugin must follow the moku-plugin skill's complexity tiers. Full JSDoc, unit tests, integration tests.
 
 For multiple custom plugins, use wave analysis (same as framework build) to identify parallel opportunities.
+
+Not every consumer concern is a plugin — pure build-time data access belongs in `lib/`, and client-only DOM behavior belongs in an island (web). See the `consumer-plugins.md` reference for the plugin-vs-`lib`-vs-island decision guide and the Layer-3 wiring rules (no `src/config.ts`; compose via `createApp({ plugins: [...] })`; the `src/plugins/index.ts` barrel is optional at Layer 3).
 
 ## Step 4: Create Entry Point
 

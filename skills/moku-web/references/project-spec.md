@@ -24,8 +24,11 @@ to your project type (see the §13 project-type matrix); the skeleton is the sam
 > frontend," anything from a one-file landing page to an interactive app is in scope.
 
 > **You are building a Layer-3 app.** Depend on **`@moku-labs/web` only** (it pins
-> `@moku-labs/core` itself — never add a direct core dep). You never write core config or plugins;
-> you call `createApp(...)` and supply `pluginConfigs`. Entry + route wiring detail lives in
+> `@moku-labs/core` itself — never add a direct core dep). You never write core config
+> (`createCoreConfig`/`createCore` belong to the framework, Layer 2); you call `createApp(...)` and
+> supply `pluginConfigs`. You **may** author your own custom plugins via the framework's re-exported
+> `createPlugin` (in `src/plugins/`) for plugin-shaped concerns — see
+> [consumer-plugins.md](../../moku-core/references/consumer-plugins.md). Entry + route wiring detail lives in
 > [layout-structure.md](layout-structure.md); this file is the surrounding skeleton + rules.
 
 ## 1. Architecture model
@@ -65,6 +68,7 @@ one-page marketing site to a multi-locale app with hundreds of routes.
 │  ├─ components/              # pure Preact *.tsx + colocated *.css (@scope)
 │  ├─ islands/                 # vanilla-TS client behavior + index.ts registry (if any JS)
 │  ├─ lib/                     # pure, browser-safe helpers (data access, head, urls, …)
+│  ├─ plugins/                 # OPTIONAL — custom Layer-3 plugins (createPlugin); compose into app.ts/spa.tsx — see consumer-plugins.md
 │  ├─ styles/                  # global CSS (@layer) + fonts — see css-architecture.md
 │  ├─ i18n/                    # OPTIONAL — Locale union + translations (multi-locale sites)
 │  └─ og/                      # OPTIONAL — OG social-card components → build.ogImage
@@ -115,6 +119,12 @@ A moku-web project's data layer is one of three strategies — pick by project t
 In all three, **route loaders run at BUILD only** and reach sibling plugins the spec way
 (`ctx.require(plugin)`); the persisted output is fed straight back as `ctx.data` on client nav (no
 re-validation). Keep the data-access helpers in `lib/` and browser-safe (Rule R3).
+
+> **Plugin-shaped concerns go in `src/plugins/`, not `lib/`.** The data layer above (loaders + `lib/`
+> + optional `dataPlugin`) is the default for data and DOM. When a concern is genuinely plugin-shaped —
+> a typed `app.<x>.method()` API, custom events, lifecycle, shared cross-route state, or a dependency
+> on another plugin — author a **custom Layer-3 plugin** instead (via the framework's `createPlugin`).
+> See [consumer-plugins.md](../../moku-core/references/consumer-plugins.md) for the decision guide.
 
 ## 5. Routing patterns (general)
 
@@ -192,8 +202,10 @@ Three tiers, each guarding a different thing — applies to any project type:
 
 ## 11. RULES (MUST)
 
-- **R1 — Layer-3 only.** Depend on `@moku-labs/web` alone; never declare core config/plugins; never
-  add a direct `@moku-labs/core` dependency.
+- **R1 — Layer-3 only.** Depend on `@moku-labs/web` alone; never declare core config
+  (`createCoreConfig`/`createCore`); never add a direct `@moku-labs/core` dependency. Authoring your
+  own custom plugins via the framework's re-exported `createPlugin` (in `src/plugins/`) IS allowed for
+  plugin-shaped concerns — see [consumer-plugins.md](../../moku-core/references/consumer-plugins.md).
 - **R2 — One route table.** All routes register via `pluginConfigs.router.routes` (no imperative
   `set()`); `routes.tsx` is shared by build + SPA + links.
 - **R3 — Client bundle stays node-free.** `routes.tsx` + `lib/**` (browser graph) must NOT import
@@ -259,7 +271,9 @@ The structure (§2) and rules (§11) are constant; what changes is the data laye
 5. **UI** — `layouts/`, `components/` (+ CSS), `pages/`, `islands/` (+ registry).
 6. **Routes** — `src/routes.tsx` (`defineRoutes` + `urls`) wiring loaders to `lib/`.
 7. **Compositions** — `src/spa.tsx` (browser) + `src/app.ts` (`makeApp(stage)` + `app`), composing
-   the plugins your project type needs (§13) + `build.ogImage` if used.
+   the plugins your project type needs (§13) + `build.ogImage` if used. **Optional:** author any custom
+   Layer-3 plugins in `src/plugins/{name}/` (via the framework's `createPlugin`) for plugin-shaped
+   concerns and compose them here — see [consumer-plugins.md](../../moku-core/references/consumer-plugins.md).
 8. **Static host files** — `src/404.html`, `public/_headers`, favicons/manifest.
 9. **Scripts** — `scripts/{build,serve,preview,deploy}.ts` (thin `app.cli.*`).
 10. **Tests** — fixtures + unit/integration/e2e. `bun run build` to verify; ship via

@@ -2,6 +2,45 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.3 (2026-06-16)
+
+**Encourage & organize Layer-3 (consumer) plugin creation.** The toolkit contradicted the Moku Core
+spec on consumer plugins: the spec treats consumer-authored plugins as first-class Layer 3 ("what
+custom plugins consumers write themselves — that's Layer 3"), yet `commands/init.md` and the `moku-web`
+project spec **forbade** `src/plugins/` in a consumer app while `build-app.md` and the `moku-web` skill
+simultaneously **taught** authoring them with `createPlugin`. Root cause: "no core config" and "no
+plugins" were flattened into one rule — only the first is true. This release fixes the contradiction
+everywhere and tunes the agents so consumer-app plugins are no longer false-blocked. Framing is
+**balanced**: consumer plugins are first-class, but a plugin-vs-`lib`-vs-island decision guide keeps web
+apps from being over-pluginized. The single source of truth is the new `consumer-plugins.md`.
+
+### Added
+- **`skills/moku-core/references/consumer-plugins.md`** — new shared reference (source of truth) for
+  Layer-3 consumer plugin authorship: the DOES/does-NOT rule (author via the framework's re-exported
+  `createPlugin`; never `createCoreConfig` or a direct `@moku-labs/core` dep), where consumer plugins
+  live and wire, the plugin-vs-`lib`-vs-island decision guide, web composition nuance, and quality bar.
+- **Optional `src/plugins/` in the web project structure** — added to the `moku-web` project-spec
+  directory tree (§2) and the `moku-web` SKILL.md Project Structure quick-view.
+
+### Changed
+- **`commands/init.md`** — Consumer App (Layer 3) tree gains an optional `src/plugins/`; the "no
+  plugins" prohibition is split into the correct rule (no `src/config.ts` / `createCoreConfig` / direct
+  `@moku-labs/core` dep — but consumer plugins ARE allowed); next-steps + Important section reference
+  the new doc.
+- **`skills/moku-web/references/project-spec.md`** — §1 architecture model, R1, §4 data layer, and §14
+  scaffold sequence corrected: authoring custom plugins via the framework's `createPlugin` is allowed
+  for plugin-shaped concerns (loaders/`lib`/islands remain the default for data + DOM).
+- **`skills/moku-core/references/build-app.md`** & **`plan-stages.md`** — custom plugins framed as a
+  first-class plugin-shaped decision with the decision guide; both cross-reference `consumer-plugins.md`.
+- **`skills/moku-plugin/SKILL.md`** — broadened triggers (consumer / Layer-3 plugins) + new
+  "Framework plugins vs. consumer plugins" section.
+- **Agents tuned to stop false-blocking consumer apps** — `architecture-validator` (project-context
+  detection; the `src/plugins/index.ts` barrel BLOCKER is now framework-only), `verifier` (consumer
+  wiring via `createApp`; no required `src/config.ts`/barrel), `builder` (consumer wiring path + import
+  source), `plugin-spec-validator` (barrel optional at Layer 3), `plan-checker` (app-plan plugin-shaped
+  coverage check).
+- Version bumped to 0.47.3 in plugin.json and marketplace.json.
+
 ## 0.47.2 (2026-06-16)
 
 **Sync `moku-web` skill to `@moku-labs/web@1.12.3`.** Web 1.12.3 is a dependency-only release that

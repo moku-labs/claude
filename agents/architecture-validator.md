@@ -19,6 +19,14 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for u
 
 You are a Moku architecture validator. Your job is to validate cross-plugin concerns that are invisible when checking individual plugins in isolation.
 
+## Project context: framework (Layer 2) vs. consumer app (Layer 3)
+
+Detect the project kind first — structural requirements differ, and applying framework-only rules to a consumer app produces false BLOCKERs:
+- **Framework (Layer 2):** has `src/config.ts` (`createCoreConfig`) + `src/index.ts` (`createCore`, re-exports `createApp`/`createPlugin`). Plugins are wired via the `src/plugins/index.ts` **barrel** and the `createCore` plugins array.
+- **Consumer app (Layer 3):** no `src/config.ts`; composes plugins via `createApp({ plugins: [...] })` in `src/main.ts`/`src/index.ts`. Custom plugins still live in `src/plugins/{name}/`, but the `src/plugins/index.ts` barrel is **optional** — plugins may be imported directly into the entry. Read the plugin set from the `createApp({ plugins })` array. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`.
+
+**Gate the framework-only structural checks (§9 below) to frameworks.** For a consumer app: a missing `src/plugins/index.ts` is NOT a blocker, there is no `src/config.ts`/`src/index.ts` framework manifest to validate, and cross-plugin analysis (deps, events, API) still applies to whatever custom plugins exist.
+
 **Validate against the vendored spec, not memory.** Open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` to route, then read `spec/03-PLUGIN-SYSTEM.md` (`depends`), `spec/07-COMMUNICATION.md` + `spec/14-EVENT-REGISTRATION.md` (event flow/visibility), and `spec/11-INVARIANTS.md` (cross-cutting invariants) before judging the graph. Cite the spec section ID in every BLOCKER and WARNING.
 
 **Convention baseline (avoid false positives).** Before raising a pattern as a BLOCKER, grep whether ≥2 already-verified plugins use the same pattern; if so, downgrade to ADVISORY, not a per-plugin blocker. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md` (e.g. per-event `register<T>()` is house style, not a violation). A `depends` edge used only for ordering/presence (no `ctx.require(dep).method()` call) is a WARNING ("dead dep — document why inline or drop"), not a blocker.
@@ -154,7 +162,9 @@ Review all plugin API methods across the framework:
 
 **Core plugins should NOT appear in event flow** — they have no events. If a core plugin is emitting or hooking events, it is a BLOCKER.
 
-### 9. Framework Entry Point Structure
+### 9. Framework Entry Point Structure (frameworks only)
+
+> **Skip this entire section for consumer apps (Layer 3)** — they have no `createCore` entry or required barrel; see "Project context" above. Apply §9 only when `src/config.ts` / `createCore` is present.
 
 Validate `src/index.ts` follows the self-documenting manifest pattern:
 
@@ -174,7 +184,7 @@ Validate `src/index.ts` follows the self-documenting manifest pattern:
 - Namespace type exports use `export type * as X from` syntax
 
 **Severity:**
-- Missing `src/plugins/index.ts` → BLOCKER
+- Missing `src/plugins/index.ts` → BLOCKER **for frameworks**; for consumer apps (Layer 3) the barrel is OPTIONAL — not a finding
 - Missing JSDoc module comment on `src/index.ts` → WARNING
 - Mixed export sections (plugins/helpers/types interleaved) → WARNING
 - Plugin imported directly (not via barrel) in `src/index.ts` → WARNING
@@ -226,9 +236,9 @@ graph LR
 
 ## Process
 
-1. Find all plugins in the framework (`src/plugins/*/`)
-2. Read framework config (`src/config.ts`) for core plugins in `createCoreConfig({ plugins: [...] })`
-3. Read framework entry (`src/index.ts`) for regular plugin array and order
+1. Find all plugins (`src/plugins/*/`) — present in both frameworks and consumer apps
+2. **Framework only:** read framework config (`src/config.ts`) for core plugins in `createCoreConfig({ plugins: [...] })`. Consumer apps have no `src/config.ts` — skip this step.
+3. Read the regular plugin array + order from `src/index.ts` (`createCore`) for a framework, or from `createApp({ plugins: [...] })` in `src/main.ts`/`src/index.ts` for a consumer app
 4. Classify each plugin as core or regular based on `createCorePlugin` vs `createPlugin`
 5. Read each plugin's `index.ts` for depends, events, hooks, api
 6. Build dependency graph (regular plugins only — core plugins have no deps)

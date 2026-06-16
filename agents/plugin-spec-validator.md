@@ -128,7 +128,7 @@ Scan ALL plugins in the framework/project and flag groups that should be merged 
 
 ### 15. Barrel Export Structure
 
-If `src/plugins/index.ts` exists, validate:
+The `src/plugins/index.ts` barrel is **required for frameworks** but **optional for consumer apps** (Layer 3), where plugins may be composed directly in `createApp({ plugins: [...] })` — its absence is not a finding there (see `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`). If `src/plugins/index.ts` exists, validate:
 
 **Required sections (in order):**
 1. `// ─── Plugin Instances ─────` — only `export { name }` lines, alphabetical

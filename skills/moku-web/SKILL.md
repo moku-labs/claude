@@ -156,6 +156,7 @@ src/
     tokens.css        # Design system tokens
     reset.css, base.css, components.css, ...
   lib/               # Pure browser-safe helpers (content access, head builders, urls, themes)
+  plugins/           # OPTIONAL — custom Layer-3 plugins (createPlugin) for plugin-shaped concerns
   i18n/              # Locales + translations (pluginConfigs.i18n)
   og/                # OG card components (template/default-card/chrome) → build.ogImage
   config.ts          # Site identity constants (SITE)
