@@ -65,7 +65,7 @@ jobs:
           persist-credentials: false
       - uses: oven-sh/setup-bun@<SHA> # v2.2.0
       - run: bun install --frozen-lockfile
-      - run: bun test
+      - run: bun run test # NOT `bun test`: Bun's native runner bleeds vitest module mocks across files
   build:
     runs-on: ubuntu-latest
     steps:
@@ -105,10 +105,14 @@ on:
   release:
     types: [published]
 
-# Scope concurrency by workflow name (see ci.yml note) so a release's reused CI run
-# is in the "Release" group and a concurrent push to main can't cancel its checks.
+# Distinct literal group ("publish-…") — NOT github.workflow. The reused ci.yml (the `check`
+# job below) computes its concurrency from the CALLER's github.workflow = "Release", i.e.
+# "Release-<ref>". If this parent run also used "Release-<ref>" it would hold that slot for its
+# whole duration while the child `check` waits for the same slot → deadlock, and the reusable
+# workflow never starts (0 jobs, run fails). A distinct "publish-<ref>" group avoids the
+# collision; the child stays in "Release-<ref>", still separate from standalone CI's "CI-<ref>".
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: publish-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
@@ -142,8 +146,8 @@ jobs:
         run: |
           set -euo pipefail
           # package.json on a protected branch goes stale; the latest tag is the truth.
-          base="$(git tag --list 'v*' --sort=-v:refname | head -1)"
-          base="${base#v}"
+          prev="$(git tag --list 'v*' --sort=-v:refname | head -1)" # previous release tag, or "" on the first release
+          base="${prev#v}"
           base="${base:-0.0.0}"
           # Set package.json to the base, then bump — no git tag, no push from npm.
           npm version "$base" --no-git-tag-version --allow-same-version >/dev/null
@@ -151,6 +155,7 @@ jobs:
           new="${new#v}"
           echo "version=$new" >> "$GITHUB_OUTPUT"
           echo "tag=v$new" >> "$GITHUB_OUTPUT"
+          echo "prev_tag=$prev" >> "$GITHUB_OUTPUT" # explicit changelog base for --notes-start-tag
       - name: Commit the bump locally and push the TAG ONLY
         env:
           TAG: ${{ steps.bump.outputs.tag }}
@@ -166,6 +171,7 @@ jobs:
       - name: Create the GitHub release with native notes
         env:
           TAG: ${{ steps.bump.outputs.tag }}
+          PREV_TAG: ${{ steps.bump.outputs.prev_tag }}
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
@@ -173,7 +179,20 @@ jobs:
           # attacker-influenceable commit text). --verify-tag fails closed if the tag is missing.
           # A release created with the default GITHUB_TOKEN does NOT re-fire release:published,
           # so the publish job below runs inline in this same run for the dispatch path.
-          gh release create "$TAG" --generate-notes --verify-tag --title "$TAG"
+          # Changelog base: pass the previous tag EXPLICITLY. The tag-only model tags each version
+          # on a separate bump commit that is NOT an ancestor of the next, so auto base-detection
+          # fails and lists the FULL history (cumulative notes). --notes-start-tag forces a correct
+          # delta; omit it on the first release (no previous tag).
+          notes=(--generate-notes)
+          if [ -n "$PREV_TAG" ]; then
+            notes+=(--notes-start-tag "$PREV_TAG")
+          fi
+          # A prerelease tag (contains '-', e.g. v1.2.3-rc.0) must be flagged --prerelease so GitHub
+          # does not surface an rc as the repo's "Latest release"; stable tags get --latest.
+          case "$TAG" in
+            *-*) gh release create "$TAG" "${notes[@]}" --verify-tag --title "$TAG" --prerelease --latest=false ;;
+            *)   gh release create "$TAG" "${notes[@]}" --verify-tag --title "$TAG" --latest ;;
+          esac
 
   # 3. Build + package the tarball WITHOUT the publish token in scope (optional hardening).
   package:
@@ -197,8 +216,11 @@ jobs:
       - run: bun run build
       - run: bun run validate
       - name: Pack the publishable tarball
-        run: npm pack --pack-destination dist-pack
-      - uses: actions/upload-artifact@<SHA> # v4.4.0
+        # `npm pack --pack-destination` does NOT create the target dir (errors ENOENT on write).
+        run: |
+          mkdir -p dist-pack
+          npm pack --pack-destination dist-pack
+      - uses: actions/upload-artifact@<SHA> # v7.0.1
         with:
           name: npm-package
           path: dist-pack/*.tgz
@@ -226,7 +248,7 @@ jobs:
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
-      - uses: actions/download-artifact@<SHA> # v4.1.8
+      - uses: actions/download-artifact@<SHA> # v8.0.1
         with:
           name: npm-package
           path: dist-pack
@@ -258,7 +280,9 @@ jobs:
           # Prereleases (a '-' in the version) go to dist-tag 'next' so they never clobber 'latest'.
           case "$pkg" in *-*) tag=next ;; *) tag=latest ;; esac
           # Trusted Publishing: tokenless, provenance auto-attached. No NODE_AUTH_TOKEN needed.
-          npm publish "dist-pack"/*.tgz --tag "$tag" --access public
+          # Leading "./" is REQUIRED: a bare "dist-pack/foo.tgz" is parsed by npm as a GitHub
+          # "owner/repo" spec (it tries `git ls-remote` and fails), not a local file.
+          npm publish ./dist-pack/*.tgz --tag "$tag" --access public
 ```
 
 ## Non-negotiable security + correctness rules
@@ -271,8 +295,10 @@ jobs:
    ```
    Replace every `@<SHA>` placeholder above with the resolved 40-char SHA. Use
    Node-24-capable versions: `actions/checkout` v6+, `actions/setup-node` v6+,
-   `oven-sh/setup-bun` v2.2+. Confirm each action declares `runs.using: node24`
-   (`gh api repos/<owner>/<repo>/contents/action.yml --jq ...` or read action.yml).
+   `oven-sh/setup-bun` v2.2+, `actions/upload-artifact` v7+, `actions/download-artifact` v8+
+   (the v4 artifact actions are node20 — GitHub force-runs them on node24 and warns). Confirm
+   each action declares `runs.using: node24` (`gh api repos/<owner>/<repo>/contents/action.yml
+   --jq ...` or read action.yml).
 2. **Least privilege.** Workflow-level `contents: read`. Elevate per job:
    `contents: write` ONLY on `release`; `id-token: write` ONLY on `publish`. Set
    `persist-credentials: false` on any checkout that does not push (everything except
@@ -359,12 +385,20 @@ JSON
 - **PR head can lag the branch.** After pushing a follow-up commit to an open PR, confirm
   `gh pr view <n> --json headRefOid` caught up BEFORE merging — a merge at the stale head
   silently drops the new commit.
-- **Concurrency reuse.** Reusing ci.yml across CI and publish requires the
-  `github.workflow`-scoped concurrency group above, or a concurrent push to main can
-  cancel a release's checks.
+- **Concurrency reuse / parent-child deadlock.** ci.yml keeps a `github.workflow`-scoped
+  group so a push-to-main CI run (`CI-<ref>`) can't cancel a release's reused checks
+  (`Release-<ref>`). But publish.yml MUST use a DIFFERENT literal group (`publish-<ref>`): if
+  it also used `github.workflow` it would be `Release-<ref>` — the SAME group its reused
+  `check` computes (github.workflow = the caller) — so the parent holds the slot while the
+  child waits → deadlock, and the reusable workflow never starts.
 - **Tag-only release vs. package.json.** On a protected branch package.json `version`
   drifts behind the tags; always derive the next version from the latest tag, and treat
   package.json `version` on main as informational.
+- **Cumulative release notes.** Each version tag sits on a separate bump commit that is NOT
+  an ancestor of the next, so `gh release create --generate-notes` can't auto-detect the
+  previous tag and lists the FULL history (every release repeats all prior PRs). Pass the
+  previous tag explicitly via `--notes-start-tag` (the `prev_tag` step output) for a correct
+  delta. Flag prerelease tags `--prerelease` so an rc isn't surfaced as the repo's "Latest".
 
 ## Optional hardening (recommended, included above)
 
