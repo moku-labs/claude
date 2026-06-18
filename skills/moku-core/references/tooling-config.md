@@ -29,6 +29,9 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
     }
   },
   "files": ["dist", "LICENSE", "README.md"],
+  "repository": { "type": "git", "url": "git+https://github.com/<owner>/<repo>.git" },
+  "homepage": "https://github.com/<owner>/<repo>#readme",
+  "bugs": { "url": "https://github.com/<owner>/<repo>/issues" },
   "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.3",
@@ -63,6 +66,11 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
   }
 }
 ```
+
+> **`repository` is required for npm provenance.** Publishing with provenance (automatic under
+> OIDC Trusted Publishing — see [ci-release.md](ci-release.md)) fails `E422` unless `package.json`
+> declares a `repository.url` matching the GitHub repo. Replace `<owner>/<repo>` with the real
+> slug (e.g. `moku-labs/worker`); drop `homepage`/`bugs` if unused, but keep `repository`.
 
 ## biome.json
 

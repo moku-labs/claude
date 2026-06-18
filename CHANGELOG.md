@@ -2,6 +2,38 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.5 (2026-06-18)
+
+**Fix the CI/release template — 8 publish-flow bugs every generated framework was hand-patching.**
+The `ci-release.md` workflow template and the `tooling-config.md` package.json scaffold shipped bugs
+that each Layer-2 framework (`@moku-labs/web`, `@moku-labs/worker`) re-hit and fixed by hand when first
+running its release pipeline. Fixed at the source so `/moku:build` Step 5.10 emits correct workflows.
+All fixes were proven end-to-end in `moku-labs/worker` (published `@moku-labs/worker@0.1.1` via OIDC
+Trusted Publishing with SLSA provenance, plus `0.1.2-rc.0` to `next`, with correct per-release notes).
+
+### Fixed
+- **`skills/moku-core/references/ci-release.md`**
+  - `ci.yml`: `bun test` → `bun run test` — `bun test` invokes Bun's native runner, which bleeds
+    vitest module mocks across files (phantom failures); the project's `test` script is `vitest run`.
+  - `publish.yml` concurrency: the reused `ci.yml` (`check`) derives its group from the **caller's**
+    `github.workflow` (= "Release"), colliding with the parent's `Release-<ref>` group → the parent
+    holds the slot while the child `check` waits → deadlock, reusable workflow never starts. Use a
+    distinct `publish-<ref>` group.
+  - Release notes: the tag-only model tags each version on a separate bump commit that is **not** an
+    ancestor of the next, so `gh release create --generate-notes` can't auto-detect the previous tag
+    and lists the **full** history (cumulative notes — every release repeats all prior PRs). Capture
+    `prev_tag` and pass `--notes-start-tag` for a correct delta.
+  - Prerelease tags get `--prerelease --latest=false` so an `rc` isn't surfaced as the repo's "Latest
+    release"; stable tags get `--latest`.
+  - `package` job: `mkdir -p dist-pack` before `npm pack` (`--pack-destination` does not create the dir).
+  - `publish` job: `npm publish ./dist-pack/*.tgz` — a bare `dist-pack/x.tgz` is parsed by npm as a
+    GitHub `owner/repo` spec (`git ls-remote` failure); the leading `./` forces local-file resolution.
+  - Artifact actions off node20: `upload-artifact` v4.4.0 → v7.0.1, `download-artifact` v4.1.8 → v8.0.1
+    (both node24, `@actions/artifact` v6 backend); rule #1 + the concurrency/notes gotchas updated.
+- **`skills/moku-core/references/tooling-config.md`** — add `repository`/`homepage`/`bugs` to the
+  package.json scaffold; `repository.url` is **required for npm provenance** (publishing with
+  provenance fails `E422` without it).
+
 ## 0.47.4 (2026-06-16)
 
 **Sync the `moku-web` skill to `@moku-labs/web@1.12.4`.** web 1.12.4 sources its `log` and `env`
