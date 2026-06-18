@@ -330,6 +330,39 @@ jobs:
    empty ref. Stable versions → `latest` dist-tag; prerelease (`-` in version) → `next`,
    so prereleases never clobber `latest`.
 
+## First-time setup (one-time, manual — the npm side)
+
+The workflows above publish via OIDC Trusted Publishing, which **cannot be configured for a
+package that does not exist yet**. So the FIRST publish is manual; the workflow takes over for
+every release after. Do this once per package, in order:
+
+1. **npm org/scope.** Ensure the scope's org exists on npmjs.com (e.g. `@your-scope`) and you
+   have publish rights. `npm whoami` to confirm you're logged in (`npm login` if not).
+2. **Bootstrap publish (manual, authenticated).** From a clean build, publish the first version
+   yourself — this creates the package on the registry:
+   ```bash
+   bun run build
+   npm publish --access public   # add --otp=<code> if your npm account has 2FA
+   ```
+   This first publish has **no provenance** — expected; OIDC publishes afterward attach it.
+3. **Tag the bootstrap version.** The release workflow derives the next version from the latest
+   `v*` tag; without this it starts from `0.0.0` and would regress `latest`:
+   ```bash
+   git tag vX.Y.Z && git push origin vX.Y.Z   # X.Y.Z = the version you just published
+   ```
+4. **Register the Trusted Publisher.** npmjs.com → the package → **Settings → Trusted Publisher
+   → GitHub Actions**: Organization/User = `<owner>`, Repository = `<repo>`, **Workflow filename
+   = `publish.yml`**, Environment = (blank). This is what lets the workflow publish tokenlessly —
+   until it is registered, the `publish` job fails auth.
+5. **package.json `repository.url`** must match the repo (it's in the scaffold) — required for
+   provenance, else publish fails `E422`.
+6. **Branch protection.** Apply the repo ruleset (next section) so the tag-only release flow is
+   safe on a protected `main`.
+
+After this, every release is one action — **Actions → Release → Run workflow** (pick
+`patch`/`minor`/`major`/`prerelease`), or `gh workflow run publish.yml -f release_type=patch
+--ref main`. No tokens; provenance is automatic; prereleases go to the `next` dist-tag.
+
 ## Branch protection (repo ruleset — apply via `gh api`, not a workflow)
 
 This is a repository ruleset, not CI. Apply once:
