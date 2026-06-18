@@ -2,6 +2,24 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.7 (2026-06-19)
+
+**Hard-block `NPM_TOKEN` for npm publish.** 0.47.5/0.47.6 made the OIDC Trusted Publishing flow the
+default and documented its setup — but nothing *stopped* an agent that skipped `ci-release.md` from
+reinventing the insecure token-based `release.yml` from memory (it happened in the field). The
+guidance existed; it wasn't unmissable. This release makes the prohibition explicit and scannable so
+the wrong path can't be reached by accident.
+
+### Changed
+- **`skills/moku-core/references/ci-release.md`** — added a top-of-file ⛔ banner: NEVER use
+  `NPM_TOKEN`/`NODE_AUTH_TOKEN` to publish, with the two reasons it's wrong (insecure long-lived
+  secret next to the publish step; and it attaches no provenance / bypasses the Trusted Publisher so
+  it doesn't even work for this flow) and the one correct path (the `publish.yml` OIDC job). Rule 4 in
+  the non-negotiable rules now names the prohibition explicitly.
+- **`skills/moku-core/references/build-final.md`** — Step 5.10's npm-publish block now opens with a ⛔
+  STOP callout: open and apply `ci-release.md` verbatim, do NOT generate publish CI from memory, and
+  never write `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`.
+
 ## 0.47.6 (2026-06-18)
 
 **Document the one-time npm-side setup for OIDC Trusted Publishing.** 0.47.5 fixed the generated

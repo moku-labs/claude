@@ -9,6 +9,24 @@ workflow.
 Apply the rationale — these rules exist because the naive form has caused real
 compromises and silent release bugs. Don't cargo-cult; understand each rule.
 
+> ## ⛔ NEVER use `NPM_TOKEN` / `NODE_AUTH_TOKEN` to publish — this is the #1 wrong pattern
+>
+> If you are about to write `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}` (or any `npm publish` that
+> reads a long-lived npm token), **STOP — that workflow is wrong and must not ship.** Publishing in
+> this template is **tokenless OIDC Trusted Publishing** (`id-token: write` on the `publish` job,
+> nothing else). A token-based publish is rejected on two counts:
+> 1. **Insecure** — a long-lived, exfiltratable secret sitting next to the publish step (and, if build
+>    runs in the same job, exposed to every dependency's postinstall). The whole point of the
+>    `package`/`publish` split + OIDC is that there is *no* token to steal.
+> 2. **It won't even work for this flow** — provenance attestation requires the OIDC `id-token`, and
+>    npm Trusted Publishing matches the workflow filename in the OIDC claim. A `NODE_AUTH_TOKEN`
+>    publish attaches **no provenance** and bypasses the Trusted Publisher you registered.
+>
+> There is exactly ONE correct path: the `publish.yml` below. Do **not** hand-roll an alternative, do
+> **not** add an `NPM_TOKEN` repo secret, and if you find one in an existing repo, delete it. If you
+> skipped this file and reached for a token from memory: that is the exact mistake this banner exists
+> to stop — read the `publish.yml` job (§"publish") and copy it verbatim.
+
 ## Shape: exactly TWO workflow files
 
 Keep it minimal — two files, no third workflow.
@@ -306,7 +324,10 @@ jobs:
 3. **No untrusted data in any `run:` block.** Pass `${{ inputs.* }}`, tag names, refs,
    and tokens through `env:` and read them as `$VAR`. Zero `${{ }}` inside shell — this
    is the script-injection class and has caused real compromises.
-4. **npm Trusted Publishing via OIDC** (tokenless, provenance auto-attached). npm matches
+4. **npm Trusted Publishing via OIDC** (tokenless, provenance auto-attached). **NEVER an
+   `NPM_TOKEN`/`NODE_AUTH_TOKEN` secret** — see the ⛔ banner at the top of this file; a
+   token-based publish is both insecure and incompatible with provenance + Trusted Publishing.
+   The `publish` job carries `id-token: write` and nothing else. npm matches
    the **top-level workflow filename** in the OIDC claim, so keep `npm publish` INLINE in
    `publish.yml` (NOT in a reusable sub-workflow) and register only `publish.yml` on
    npmjs.com. Do NOT `npm install -g npm@latest` in the credentialed step — rely on the

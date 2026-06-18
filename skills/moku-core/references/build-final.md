@@ -311,6 +311,12 @@ Add a coverage step that runs `bun run test:coverage` and fails if coverage drop
 
 **npm Publish (Layer-2 framework package):**
 
+> ⛔ **STOP — open [ci-release.md](ci-release.md) and apply it verbatim. Do NOT generate publish CI
+> from memory, and NEVER use an `NPM_TOKEN`/`NODE_AUTH_TOKEN` secret.** Publishing is tokenless OIDC
+> Trusted Publishing only — a token-based `npm publish` is insecure AND attaches no provenance / fails
+> the Trusted Publisher match. If you catch yourself writing `NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}`,
+> that's the exact mistake the spec exists to prevent.
+
 For a framework package published to npm, do NOT scaffold a single ad-hoc `release.yml`.
 Generate the **two-workflow flow** — `ci.yml` (parallel lint/types/test/build, reusable via
 `workflow_call`) + `publish.yml` (one release+publish workflow, OIDC Trusted Publishing,
