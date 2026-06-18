@@ -320,6 +320,13 @@ least-privilege per-job permissions, the no-script-injection `run:` rule, native
 notes, the branch-protection ruleset, and the acceptance checks. Apply it verbatim;
 resolve each `@<SHA>` placeholder with `gh api repos/<o>/<r>/commits/<tag> --jq .sha`.
 
+**After generating the workflows, tell the user the one-time npm setup** — it cannot be
+automated (see ci-release.md "First-time setup"): the npm org/scope must exist; do a manual
+**bootstrap publish** of the first version (OIDC Trusted Publishing can't be configured for a
+package that doesn't exist yet); **tag** that version; then **register the Trusted Publisher**
+on npmjs.com (the package → Settings → Trusted Publisher → GitHub Actions, repo + `publish.yml`).
+Until the Trusted Publisher is registered, the `publish` job fails auth.
+
 **GitHub Releases** (added to `release.yml`):
 Add a step using `softprops/action-gh-release` that creates a GitHub Release from the tag, attaching the changelog entry.
 

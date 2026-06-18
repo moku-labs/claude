@@ -2,6 +2,24 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.47.6 (2026-06-18)
+
+**Document the one-time npm-side setup for OIDC Trusted Publishing.** 0.47.5 fixed the generated
+workflows, but the template never told framework authors the *manual* prerequisites — so the first
+`publish.yml` run fails auth until they're done. Add the missing human runbook.
+
+### Added
+- **`skills/moku-core/references/ci-release.md`** — a "First-time setup (one-time, manual — the
+  npm side)" section: confirm the npm org/scope; do a manual **bootstrap publish** of the first
+  version (OIDC Trusted Publishing can't be configured for a package that doesn't exist yet, so
+  the first publish must be manual + authenticated); **tag** that version (the release workflow
+  derives the next version from the latest `v*` tag); and **register the Trusted Publisher** on
+  npmjs.com (the package → Settings → Trusted Publisher → GitHub Actions, repo + `publish.yml`).
+
+### Changed
+- **`skills/moku-core/references/build-final.md`** — Step 5.10 now instructs the build to surface
+  that one-time npm setup to the user immediately after generating the workflows.
+
 ## 0.47.5 (2026-06-18)
 
 **Fix the CI/release template — 8 publish-flow bugs every generated framework was hand-patching.**
