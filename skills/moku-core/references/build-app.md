@@ -81,7 +81,51 @@ Writing → Test Execution), but scope scenarios to THIS app's user journeys: bo
 (e.g. for a web app: load a route → render → navigate → handle an event end-to-end), no mocks.
 Tests go to `tests/integration/`. Run `bun run test`; route failures to gap closure (max 2 rounds).
 
-## Step 7: README generation / update
+## Step 7: Runtime smoke test — boot the real artifact (delivery gate)
+
+Static validation (Step 5) and integration tests (Step 6) run against **mocked / fake bindings** — they
+prove the code is internally consistent, not that the app actually boots. An app can pass every test and
+still fail on first run: an unmigrated local DB, a missing env var, bad entry wiring, an unseeded store.
+**Never report an app as ready, or show it to the user, without running the exact command the README
+tells them to run.** This is a hard delivery gate, not an optional check.
+
+Mandatory for any app that produces a runnable artifact (HTTP server, Cloudflare Worker, CLI, web dev
+server). Skip only for a pure library with no run command (say so explicitly in the report).
+
+1. **Find the documented run command.** Read `package.json` scripts and the README quickstart. The first
+   command a fresh user runs is the contract — usually `bun run dev` (fallback `start`).
+
+2. **Run it from a clean state.** Everything a fresh clone needs to run (DB schema, migrations, seed data,
+   generated files) must live *inside* the run command — never as a side instruction the user can miss. To
+   prove that, run the smoke test from a clean state (remove local/ephemeral resource state first — e.g. a
+   Cloudflare app's `.wrangler/state`). If the app only works after a manual step, that manual step is a
+   bug: fold it into the run script (or a script it chains) and re-test.
+
+3. **Boot and assert the primary surface responds** (adapt to app type):
+   - **Worker / HTTP server:** start the dev server in the background, wait until it accepts connections,
+     hit its primary route(s), and assert a success status — **not** a 5xx. A 500 on the first real
+     request is a failed gate even if every unit test passed. Stop the server afterward.
+   - **Web SPA (no API):** start the dev server and assert the root document serves `200`.
+   - **CLI:** invoke the built binary with a smoke command (`--help`, `--version`, or a no-op subcommand)
+     and assert exit 0.
+
+4. **Cloudflare Worker apps (D1 / KV / R2 / Queues / DO) — the mocked-test blind spot.** Integration tests
+   use fake bindings, so a missing local **D1 migration** is invisible to them yet fatal at runtime
+   (`D1_ERROR: no such table: …` → 500). For any app with a `d1_databases` binding and a `migrations/` dir,
+   the `dev` script MUST apply migrations to the local DB before `wrangler dev`:
+   ```jsonc
+   "migrate:local": "wrangler d1 migrations apply <db-name> --local",
+   "dev": "bun run build && bun run migrate:local && wrangler dev"
+   ```
+   The smoke test (step 3) must hit at least one route that **reads from D1** to prove the schema is
+   present. Apply the same reasoning to other bindings (KV/R2 seed, queue consumers).
+
+5. **On failure:** route to gap closure — fix the run script / wiring / setup — then re-run this gate. Do
+   NOT proceed until the documented run command boots and serves cleanly from a clean state.
+
+Record the result (command run, surface checked, status) in the Step 10 report.
+
+## Step 8: README generation / update
 
 Generate or update the project root `README.md` (and any per-custom-plugin READMEs) now that the app
 is built — follow `build-final.md` Step 5.6 (Root README) scoped to an app: what the app is, how to
@@ -89,7 +133,7 @@ run it (`bun run dev`/`build`/`start`), its plugin composition + config, entry p
 notes. If a `README.md` already exists (rebuild/update), refresh the changed sections rather than
 overwriting hand-written prose. Run `bun run format`.
 
-## Step 8: CI/CD, deployment & publication (user chooses)
+## Step 9: CI/CD, deployment & publication (user chooses)
 
 Apps usually ship by **deployment**, not npm publish. Run `build-final.md` Step 5.10 (CI/CD,
 Deployment & Publication Wave): present the shipping options with examples via `AskUserQuestion` and
@@ -97,19 +141,20 @@ let the user pick where/how to deploy (Cloudflare Pages/Workers, Vercel, Netlify
 container) and whether to add PR-validation CI. Recommend a deploy target for app projects. Generate
 only the selected workflows, tell the user which repo secrets to add, and validate the YAML.
 
-## Step 9: Report
+## Step 10: Report
 
 Summarize what was built:
 - Custom plugins created
 - Entry point structure
 - Validation results
-- Integration test count + coverage (Step 7)
+- Integration test count + coverage (Step 6)
+- **Runtime smoke test (Step 7): the run command exercised, the surface checked, and its status** — state plainly that the app was booted and served cleanly (or, for a pure library, that the gate was skipped and why)
 - README + CI/CD / deployment generated (Steps 8–9)
 - Any issues found and fixed
 
 Update `.planning/STATE.md` with build results.
 
-(Numbering note: validation is Step 5; integration tests / README / CI/CD are Steps 6–8; this Report is the final step.)
+(Numbering note: validation is Step 5; integration tests are Step 6; the runtime smoke-test delivery gate is Step 7; README is Step 8; CI/CD is Step 9; this Report is Step 10.)
 
 ## App Quality Requirements
 
@@ -118,6 +163,7 @@ Update `.planning/STATE.md` with build results.
 - NEVER import from `@moku-labs/core` — only from the framework
 - All tests must pass
 - Biome and ESLint must pass
+- The documented run command (`bun run dev` / `start`) boots the app **from a clean state** and serves its primary surface without error (Step 7 runtime smoke test) — passing tests alone never clear this bar
 - Custom plugins follow the same quality standards as framework plugins
 
 ## Web Application

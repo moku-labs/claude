@@ -401,11 +401,13 @@ During gap closure, track fix effectiveness between rounds. If the same errors p
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-app.md` for detailed app build steps.
 
-**Summary**: Verify framework availability, build custom consumer-side plugins (if any), create entry point with createApp, validate with the full pipeline.
+**Summary**: Verify framework availability, build custom consumer-side plugins (if any), create entry point with createApp, validate with the full pipeline, then **boot the real artifact and prove it serves before declaring it done**.
 
-**Flow**: Read app spec -> Verify framework exports/plugins -> Build custom plugins (following Plugin Build) -> Create entry point (src/main.ts) -> Validate (spec, plugin-spec, jsdoc, readable-code, test, type validators) -> Report + STATE.md update.
+**Flow**: Read app spec -> Verify framework exports/plugins -> Build custom plugins (following Plugin Build) -> Create entry point (src/main.ts) -> Validate (spec, plugin-spec, jsdoc, readable-code, test, type validators) -> Full-app integration tests -> **Runtime smoke test (boot via the documented run command from a clean state; assert the primary surface serves without error)** -> README -> CI/CD -> Report + STATE.md update.
 
-**Key rule**: NEVER import from `@moku-labs/core` — only from the framework package. If web app, also enforce moku-web skill patterns.
+**Key rules**:
+- NEVER import from `@moku-labs/core` — only from the framework package. If web app, also enforce moku-web skill patterns.
+- **Never deliver or show the user an app you have not actually run.** Tests use mocked bindings and cannot catch a runtime-only failure (e.g. an unmigrated local D1 → `no such table` → 500). Step 7 (runtime smoke test in `build-app.md`) is a hard delivery gate: the documented `bun run dev` must boot from a clean state and serve its primary surface. For Cloudflare Worker apps, that means the `dev` script applies local D1 migrations before `wrangler dev`.
 
 ---
 
