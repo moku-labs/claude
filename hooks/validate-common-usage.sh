@@ -50,10 +50,12 @@ if printf '%s\n' "$CONTENT" | grep -E 'console\.(log|info|warn|error|debug|trace
   exit 2
 fi
 
-# MC3: raw process.env read. Env providers are already excluded by the path scope above.
-if printf '%s\n' "$CONTENT" | grep -q 'process\.env'; then
+# MC3: raw process.env read. Env providers are excluded by the path scope above; a
+# legitimate passthrough (e.g. spreading process.env into a spawned subprocess) may mark
+# its line with `// @env-allow`. Only block when a process.env line lacks that marker.
+if printf '%s\n' "$CONTENT" | grep -E 'process\.env' | grep -qv '@env-allow'; then
   log_diagnostic "ANTIPATTERN" "$FILE_PATH" "raw process.env — use ctx.env (MC3)"
-  echo 'BLOCKED: raw process.env detected in plugin/CLI/script source (MC3). Use ctx.env.require("NAME") (must-exist) or ctx.env.get("NAME") (optional/defaulted) from the envPlugin in @moku-labs/common. Env providers (the module backing envPlugin) are exempt. See the moku-common skill (skills/moku-common/references/conventions.md MC3).' >&2
+  echo 'BLOCKED: raw process.env detected in plugin/CLI/script source (MC3). Use ctx.env.require("NAME") (must-exist) or ctx.env.get("NAME") (optional/defaulted) from the envPlugin in @moku-labs/common. Env providers are exempt; a legitimate passthrough (e.g. spreading process.env into a spawned subprocess) may mark that line with a `// @env-allow` comment. See the moku-common skill (skills/moku-common/references/conventions.md MC3).' >&2
   exit 2
 fi
 

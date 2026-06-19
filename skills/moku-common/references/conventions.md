@@ -144,6 +144,9 @@ const port = ctx.env.get("PORT") ?? 3000;        // validated accessor with a de
 - Allowed: test files; and **env providers** — the module backing `envPlugin` (`*/env/*`, a
   `*EnvProvider` export, or `env-provider.ts`) is *where* validated access is implemented and must
   read `process.env`.
+- A legitimate **passthrough** — e.g. spreading `process.env` into a spawned subprocess (a
+  wrangler/CLI child) — may mark that line with a `// @env-allow` comment; the hook skips marked
+  lines (the same escape-hatch pattern as `// @log-sink` for MC2).
 - Reading `process.env.NODE_ENV` in a build/tooling config is a gray area — prefer `ctx.env` in app
   code, but a `*.config.ts` is already exempt (shared exception #1).
 

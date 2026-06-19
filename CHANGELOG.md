@@ -2,6 +2,13 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.48.1 (2026-06-19)
+
+**MC3 `// @env-allow` exemption.** The `validate-common-usage.sh` PreToolUse hook now honors a
+`// @env-allow` inline marker on a `process.env` line, so a legitimate passthrough (e.g. spreading
+`process.env` into a spawned subprocess) is no longer blocked — mirroring the `// @log-sink` escape
+hatch for MC2. Documented in the `moku-common` conventions reference.
+
 ## 0.48.0 (2026-06-19)
 
 **Enforce the `@moku-labs/common` family conventions, plus a new R9 type-first rule.** The Moku
