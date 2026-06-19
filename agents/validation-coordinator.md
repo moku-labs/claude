@@ -23,13 +23,14 @@ You are a Moku validation coordinator. Your job is to orchestrate the full valid
 Execute validators in this exact order — groups run in parallel, but groups are sequential:
 
 ### Group A (parallel — structure + docs)
-Spawn these 4 agents simultaneously:
+Spawn these 5 agents simultaneously:
 1. **moku-spec-validator** — specification compliance per plugin
 2. **moku-jsdoc-validator** — documentation quality per plugin
 3. **moku-plugin-spec-validator** — structure compliance per plugin
 4. **moku-readable-code-validator** — function-body readability per plugin (wall-of-text / stanza style; WARNING/INFO only — never blocks)
+5. **moku-common-validator** — family-level `@moku-labs/common` usage per plugin/CLI/script (branded CLI MC1, `ctx.log` not `console.*` MC2, `ctx.env` not `process.env` MC3)
 
-Wait for all 4 to complete. Parse their output contract JSON blocks.
+Wait for all 5 to complete. Parse their output contract JSON blocks.
 
 ### Intra-Group Conflict Resolution
 
@@ -73,7 +74,7 @@ Wait for all 3 to complete. Parse their output contract JSON blocks.
 ## Agent Spawning
 
 For each agent, provide the appropriate scope:
-- **Per-plugin validators** (spec, jsdoc, plugin-spec, test): spawn with the list of plugin directories to check
+- **Per-plugin validators** (spec, jsdoc, plugin-spec, readable-code, common, test): spawn with the list of plugin directories to check
 - **Project-wide validators** (type, architecture): spawn with the project root
 
 Use `maxParallelAgents` from project config (default: 3) to limit concurrent agents within each group.
@@ -90,6 +91,7 @@ Before spawning validators, assess project complexity to choose appropriate mode
 | moku-jsdoc-validator | sonnet | JSDoc quality per plugin | ~2-4k per plugin |
 | moku-plugin-spec-validator | sonnet | Structure compliance per plugin | ~3-5k per plugin |
 | moku-readable-code-validator | sonnet | Function-body readability per plugin (WARNING/INFO only) | ~2-4k per plugin |
+| moku-common-validator | sonnet | `@moku-labs/common` usage per plugin/CLI/script (MC1–MC3) | ~2-4k per plugin |
 | moku-test-validator | sonnet | Test quality per plugin | ~3-5k per plugin |
 | moku-type-validator | sonnet | TypeScript correctness (whole project) | ~5-10k total |
 | moku-architecture-validator | sonnet | Cross-plugin architecture (whole project) | ~8-15k total |
@@ -131,6 +133,7 @@ Aggregate into a unified report:
 | jsdoc-validator | PARTIAL | 0 | 5 |
 | plugin-spec-validator | PASS | 0 | 1 |
 | readable-code-validator | PASS | 0 | 3 |
+| common-validator | PASS | 0 | 1 |
 
 ### Group B Results
 | Validator | Verdict | Blockers | Warnings |

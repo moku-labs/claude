@@ -320,6 +320,6 @@ Before writing your report, double-check these rules — they are the most frequ
 - **Preamble R1** — every `createPlugin(` with angle brackets is a BLOCKER
 - **Preamble R4** — plugin export names SHOULD use the `<name>Plugin` suffix (spec/15 §7); flag a missing suffix as WARNING
 - **`ctx.require()` inside frequently-called API methods is a performance flag** — should be cached at factory level
-- **Helpers must be static pure functions** — no `ctx` access, no lifecycle, no side effects (see preamble R1–R8 for full list)
+- **Helpers must be static pure functions** — no `ctx` access, no lifecycle, no side effects (see preamble R1–R9 for full list)
 
 Then end your response with the output contract JSON (see agent-preamble.md).

@@ -86,7 +86,7 @@ Verify the plugin is correctly integrated into the project.
 - Run `bun run test` — report pass/fail and any failures
 - If lint or test commands don't exist, report as WARNING
 
-**Code compliance (preamble rules R1–R8):**
+**Code compliance (preamble rules R1–R9):**
 - Enforce all Moku Code Rules from agent-preamble.md — each violation is a BLOCKER
 - Additionally: no imports from `@moku-labs/core` in plugin files (except `PluginCtx`, `EmitFn` type utilities)
 

@@ -64,7 +64,7 @@ Run 4 sequential passes. Each pass focuses on ONE concern:
 - Creating closures in hot loops, unbounded state growth
 
 ### Pass 4: Maintainability (skip files with > 2 BLOCKERs from earlier passes; optional for Nano/Micro)
-- Moku anti-patterns R1–R8 (from preamble)
+- Moku anti-patterns R1–R9 (from preamble)
 - State leakage, wire factory patterns, index.ts > 30 lines
 - Cross-plugin coupling bypassing event system
 

@@ -10,6 +10,23 @@ Types flow through closures, not explicit generics:
 - `createCore(coreConfig, { plugins })` captures plugin instances
 - `createApp(options)` returns `App` with full type inference
 
+## Type Discipline (R9) — derive the shape, don't widen to `unknown`
+
+The "zero casts" goal applies to *your* code too, not just the kernel's inference. When a value's shape is **derivable from a known contract**, declare and use that type — do not annotate it `unknown` / `any` / `Record<string, unknown>` and then read it field-by-field with casts. Enforced as preamble rule **R9**.
+
+A shape is derivable when it comes from a contract you control or can read:
+
+| Source | Lazy (R9 BLOCKER) | Derive it |
+|--------|-------------------|-----------|
+| DB row — the SQL schema *is* the type | `d1.first<Record<string, unknown>>(…)` then `row.id as string` | `type BoardRow = { id: string; title: string; created_at: number }` → `d1.first<BoardRow>(…)`; mapper takes `BoardRow`; zero casts |
+| Parsed API / queue / config payload | `JSON.parse(s) as Record<string, unknown>` used directly | declare the DTO / message type; parse → validate/narrow → use as that type |
+| Param with fixed callers | `(env: Record<string, unknown>)` | name the real type — often a framework export (`WorkerEnv`, `Router.LayoutContext<RouteState>`) |
+| Homogeneous value array | `const params: unknown[]` | `const params: string[]` (or the real element union) |
+
+`unknown` is still correct at **genuine boundaries** — untrusted `JSON.parse` / `fetch` results, `catch (e)`, a generic's `<T = unknown>` default, plugin-agnostic kernel slots. The rule there: **narrow or validate immediately**, never thread `unknown` through the body or cast it straight to a concrete type. In tests, `as unknown as <ExternalType>` to build a *partial mock* of a complex SDK type (`D1Database`, a full plugin `Ctx`) is the one allowlisted cast.
+
+Rule of thumb: if you write `x.field as SomeType` more than once off the same value, you wanted a type for `x` — declare it.
+
 ## Plugin Instance Type (Internal)
 
 ```typescript

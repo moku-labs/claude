@@ -139,11 +139,12 @@ tests/
   integration/       # Framework-level integration tests only (cross-plugin scenarios)
 ```
 
-**Dependencies:** `@moku-labs/core`
+**Dependencies:** `@moku-labs/core`, `@moku-labs/common` (the shared family infrastructure — supplies `logPlugin`/`envPlugin` and the branded CLI kit; see the **moku-common** skill)
 
-**src/config.ts** — Replace `"<actual-project-name>"` with the actual project name (e.g., derive from the `package.json` `name` field, stripping any npm scope):
+**src/config.ts** — Replace `"<actual-project-name>"` with the actual project name (e.g., derive from the `package.json` `name` field, stripping any npm scope). Register `logPlugin` + `envPlugin` from `@moku-labs/common` so `ctx.log` and `ctx.env` are injected on every plugin's `ctx` (family convention — see the moku-common skill). Because explicit `Config`/`Events` type args are given, the third `CorePlugins` tuple arg is required (`skeleton-conventions.md §2`):
 ```typescript
 import { createCoreConfig } from "@moku-labs/core";
+import { logPlugin, envPlugin } from "@moku-labs/common";
 
 /**
  * Global configuration shape for the framework.
@@ -167,9 +168,13 @@ type Config = {};
 // biome-ignore lint/complexity/noBannedTypes: placeholder for user-defined events
 type Events = {};
 
-export const coreConfig = createCoreConfig<Config, Events>("<actual-project-name>", {
-  config: {}
-});
+export const coreConfig = createCoreConfig<Config, Events, [typeof logPlugin, typeof envPlugin]>(
+  "<actual-project-name>",
+  {
+    config: {},
+    plugins: [logPlugin, envPlugin], // core plugins → ctx.log + ctx.env on every ctx
+  },
+);
 
 export const { createPlugin, createCore } = coreConfig;
 ```
@@ -184,6 +189,13 @@ const framework = createCore(coreConfig, {
 
 export const { createApp, createPlugin } = framework;
 ```
+
+**Family conventions (see the moku-common skill).** Plugin/CLI/script source must use `ctx.log`
+(not raw `console.*`) for logging and `ctx.env` (not raw `process.env`) for environment access, and
+any CLI surface must render through the branded kit (`@moku-labs/common/cli` — `createBrandConsole`,
+`box`, `spinnerFrameAt`, styled `confirm`/`select`). These are enforced by the
+`validate-common-usage` hook + `moku-common-validator`. Full rules + examples:
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-common/references/conventions.md` (MC1–MC3).
 
 **IMPORTANT:** Keep type names as `Config` and `Events` — do NOT use domain-specific names like `MyFrameworkConfig` or `AppEvents`. These generic names are the convention across all Moku projects.
 
@@ -211,6 +223,8 @@ const app = createApp({
 ```
 
 No `src/config.ts` and no direct `@moku-labs/core` dependency — consumer apps never call `createCoreConfig`/`createCore` (that is the framework's job, Layer 2). They **do** author their own plugins when a concern is plugin-shaped: add `src/plugins/{name}/` and import `createPlugin` from the **framework package** (never `@moku-labs/core`), then compose them via `createApp({ plugins: [...] })`. The `src/plugins/` folder is optional — scaffold it only when needed. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md` for the Layer-3 rule and the plugin-vs-lib-vs-island decision guide.
+
+A consumer app **inherits `ctx.log`/`ctx.env`** from its framework (the framework registers `logPlugin`/`envPlugin`) — it does NOT register them itself. The family conventions still apply to consumer-authored plugins and any CLI/`scripts/`: use `ctx.log` (not raw `console.*`), `ctx.env` (not raw `process.env`), and render CLI through `@moku-labs/common/cli`. See the **moku-common** skill (`${CLAUDE_PLUGIN_ROOT}/skills/moku-common/references/conventions.md`, MC1–MC3).
 
 #### Tools/Library
 

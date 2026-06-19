@@ -77,7 +77,7 @@ Check:
 **Lens**: "Will this code be easy to understand and modify?"
 
 Check:
-- Moku anti-patterns R1–R8 (from agent-preamble.md)
+- Moku anti-patterns R1–R9 (from agent-preamble.md)
 - State leakage outside plugin boundary
 - Wire factory patterns
 - Index.ts exceeding ~30 lines with inline logic
@@ -86,7 +86,7 @@ Check:
 - Cross-plugin coupling that bypasses the event system
 - Overly clever code that could be simpler
 
-**Severity calibration**: R1 (explicit generics) and R7 (as any) are BLOCKER. Other anti-patterns are WARNING. Style preferences are INFO (don't report).
+**Severity calibration**: R1 (explicit generics), R7 (as any), and R9 (lazy `unknown`/`Record<string, unknown>` for a knowable shape) are BLOCKER. Other anti-patterns are WARNING. Style preferences are INFO (don't report).
 
 ## Execution Protocol
 

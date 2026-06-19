@@ -47,6 +47,31 @@ Search all source files for type assertions:
 - `as Type` assertions that could be replaced with type narrowing
 - Unnecessary type assertions where TypeScript can already infer
 
+### 2.5 Lazy `unknown` / `Record<string, unknown>` Audit (Preamble R9)
+
+Check 2 catches `as any` / `as unknown` *casts*; this catches the *annotation* that hides a knowable shape — the more common and more insidious leak (it passes `tsc` and lint, so nothing else flags it). Grep plugin source (skip `__tests__/` — partial-mock casts there are allowlisted) for:
+
+- `: Record<string, unknown>` and `<Record<string, unknown>>` — param, field, variable, or generic argument (e.g. `d1.query<Record<string, unknown>>`)
+- `: unknown` / `<unknown>` annotations — but NOT a generic's `<T = unknown>` *default*
+- `: any` / `<any>` annotations (R7 covers the `as any` cast; this covers the annotation form)
+
+For each hit, apply the **derivable-shape test** — is the shape knowable from a contract?
+
+**VIOLATION (BLOCKER) — shape is knowable, so type it:**
+- A **DB row** typed `Record<string, unknown>` then read field-by-field. The SQL schema IS the row type — declare `type XRow = { … }` and feed it to `d1.query<XRow>` / `d1.first<XRow>` and the row-mapper, dropping every `row.col as T` cast.
+- A parsed **API / queue / config payload** widened to `unknown` / `Record<string, unknown>` instead of its declared message or DTO type.
+- A **function parameter** typed `unknown` / `Record<string, unknown>` whose callers all pass one concrete type — including the framework's own exported types (e.g. `WorkerEnv`, `Router.LayoutContext`). Name that type.
+- An **array of bind/arg values** typed `unknown[]` whose elements are all one known type (e.g. `string[]`).
+
+**ALLOWLISTED (OK):**
+- `unknown` at a *genuine* dynamic boundary (`JSON.parse` / `fetch` / external untrusted input, `catch (e)`) that is **immediately** narrowed or validated before use.
+- `<T = unknown>` as a generic default (the caller supplies the real type).
+- `as unknown as <ExternalType>` for partial **test** mocks of complex SDK types (see Check 2 allowlist).
+
+**WARNING (uncertain):** an `unknown` / `Record<string, unknown>` whose shape you cannot confidently derive from the schema, spec, or callers — flag it for the author to type or justify. Per universal rule #5, do NOT raise a BLOCKER when unsure.
+
+Cite **R9** and name the concrete replacement type in every finding.
+
 ### 3. No Explicit Generics on createPlugin (Preamble R1)
 
 Grep all source files in `src/plugins/` recursively for `createPlugin<` or `createCorePlugin<`. Any angle brackets between the function name and `(` is a BLOCKER. See preamble rule R1.
@@ -124,7 +149,7 @@ For the kernel itself (`@moku-labs/core`):
 
 ## Severity Levels
 
-- **BLOCKER**: `tsc --noEmit` fails; `as any` in plugin code; explicit generics on `createPlugin`
+- **BLOCKER**: `tsc --noEmit` fails; `as any` in plugin code; explicit generics on `createPlugin`; lazy `unknown` / `Record<string, unknown>` annotation for a knowable shape (R9)
 - **CRITICAL**: `import` instead of `import type` for type-only usage; inference chain broken (type-level tests missing or failing); missing strict flags
 - **WARNING**: Unnecessary type assertion; could use type narrowing instead of cast; tsconfig missing optional strict flag
 - **INFO**: Type could be narrowed further; consider `satisfies` for better inference
@@ -132,12 +157,13 @@ For the kernel itself (`@moku-labs/core`):
 ## Process
 
 1. Run `tsc --noEmit` and collect results
-2. Grep for type assertions (`as any`, `as unknown`, `as `)
-3. Grep for `createPlugin<` explicit generics
-4. Check import type compliance
-5. Verify tsconfig strict flags
-6. Read plugin types.ts files for PluginCtx usage
-7. Report findings
+2. Grep for type assertions (`as any`, `as unknown`, `as `) — Check 2
+3. Grep for weak annotations (`Record<string, unknown>`, `: unknown`, `<unknown>`, `: any`) and apply the R9 derivable-shape test — Check 2.5
+4. Grep for `createPlugin<` explicit generics
+5. Check import type compliance
+6. Verify tsconfig strict flags
+7. Read plugin types.ts files for PluginCtx usage
+8. Report findings
 
 ## Output Format
 
@@ -154,6 +180,12 @@ For the kernel itself (`@moku-labs/core`):
 - Allowlisted (kernel): N
 - VIOLATIONS: N
   - [file:line] `as any` — [context description]
+
+### Lazy unknown / Record<string, unknown> (R9)
+- Annotations scanned: N
+- Allowlisted (genuine boundary / generic default / test mock): N
+- VIOLATIONS (knowable shape): N
+  - [file:line] `Record<string, unknown>` — [derivable type, e.g. "DB row → declare BoardRow"]
 
 ### createPlugin Generics
 - Calls checked: N

@@ -46,6 +46,11 @@ export const xxxPlugin = createPlugin("xxx", {
   which `interface` does not.
 - **`createCoreConfig<Config, Events, [typeof p1, …]>`** — once you give ANY explicit type arg, the
   **third `CorePlugins` tuple arg is required** (TS will not infer a defaulted type parameter).
+- **Compose `logPlugin` + `envPlugin` from `@moku-labs/common`** in the framework's `createCoreConfig`
+  (`plugins: [logPlugin, envPlugin]`) so `ctx.log`/`ctx.env` exist on every plugin's `ctx`. They are
+  core plugins, so they belong in the tuple type arg above:
+  `createCoreConfig<Config, Events, [typeof logPlugin, typeof envPlugin]>("name", { plugins: [logPlugin, envPlugin] })`.
+  Consumer apps (Layer 3) inherit them from the framework — they do NOT register them.
 
 ## 3. Injectable / exported function types are STRUCTURAL
 
@@ -90,6 +95,24 @@ justification comment so the antipattern hook stays quiet, e.g.:
 - **Tier ≠ directory shape.** A flat multi-file layout (one concern per file, no subdirs) is a valid
   Complex/VeryComplex layout — the ≤30-line index rule often forces flat. Having a `generators/`-style
   subdir does NOT force a tier relabel. Pick tier by domain complexity, not by folder nesting.
+
+## 9. `@moku-labs/common` family conventions (MC1–MC3)
+
+Skeleton/plugin/CLI/script source must consume the shared `@moku-labs/common` package — these are
+enforced by the `validate-common-usage` hook and `moku-common-validator`, so emit compliant code on
+the first try. Full rules + examples + allowed exceptions: the **moku-common** skill
+(`../../moku-common/references/conventions.md`).
+
+- **MC1 — branded CLI.** Render any CLI surface (a `cli` plugin, `scripts/*.ts`, a `bin`) through
+  `@moku-labs/common/cli` (`createBrandConsole`, `box`, `spinnerFrameAt`, styled `confirm`/`select`).
+  No hand-rolled ANSI escapes, box-drawing, or spinner animations.
+- **MC2 — `ctx.log`, not `console.*`.** Log diagnostics/events via `ctx.log.info/warn/error/debug`.
+  The only exception is one low-level transport marked `// @log-sink`.
+- **MC3 — `ctx.env`, not `process.env`.** Read env via `ctx.env.require("NAME")` /
+  `ctx.env.get("NAME")`. Only the env provider backing `envPlugin` reads `process.env`.
+
+Wire-up: the framework registers `logPlugin` + `envPlugin` in `createCoreConfig` (§2); consumers
+inherit `ctx.log`/`ctx.env`.
 
 ## Skeleton "revisit" TODOs are tracked, not lost
 

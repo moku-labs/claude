@@ -307,6 +307,9 @@ For plugins with sub-module directories (Very Complex tier), read `references/do
 
 - **moku-core** — Architecture fundamentals, factory chain, lifecycle, event system, type system
 - **moku-web** — Web-specific plugin patterns, island architecture, CSS encapsulation
+- **moku-common** — Family conventions for `@moku-labs/common`: log via `ctx.log` (not raw `console.*`),
+  read env via `ctx.env` (not raw `process.env`), and render CLI through the branded kit
+  (`@moku-labs/common/cli`). Plugin domain code that needs logging/env/CLI output follows MC1–MC3.
 
 ### Cross-Skill Example: SPA Plugin with Web Components
 

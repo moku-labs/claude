@@ -86,6 +86,7 @@ const VALIDATORS = [
   { type: 'moku-plugin-spec-validator', focus: 'plugin structure, complexity tier, file organization, domain-merge detection.' },
   { type: 'moku-jsdoc-validator', focus: 'JSDoc completeness and quality on all exports.' },
   { type: 'moku-readable-code-validator', focus: 'function-body readability — wall-of-text functions lacking blank-line stanzas / intent comments, nested ternaries, deep nesting, fused concerns. Cite readable-code rule numbers (not spec sections); WARNING/INFO only, never blocks.' },
+  { type: 'moku-common-validator', focus: 'family-level @moku-labs/common usage — branded CLI rendering (MC1), ctx.log not raw console.* (MC2), ctx.env not raw process.env (MC3) in plugin/CLI/script source. Read skills/moku-common/references/conventions.md and cite MC rule IDs (not spec sections); honor the documented exceptions (brand-kit source, // @log-sink, env providers, tests).' },
   { type: 'moku-type-validator', focus: 'TypeScript correctness: tsc --noEmit, type-assertion audit, inference chains, import type.' },
   { type: 'moku-test-validator', focus: 'test quality: mock-context correctness, assertion quality, edge cases, lifecycle.' },
   { type: 'moku-web-validator', focus: 'Moku web patterns (data-* attributes, @scope/@layer, islands, tokens) — skip with PASS if this is not a web project.' },

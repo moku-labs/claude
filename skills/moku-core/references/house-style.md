@@ -38,3 +38,15 @@ them, passed Stage-2 validation, and had clean `tsc`/`expectTypeOf`. They are ho
 
 > When a build legitimately establishes a NEW cross-cutting convention, add it here (and the builder
 > appends the term/pattern as part of "done") so it is never re-flagged.
+
+## Family-level conventions (required, owned outside the vendored spec)
+
+These are REQUIRED rules for how moku projects consume the shared `@moku-labs/common` package. They
+are approved house style — treat them as authoritative, not a per-project invention:
+
+4. **`@moku-labs/common` usage — MC1/MC2/MC3.** Render CLI output through the branded kit
+   (`@moku-labs/common/cli`), log via `ctx.log` (not raw `console.*`), and read env via `ctx.env`
+   (not raw `process.env`). Authoritative, citable rules with rationale + examples + detection +
+   the allowed exceptions (brand-kit source, the marked `// @log-sink`, env providers, tests) live
+   in [`../../moku-common/references/conventions.md`](../../moku-common/references/conventions.md)
+   (the `moku-common` skill); the `moku-common-validator` agent enforces them.

@@ -2,6 +2,68 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.48.0 (2026-06-19)
+
+**Enforce the `@moku-labs/common` family conventions, plus a new R9 type-first rule.** The Moku
+family is standardizing how projects consume the shared `@moku-labs/common` package: render CLI
+output through the branded kit (`@moku-labs/common/cli`), log via `ctx.log` (not raw `console.*`),
+and read env via `ctx.env` (not raw `process.env`). This release ships the skill, the citable rule
+set, a validator, and a conservative PreToolUse hook that enforces it — and wires it into
+scaffolding so new projects are compliant by construction. These are family conventions (how
+projects consume the common package), separate from the upstream Moku Core invariants R1–R8. It also
+adds **R9**, a new Moku Core code rule that bans lazy `unknown` / `Record<string, unknown>` where the
+shape is knowable.
+
+### Added
+- **R9 — type-first rule: no lazy `unknown` / `any` / `Record<string, unknown>` for a knowable
+  shape.** New Moku Code Rule in `agent-preamble.md`. When a value's shape is derivable from a known
+  contract — a DB row (the SQL schema *is* the type), a parsed API/queue/config payload, a parameter
+  with fixed callers, a framework export like `WorkerEnv` or `Router.LayoutContext` — declare and use
+  that type instead of widening to `unknown`/`Record<string, unknown>` and casting field-by-field.
+  `unknown` stays allowed at genuine dynamic boundaries (narrowed immediately) and for
+  `as unknown as <ExternalType>` partial test mocks. Derives from `spec/09-TYPE-SYSTEM.md`'s "full
+  inference, zero casts" philosophy; complements R6 (no inline assertions) and R7 (no `as any`).
+  BLOCKER when the shape is knowable.
+  - `moku-type-validator` gains a dedicated audit (Check 2.5) for the *annotation* form that `tsc` and
+    lint both miss — the prior assertion audit only caught `as any` / `as unknown` casts, which is why
+    a `Record<string, unknown>`-heavy plugin could pass type validation cleanly.
+  - `type-system.md` documents the derive-the-shape patterns (DB row types, narrow-at-boundary).
+  - `builder`, `code-reviewer`, `verifier`, `spec-validator`, `architecture-validator`, and the
+    multi-pass review now cite R1–R9.
+- **`skills/moku-common/SKILL.md`** — new skill documenting `@moku-labs/common`: the branded CLI kit,
+  `logPlugin`/`ctx.log`, `envPlugin`/`ctx.env`, with framework wiring examples
+  (`createCoreConfig` composes `logPlugin`+`envPlugin`) and an Anti-Patterns section. Triggers on
+  "moku common", "branded cli", "ctx.log", "ctx.env", "@moku-labs/common", etc.
+- **`skills/moku-common/references/conventions.md`** — the authoritative, citable rules with stable
+  IDs (**MC1** branded CLI, **MC2** `ctx.log` not `console.*`, **MC3** `ctx.env` not `process.env`),
+  each with rationale, a correct/incorrect example, detection guidance, and the allowed exceptions
+  (brand-kit source, a `// @log-sink`-marked sink, env providers, tests). Repo-owned (outside the
+  vendored `spec/` tree, which `spec-sync` regenerates).
+- **`agents/moku-common-validator.md`** — validator (model sonnet, tools Read/Grep/Glob) that reads
+  `conventions.md` and flags raw `console.*` / `process.env` / hand-rolled CLI chrome in
+  plugin/CLI/script source, citing MC IDs and honoring the documented exceptions. Registered in
+  Group A of `validation-coordinator` and in the `moku-verify` workflow fan-out.
+- **`hooks/validate-common-usage.sh`** — conservative PreToolUse (Write|Edit) hook mirroring
+  `check-plugin-antipatterns.sh`: on scoped `.ts` writes (plugins, `*cli*`, `scripts/`) it blocks
+  raw `console.*` (MC2) and `process.env` (MC3) with an actionable message, while skipping tests,
+  the brand-kit source (`*/common/src/cli/*`), env providers, and `// @log-sink`-marked lines.
+  Registered under the existing PreToolUse `Write|Edit` matcher.
+
+### Changed
+- **`skills/moku-core/references/house-style.md`** — added a "Family-level conventions" pointer (item
+  4) marking the MC1–MC3 rules in `moku-common/references/conventions.md` as approved/required house
+  style so other validators don't treat them as a per-project invention.
+- **`agents/validation-coordinator.md`** — Group A now spawns 5 agents (added `moku-common-validator`);
+  updated the model-assignment table, the per-plugin validator list, and the example results table.
+- **`workflows/moku-verify.js`** + **`workflows/README.md`** — added `moku-common-validator` to the
+  parallel validator fan-out (focus cites MC IDs, not spec sections).
+- **`commands/init.md`** + **`skills/moku-core/references/skeleton-conventions.md`** — scaffolding now
+  adds `@moku-labs/common` as a framework dependency, registers `logPlugin`+`envPlugin` in
+  `createCoreConfig` (with the required `CorePlugins` tuple type arg), and documents the MC1–MC3
+  family conventions (consumers inherit `ctx.log`/`ctx.env` from the framework).
+- **`skills/moku-plugin/SKILL.md`** + **`skills/moku-web/SKILL.md`** — added a `moku-common` pointer
+  to their Related Skills sections.
+
 ## 0.47.7 (2026-06-19)
 
 **Hard-block `NPM_TOKEN` for npm publish.** 0.47.5/0.47.6 made the OIDC Trusted Publishing flow the

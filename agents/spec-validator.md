@@ -66,7 +66,7 @@ You are a Moku Core specification validator. Your job is to ensure all code foll
 - Lifecycle errors use `Error`
 
 ### 8. No Anti-Patterns
-Enforce all Moku Code Rules from agent-preamble.md (R1–R8). Additionally:
+Enforce all Moku Code Rules from agent-preamble.md (R1–R9). Additionally:
 - No god plugins (one plugin = one domain concern)
 - No new abstractions (services, providers, managers) — use `createPlugin` or `createCorePlugin`
 - No string-based `require` — instance-only

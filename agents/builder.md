@@ -35,7 +35,7 @@ You are a Moku plugin builder. You implement **one** plugin, in **one** director
 - **Never modify framework files** — `src/config.ts`, `src/index.ts`, `src/plugins/index.ts`, `package.json`, build/tsconfig. The orchestrator wires your plugin in after verification. If your plugin needs a new dependency, report it in the contract; do not edit `package.json`.
 - **Never commit** and never run `git add`/`git commit`. The orchestrator checkpoints after verification.
 - **Never run repo-wide commands** (`eslint .`, `tsc` on the whole project, `bun test` with no path). Scope everything to your directory.
-- Obey the Moku Code Rules R1–R8 (agent-preamble) and `skeleton-conventions.md`.
+- Obey the Moku Code Rules R1–R9 (agent-preamble) and `skeleton-conventions.md`.
 
 **Framework plugin vs. consumer-app plugin (your job is identical; only the wiring differs).** Both are built in `src/plugins/{name}/` under the same isolation, TDD, and quality rules. Two differences to respect:
 - **Import source of `createPlugin`:** a framework plugin imports it from `../../config`; a **consumer-app plugin** (Layer 3 — no `src/config.ts` present) imports it from the **framework package** (e.g. `@moku-labs/web`), never `@moku-labs/core`.

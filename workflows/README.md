@@ -21,10 +21,11 @@ fan-out + deterministic control flow) instead of turn-by-turn.
 
 ### `moku-verify.js` → `/moku-verify`  (consumer + framework projects)
 Runs the full validation pipeline as a parallel fan-out: `moku-spec-validator`,
-`moku-plugin-spec-validator`, `moku-jsdoc-validator`, `moku-type-validator`,
-`moku-test-validator`, `moku-web-validator`, `moku-architecture-validator` — then aggregates a
-single deduped PASS/FAIL disposition. Mirrors `moku-validation-coordinator` but with true
-concurrency. **`/moku:init` installs this into a project's `.claude/workflows/`.**
+`moku-plugin-spec-validator`, `moku-jsdoc-validator`, `moku-readable-code-validator`,
+`moku-common-validator`, `moku-type-validator`, `moku-test-validator`, `moku-web-validator`,
+`moku-architecture-validator` — then aggregates a single deduped PASS/FAIL disposition. Mirrors
+`moku-validation-coordinator` but with true concurrency. **`/moku:init` installs this into a
+project's `.claude/workflows/`.**
 **Adversarial mode (ON by default):** each surviving blocker is challenged by N `moku-skeptic`
 agents (default 2) that try to *refute* it — including checking whether ≥2 already-verified plugins
 use the same pattern (a house convention, not a per-plugin violation); a majority-refuted blocker is
