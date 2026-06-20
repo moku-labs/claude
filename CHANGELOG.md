@@ -2,6 +2,26 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.51.0 (2026-06-20)
+
+**`moku-sync` of the new frameworks — real catalogs for `worker` + `room`.** The `worker`/`room` skills
+(registered as stubs in 0.50.0) are now generated from their published packages, and `room` is
+re-classified as a **plugin pack** (it is not a framework).
+
+### Changed
+- **`moku-sync` worker `0.0.0 → 0.4.0`** — `skills/moku-worker/` SKILL + `plugin-index.md` regenerated from
+  `@moku-labs/worker@0.4.0`: the full **10-plugin** catalog (`bindings`, `server`, `kv`, `d1`, `queues`,
+  `storage`, `durableObjects`, `stage` runtime + node-only `deploy`/`cli`), `WorkerConfig` + per-plugin
+  config, the request/deploy events, the dependency graph, and the runtime-vs-`./cli` bundle boundary.
+- **`moku-sync` room `0.0.0 → 0.1.1`**, and **re-classified `role: framework → plugin-pack`** — room has no
+  Layer-2 shell and never calls `createApp`; you spread `roomPlugins.stage` / `.controller` into a
+  `@moku-labs/web` app. `skills/moku-room/` regenerated: **6 plugins** (4 engines + 2 role facades),
+  config, the 5 `room:*` lifecycle events, the Wire-vs-events split, signaling adapters, dependency graph.
+- Registry `knownVersion` stamped (worker `0.4.0`, room `0.1.1`) — the `moku-worker-version` /
+  `moku-room-version` upgrade migrations now fire against the real versions. Catalogs were generated from
+  the published **npm tarball READMEs** (npm `latest` was ahead of GitHub `main`, still at 0.1.0).
+- Version bumped to 0.51.0 in plugin.json and marketplace.json.
+
 ## 0.50.0 (2026-06-20)
 
 **Idiomatic app-shape guard + three new Moku-family members.** (1) A concrete architecture-shape rubric so

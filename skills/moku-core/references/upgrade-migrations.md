@@ -210,9 +210,7 @@ the block below.
 - **Default:** on
 - **Depends on:** moku-core-version (when the project also depends directly on `@moku-labs/core`)
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/worker` AND its
-  resolved/declared version `< frameworks[worker].knownVersion` in `moku-frameworks.md`. (While
-  `knownVersion` is the `0.0.0` registration sentinel this never fires — run `moku-sync worker` first to
-  stamp the real version.)
+  resolved/declared version `< frameworks[worker].knownVersion` in `moku-frameworks.md` (currently `0.4.0`).
 - **Apply:**
   1. Read `frameworks[worker].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/worker` dependency to that version (preserve the range operator
@@ -236,8 +234,7 @@ the block below.
 - **Depends on:** moku-web-version (room is built on `@moku-labs/web` — bump web first), plus
   moku-core-version when the project also depends directly on `@moku-labs/core`.
 - **Detect:** `package.json` dependencies contain `@moku-labs/room` AND its resolved/declared version
-  `< frameworks[room].knownVersion` in `moku-frameworks.md`. (Sentinel `0.0.0` ⇒ never fires until
-  `moku-sync room` stamps the real version.)
+  `< frameworks[room].knownVersion` in `moku-frameworks.md` (currently `0.1.1`).
 - **Apply:**
   1. Read `frameworks[room].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set `@moku-labs/room` to that version (preserve the range operator; default exact).

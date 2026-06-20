@@ -84,7 +84,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.0.0",
+      "knownVersion": "0.4.0",
       "skill": "skills/moku-worker",
       "pluginIndex": "skills/moku-worker/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -105,8 +105,8 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "repo": "https://github.com/moku-labs/room",
       "localClone": "../room",
       "layer": 2,
-      "role": "framework",
-      "knownVersion": "0.0.0",
+      "role": "plugin-pack",
+      "knownVersion": "0.1.1",
       "skill": "skills/moku-room",
       "pluginIndex": "skills/moku-room/references/plugin-index.md",
       "dependsOn": ["@moku-labs/web"],
@@ -125,24 +125,22 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `worker` entry:** registered 2026-06-20 from the public package
-> `@moku-labs/worker` (repo `moku-labs/worker`, local clone `../worker`). **npm `dist-tags.latest`
-> at registration = `0.4.0`** — deps `@moku-labs/core@0.1.4` (registered) + `@moku-labs/common@0.2.0`
-> (the shared infra package — a skill, not a framework entry); engines node ≥24 / bun ≥1.3.14.
-> Description: *"Cloudflare Worker framework for Moku — Durable Objects, Queues, R2, D1, and KV plugins
-> that compose with Moku frameworks."* **`knownVersion` is the `0.0.0` "never-synced" sentinel on
-> purpose** — `skills/moku-worker/SKILL.md` + its `plugin-index.md` are **stubs**; run
-> **`moku-sync worker`** to generate the real API form + plugin catalog from `../worker` and stamp the
-> real version. (The upgrade migration `moku-worker-version` will not fire while `knownVersion` is
-> `0.0.0`, which is correct — don't push upgrades to a catalog we haven't generated yet.)
+> **Provenance of the `worker` entry:** registered + **synced 2026-06-20** to `@moku-labs/worker@0.4.0`
+> (npm `dist-tags.latest`; repo `moku-labs/worker`, local clone `../worker`). Deps `@moku-labs/core@0.1.4`
+> (registered) + `@moku-labs/common@0.2.0` (shared infra — a skill, not a framework entry); engines node
+> ≥24 / bun ≥1.3.14. A Layer-2 framework (`createCoreConfig`/`createCore`) exposing Cloudflare primitives
+> as plugins (KV, D1, R2, Queues, Durable Objects) + a `server` router, with a node-only `./cli` deploy
+> entry. **Catalog source:** the published **0.4.0 tarball README** — upstream `main` was still at `0.1.0`
+> when synced, so the npm tarball is the authority for the released surface (`skills/moku-worker/SKILL.md`
+> + `plugin-index.md` are generated from it). `moku-worker-version` now fires for projects behind 0.4.0.
 >
-> **Provenance of the `room` entry:** registered 2026-06-20 from the public package `@moku-labs/room`
-> (repo `moku-labs/room`, local clone `../room`). **npm `dist-tags.latest` at registration = `0.1.1`** —
-> **built on `@moku-labs/web`** (peer dep `^1.12.4`; so `dependsOn: ["@moku-labs/web"]`, upgrade order
-> core → web → room) plus `qrcode` + `trystero` (WebRTC); engines node ≥24 / bun ≥1.3.14. Description:
-> *"Couch-multiplayer foundation for Moku — shared screen + phones, WebRTC, multi-device state sync."*
-> Same `0.0.0` sentinel + **stub** skill — run **`moku-sync room`** to generate the catalog and stamp
-> `0.1.1`.
+> **Provenance of the `room` entry:** registered + **synced 2026-06-20** to `@moku-labs/room@0.1.1`
+> (npm `dist-tags.latest`; repo `moku-labs/room`, local clone `../room`). **`role: "plugin-pack"`** — room
+> is **not a framework**: it has no Layer-2 shell and never calls `createApp`; you spread its
+> `roomPlugins.stage`/`.controller` arrays into a `@moku-labs/web` app. **Built on `@moku-labs/web`** (peer
+> dep `^1.12.4`; `dependsOn: ["@moku-labs/web"]`, upgrade order core → web → room) + bundled `trystero`
+> (WebRTC) + `qrcode`; engines node ≥24 / bun ≥1.3.14. **Catalog source:** the published **0.1.1 tarball
+> README** (upstream `main` was at `0.1.0`). 6 plugins (4 engines + 2 role facades); WebRTC P2P, no TURN.
 
 > **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.4` (npm `latest`,
 > published 2026-06-11, gitHead `dd723ce` = GitHub tag `v0.1.4`). **0.1.3 → 0.1.4 delta:** a
