@@ -76,10 +76,73 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
         "llms": "https://raw.githubusercontent.com/moku-labs/web/main/llms-full.txt"
       },
       "upgrade": { "migrationId": "moku-web-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "worker",
+      "npm": "@moku-labs/worker",
+      "repo": "https://github.com/moku-labs/worker",
+      "localClone": "../worker",
+      "layer": 2,
+      "role": "framework",
+      "knownVersion": "0.0.0",
+      "skill": "skills/moku-worker",
+      "pluginIndex": "skills/moku-worker/references/plugin-index.md",
+      "dependsOn": ["@moku-labs/core"],
+      "detect": { "packageJsonDep": "@moku-labs/worker" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/worker",
+        "github": "https://github.com/moku-labs/worker",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/worker/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/worker/main/package.json",
+        "llms": "https://raw.githubusercontent.com/moku-labs/worker/main/llms-full.txt"
+      },
+      "upgrade": { "migrationId": "moku-worker-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "room",
+      "npm": "@moku-labs/room",
+      "repo": "https://github.com/moku-labs/room",
+      "localClone": "../room",
+      "layer": 2,
+      "role": "framework",
+      "knownVersion": "0.0.0",
+      "skill": "skills/moku-room",
+      "pluginIndex": "skills/moku-room/references/plugin-index.md",
+      "dependsOn": ["@moku-labs/web"],
+      "detect": { "packageJsonDep": "@moku-labs/room" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/room",
+        "github": "https://github.com/moku-labs/room",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/room/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/room/main/package.json",
+        "llms": "https://raw.githubusercontent.com/moku-labs/room/main/llms-full.txt"
+      },
+      "upgrade": { "migrationId": "moku-room-version", "distTagPolicy": "stable->latest,prerelease->next" }
     }
   ]
 }
 ```
+
+> **Provenance of the `worker` entry:** registered 2026-06-20 from the public package
+> `@moku-labs/worker` (repo `moku-labs/worker`, local clone `../worker`). **npm `dist-tags.latest`
+> at registration = `0.4.0`** — deps `@moku-labs/core@0.1.4` (registered) + `@moku-labs/common@0.2.0`
+> (the shared infra package — a skill, not a framework entry); engines node ≥24 / bun ≥1.3.14.
+> Description: *"Cloudflare Worker framework for Moku — Durable Objects, Queues, R2, D1, and KV plugins
+> that compose with Moku frameworks."* **`knownVersion` is the `0.0.0` "never-synced" sentinel on
+> purpose** — `skills/moku-worker/SKILL.md` + its `plugin-index.md` are **stubs**; run
+> **`moku-sync worker`** to generate the real API form + plugin catalog from `../worker` and stamp the
+> real version. (The upgrade migration `moku-worker-version` will not fire while `knownVersion` is
+> `0.0.0`, which is correct — don't push upgrades to a catalog we haven't generated yet.)
+>
+> **Provenance of the `room` entry:** registered 2026-06-20 from the public package `@moku-labs/room`
+> (repo `moku-labs/room`, local clone `../room`). **npm `dist-tags.latest` at registration = `0.1.1`** —
+> **built on `@moku-labs/web`** (peer dep `^1.12.4`; so `dependsOn: ["@moku-labs/web"]`, upgrade order
+> core → web → room) plus `qrcode` + `trystero` (WebRTC); engines node ≥24 / bun ≥1.3.14. Description:
+> *"Couch-multiplayer foundation for Moku — shared screen + phones, WebRTC, multi-device state sync."*
+> Same `0.0.0` sentinel + **stub** skill — run **`moku-sync room`** to generate the catalog and stamp
+> `0.1.1`.
 
 > **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.4` (npm `latest`,
 > published 2026-06-11, gitHead `dd723ce` = GitHub tag `v0.1.4`). **0.1.3 → 0.1.4 delta:** a
@@ -181,4 +244,26 @@ routine version bump only edits `knownVersion` here — not the migration text.
 `moku-sync` loops over `frameworks[]`, resolves each `releaseSource` latest, compares to
 `knownVersion`, and on a newer version regenerates that framework's skill API section +
 `pluginIndex`, then writes back the new `knownVersion` here. See
-`skills/moku-sync/SKILL.md`.
+`skills/moku-sync/SKILL.md`. (Newly-registered frameworks carry `knownVersion: "0.0.0"`, so the first
+`moku-sync <key>` run treats everything as new and generates the catalog — see the worker/room
+provenance above.)
+
+## Reference Projects (Layer-3 examples — consult when building apps)
+
+Layer-3 **apps** are not framework registry entries (they deploy, not publish — see the `layer` field
+note). But the toolkit keeps a small set of **curated reference example apps** to consult for *idiomatic
+solutions* when planning or building an app — "how does a real, well-built Moku app of this shape do X?".
+The `/moku:plan` and `/moku:build` app flows (and `/moku:design`) should point at the closest reference.
+
+| Key | What it is | Stack | Location | Status |
+|-----|-----------|-------|----------|--------|
+| `demos/tracker` | **THE canonical worked reference for building apps** — a real Layer-3 full-stack kanban app: `@moku-labs/web` client + islands and an `@moku-labs/worker` Cloudflare backend (Durable Objects, Queues, R2, D1, KV) in one project. The authority on idiomatic **app shape** (`moku-idioms.md`): multiple `createApp` instances (`app.ts` build / `spa.tsx` browser / `server.ts` worker), two frameworks side-by-side, folder split by concern, a thin `cloudflare/worker.ts` entry, logic in `plugins/tracker`. **Read it before inventing an app structure.** | `@moku-labs/web` + `@moku-labs/worker` | repo `github.com/moku-labs/demos`, local clone `../demos/tracker` | **available** |
+| `tracker-v2` *(design prototype)* | The `/moku:design` **design** prototype that *preceded* the tracker build (the "Atlas" editorial concept) — a throwaway HTML/CSS/JS demo of look/feel + the `design-context.md` quality bar. Use for **design** reference only; the real implementation is `demos/tracker`. | (design demo — re-implemented on `@moku-labs/web`) | local `assets/tracker-v2/` (this repo) | **available (demo-only)** |
+
+**Spec, not source:** `demos/tracker` is real, idiomatic code — study its **structure and patterns** as
+the app-shape authority. The `tracker-v2` prototype is **demo-quality** (see its `design-context.md` §0):
+re-implement, never copy. When more demos land in `../demos`, add a row here.
+
+> **How apps use this:** when `/moku:build` (App Build) or `/moku:plan` (create/update app) needs a
+> pattern, consult the closest reference project here before inventing one — it is the fastest path to an
+> idiomatic solution and reinforces the `moku-idioms.md` rubric with a concrete worked example.

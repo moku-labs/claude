@@ -27,6 +27,7 @@ Before writing the report, materialize these intermediate results explicitly (wr
 3. **Event catalog**: Table of all events — declared by, emitted by, hooked by (from specs)
 4. **Section checklist**: For each spec, which required sections are present/missing
 5. **Code example scan**: For each spec, whether `createPlugin<` or forbidden fields appear
+6. **Architecture-shape scan** (for the idiom check, #10): does any **app** plan call `createCoreConfig`/`createCore` or declare a **direct** `@moku-labs/core` dependency (the I1 BLOCKER)? does a custom plugin import `createPlugin` from `@moku-labs/core` rather than the framework package? does a single `createApp` *fuse* plugins from two different framework packages (I2 WARNING)? does the Worker entry / `index.ts` carry business logic (I4)? — **Note:** multiple `createApp` instances, composing multiple frameworks side-by-side, and folder splits are IDIOMATIC (see `demos/tracker`) — do NOT count them as problems
 
 Only AFTER materializing these intermediates, analyze them for violations. This prevents missed findings from reasoning shortcuts.
 
@@ -135,7 +136,26 @@ For each specification's Code Example section:
 - Verify no regular plugin has the same name as a core plugin — flag as BLOCKER
 - Core plugin names must not be reserved names (`start`, `stop`, `emit`, `require`, `has`, `config`, `global`, `state`)
 
-### 10. Mermaid Diagram Generation
+### 10. Idiomatic Architecture (app shape — rubric `moku-idioms.md`, worked reference `demos/tracker`)
+
+Check the plan's app shape against `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md` (I1–I5), whose worked reference is `demos/tracker` (a Layer-3 full-stack app on `@moku-labs/web` + `@moku-labs/worker`). The code-level checks above catch a non-idiomatic *plugin*; this catches the one app-shape rule that genuinely holds.
+
+**Do NOT flag these — they are idiomatic (reporting them is a false positive):**
+- **Multiple `createApp` instances** in one app (e.g. a Node build app, a browser SPA app, and a worker server app — `tracker` has three).
+- **Composing multiple frameworks side-by-side** (e.g. depending on BOTH `@moku-labs/web` and `@moku-labs/worker` — full-stack apps routinely do).
+- **Splitting the project into many folders by concern** (`cloudflare/`, `components/`, `islands/`, `pages/`, `layouts/`, `lib/`, `plugins/{name}/`, plus `config.ts`/`routes.tsx`/`endpoints.ts`/`server.ts`/`spa.tsx`).
+- An app `config.ts` of identity constants (web Rule R4) — that is not `createCoreConfig`.
+
+**Check (and report) only these:**
+- **I1 — Apps compose; they don't define a framework:** **BLOCKER** if a Layer-3 app plan calls `createCoreConfig`/`createCore`, or declares a **direct** `@moku-labs/core` dependency. Apps use `createApp` + the framework's re-exported `createPlugin`. (This is the one hard structural rule.)
+- **I2 — one `createApp` per framework:** **WARNING** only if a single `createApp`'s `plugins: [...]` *fuses* plugins from two different framework packages (vs separate side-by-side apps wired at the edges). Multiple instances/frameworks themselves are fine.
+- **I3 — plugin-shaped concerns use the framework's `createPlugin` in `src/plugins/{name}/`:** **WARNING** if a plugin-shaped requirement is folded into `lib/`/config with no plugin (BLOCKER if `createPlugin` is imported from `@moku-labs/core` — that's also I1).
+- **I4 — entries/adapters stay thin:** **WARNING** if the plan puts business logic / direct binding access in the Worker entry or `index.ts` instead of a plugin (R3).
+- **I5 — no reinvented primitives:** **WARNING** (BLOCKER if it reintroduces a forbidden `invariants.md` primitive).
+
+Cite each finding as `moku-idioms.md §I{n}` + the underlying `spec/NN-*.md §N` / `consumer-plugins.md`, and point at the `demos/tracker` pattern for the fix. Only an **I1** violation is a gate BLOCKER; never block a plan for multiple instances, multiple frameworks, or folder splits.
+
+### 11. Mermaid Diagram Generation
 
 After validation, generate and include these mermaid diagrams in the report:
 
@@ -243,6 +263,16 @@ These diagrams help the user visualize the plan structure before approving.
 ### Code Example Issues
 - BLOCKER: [spec] — explicit generics on createPlugin
 - WARNING: [spec] — onStart present but no resource justification
+
+### Idiomatic Architecture (vs `demos/tracker`)
+| Idiom | Status | Finding (offending text) | Fix | Severity |
+|-------|--------|--------------------------|-----|----------|
+| I1 app composes, doesn't define a framework | PASS / VIOLATION | … | … | BLOCKER |
+| I2 one `createApp` per framework (no fusing) | … | … | … | WARNING |
+| I3 plugin-shaped → framework `createPlugin` | … | … | … | WARNING |
+| I4 entries/adapters stay thin | … | … | … | WARNING |
+| I5 no reinvented primitives | … | … | … | WARNING |
+- Idiomatic, NOT flagged (expected in a full-stack app): multiple `createApp` instances [count], frameworks composed side-by-side [list], folder splits [list]
 
 ### Diagrams
 [mermaid dependency graph]

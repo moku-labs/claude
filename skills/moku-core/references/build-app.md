@@ -11,6 +11,15 @@ Read the specification from the provided path (defaults to `.planning/app-spec.m
 
 If the plan is incomplete, ask the user to run `/moku:plan app` first.
 
+**Consult the reference app.** Before inventing an app structure, **read `demos/tracker`** (the
+**Reference Projects** in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-frameworks.md`; local
+clone `../demos/tracker`) — a real Layer-3 full-stack app (`@moku-labs/web` + `@moku-labs/worker`) and the
+authority on idiomatic **app shape** per `moku-idioms.md`: multiple `createApp` instances (build / browser
+/ worker), two frameworks side-by-side, folder split by concern, a thin `cloudflare/worker.ts` entry, and
+business logic in `plugins/tracker`. Follow its structure and plugin boundaries — that is the fastest path
+to an idiomatic solution. **Spec, not source:** for *design* references (e.g. `tracker-v2`) study look/feel
+and re-implement, never copy a demo prototype's source (see its `design-context.md` §0).
+
 ## Step 2: Verify Framework
 
 Check that the framework package is available:

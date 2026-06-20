@@ -2,6 +2,41 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.50.0 (2026-06-20)
+
+**Idiomatic app-shape guard + three new Moku-family members.** (1) A concrete architecture-shape rubric so
+`/moku:brainstorm` and `/moku:plan` stop handing back non-idiomatic app structures — grounded in the real
+`demos/tracker` full-stack app. (2) The `worker` and `room` frameworks registered in the family registry,
+plus a Reference Projects index pointing at `demos/tracker` as the app-shape authority.
+
+### Added
+- **`moku-idioms.md`** — the idiomatic app-shape rubric (I1–I5), worked reference `demos/tracker`. The one
+  hard rule (**I1**, BLOCKER): a Layer-3 app **composes** (`createApp`) and must not **define** a framework
+  (no `createCoreConfig`/`createCore`, no direct `@moku-labs/core` dep). It explicitly **blesses** the
+  full-stack idioms the demo proves — **multiple `createApp` instances**, **composing multiple frameworks
+  side-by-side** (`@moku-labs/web` + `@moku-labs/worker`), and **folder splits** — so the validators never
+  false-flag them. Enforced by `moku-plan-checker` (check #10, BLOCKER-triaged before every plan gate) and
+  `brainstorm-challenger` (mandatory check each debate round), with app-shape gates in `brainstorm.md` /
+  `plan.md` that block only on the I1 violation.
+- **`worker` + `room` frameworks** registered in `moku-frameworks.md` (`@moku-labs/worker` — Cloudflare
+  Workers backend: Durable Objects, Queues, R2, D1, KV; `@moku-labs/room` — couch-multiplayer on
+  `@moku-labs/web`), with `/moku:upgrade` migrations (`moku-worker-version`, `moku-room-version`) and
+  `skills/moku-worker/` + `skills/moku-room/` stubs. `knownVersion: "0.0.0"` (never-synced sentinel) — run
+  `moku-sync worker` / `moku-sync room` to generate the real catalogs and stamp versions (latest at
+  registration: worker 0.4.0, room 0.1.1).
+- **Reference Projects** index in `moku-frameworks.md` — the real full-stack `demos/tracker`
+  (`github.com/moku-labs/demos`, local `../demos/tracker`) as the canonical app-shape reference; the
+  `tracker-v2` design prototype is retained as design-phase-only. Wired into App Build (`build-app.md`):
+  read `demos/tracker` before inventing an app structure.
+
+### Changed
+- `moku-plan-checker` + `brainstorm-challenger` gain the Idiomatic Architecture check; `brainstorm.md` and
+  `plan.md` gain app-shape gates (block only on the I1 violation — never on multiple instances/frameworks/
+  folders, which are idiomatic).
+- `SKILL-INVENTORY.md` — skills 8 → 10 (worker/room stubs), reference set 49 → 50 (`moku-idioms.md`) + the
+  Reference Projects note.
+- Version bumped to 0.50.0 in plugin.json and marketplace.json.
+
 ## 0.49.0 (2026-06-20)
 
 **New `/moku:design` command — human-in-the-loop design exploration that produces a reusable design
