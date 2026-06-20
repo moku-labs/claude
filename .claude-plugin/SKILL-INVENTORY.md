@@ -8,7 +8,7 @@ for the live component list and `/usage` (per-category) to see actual token spen
 
 | Skill | Triggers on | What it brings |
 |-------|-------------|----------------|
-| **moku-core** | moku architecture, factory chain, createCoreConfig, lifecycle, events, plugin structure | The authoritative `spec/` (15 vendored spec files) + `spec-index.md`, the coding-style `sandbox/` (48 exemplars) + `sandbox-index.md`, the build/plan/brainstorm/design reference set (50 reference docs, incl. the design set + `moku-idioms.md`, the idiomatic-architecture rubric enforced by plan-checker + brainstorm-challenger), `agent-preamble.md`, memory + tool-scoping + hook-pattern docs |
+| **moku-core** | moku architecture, factory chain, createCoreConfig, lifecycle, events, plugin structure | The authoritative `spec/` (15 vendored spec files) + `spec-index.md`, the coding-style `sandbox/` (48 exemplars) + `sandbox-index.md`, the build/plan/brainstorm/design reference set (51 reference docs, incl. the design set + `moku-idioms.md` + `e2e-testing.md`, the comprehensive Playwright e2e + visual-baseline gate), `agent-preamble.md`, memory + tool-scoping + hook-pattern docs |
 | **moku-plugin** | plugin structure, complexity tiers, createPlugin layout | Tiered plugin file organization (nano→very-complex), naming, wiring-harness pattern |
 | **moku-web** | moku web, islands, @scope/@layer, data-* attributes | Preact island architecture (Vite-free, Bun-bundled), CSS token system (points at the vendored `sandbox/demo/blog/`) |
 | **moku-worker** | moku worker, @moku-labs/worker, cloudflare durable object/queue/r2/d1/kv | Layer-2 Cloudflare Workers backend framework — synced to `@moku-labs/worker@0.4.0` (10 plugins: server/kv/d1/queues/storage/durableObjects + node-only deploy/cli; full catalog in its `plugin-index.md`) |
@@ -20,24 +20,26 @@ for the live component list and `/usage` (per-category) to see actual token spen
 | **moku-sync** *(maintainer)* | "sync moku frameworks", "check for new moku framework releases", "new @moku-labs/web release" | Per-framework counterpart to spec-sync: polls each registry framework's release source, regenerates its plugin index + skill API form, registers new versions with `/moku:upgrade`. Read-only `--check` mode. STOPs outside the plugin repo. |
 
 > Only `moku-core` is broad; the other nine trigger narrowly. The toolkit also keeps **Reference Projects** in
-> `moku-frameworks.md` — the real full-stack `demos/tracker` (`@moku-labs/web` + `@moku-labs/worker`, the
-> app-shape authority for `moku-idioms.md`) plus the `tracker-v2` design prototype. References are Level-3 progressive
+> `moku-frameworks.md` — *public* worked examples only (e.g. the full-stack `tracker` in `github.com/moku-labs/demos`),
+> illustrating the `moku-idioms.md` app-shape rubric. References are Level-3 progressive
 > disclosure — they cost ~0 tokens until an agent opens them, which is why the vendored spec/sandbox
 > (~6,400 + ~4,000 lines) are *indexed*, not front-loaded.
 
-## Commands (10)
+## Commands (11)
 
 `brainstorm` · `design` (multi-round, human-in-the-loop design exploration → a reusable design context,
-a *spec, not source*) · `plan` · `build` (the 3-stage gated core) · `next` · `status` · `check` (incl.
-`check --usage`) · `clean` · `init` · `upgrade` (zero-arg stack migration).
+a *spec, not source*) · `plan` · `build` (the 3-stage gated core) · `e2e` (comprehensive Playwright e2e +
+visual-baseline coverage for a web app — every screen/feature tested, confirmed, and fixed) · `next` ·
+`status` · `check` (incl. `check --usage`) · `clean` · `init` · `upgrade` (zero-arg stack migration).
 
-## Agents (24) — spawned on demand by commands/workflows, isolated context
+## Agents (25) — spawned on demand by commands/workflows, isolated context
 
 - **Validation (10):** spec, plugin-spec, type, jsdoc, test, web, readable-code, common, architecture validators + validation-coordinator
 - **Review/judgment (5):** verifier, code-reviewer, wave-judge, error-diagnostician, skeptic
 - **Brainstorm (3):** brainstorm-researcher, challenger, synthesizer
 - **Design (3):** design-generator (parallel concept prototypes), design-synthesizer (writes the design context), design-critic (round critique)
 - **Build/plan support (3):** builder, plan-checker, planning-phase `researcher`
+- **E2E (1):** web-e2e-tester (comprehensive Playwright e2e + visual baselines; runs the app for real, fixes what it finds)
 - Mechanical validators run at `effort: low` (haiku); deep reviewers (`code-reviewer`, `wave-judge`,
   `skeptic`) at `effort: high` — to keep the 20-agent surface cost-aware.
 

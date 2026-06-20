@@ -36,11 +36,11 @@ for Cloudflare's runtime primitives — **Durable Objects, Queues, R2, D1, KV** 
 | Package manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
 | Engines | node ≥24, bun ≥1.3.14 |
 
-## Idiomatic shape — follow `demos/tracker`
+## Idiomatic shape
 
-The worked reference is **`demos/tracker`** (`../demos/tracker`; the app-shape authority for
-[`moku-idioms.md`](../moku-core/references/moku-idioms.md)): **one project composes web + worker
-side-by-side.** That means **multiple `createApp` instances** — a web build app + browser SPA on
+Build to the app-shape rubric in [`moku-idioms.md`](../moku-core/references/moku-idioms.md): **one project
+composes web + worker side-by-side.** That means **multiple `createApp` instances** — a web build app +
+browser SPA on
 `@moku-labs/web` (`app.ts`/`spa.tsx`) and a worker server app on `@moku-labs/worker` (`server.ts`) — plus
 a **thin** `cloudflare/worker.ts` entry that routes `/api`+`/ws` to the worker `server` and serves the
 built web client from the `ASSETS` binding. **Multiple instances, two frameworks in one project, and

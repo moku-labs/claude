@@ -315,7 +315,8 @@ Tell the user what was created, show the verification checklist results, and pro
 - Use `/moku:design "what to design"` to explore the **design** (look, feel, screens) and capture a reusable design context before planning — recommended for any app with a UI; it produces a `design-context.md` that `/moku:plan ... --context` consumes
 - Use `/moku:brainstorm create app "description"` to explore architecture decisions before planning (optional)
 - Use `/moku:plan create app` to plan the application
-- Use `/moku:build` to build from a plan
+- Use `/moku:build` to build from a plan — for a **web** app its final stage is the comprehensive E2E + visual-baseline gate (mandatory, skippable only with a confirmed skip)
+- Use `/moku:e2e` any time to comprehensively e2e-test the app in a real browser (Playwright) with visual baselines — every screen/feature tested + confirmed, bugs/visual issues fixed
 - Author custom Layer-3 plugins for plugin-shaped concerns — add `src/plugins/{name}/` via the framework's `createPlugin` (see the moku-core `consumer-plugins.md` reference)
 
 **Tools/Library:**

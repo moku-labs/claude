@@ -11,14 +11,14 @@ Read the specification from the provided path (defaults to `.planning/app-spec.m
 
 If the plan is incomplete, ask the user to run `/moku:plan app` first.
 
-**Consult the reference app.** Before inventing an app structure, **read `demos/tracker`** (the
-**Reference Projects** in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-frameworks.md`; local
-clone `../demos/tracker`) — a real Layer-3 full-stack app (`@moku-labs/web` + `@moku-labs/worker`) and the
-authority on idiomatic **app shape** per `moku-idioms.md`: multiple `createApp` instances (build / browser
-/ worker), two frameworks side-by-side, folder split by concern, a thin `cloudflare/worker.ts` entry, and
-business logic in `plugins/tracker`. Follow its structure and plugin boundaries — that is the fastest path
-to an idiomatic solution. **Spec, not source:** for *design* references (e.g. `tracker-v2`) study look/feel
-and re-implement, never copy a demo prototype's source (see its `design-context.md` §0).
+**Build to the idiomatic app shape** in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md`:
+multiple `createApp` instances (build / browser / worker), two frameworks side-by-side where the app is
+full-stack (`@moku-labs/web` + `@moku-labs/worker`), folder split by concern, a thin `cloudflare/worker.ts`
+entry, and business logic in plugins. A public worked example of this shape is the **`tracker`** app in the
+public repo **`github.com/moku-labs/demos`** — consult it only if a concrete reference helps (it's
+illustrative, never required, and never assume it's checked out locally). **Spec, not source:** study a
+reference for *what idiomatic looks like* and re-implement to the project's conventions — never copy a demo
+prototype's source.
 
 ## Step 2: Verify Framework
 
@@ -133,6 +133,32 @@ server). Skip only for a pure library with no run command (say so explicitly in 
    NOT proceed until the documented run command boots and serves cleanly from a clean state.
 
 Record the result (command run, surface checked, status) in the Step 10 report.
+
+## Step 7.5: Comprehensive E2E + visual-baseline gate (LAST verification — web apps)
+
+The smoke test (Step 7) proves the app **boots**; this proves it **works** — every screen and feature,
+in a real browser, pinned with visual baselines. Full process:
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`.
+
+1. **Scope:** web surface present? (a `@moku-labs/web` client, incl. a worker-backed full-stack app or a
+   `@moku-labs/room` app). If no web surface, skip with a one-line note (nothing to e2e) and continue.
+2. **Offer the gate — confirmed skip only.** `AskUserQuestion`: *"Run the comprehensive E2E + visual-baseline
+   stage now? Every screen/feature is tested + confirmed in a real browser; bugs and visual issues found are
+   fixed."* — options: **"Run it (Recommended)"** · **"Skip — I confirm"** (desc: "ship without comprehensive
+   e2e; recorded as skipped"). The skip is a **deliberate, confirmed** choice — never a silent default.
+3. **On run:** spawn the **`web-e2e-tester`** agent (INVENTORY_SOURCES = the design context §6 inventory if
+   present, the specs + what each wave delivered, and the app source; `MODE=gate`). It builds the full
+   feature inventory, **gap-analyzes the whole app** (incl. features built in earlier waves), scaffolds/extends
+   the Playwright suite + frozen fixture corpus + per-engine/per-OS visual baselines, **runs it for real**,
+   **fixes every functional bug / visual regression it finds** (app source, moku-web conventions) and re-runs
+   until **green with full coverage**. The build is **not done** until it returns `PASS` — do not proceed to
+   README/report on a red or partially-covered suite.
+4. **On skip:** record it **prominently** in the Step 10 report ("⚠️ comprehensive E2E skipped by user — N
+   screens unverified"), and write the outcome (run/skipped + coverage) to STATE.md so it is visible, not
+   silent. (The standalone `/moku:e2e` command runs the same agent any time, without the skip offer.)
+
+**Confirm, don't assume.** Never present the finished app as working on the strength of unit/integration
+tests alone — only a green real-browser run counts (or an explicitly confirmed skip).
 
 ## Step 8: README generation / update
 

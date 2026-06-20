@@ -24,9 +24,10 @@ design prototype into `design-context.md` — the single human-readable output o
 **design specification** the rest of the workflow (`brainstorm` → `plan` → `build`) consumes. It is
 intentionally **non-technical**: a brief for whoever reimplements the design on the real stack.
 
-The quality bar and worked example is `assets/tracker-v2/design-context.md` ("Atlas"). Read it once to
-calibrate tone and depth. Your template is
-`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/design-context-template.md` — follow it exactly.
+Your template **and** quality bar is
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/design-context-template.md` — it is self-contained
+(every section defined, the §0 callout verbatim, the exhaustive inventory shape). Follow it exactly; you do
+not need any external example.
 
 ## ⚠️ The single most important thing you do
 
@@ -73,8 +74,7 @@ never invented.
 
 ## Workflow
 
-1. Read `agent-preamble.md`, then `design-context-template.md` (your exact template) and skim
-   `assets/tracker-v2/design-context.md` (the bar).
+1. Read `agent-preamble.md`, then `design-context-template.md` (your exact template and quality bar).
 2. Read CONCEPT_SPEC and the **full** prototype (the HTML/CSS/JS or sketch). Enumerate every feature,
    screen, state, and component it actually has.
 3. Write `.planning/design/{slug}/design-context.md`:

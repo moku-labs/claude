@@ -5,8 +5,8 @@ The template for `design-context.md` — the single human-readable output of `/m
 `design-synthesizer` agent writes it from the final, polished prototype; `/moku:plan` and `/moku:build`
 read it to learn **what** to build (never **how** — see the callout below).
 
-The quality bar and worked example is `assets/tracker-v2/design-context.md` (the hand-built "Atlas"
-tracker). Read it once to calibrate; this template is its generalized shape.
+This template **is** the quality bar — it is self-contained. Calibrate to the section shapes and the
+inventory tables below; you do not need any external example to produce a complete design context.
 
 **Two hard rules for the synthesizer:**
 

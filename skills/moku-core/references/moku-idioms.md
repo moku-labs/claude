@@ -4,10 +4,11 @@ The **architecture-shape** rubric: is a proposed app structured the idiomatic Mo
 code-level rules in [`invariants.md`](invariants.md) (R1–R9, naming, lifecycle) — those check *how a
 plugin is written*; this checks *how a whole app is composed*.
 
-**The worked reference is `demos/tracker`** (repo `github.com/moku-labs/demos`, local clone
-`../demos/tracker`) — a real Layer-3 full-stack app on `@moku-labs/web` (client) + `@moku-labs/worker`
-(Cloudflare backend). When in doubt about app shape, **read how `tracker` does it** and follow that. This
-catalog is distilled from it.
+This catalog **describes** the idiomatic app shape directly — build to it; you do not need any example
+project to follow it. A public worked example of this exact shape (a Layer-3 full-stack app on
+`@moku-labs/web` client + `@moku-labs/worker` Cloudflare backend) lives in the **`tracker`** app of the
+public repo **`github.com/moku-labs/demos`** — consult it only if a concrete reference helps; it is
+illustrative, not required, and never assume a reader has it checked out.
 
 > **Cite both** `demos/tracker` (the worked example) and the underlying `spec/NN-*.md §N` /
 > `architecture.md` / `consumer-plugins.md` when reporting. Where this catalog and `spec/` disagree, the

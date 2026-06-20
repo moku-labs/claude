@@ -2,6 +2,37 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.52.0 (2026-06-20)
+
+**Comprehensive E2E + visual-baseline testing for Layer-3 web apps.** Every screen and feature is now
+proven to work in a **real browser** (Playwright) with **visual baselines** — as
+the final App-Build gate and as a standalone command. Confirm, don't assume: bugs and visual regressions
+found are **fixed** before any result is shown.
+
+### Added
+- **`/moku:e2e` command** — comprehensively e2e-test a web app on demand: enumerate every screen/feature,
+  close coverage gaps, run the suite in a real browser, fix what's broken, and report green coverage. Web
+  scope-gated; accepts a focus target + `--update-baselines`.
+- **`web-e2e-tester` agent** (`moku-web-e2e-tester`) — builds the full feature inventory (from a design
+  context §6 / specs / app source), **gap-analyzes the whole app** (incl. features built in earlier waves),
+  scaffolds/extends the Playwright suite + frozen fixture corpus + per-engine/per-OS visual baselines,
+  **runs it for real**, **fixes every functional bug / visual regression** in app source, and only returns
+  `PASS` when green with full coverage. Bounded fix loop; never blanket-updates baselines.
+- **`e2e-testing.md` reference** — the self-contained, concrete process: frozen fixture corpus, the spec
+  catalog (`no-js-errors`/`baseline`/`build-validation`/`navigation`/`links`/`seo`/…), the engine matrix
+  (chromium full; webkit+firefox visual+boot-guard), visual determinism knobs (clock freeze, fonts-ready,
+  animations off, `maxDiffPixelRatio` 0.02), per-engine/per-OS goldens (local + pinned-Docker Linux), and
+  the baseline policy (real regression → fix app; intended change → deliberate update).
+
+### Changed
+- **App Build gains a final E2E gate (`build-app.md` Step 7.5).** After the runtime smoke test, the
+  comprehensive E2E + visual stage runs as the **last verification** — **mandatory but skippable only with
+  an explicit, confirmed skip** (recorded prominently in the report, never silent). The build is not "done"
+  until the suite is green with full coverage (or a confirmed skip). Wired into `build.md` (App Build flow +
+  key rule) and surfaced in `init.md` (Consumer App next steps).
+- `SKILL-INVENTORY.md` — commands 10 → 11, agents 24 → 25 (new E2E group), reference set 50 → 51.
+- Version bumped to 0.52.0 in plugin.json and marketplace.json.
+
 ## 0.51.0 (2026-06-20)
 
 **`moku-sync` of the new frameworks — real catalogs for `worker` + `room`.** The `worker`/`room` skills
@@ -44,9 +75,8 @@ plus a Reference Projects index pointing at `demos/tracker` as the app-shape aut
   `skills/moku-worker/` + `skills/moku-room/` stubs. `knownVersion: "0.0.0"` (never-synced sentinel) — run
   `moku-sync worker` / `moku-sync room` to generate the real catalogs and stamp versions (latest at
   registration: worker 0.4.0, room 0.1.1).
-- **Reference Projects** index in `moku-frameworks.md` — the real full-stack `demos/tracker`
-  (`github.com/moku-labs/demos`, local `../demos/tracker`) as the canonical app-shape reference; the
-  `tracker-v2` design prototype is retained as design-phase-only. Wired into App Build (`build-app.md`):
+- **Reference Projects** index in `moku-frameworks.md` — the public full-stack example app
+  (`github.com/moku-labs/demos`) as a worked app-shape reference. Wired into App Build (`build-app.md`):
   read `demos/tracker` before inventing an app structure.
 
 ### Changed

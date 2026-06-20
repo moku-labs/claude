@@ -126,7 +126,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 ```
 
 > **Provenance of the `worker` entry:** registered + **synced 2026-06-20** to `@moku-labs/worker@0.4.0`
-> (npm `dist-tags.latest`; repo `moku-labs/worker`, local clone `../worker`). Deps `@moku-labs/core@0.1.4`
+> (npm `dist-tags.latest`; public repo `github.com/moku-labs/worker`). Deps `@moku-labs/core@0.1.4`
 > (registered) + `@moku-labs/common@0.2.0` (shared infra — a skill, not a framework entry); engines node
 > ≥24 / bun ≥1.3.14. A Layer-2 framework (`createCoreConfig`/`createCore`) exposing Cloudflare primitives
 > as plugins (KV, D1, R2, Queues, Durable Objects) + a `server` router, with a node-only `./cli` deploy
@@ -135,7 +135,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > + `plugin-index.md` are generated from it). `moku-worker-version` now fires for projects behind 0.4.0.
 >
 > **Provenance of the `room` entry:** registered + **synced 2026-06-20** to `@moku-labs/room@0.1.1`
-> (npm `dist-tags.latest`; repo `moku-labs/room`, local clone `../room`). **`role: "plugin-pack"`** — room
+> (npm `dist-tags.latest`; public repo `github.com/moku-labs/room`). **`role: "plugin-pack"`** — room
 > is **not a framework**: it has no Layer-2 shell and never calls `createApp`; you spread its
 > `roomPlugins.stage`/`.controller` arrays into a `@moku-labs/web` app. **Built on `@moku-labs/web`** (peer
 > dep `^1.12.4`; `dependsOn: ["@moku-labs/web"]`, upgrade order core → web → room) + bundled `trystero`
@@ -255,13 +255,14 @@ The `/moku:plan` and `/moku:build` app flows (and `/moku:design`) should point a
 
 | Key | What it is | Stack | Location | Status |
 |-----|-----------|-------|----------|--------|
-| `demos/tracker` | **THE canonical worked reference for building apps** — a real Layer-3 full-stack kanban app: `@moku-labs/web` client + islands and an `@moku-labs/worker` Cloudflare backend (Durable Objects, Queues, R2, D1, KV) in one project. The authority on idiomatic **app shape** (`moku-idioms.md`): multiple `createApp` instances (`app.ts` build / `spa.tsx` browser / `server.ts` worker), two frameworks side-by-side, folder split by concern, a thin `cloudflare/worker.ts` entry, logic in `plugins/tracker`. **Read it before inventing an app structure.** | `@moku-labs/web` + `@moku-labs/worker` | repo `github.com/moku-labs/demos`, local clone `../demos/tracker` | **available** |
-| `tracker-v2` *(design prototype)* | The `/moku:design` **design** prototype that *preceded* the tracker build (the "Atlas" editorial concept) — a throwaway HTML/CSS/JS demo of look/feel + the `design-context.md` quality bar. Use for **design** reference only; the real implementation is `demos/tracker`. | (design demo — re-implemented on `@moku-labs/web`) | local `assets/tracker-v2/` (this repo) | **available (demo-only)** |
+| `demos/tracker` | **A public worked example for app shape** — a real Layer-3 full-stack kanban app: `@moku-labs/web` client + islands and an `@moku-labs/worker` Cloudflare backend (Durable Objects, Queues, R2, D1, KV) in one project. Illustrates the idiomatic **app shape** (`moku-idioms.md`): multiple `createApp` instances (build / browser / worker), two frameworks side-by-side, folder split by concern, a thin `cloudflare/worker.ts` entry, logic in a `tracker` plugin. Consult if a concrete reference helps — **not required**, and never assume it's checked out. | `@moku-labs/web` + `@moku-labs/worker` | public repo `github.com/moku-labs/demos` (`tracker` app) | **public** |
 
-**Spec, not source:** `demos/tracker` is real, idiomatic code — study its **structure and patterns** as
-the app-shape authority. The `tracker-v2` prototype is **demo-quality** (see its `design-context.md` §0):
-re-implement, never copy. When more demos land in `../demos`, add a row here.
+**Spec, not source:** a reference shows *what idiomatic looks like* — study its **structure and patterns**
+and re-implement to the project's conventions; never copy a demo's source. Only list **public** references
+here (a public repo or a public framework) — never a local-only path, which won't exist for a user running
+the toolkit elsewhere. The primary guidance is always the **described** rubric (`moku-idioms.md`); a
+reference repo is illustrative, not required.
 
 > **How apps use this:** when `/moku:build` (App Build) or `/moku:plan` (create/update app) needs a
-> pattern, consult the closest reference project here before inventing one — it is the fastest path to an
-> idiomatic solution and reinforces the `moku-idioms.md` rubric with a concrete worked example.
+> pattern, **follow the described rubric in `moku-idioms.md` first**; a public reference repo (above) is an
+> optional concrete example. Never instruct a reader to open a local-only path.
