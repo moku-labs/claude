@@ -307,10 +307,12 @@ Tell the user what was created, show the verification checklist results, and pro
 **Framework:**
 - Edit `src/config.ts` to define Config and Events types
 - Use `/moku:brainstorm create framework "description"` to explore architecture decisions before planning (optional — recommended for novel or complex domains)
+- (Optional) `/moku:design "..."` only if the framework ships a **UI or a CLI/TUI/DX surface** to design — most frameworks have nothing to design visually and can skip it
 - Use `/moku:plan create framework` to plan a complete framework
 - Use `/moku:build` to build from a plan
 
 **Consumer App:**
+- Use `/moku:design "what to design"` to explore the **design** (look, feel, screens) and capture a reusable design context before planning — recommended for any app with a UI; it produces a `design-context.md` that `/moku:plan ... --context` consumes
 - Use `/moku:brainstorm create app "description"` to explore architecture decisions before planning (optional)
 - Use `/moku:plan create app` to plan the application
 - Use `/moku:build` to build from a plan

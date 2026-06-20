@@ -6,9 +6,9 @@
   "plugins": [
     {
       "name": "moku",
-      "version": "0.48.1",
+      "version": "0.49.0",
       "source": "./",
-      "description": "Development toolkit for Moku Core \u2014 scaffolding, framework planning, plugin building, migration, and specification enforcement for the micro-kernel plugin framework",
+      "description": "Development toolkit for Moku Core, the micro-kernel TypeScript plugin framework: it scaffolds projects and drives a gated brainstorm \u2192 design \u2192 plan \u2192 build workflow with parallel research, multi-round design exploration, TDD build waves, and a multi-agent validation pipeline. The authoritative Moku Core specification is vendored and injected into every command and agent for spec-grounded decisions.",
       "author": {
         "name": "Oleksandr Kucherenko"
       },

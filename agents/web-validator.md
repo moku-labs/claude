@@ -131,10 +131,22 @@ Verify the expected directory structure:
 
 **WARNING** for missing required directories/files. **INFO** for missing optional ones.
 
+### 9. Links via the Route Map (No Hardcoded Internal URLs)
+
+Internal links must be built from the route map's `urls` builder (`createUrls`) — or `ctx.url(name, params)` inside a route/layout — never hand-written URL string literals. This is the link-building half of Rule R2 (one route table for build, SPA, AND links): hardcoded paths silently rot when a route pattern changes, breaking deep-linkability (a shared link to a specific place stops resolving).
+
+- **WARNING**: A hardcoded internal URL string in `.ts`/`.tsx` — `href="/..."`, `` href={`/.../${id}`} ``, `location.assign("/...")` / `location.href = "/..."`, `navigate("/...")`, `history.pushState(..., "/...")` — when `src/routes.tsx` exports a `urls` builder. Suggest `urls.toUrl("name", { ... })` (or `ctx.url(...)` inside a render/layout/head).
+- **OK**: `urls.toUrl(...)`, `ctx.url(...)`; the literal `href="/"` when no named route is more specific; external URLs (`https://`, `mailto:`, `tel:`); non-page API/asset paths (`/api/...`, `/assets/...`); and same-page anchors/hash fragments.
+
+**How to check:**
+- Read `src/routes.tsx`: if it `export`s `urls` (from `createUrls`), this rule applies. Collect the route patterns so you can recognize internal page paths.
+- Grep `.tsx`/`.ts` (excluding `routes.tsx` and tests) for internal-URL literals: `href="/`, `` href={`/ ``, `location.assign("/`, `location.href = "/`, `.navigate("/`, and `pushState(` with a `/…` literal.
+- For each hit, exclude API/asset paths and external URLs; a remaining internal page path (especially one matching or shadowing a route pattern) is a WARNING. Note whether the file imports `urls` from the route map.
+
 ## Severity Levels
 
 - **BLOCKER**: CSS classes in markup; missing @scope; missing @layer declaration; framework-heavy interactivity instead of islands
-- **WARNING**: Raw colors outside tokens; missing component CSS; wrong naming convention; missing cleanup in islands; size estimates exceeded
+- **WARNING**: Raw colors outside tokens; missing component CSS; wrong naming convention; missing cleanup in islands; size estimates exceeded; hardcoded internal URL links (not built from the route map)
 - **INFO**: Naming suggestions; missing optional directories; additional token opportunities
 
 ## Process
@@ -147,7 +159,8 @@ Verify the expected directory structure:
 6. Check island architecture patterns
 7. Verify naming conventions
 8. Estimate bundle sizes
-9. Report findings
+9. Check internal links are built from the route map (`urls` / `ctx.url`)
+10. Report findings
 
 ## Output Format
 
@@ -192,6 +205,10 @@ Verify the expected directory structure:
 ### Structure
 - Required: [all present / missing list]
 - Optional: [present / missing list]
+
+### Links (Route Map)
+- Route map `urls` builder: [present / absent]
+- Hardcoded internal URL violations: [none / list with file:line + suggested `urls.toUrl(...)`]
 
 ### Summary
 - Blockers: N

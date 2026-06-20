@@ -2,6 +2,50 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.49.0 (2026-06-20)
+
+**New `/moku:design` command — human-in-the-loop design exploration that produces a reusable design
+context (a spec, not source).** A multi-round process: frame the target (whole app, one page, or a single
+element), generate N distinct concept prototypes in parallel, converge on a winner, polish it in a live
+browser preview, then capture a non-technical `design-context.md` with an exhaustive screen/element
+inventory. The design context grounds the rest of the workflow (`brainstorm` → `plan` → `build`) — and a
+hard, repeated principle is wired through every layer: **the prototype is throwaway demo code; downstream
+agents re-implement it from scratch on the real stack with all plugin conventions, and never copy it.**
+
+### Added
+- **`commands/design.md`** — the orchestrator: NL intent normalization (target/scope/medium + `--count`,
+  `--rounds`, `--medium`, `resume`, `list`), per-design isolation under `.planning/design/{slug}/`, a scope
+  gate that declines non-UI projects (or switches to a CLI/TUI/DX surface), atomic resumable per-design
+  state, and human gates at every round pick / polish / capture. `disable-model-invocation: true`. Loads
+  the official `frontend-design` skill at the start of a run as a quality lever, and always serves a live
+  preview (internal browser + screenshots when available, else a local static-server port).
+- **Agents** — `design-generator` (builds one self-contained concept prototype in parallel, invokes
+  `frontend-design`, strict single-file isolation), `design-synthesizer` (writes `design-context.md`,
+  always emitting the verbatim "spec, not source" callout + an exhaustive inventory), and `design-critic`
+  (read-only round critique: coverage / distinctiveness / fit).
+- **Reference docs** — `design-flow.md` (phases A–E, gates, rounds loop, availability-aware preview chain),
+  `design-stages.md` (per-design STATE schema + registry + resume table), `design-context-template.md`
+  (the tracker-v2-derived template, opening with the mandatory callout), `design-medium.md` (scope gate +
+  web/cli/tui branching).
+- **Runtime smoke-test delivery gate for app builds** — `build-app.md` Step 7: the documented run command
+  must boot from a clean state and serve its primary surface before an app is declared done (catches
+  runtime-only failures that mocked tests miss).
+- **`web-validator` link check (Rule R2)** — flags hardcoded internal URL literals; internal links must be
+  built from the route map's `urls` builder / `ctx.url(...)`. Documented in moku-web `SKILL.md` +
+  `project-spec.md`.
+
+### Changed
+- **Spec-not-source carry-through wired into `plan` and `build`** — when a design context grounds a plan,
+  the re-implement-from-scratch instruction is forwarded into the generated specs and any spawned planning
+  agent; the builders (App + Plugin) carry it into every builder prompt. The demo prototype is never copied
+  or ported 1:1.
+- **`brainstorm` / `plan` design-context detection** — both offer to ground their work in a matching
+  `.planning/design/{slug}/design-context.md`; `init` lists `/moku:design` as a next step for UI apps.
+- **Plugin + marketplace description trimmed to two sentences** (now naming the design step in the
+  brainstorm → design → plan → build pipeline).
+- **`SKILL-INVENTORY.md`** — commands 9 → 10, agents 21 → 24 (new Design group), reference set 45 → 49.
+- Version bumped to 0.49.0 in plugin.json and marketplace.json.
+
 ## 0.48.1 (2026-06-19)
 
 **MC3 `// @env-allow` exemption.** The `validate-common-usage.sh` PreToolUse hook now honors a

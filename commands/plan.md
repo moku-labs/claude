@@ -390,6 +390,23 @@ If the project has output styles configured (test if `.claude/output-styles/` di
 
 ---
 
+## Design Context Detection (spec, not source)
+
+A `/moku:design` run may have captured the design (look, feel, screens) for this work at `.planning/design/{slug}/design-context.md`. Before routing, if VERB is `create` or `update` and no design context is already in CONTEXT_FILES, glob `.planning/design/*/design-context.md`. If one or more exist whose target relates to REQUIREMENTS (match the slug, or the `# {NAME} — Design Context` title), offer via `AskUserQuestion`:
+- Question: "A design context for `{slug}` exists. Use it to ground this plan?"
+- Header: "Design context"
+- Options: "Use it (Recommended)" — description: "Plan to build that design; specs reference its screen/element inventory" · "Skip it" — description: "Plan without it"
+
+If "Use it": append its path to CONTEXT_FILES (the create-verb Context Injection Pre-Phase merges it like any context). A user may also pass it explicitly: `--context design/{slug}/design-context.md`.
+
+**Spec-not-source carry-through (mandatory).** When any CONTEXT_FILE is a design context (a path under `.planning/design/`, or a file that opens with the "spec, not source" §0 callout), its prototype (HTML/CSS/JS or sketch) is **demo-only** and must be **re-implemented from scratch** — never copied, never ported 1:1, never used as a scaffold. The plan MUST forward this so it is internalised, not merely filed:
+1. **Into the specs:** every spec for a screen/component derived from the design states, in its Overview/Verification, "Re-implement from the design context honouring ALL Moku conventions — for web: moku-web islands, `@scope`/`@layer` CSS, `data-*` attributes only (no class selectors), the token system, one route table, a node-free client bundle (moku-web Rules R1–R7), readable-code style. Do NOT copy the prototype's CSS/JS/DOM or replicate its bugs." This carries the instruction into `/moku:build`, which reads the specs.
+2. **Into any spawned planning agent** (`researcher`, `plan-checker`): include the same instruction in the spawn prompt when a design context grounds the plan — so analysis treats the prototype as a spec, never as code to lift.
+
+The design context describes **WHAT** to build; the specs and conventions define **HOW**.
+
+---
+
 ## Route to Workflow
 
 **Guard — unrecognized VERB:** Before routing, verify that VERB (loaded from STATE.md on resume, or parsed from arguments on fresh invocation) is one of: `create`, `update`, `add`, `migrate`. If VERB is any other value:
@@ -441,6 +458,7 @@ Based on parsed VERB and TYPE, load and follow the appropriate verb-specific ref
 - The spec must be complete enough to implement without further questions
 - **Run plan-checker agent BEFORE every user gate, and triage BLOCKERs BEFORE the gate is shown — users see validated plans only.** This ordering is mandatory and is NOT relaxed by quick mode: the plan-checker → BLOCKER-triage → fix step must complete *before* the approval `AskUserQuestion` is presented, never after approval. In quick mode the three per-stage gates collapse to ONE combined gate — so run plan-checker on the final assembled plan and resolve every "Fix now" BLOCKER (per `plan-stages.md` Interactive Triage) *before* presenting that single gate. Presenting an approval while unresolved BLOCKERs exist is a defect (this was the recurring deviation in the multi-plan incident: gates were accepted, then BLOCKERs fixed after). If a BLOCKER is found after a gate was already shown, withdraw the gate, fix, re-run plan-checker, and re-present.
 - Read `.planning/STATE.md` at the start of every stage, write it at the end — enable cross-session continuity. **Every STATE.md write must refresh the `## Recovery` block** (Last good step / Open blockers / Next action / Updated) per `plan-templates.md` + `memory-schema.md`, so a cold session or `/moku:next` rehydrates in one read.
+- **Design context = spec, not source:** when a design context grounds the plan (see "Design Context Detection"), forward the re-implement-from-scratch instruction into the generated specs AND any spawned planning agent — the prototype is demo-only and must never be copied. This is mandatory, not optional.
 - After all stages complete, `Next Action` must point to `Run /moku:build resume (build command detects skeleton not-started and runs skeleton build first)`
 - **Plan NEVER builds:** The plan command only creates specs, analyzes, and recommends. It must NEVER invoke build steps, read build reference files, or create/modify source code files. After approval, always recommend the appropriate `/moku:build` command for the user to run in a fresh context. This applies to ALL verbs including `add` and `update` — the `add` verb creates a spec and recommends `/moku:build add {name}`, the `update` verb updates specs and recommends `/moku:build resume`.
 

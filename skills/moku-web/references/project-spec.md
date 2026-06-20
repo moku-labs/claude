@@ -207,7 +207,9 @@ Three tiers, each guarding a different thing — applies to any project type:
   own custom plugins via the framework's re-exported `createPlugin` (in `src/plugins/`) IS allowed for
   plugin-shaped concerns — see [consumer-plugins.md](../../moku-core/references/consumer-plugins.md).
 - **R2 — One route table.** All routes register via `pluginConfigs.router.routes` (no imperative
-  `set()`); `routes.tsx` is shared by build + SPA + links.
+  `set()`); `routes.tsx` is shared by build + SPA + links. Build every internal link from the table's
+  `urls` (`createUrls`) / `ctx.url(name, params)` — never a hardcoded URL string literal, which rots
+  when a pattern changes and breaks deep-linkability.
 - **R3 — Client bundle stays node-free.** `routes.tsx` + `lib/**` (browser graph) must NOT import
   `src/app.ts` or any node-only plugin/provider. Loaders reach data via `ctx.require(plugin)` (the
   browser-safe shell); the node provider (`fileSystemContent`) is composed ONLY in `src/app.ts`.

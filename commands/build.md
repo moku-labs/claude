@@ -407,6 +407,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-app.md` for detail
 
 **Key rules**:
 - NEVER import from `@moku-labs/core` — only from the framework package. If web app, also enforce moku-web skill patterns.
+- **Design context = spec, not source.** If the app spec (or any screen/component spec) references a design context (`.planning/design/*/design-context.md`) or carries a "re-implement from the design context" note, the design's prototype is **demo-only** — its HTML/CSS/JS communicates look, feel, behaviour, and the screen/element inventory, nothing more. **Re-implement every screen and component from scratch** on the real stack honouring ALL moku-web conventions (island architecture, `@scope`/`@layer` CSS, `data-*` attributes only — never class selectors, the token system, one route table, node-free client bundle — Rules R1–R7), and readable-code style. **Pass this instruction into every spawned builder's prompt** so it is internalised. NEVER copy or port the prototype's CSS/JS/DOM, its class names, or its (buggy) behaviour, and never use it as a scaffold. The design context says WHAT to build; moku-web says HOW.
 - **Never deliver or show the user an app you have not actually run.** Tests use mocked bindings and cannot catch a runtime-only failure (e.g. an unmigrated local D1 → `no such table` → 500). Step 7 (runtime smoke test in `build-app.md`) is a hard delivery gate: the documented `bun run dev` must boot from a clean state and serve its primary surface. For Cloudflare Worker apps, that means the `dev` script applies local D1 migrations before `wrangler dev`.
 
 ---
@@ -419,7 +420,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-plugin.md` for det
 
 **Flow**: Understand plugin (from spec, description, or hierarchy) -> Determine tier (Nano/Micro/Standard/Complex/VeryComplex) + domain merge check -> Create directory structure -> Implement domain files (types.ts, state.ts, api.ts, handlers.ts) -> Write index.ts (~30 lines wiring, NO explicit generics) -> Write tests (unit + integration) -> Write README.md -> Validate (verifier, plugin-spec, jsdoc, readable-code, test, type validators) -> Gap closure if needed (max 2 rounds).
 
-**Key rules**: Domain merge check before creating new plugins. No explicit generics on createPlugin. No unnecessary onStart/onStop. Full JSDoc everywhere.
+**Key rules**: Domain merge check before creating new plugins. No explicit generics on createPlugin. No unnecessary onStart/onStop. Full JSDoc everywhere. **If a custom (Layer-3) plugin implements a design-context screen/component, re-implement it from scratch per moku-web/moku conventions — never copy or port the demo prototype's source or bugs; pass this instruction into the builder's prompt.**
 
 ---
 

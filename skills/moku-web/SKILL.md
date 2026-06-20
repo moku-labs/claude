@@ -66,6 +66,9 @@ export const routes = defineRoutes({
     .head((ctx) => ({ title: ctx.data.frontmatter.title })),
 });
 export const urls = createUrls(routes, "en");  // pure name→URL builder (no app); 2nd arg = default locale
+// Build EVERY internal link from `urls` (islands/components) or `ctx.url` (render/layout/head) — never a
+// hardcoded URL string. One table, one builder → links stay correct as patterns evolve, and every place
+// stays deep-linkable (Rule R2). e.g. urls.toUrl("post", { slug }), NOT `href={`/${slug}/`}`.
 
 // app.ts — Node SSG build (full entry)
 import { createApp, contentPlugin, fileSystemContent, buildPlugin, dataPlugin, cliPlugin } from "@moku-labs/web";

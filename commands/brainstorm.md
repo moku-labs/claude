@@ -172,6 +172,15 @@ If "Resume": check if scratch files exist (`.planning/brainstorm-{NAME}-*.md`).
 If "Start fresh": delete `.planning/context-{NAME}.md` and all `.planning/brainstorm-{NAME}-*.md` scratch files.
 If "Cancel": delete `.planning/.brainstorm-active`, remove `.planning/build/` only if it was just created by this session (i.e., was empty — check with `find .planning/build -maxdepth 1 -empty`), and stop.
 
+### Design Context Detection (optional grounding)
+
+A prior `/moku:design` run may already have captured the **design** (look, feel, screens) for this work. Before research, glob `.planning/design/*/design-context.md`. If one or more exist whose target relates to NAME/DESCRIPTION (match the slug or the `# {NAME} — Design Context` title against the brainstorm subject), offer to ground the session in it via `AskUserQuestion`:
+- Question: "A design context for `{slug}` exists. Ground this brainstorm in it?"
+- Header: "Design context"
+- Options: "Use it (Recommended)" — description: "Read it so the architecture brainstorm targets that design's screens/behaviour" · "Ignore it" — description: "Brainstorm without it"
+
+If used: **read** the design context and treat it as the design **specification** the architecture must realize — focus the debate on *how to build that design properly on the Moku stack* (plugins, data flow, islands), not on re-deciding the visuals. **Carry the spec-not-source framing forward:** note in the final `context-{NAME}.md` (Summary or Non-Goals) that the design's prototype is demo-only and must be **re-implemented from scratch** with all plugin conventions — never copied — so `/moku:plan` inherits it. Keep this lightweight: one detection, one question, no new files.
+
 ---
 
 ## Ground in spec (before research & debate)
