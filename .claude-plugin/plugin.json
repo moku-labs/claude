@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "moku",
   "displayName": "Moku",
-  "version": "0.56.0",
+  "version": "0.57.0",
   "description": "Development toolkit for Moku Core, the micro-kernel TypeScript plugin framework: it scaffolds projects and drives a gated brainstorm \u2192 design \u2192 plan \u2192 build workflow with parallel research, multi-round design exploration, TDD build waves, and a multi-agent validation pipeline. The authoritative Moku Core specification is vendored and injected into every command and agent for spec-grounded decisions.",
   "author": {
     "name": "Oleksandr Kucherenko",

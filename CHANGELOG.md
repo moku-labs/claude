@@ -2,6 +2,14 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.57.0 (2026-06-21)
+
+**Flag the `createApp` entry-point wrapper anti-pattern.** A Layer-2 framework that wraps the core-bound `createApp` / `createPlugin` in `: typeof <private> = options =>` with body casts (to inject core-plugin config) violates R6 (inline assertions) + R9 (`Record<string, unknown>` widened then cast) at the framework's front door, and hides the public signature behind `typeof` of a private const. Validators now catch it and steer authors to the plain `createApp = framework.createApp` re-export, with core-plugin defaults seeded at `createCoreConfig` (the `@moku-labs/web` pattern).
+
+### Added
+- **`moku-type-validator`** Check 2.6 (BLOCKER, R6+R9): flags an `export const createApp: typeof <private> = options =>` wrapper with body casts; allowlists the plain binding re-export and a cast-free explicitly-typed function.
+- **`moku-readable-code-validator`** flag #8 (WARNING): flags an opaque public entry signature hidden behind `typeof` of a private const; exempts the plain re-export.
+
 ## 0.56.0 (2026-06-21)
 
 **Synced `moku-worker` skill knowledge to `@moku-labs/worker@0.11.0`** (`moku-sync`; was 0.9.2). The `0.9.2 → 0.11.0` delta is the `./cli` subpath removal — `deployPlugin`/`cliPlugin` + the deploy manifest types (`ExternalManifest`/`ResourceManifest`) now ship only from the package root — plus docs/branding. No plugin/API/event/config change (still 10 plugins, same set).
