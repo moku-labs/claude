@@ -27,7 +27,7 @@ Ship pre-expanded in the default `eslint.config.ts`:
 ```
 
 Use a scoped `eslint-disable` only for canonical spec **type names** that are abbreviations
-(e.g. `EnvVarSpec`, `ComponentDef`) — do NOT put PascalCase type names in the allowList.
+(e.g. `EnvVarSpec`, `IslandDef`) — do NOT put PascalCase type names in the allowList.
 
 ## 2. cspell / dictionary `words` (prose in comments, docs, Markdown)
 

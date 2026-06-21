@@ -129,14 +129,14 @@ plugins/spa/
     api.ts
   progress/
     state.ts, api.ts
-  components/
+  islands/
     types.ts, state.ts, api.ts
   router/
     types.ts, state.ts, api.ts
   README.md
   __tests__/
     unit/
-      components-api.test.ts, router-api.test.ts, ...
+      islands-api.test.ts, router-api.test.ts, ...
     integration/
       spa.test.ts
 ```
@@ -157,7 +157,7 @@ Nested config convention — sub-module configs are just nested objects:
 config: {
   router: { viewTransitions: false, progressBar: true },
   progress: { enabled: true, color: "#0076ff", height: 2 },
-  components: { swapSelector: "main > section", componentAttribute: "data-component" },
+  islands: { swapSelector: "main > section", islandAttribute: "data-island" },
 },
 ```
 
@@ -169,12 +169,12 @@ export type SpaCtx = PluginCtx<SpaConfig, SpaState, SpaEvents>;
 
 Sub-module factory pattern — each module exports a `createXxxApi(ctx)` factory:
 ```typescript
-// components/api.ts
+// islands/api.ts
 import type { SpaCtx } from "../types";
-export function createComponentsApi(ctx: SpaCtx) {
+export function createIslandsApi(ctx: SpaCtx) {
   return {
-    createComponent: (name, hooks) => { /* ... */ },
-    scanAndMount: (root) => scanAndMount(root, ctx.state.components.registered),
+    createIsland: (name, hooks) => { /* ... */ },
+    scanAndMount: (root) => scanAndMount(root, ctx.state.islands.registered),
   };
 }
 ```
@@ -184,7 +184,7 @@ Composed state — root `createState` composes sub-module state factories:
 createState: () => ({
   router: createSpaRouterState(),
   progress: createProgressState(),
-  components: createComponentsState(),
+  islands: createIslandsState(),
 }),
 ```
 
@@ -193,7 +193,7 @@ Event ownership — the plugin declares ALL events; sub-modules emit via `ctx.em
 events: (register) => register.map<SpaEvents>({ /* all sub-module events */ }),
 ```
 
-**When to merge:** If multiple plugins share a domain name (e.g. `spaHead`, `spaProgress`, `spaRouter`, `components` all relate to SPA), coordinate via events, or would naturally be configured together — merge them into one Very Complex plugin.
+**When to merge:** If multiple plugins share a domain name (e.g. `spaHead`, `spaProgress`, `spaRouter`, `islands` all relate to SPA), coordinate via events, or would naturally be configured together — merge them into one Very Complex plugin.
 
 **When to split:** If modules have no shared state, events, or coordination — they should be separate plugins.
 

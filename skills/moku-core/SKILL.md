@@ -314,8 +314,8 @@ export const routerPlugin = createPlugin('router', {   // export uses <name>Plug
 });
 
 // 3. moku-web: Island handles client-side navigation
-// components/NavigationIsland.ts — vanilla TS, no framework
-export const Navigation = createComponent('nav', {
+// islands/NavigationIsland.ts — vanilla TS, no framework
+export const Navigation = createIsland('nav', {
   onCreate(el) { el.querySelectorAll('a').forEach(a => a.addEventListener('click', handleNav)); },
 });
 ```

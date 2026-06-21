@@ -111,7 +111,7 @@ Scan ALL plugins in the framework/project and flag groups that should be merged 
 
 **Detection signals — flag when 2+ plugins share ANY of these:**
 - Same domain prefix in name (e.g. `spaHead`, `spaProgress`, `spaRouter` → "spa")
-- Overlapping event namespaces (e.g. `nav:start`, `nav:end`, `component:mount` all relate to SPA navigation)
+- Overlapping event namespaces (e.g. `nav:start`, `nav:end`, `island:mount` all relate to SPA navigation)
 - Coordinated state (one plugin's events drive another plugin's state changes)
 - Would naturally be configured together by consumers (e.g. SPA navigation settings)
 - Consumer must depend on multiple plugins from the same domain
@@ -136,7 +136,7 @@ The `src/plugins/index.ts` barrel is **required for frameworks** but **optional 
 
 **VIOLATION — helper in barrel:**
 `export { name }` where `name` is NOT a plugin instance (i.e., not a `createPlugin()`
-return value). E.g.: `articleToCard`, `route`, `loadJson`, `boot`, `createComponent`.
+return value). E.g.: `articleToCard`, `route`, `loadJson`, `boot`, `createIsland`.
 
 **VIOLATION — missing structure:**
 - No `// ─── Plugin Instances` or `// ─── Plugin Types` comment headers

@@ -170,7 +170,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 >   `mermaid-isomorphic@^3.0.0`** (+ playwright/browser).
 > - **`::embed` lazy iframe facades + `lazyEmbed` island (v1.10.0, #70; enhanced v1.11.0, #71).**
 >   `::embed{src="…" title="…" width? height?}` leaf directives rewrite to a static
->   click-to-activate `<figure data-component="lazy-embed">` — NO iframe (or its network/JS cost)
+>   click-to-activate `<figure data-island="lazy-embed">` — NO iframe (or its network/JS cost)
 >   until the reader clicks, when the new **`lazyEmbed`** SPA island swaps in the real
 >   `<iframe loading="lazy">`. `src` may be http(s), root-relative, or a co-located relative path
 >   resolved to the shared `/<slug>/…` URL; `width`×`height` reserve the box aspect-ratio. Provider
@@ -179,7 +179,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > - **`::gallery` folder galleries (v1.12.0, #72).** `::gallery{src="./images/dir/" caption="…"}`
 >   reads the co-located folder at build, sorts its images, rewrites each to its shared `/<slug>/…`
 >   URL, and renders them through a Preact component (default `GalleryTrack`, or consumer
->   `gallery.component`) into `<div data-component="gallery">`; the swipe/keyboard/lightbox island is
+>   `gallery.component`) into `<div data-island="gallery">`; the swipe/keyboard/lightbox island is
 >   **consumer-provided**. Provider option `gallery?: boolean | { component }`; requires
 >   `trustedContent: true`.
 > - **SPA/build fixes.** v1.8.1 (#64) titleTemplate applied on DATA-path client nav; v1.8.2 (#67/#68)
@@ -189,7 +189,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 >
 > **New public exports (`.`):** runtime `EmbedFacadeButton`, `GalleryTrack`; types
 > `EmbedFacade` / `EmbedFacadeProps` / `EmbedOptions` and `GalleryComponent` / `GalleryOptions` /
-> `GalleryProps` / `GallerySlide`. **`lazyEmbed`** (+ `createComponent`) is exported from **both** `.`
+> `GalleryProps` / `GallerySlide`. **`lazyEmbed`** (+ `createIsland`) is exported from **both** `.`
 > and `./browser` (the island runs client-side); the facade/gallery **components + named types are
 > `.`-only** build-time concerns (also reachable as `Content.*` via the `Content` namespace on
 > `./browser`). **New optional `peerDependency` `mermaid-isomorphic@^3.0.0`** (only when `mermaid` is

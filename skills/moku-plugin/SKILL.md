@@ -91,7 +91,7 @@ plugins/
 
 ## Very Complex Plugin Structure
 
-When multiple plugins share a domain (e.g. `spaHead`, `spaProgress`, `spaRouter`, `components` all relate to SPA), merge into one plugin with sub-module directories.
+When multiple plugins share a domain (e.g. `spaHead`, `spaProgress`, `spaRouter`, `islands` all relate to SPA), merge into one plugin with sub-module directories.
 
 ```
 plugins/spa/
@@ -99,7 +99,7 @@ plugins/spa/
   types.ts           # Shared config, state, events, context type.
   head/api.ts
   progress/state.ts, progress/api.ts
-  components/types.ts, components/state.ts, components/api.ts
+  islands/types.ts, islands/state.ts, islands/api.ts
   router/types.ts, router/state.ts, router/api.ts
 ```
 
@@ -329,9 +329,9 @@ export const spaPlugin = createPlugin('spa', {
   }),
 });
 
-// moku-web: Island mounts on data-component, uses SPA plugin API
-// components/NavIsland.ts
-export const Nav = createComponent('nav', {
+// moku-web: Island mounts on data-island, uses SPA plugin API
+// islands/NavIsland.ts
+export const Nav = createIsland('nav', {
   onNavEnd({ doc }) { /* update active link from new doc */ },
 });
 

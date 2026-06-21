@@ -96,12 +96,12 @@ component = create `Foo.tsx` + `Foo.css`, then add one `@import "../components/F
 
 ## `@scope` for component encapsulation
 
-Each component sheet scopes everything to its `[data-component="…"]` root, so generic element
+Each component sheet scopes everything to its `[data-island="…"]` root, so generic element
 selectors (`article`, `h2`, `time`) never collide across components.
 
 ```css
 /* components/DashboardGrid.css */
-@scope ([data-component="dashboard"]) {
+@scope ([data-island="dashboard"]) {
   :scope { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.75rem; }
 
   article {
@@ -123,14 +123,14 @@ Two refinements the reference uses:
 
 - **Donut scope** — exclude a nested self-scoping child:
   ```css
-  @scope ([data-component="tab-nav"]) to ([data-component="lang-switcher"]) { a { /* tab-nav links, NOT lang-switcher's */ } }
+  @scope ([data-island="tab-nav"]) to ([data-island="lang-switcher"]) { a { /* tab-nav links, NOT lang-switcher's */ } }
   ```
 - **Intentional global atoms** — a reusable leaf that must look identical everywhere is styled
   **without** `@scope` (e.g. `GitTag.css` styles bare `[data-tag]`), so it renders the same inside
   any component's scope. Use sparingly, only for true cross-context atoms.
 
 ### `@scope` rules
-- Selector: `@scope ([data-component="name"])`; `:scope` is the scoped root.
+- Selector: `@scope ([data-island="name"])`; `:scope` is the scoped root.
 - **No classes** — element selectors + `data-*` attributes only (matches the no-`className` markup rule).
 - CSS nesting is allowed inside `@scope`.
 - Always use semantic tokens; never hardcode colors.
@@ -172,7 +172,7 @@ OG-render fonts are a **separate, build-time-only** set in `assets/fonts/og/` (w
 
 ## Conventions
 
-- **Data-attribute styling, never classes** — `[data-component]`, `[data-variant]`, `[data-status]`,
+- **Data-attribute styling, never classes** — `[data-island]`, `[data-variant]`, `[data-status]`,
   runtime state flags like `[data-entered]`/`[data-expanded]` (islands set `el.dataset.x`, never
   `classList`). This rule extends to island code and JSDoc `@example` blocks.
 - **Responsive = scoped media queries** at reference breakpoints (≈900 / 600 / 375 / 320 px); no
