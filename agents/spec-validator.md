@@ -75,6 +75,15 @@ Enforce all Moku Code Rules from agent-preamble.md (R1–R9). Additionally:
 - Helper names must not collide with PluginInstance fields (`name`, `spec`, `_phantom`)
 - Helpers must not access core plugin APIs or any runtime context — they run before `createApp`
 
+### 9. Framework Structure (src/ root — Layer-2 frameworks)
+A Layer-2 framework's `src/` root contains ONLY `config.ts` (Layer 1), `index.ts` (Layer 2), the `plugins/` directory, and entry-point files that are each a declared `package.json` `exports` subpath. The `@moku-labs/web` root (`config.ts`, `index.ts`, `browser.ts`, `testing.ts`, `plugins/`) is the exemplar.
+- A non-entry-point file at `src/` root (a loose helper like `src/instances.ts`, `src/env-provider.ts`) is a **BLOCKER**. Cross-plugin shared helpers belong INSIDE the owning plugin (siblings import `../<owner>/<file>`) or as their own plugin (Nano/Micro, or a core plugin reached via `ctx.require()` for a utility many plugins need); a single-consumer helper co-locates with its consumer. The only sanctioned shared *root* module is one re-exported publicly through `src/index.ts`.
+- A non-plugin folder at root (`src/utils/`, `src/services/`, `src/helpers/`, `src/lib/`, `src/internal/`, `src/shared/`) is a **BLOCKER** — everything non-entry lives under `src/plugins/`.
+- An extra root entry-point file (`src/cli.ts`, `src/browser.ts`) is allowed ONLY when it is an actual `package.json` `exports` subpath; an undeclared one is a **BLOCKER**.
+- **Layer-3 consumer apps are EXEMPT** (no `src/config.ts`; `src/lib/`, `src/main.ts`, etc. are fine — see `consumer-plugins.md`). Apply this check to frameworks only — detect a framework by `src/config.ts` + `src/plugins/` both present.
+
+Cite `spec/01-ARCHITECTURE.md` and the plan-stages §Structure Constraints rule (`rule: "structure — src/ root"`).
+
 ### 10. Core Plugin Compliance
 - Core plugins must be created with `createCorePlugin`, NOT `createPlugin`
 - Core plugin spec must NOT contain `depends`, `events`, or `hooks` — these are forbidden (throws TypeError at runtime)

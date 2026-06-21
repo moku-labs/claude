@@ -2,6 +2,17 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.55.0 (2026-06-21)
+
+**Enforce the Layer-2 `src/` root structure rule post-build.** The "root = `config.ts` + `index.ts` + justified entry points only" constraint was previously enforced only at *plan* time, so a framework could drift after planning (e.g. a loose `src/instances.ts` / `src/env-provider.ts` helper, or a non-plugin folder, added during a build). It is now re-checked against the real `src/` filesystem.
+
+### Added
+- **`moku-verifier`** Level 1 (EXISTS) now runs a deterministic `src/` root cleanliness check for frameworks: the root may contain ONLY `config.ts`, `index.ts`, `plugins/`, and entry-point files declared as `package.json` `exports` subpaths. A loose helper file or a non-plugin folder (`src/lib|internal|shared|utils|services|helpers/`) at root is a BLOCKER (`rule: "structure — src/ root"`). Layer-3 consumer apps are exempt.
+- **`moku-spec-validator`** gains check §9 "Framework Structure (src/ root)" — the same rule as a spec-compliance finding, with the cross-plugin-helper fix guidance (co-locate in the owning plugin, or promote it to its own plugin).
+
+### Changed
+- **`plan-stages.md` §Structure Constraints** tightened: explicitly forbids loose helper *files* (not just folders) at `src/` root, names the cross-plugin-shared-helper homes (owning plugin / own plugin / publicly re-exported root module), adds `src/lib|internal|shared/` to the banned-folder list, and requires extra root entry points to be real `package.json` `exports` subpaths. Notes the post-build re-check.
+
 ## 0.54.0 (2026-06-21)
 
 **Synced the vendored Moku Core spec + all family framework knowledge to the `@moku-labs/core@1.5.0`
