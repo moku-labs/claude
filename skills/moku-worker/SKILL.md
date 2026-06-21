@@ -9,8 +9,8 @@ description: >
 
 # Moku Worker Patterns
 
-> **Synced to `@moku-labs/worker@0.9.2`** (npm `dist-tags.latest`; surface from the published 0.9.2
-> tarball + the `v0.9.2` git tag source). Full surface — every plugin, its API/config/events, the
+> **Synced to `@moku-labs/worker@0.11.0`** (npm `dist-tags.latest`; surface from the published 0.11.0
+> tarball + the `v0.11.0` git tag source). Full surface — every plugin, its API/config/events, the
 > dependency graph, and the runtime-vs-node-only boundary — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in
 > [`moku-frameworks.md`](../moku-core/references/moku-frameworks.md) (`frameworks[worker]`).
@@ -51,13 +51,12 @@ stays thin), and read env/secrets via `ctx.env` (not raw `process.env` or bare b
 moku-common conventions (MC2/MC3). The one hard rule: this is a **Layer-3 app** — `createApp` only, never
 `createCoreConfig`/`createCore` or a direct `@moku-labs/core` dependency.
 
-## Framework API (@moku-labs/worker v0.9.2)
+## Framework API (@moku-labs/worker v0.11.0)
 
-Two entries: **`@moku-labs/worker`** (runtime — ships in the bundle) and **`@moku-labs/worker/cli`**
-(a back-compat alias for the node-only deploy/CLI; since 0.6.0 `deployPlugin`/`cliPlugin` ship from the
-root too and are tree-shaken out unless you list them — never in the runtime bundle otherwise). `createApp`
-is **synchronous** (built once per isolate, frozen). Bindings are threaded as a **call argument** (`env`),
-never stored.
+One entry: **`@moku-labs/worker`**. The node-only deploy/CLI plugins (`deployPlugin`/`cliPlugin`) ship from
+the same root export and are tree-shaken out unless you list them — never in the runtime bundle otherwise.
+(The `./cli` back-compat subpath was removed in 0.11.0.) `createApp` is **synchronous** (built once per
+isolate, frozen). Bindings are threaded as a **call argument** (`env`), never stored.
 
 ```tsx
 import { createApp, endpoint, kvPlugin } from "@moku-labs/worker";
@@ -82,8 +81,8 @@ export default { fetch: (r, env, ctx) => app.server.handle(r, env, ctx) } satisf
 on the default and `app.<kind>.use("key")` for the rest. Defaults `bindingsPlugin` + `serverPlugin` are
 pre-wired; core `log`/`env`/`stage` are flat-injected on `ctx`. Helpers: `endpoint(path)`,
 `defineDurableObject(name)`. Author consumer plugins with `createPlugin` (generics inferred), typing context
-via `WorkerPluginCtx<Config, State, Events?>`. **Deploy** (root entry, alias `@moku-labs/worker/cli`):
-`deployPlugin` + `cliPlugin` — `deploy.run()`/`cli.deploy()` resolve to a structured `DeployReport`.
+via `WorkerPluginCtx<Config, State, Events?>`. **Deploy** (from the package root): `deployPlugin` +
+`cliPlugin` — `deploy.run()`/`cli.deploy()` resolve to a structured `DeployReport`.
 
 Full catalog (all 10 plugins, every API/config/event, the keyed-map config, the dependency graph, the
 runtime-vs-node-only boundary): **[`references/plugin-index.md`](references/plugin-index.md)**.

@@ -1,9 +1,10 @@
 # @moku-labs/worker — Plugin & Property Index
 
-**Synced version:** `0.9.2` (npm `dist-tags.latest`; surface read from the published 0.9.2 tarball +
-the `v0.9.2` git tag's source — upstream `main` HEAD and the `llms-full.txt` catalog body were still
-describing 0.1.0, so the released tarball/tag is the authority. Several prose facts in the catalog were
-stale; this index was regenerated from `src/**` at the tag).
+**Synced version:** `0.11.0` (npm `dist-tags.latest`; surface read from the published 0.11.0 tarball +
+the `v0.11.0` git tag's source. The `0.9.2 → 0.11.0` delta is small: `0.10.0` was docs/LICENSE + branded
+deploy output (no surface change), and `0.11.0` (`#42`) cleared `src/` root to `config.ts` + `index.ts`
+and **removed the `./cli` subpath** — `deployPlugin`/`cliPlugin` + the deploy manifest types now ship
+**only** from the package root. Plugin set, APIs, events, and config are unchanged from 0.9.2).
 Built on `@moku-labs/core@1.5.0`; uses `@moku-labs/common@0.2.1` (supplies the `log` + `env` core
 plugins). `wrangler` is an **optional `peerDependency`** (`>=3`). Engines: node ≥24, bun ≥1.3.14.
 
@@ -23,13 +24,12 @@ requests). Deploy/CLI tooling is built from the same model but tree-shaken out o
 
 | Import | Surface | Bundle |
 |--------|---------|--------|
-| `@moku-labs/worker` (`.`) | Runtime: `createApp`, `createPlugin`, all resource plugin instances, `endpoint`, `defineDurableObject`, `logPlugin`/`envPlugin` (re-exported), **and `deployPlugin`/`cliPlugin`** (node-only graph tree-shaken out unless you list them), types (`WorkerConfig`, `WorkerEvents`, `WorkerEnv`, `WorkerPluginCtx`, `PluginCtx`, `DeployReport`, `SeedConfig`, `ExternalManifest`, `ResourceManifest`, `StageApi` + `Server`/`D1`/`Queues`/`Storage`/`DurableObjects` namespaces). | Runtime plugins ship; deploy/cli pulled in only if listed (`"sideEffects": false`). |
-| `@moku-labs/worker/cli` (`./cli`) | **Back-compat alias** — re-exports `deployPlugin`, `cliPlugin`, `ExternalManifest`, `ResourceManifest`. Kept so existing `import … from "@moku-labs/worker/cli"` call sites keep working; prefer the root import in new code. | Node-only graph; **NEVER** in the Worker bundle. |
+| `@moku-labs/worker` (`.`) | The **only** entry point. Runtime: `createApp`, `createPlugin`, all resource plugin instances, `endpoint`, `defineDurableObject`, `logPlugin`/`envPlugin` (re-exported), **and `deployPlugin`/`cliPlugin`** (node-only graph tree-shaken out unless you list them), types (`WorkerConfig`, `WorkerEvents`, `WorkerEnv`, `WorkerPluginCtx`, `PluginCtx`, `DeployReport`, `SeedConfig`, `ExternalManifest`, `ResourceManifest`, `StageApi` + `Server`/`D1`/`Queues`/`Storage`/`DurableObjects` namespaces). | Runtime plugins ship; deploy/cli pulled in only if listed (`"sideEffects": false`). |
 
-> There is no `@moku-labs/worker/worker` subpath (the spec references one — it does not exist). The real
-> entries are `.` and `./cli`. As of 0.6.0 the node-only `deployPlugin`/`cliPlugin` ship from the **root**
-> too (`./cli` is now just an alias); they only enter a bundle when a consumer actually lists them in
-> `createApp({ plugins })`.
+> There is exactly **one** entry point — `.`. The `./cli` subpath was **removed in 0.11.0** (and the
+> spec-referenced `@moku-labs/worker/worker` subpath never existed). The node-only `deployPlugin`/`cliPlugin`
+> + the manifest types ship from the **root**; they only enter a bundle when a consumer actually lists the
+> plugins in `createApp({ plugins })`.
 
 ## API form
 
@@ -86,12 +86,12 @@ Name strings are bare (`"server"`, `"kv"`); exported instances carry the `Plugin
 | `storage` | `storagePlugin` | Complex | `.` | `get`, `put`, `delete`, `list`, `use(key)`, `deployManifest` (R2 behind a provider seam) |
 | `durableObjects` | `durableObjectsPlugin` | Standard | `.` | `get`, `use`/keyed config, `deployManifest`, `defineDurableObject` |
 | `stage` | `stagePlugin` | Nano (core) | `.` | `isDev`, `isProduction`, `current` — flat-injected `ctx.stage` |
-| `deploy` | `deployPlugin` | Complex | `.` (alias `./cli`) | `run`, `dev`, `seed`, `init`, `checkInfra`, `provisionInfra`, `verifyAuth`, `wrangler` — **node-only** orchestrator |
-| `cli` | `cliPlugin` | Standard | `.` (alias `./cli`) | `dev`, `deploy`, `seed`, `auth`, `doctor`, `whoami`, `wrangler` — **node-only** verbs + branded progress TUI |
+| `deploy` | `deployPlugin` | Complex | `.` | `run`, `dev`, `seed`, `init`, `checkInfra`, `provisionInfra`, `verifyAuth`, `wrangler` — **node-only** orchestrator |
+| `cli` | `cliPlugin` | Standard | `.` | `dev`, `deploy`, `seed`, `auth`, `doctor`, `whoami`, `wrangler` — **node-only** verbs + branded progress TUI |
 
 `log` + `env` core plugins come from `@moku-labs/common` (re-exported `logPlugin`/`envPlugin`). Framework
-defaults: core `log`/`env`/`stage` + `bindings` + `server`. (deploy/cli moved to the root entry in 0.6.0;
-`./cli` is now a back-compat alias.)
+defaults: core `log`/`env`/`stage` + `bindings` + `server`. (deploy/cli ship from the root entry; the
+`./cli` back-compat alias was removed in 0.11.0.)
 
 ## Configuration
 
@@ -137,8 +137,8 @@ through API return values, never `emit`.
 
 ```
 bindings (root) ── server · kv · d1 · queues · storage · durableObjects
-deploy → [storage, kv, d1, queues, durableObjects]   (node-only; root entry, alias ./cli)
-cli    → [deploy]                                      (node-only; root entry, alias ./cli)
+deploy → [storage, kv, d1, queues, durableObjects]   (node-only; root entry)
+cli    → [deploy]                                      (node-only; root entry)
 ```
 
 Each resource plugin exposes `deployManifest()` (an array, one per instance) that `deploy` reads via
