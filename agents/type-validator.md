@@ -72,6 +72,26 @@ For each hit, apply the **derivable-shape test** — is the shape knowable from 
 
 Cite **R9** and name the concrete replacement type in every finding.
 
+### 2.6 Framework Entry-Point Factory (Layer-2 `createApp` / `createPlugin`)
+
+The Layer-2 entry point (`src/index.ts`) re-exposes the core-bound `createApp` / `createPlugin`. It MUST NOT wrap them in a factory that hides the public signature and injects plugin config through casts. Grep `src/index.ts` (and any file that re-exports `createApp`) for `createApp:\s*typeof`, `boundCreateApp`, and `as typeof`.
+
+**VIOLATION (BLOCKER — R6 + R9):**
+- `export const createApp: typeof <privateBinding> = options => { … }` — a wrapper annotated as `typeof` a private const (`boundCreateApp`, `core.createApp`, …) with an **untyped** arrow param, whose body contains ANY of: `as typeof options`, `… as { … }`, `: Record<string, unknown>`, or other `as` casts that assemble/inject plugin config. This is the canonical R6 (inline assertion) + R9 (`Record<string, unknown>` widened then cast) leak at the framework's front door. It also defeats inference: the consumer-facing signature is invisible (hidden behind `typeof` of a private binding) and the bridged options are cast, not typed.
+
+**Why it happens / the fix:** the wrapper almost always exists to seed CORE-plugin config (env providers, `stage`, `log.mode`) at `createApp` time — but core-plugin config is sealed from `CreateAppOptions.pluginConfigs` by design (spec/05 §1b), so injecting it there forces a cast. Move that default into `createCoreConfig(id, { pluginConfigs: { … } })` (levels 1–2 of the core cascade) instead — exactly how `@moku-labs/web` seeds `log: { mode }`. The entry then collapses to the cast-free plain binding:
+```typescript
+export const createApp = framework.createApp;   // ✅ full inference, zero casts
+export const { createPlugin } = framework;
+```
+If global config genuinely must reach a core plugin per-app (e.g. a `stage` value), make that plugin a **regular** plugin that reads `ctx.global.<field>` — never a `createApp`-time cast bridge.
+
+**ALLOWLISTED (OK):**
+- `export const createApp = framework.createApp` / `export const { createApp, createPlugin } = framework` — plain binding re-export (the web pattern; the type is the binding's, fully inferred).
+- An explicitly-typed wrapper `export function createApp<…>(options?: CreateAppOptions<…>): App<…> { … }` whose body is **cast-free** (no `as`, no `Record<string, unknown>`). Rare — only when a genuinely typed transform is required.
+
+Cite **R6 + R9** and name the fix (move the default to `createCoreConfig`; plain re-export).
+
 ### 3. No Explicit Generics on createPlugin (Preamble R1)
 
 Grep all source files in `src/plugins/` recursively for `createPlugin<` or `createCorePlugin<`. Any angle brackets between the function name and `(` is a BLOCKER. See preamble rule R1.
@@ -149,7 +169,7 @@ For the kernel itself (`@moku-labs/core`):
 
 ## Severity Levels
 
-- **BLOCKER**: `tsc --noEmit` fails; `as any` in plugin code; explicit generics on `createPlugin`; lazy `unknown` / `Record<string, unknown>` annotation for a knowable shape (R9)
+- **BLOCKER**: `tsc --noEmit` fails; `as any` in plugin code; explicit generics on `createPlugin`; lazy `unknown` / `Record<string, unknown>` annotation for a knowable shape (R9); a `createApp` / `createPlugin` entry-point wrapper typed `typeof <private>` with body casts (R6 + R9, Check 2.6)
 - **CRITICAL**: `import` instead of `import type` for type-only usage; inference chain broken (type-level tests missing or failing); missing strict flags
 - **WARNING**: Unnecessary type assertion; could use type narrowing instead of cast; tsconfig missing optional strict flag
 - **INFO**: Type could be narrowed further; consider `satisfies` for better inference
@@ -159,11 +179,12 @@ For the kernel itself (`@moku-labs/core`):
 1. Run `tsc --noEmit` and collect results
 2. Grep for type assertions (`as any`, `as unknown`, `as `) — Check 2
 3. Grep for weak annotations (`Record<string, unknown>`, `: unknown`, `<unknown>`, `: any`) and apply the R9 derivable-shape test — Check 2.5
-4. Grep for `createPlugin<` explicit generics
-5. Check import type compliance
-6. Verify tsconfig strict flags
-7. Read plugin types.ts files for PluginCtx usage
-8. Report findings
+4. Grep `src/index.ts` for `createApp:\s*typeof`, `boundCreateApp`, `as typeof` — the entry-point wrapper anti-pattern (Check 2.6)
+5. Grep for `createPlugin<` explicit generics
+6. Check import type compliance
+7. Verify tsconfig strict flags
+8. Read plugin types.ts files for PluginCtx usage
+9. Report findings
 
 ## Output Format
 
@@ -186,6 +207,11 @@ For the kernel itself (`@moku-labs/core`):
 - Allowlisted (genuine boundary / generic default / test mock): N
 - VIOLATIONS (knowable shape): N
   - [file:line] `Record<string, unknown>` — [derivable type, e.g. "DB row → declare BoardRow"]
+
+### Entry-Point Factory (Check 2.6)
+- `createApp` / `createPlugin` export form: [plain binding / explicitly-typed fn / `typeof`-wrapper — VIOLATION]
+- VIOLATIONS: N
+  - [file:line] `createApp: typeof boundCreateApp = options =>` with body casts — move core-plugin default to `createCoreConfig`; plain re-export `export const createApp = framework.createApp`
 
 ### createPlugin Generics
 - Calls checked: N
