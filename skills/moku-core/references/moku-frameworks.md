@@ -84,7 +84,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.9.2",
+      "knownVersion": "0.11.0",
       "skill": "skills/moku-worker",
       "pluginIndex": "skills/moku-worker/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -125,7 +125,15 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `worker` entry:** registered 2026-06-20 (at 0.4.0); **re-synced 2026-06-21** to
+> **Provenance of the `worker` entry (latest sync):** **re-synced 2026-06-21** to `@moku-labs/worker@0.11.0`
+> (npm `dist-tags.latest`). **`0.9.2 → 0.11.0` delta:** `0.10.0` was docs (root-README rewrite) + MIT LICENSE
+> + branded migrate/seed/KV-reset deploy output (no public-surface change); `0.11.0` (#42)
+> `refactor(structure)` cleared `src/` root to `config.ts` + `index.ts` and **removed the `./cli` subpath
+> export** — `deployPlugin`/`cliPlugin` + `ExternalManifest`/`ResourceManifest` now ship **only** from the
+> package root. **No plugin/API/event/config change** (still 10 plugins, same set); the regenerated
+> `plugin-index.md` (synced header `0.11.0`) drops every `./cli` mention.
+>
+> **Provenance of the `worker` entry (0.9.2 history):** registered 2026-06-20 (at 0.4.0); **re-synced 2026-06-21** to
 > `@moku-labs/worker@0.9.2` (npm `dist-tags.latest`; public repo `github.com/moku-labs/worker`). Deps
 > bumped in lockstep with the family: `@moku-labs/core` `0.1.4 → 1.5.0` (exact) + `@moku-labs/common`
 > `0.2.0 → 0.2.1` (shared infra — a skill, not a framework entry); `wrangler` is now an **optional**

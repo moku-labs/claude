@@ -2,6 +2,14 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.56.0 (2026-06-21)
+
+**Synced `moku-worker` skill knowledge to `@moku-labs/worker@0.11.0`** (`moku-sync`; was 0.9.2). The `0.9.2 → 0.11.0` delta is the `./cli` subpath removal — `deployPlugin`/`cliPlugin` + the deploy manifest types (`ExternalManifest`/`ResourceManifest`) now ship only from the package root — plus docs/branding. No plugin/API/event/config change (still 10 plugins, same set).
+
+### Changed
+- **`skills/moku-worker/SKILL.md` + `references/plugin-index.md`** regenerated for 0.11.0: synced-version stamps bumped, all `@moku-labs/worker/cli` references dropped (entry-points table is now the single `.` entry; the plugin table + dependency graph drop the `./cli` alias).
+- **`moku-frameworks.md`** registry: `worker.knownVersion` `0.9.2 → 0.11.0` + a 0.11.0 provenance note.
+
 ## 0.55.0 (2026-06-21)
 
 **Enforce the Layer-2 `src/` root structure rule post-build.** The "root = `config.ts` + `index.ts` + justified entry points only" constraint was previously enforced only at *plan* time, so a framework could drift after planning (e.g. a loose `src/instances.ts` / `src/env-provider.ts` helper, or a non-plugin folder, added during a build). It is now re-checked against the real `src/` filesystem.
