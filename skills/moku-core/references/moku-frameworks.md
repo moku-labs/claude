@@ -62,7 +62,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "1.12.4",
+      "knownVersion": "2.0.0",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],

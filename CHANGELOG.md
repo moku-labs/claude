@@ -2,6 +2,17 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.53.0 (2026-06-21)
+
+**Synced the `moku-web` skill to `@moku-labs/web@2.0.0`.** The SPA authoring API was renamed
+`createComponent` → `createIsland` (a breaking major): `Component*` types → `Island*`, the
+`data-component` attribute → `data-island`, `spa:component-*` events → `spa:island-*`,
+`ctx.component()` / `app.spa.component()` → `.island()`, and config `spa.components` → `spa.islands`
+(Preact components — `GalleryComponent`, `h(Component)`, the content `gallery.component` option —
+are untouched). Bumped the framework registry `knownVersion` (`1.12.4` → `2.0.0`) so `/moku:upgrade`
+now bumps consumers to web 2.0.0, and added the 1.x → 2.0.0 island-rename codemod to the
+`moku-web-version` migration.
+
 ## 0.52.1 (2026-06-21)
 
 **New `moku-readme` skill — the moku-labs main-README house style.** Captures how the family's repo

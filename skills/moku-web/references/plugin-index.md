@@ -7,7 +7,7 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `1.12.4` · **Layer:** 2 (framework) ·
+**Framework:** `@moku-labs/web` · **Synced version:** `2.0.0` · **Layer:** 2 (framework) ·
 **Depends on:** `@moku-labs/core@0.1.4` (exact pin — consumers must NOT add a direct core dep; now
 lockstep with core's own registry version 0.1.4) + `@moku-labs/common@0.1.1` (**since 1.12.4** — the
 `log`/`env` core plugins are authored in `@moku-labs/common` and re-exported by `web`; public API
@@ -103,7 +103,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 > v1.9.0–v1.12.0 content directives (`mermaid`/`::embed`/`::gallery`) or `cacheHeaders`/fingerprinted
 > bundle naming. This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v1.12.4)
+## 1. Framework API form (v2.0.0)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed

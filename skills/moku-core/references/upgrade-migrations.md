@@ -174,6 +174,14 @@ the block below.
      operator the project already uses — `^`/`~`/exact; default to exact if none).
   3. Do NOT add a direct `@moku-labs/core` dependency — `@moku-labs/web` pins core itself.
   4. `bun install` to resolve.
+  5. **Crossing the 1.x → 2.0.0 boundary (BREAKING — SPA "component"→"island" rename):** the
+     SPA authoring API and all SPA-context `component` terminology were renamed to `island`.
+     Apply the codemod across the consumer's `src/` (NOT Preact `components/` — `GalleryComponent`,
+     `h(Component)`, the content `gallery.component` option stay): `createComponent`→`createIsland`;
+     `Component*` SPA type imports → `Island*`; the `data-component` attribute → `data-island`
+     (JSX/CSS/HTML/e2e); `spa:component-mount`/`-unmount` events → `spa:island-*`;
+     `ctx.component()`/`app.spa.component()` → `.island()`; config `spa.components` → `spa.islands`;
+     the `mountIsland` test-harness `components` option → `islands`. No aliases remain (hard rename).
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test`. For a web project also
   `bun run build` (SSG output intact). On failure, route to the **error-diagnostician** agent
   (bounded 3 rounds); breaking API changes between web versions are real source edits — fix
