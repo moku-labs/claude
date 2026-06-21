@@ -7,9 +7,9 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `2.0.0` · **Layer:** 2 (framework) ·
-**Depends on:** `@moku-labs/core@0.1.4` (exact pin — consumers must NOT add a direct core dep; now
-lockstep with core's own registry version 0.1.4) + `@moku-labs/common@0.1.1` (**since 1.12.4** — the
+**Framework:** `@moku-labs/web` · **Synced version:** `2.0.1` · **Layer:** 2 (framework) ·
+**Depends on:** `@moku-labs/core@1.5.0` (exact pin — consumers must NOT add a direct core dep; now
+lockstep with core's own registry version 1.5.0) + `@moku-labs/common@0.2.1` (**since 1.12.4** — the
 `log`/`env` core plugins are authored in `@moku-labs/common` and re-exported by `web`; public API
 byte-identical, so consumers use `ctx.log`/`ctx.env` and import the env providers from
 `@moku-labs/web` exactly as before) · **Peer deps (since 1.7.0):** `preact@^10.29.2` +
@@ -42,7 +42,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 >   screen reader gets feedback during the JSON load (1.12.2).
 > - **New top-level exports:** runtime `EmbedFacadeButton`, `GalleryTrack`, `lazyEmbed`; types
 >   `EmbedFacade`/`EmbedFacadeProps`/`EmbedOptions`, `GalleryComponent`/`GalleryOptions`/`GalleryProps`/`GallerySlide`.
->   `@moku-labs/core` is pinned `0.1.4` (bumped from `0.1.3` in v1.12.3 — a dep-only release, PR #75;
+>   `@moku-labs/core` is pinned `1.5.0` (bumped `0.1.4 → 1.5.0` in v2.0.1, a dep-only family bump;
 >   now lockstep with core). `PhaseName` unchanged; events unchanged.
 > - **BREAKING — ctx-based route handlers (v1.0.0).** `.load((ctx) => D)` takes a single
 >   `LoadContext` `{ params, locale, require, has }` (was `(params, locale)`); `.generate((ctx) =>
@@ -77,7 +77,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 >   content-identical alias whose canonical points to bare. No config flag.
 > - **Router matcher is native RegExp (v1.4.1)** — `URLPattern` dropped, so client matching works in
 >   Safari < 18.4 / older Firefox. (`engines.node >=24` still applies.)
-> - **`@moku-labs/core` is now `0.1.4`** (exact pin; was `0.1.3` through 1.12.2, `0.1.0-alpha.6` pre-1.x, `0.1.1` at 1.6.x).
+> - **`@moku-labs/core` is now `1.5.0`** (exact pin; was `0.1.4` at 2.0.0, `0.1.3` through 1.12.2, `0.1.1` at 1.6.x).
 >   Browser-bundle CI budget is 60 kB gzip (currently ~50 kB).
 > - **v1.7.0 (fix wave, 22 PRs).** `preact` + `preact-render-to-string` moved to
 >   **peerDependencies** (the app must install them); bundle **code splitting ON** (dynamic
@@ -103,7 +103,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 > v1.9.0–v1.12.0 content directives (`mermaid`/`::embed`/`::gallery`) or `cacheHeaders`/fingerprinted
 > bundle naming. This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v2.0.0)
+## 1. Framework API form (v2.0.1)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed

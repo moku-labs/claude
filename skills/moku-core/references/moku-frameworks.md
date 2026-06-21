@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "0.1.4",
+      "knownVersion": "1.5.0",
       "skill": "skills/moku-core",
       "pluginIndex": null,
       "dependsOn": [],
@@ -62,7 +62,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "2.0.0",
+      "knownVersion": "2.0.1",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -84,7 +84,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.4.0",
+      "knownVersion": "0.9.2",
       "skill": "skills/moku-worker",
       "pluginIndex": "skills/moku-worker/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -125,14 +125,36 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `worker` entry:** registered + **synced 2026-06-20** to `@moku-labs/worker@0.4.0`
-> (npm `dist-tags.latest`; public repo `github.com/moku-labs/worker`). Deps `@moku-labs/core@0.1.4`
-> (registered) + `@moku-labs/common@0.2.0` (shared infra — a skill, not a framework entry); engines node
-> ≥24 / bun ≥1.3.14. A Layer-2 framework (`createCoreConfig`/`createCore`) exposing Cloudflare primitives
-> as plugins (KV, D1, R2, Queues, Durable Objects) + a `server` router, with a node-only `./cli` deploy
-> entry. **Catalog source:** the published **0.4.0 tarball README** — upstream `main` was still at `0.1.0`
-> when synced, so the npm tarball is the authority for the released surface (`skills/moku-worker/SKILL.md`
-> + `plugin-index.md` are generated from it). `moku-worker-version` now fires for projects behind 0.4.0.
+> **Provenance of the `worker` entry:** registered 2026-06-20 (at 0.4.0); **re-synced 2026-06-21** to
+> `@moku-labs/worker@0.9.2` (npm `dist-tags.latest`; public repo `github.com/moku-labs/worker`). Deps
+> bumped in lockstep with the family: `@moku-labs/core` `0.1.4 → 1.5.0` (exact) + `@moku-labs/common`
+> `0.2.0 → 0.2.1` (shared infra — a skill, not a framework entry); `wrangler` is now an **optional**
+> peerDependency; engines node ≥24 / bun ≥1.3.14. A Layer-2 framework (`createCoreConfig`/`createCore`)
+> exposing Cloudflare primitives as plugins — **10 plugins, unchanged set** (bindings, server, kv, d1,
+> queues, storage, durableObjects, stage, deploy, cli). **0.4.0 → 0.9.2 delta (no new plugins, but
+> breaking + additive):**
+> - **Keyed-map resource config (breaking, v0.7.0).** kv/d1/queues/storage/durableObjects now take a
+>   `Record<key, instance>` of named instances (`{ name, binding, … }`), expose `app.<kind>.use("key")`
+>   + an implicit default, and `deployManifest()` returns an array. The old flat single-binding configs
+>   (`kv.binding`, `d1.binding`, `storage.bucket`) are gone.
+> - **deploy/cli moved to the package root (v0.6.0)** — `./cli` is now a tree-shaken back-compat alias;
+>   `deploy.run()`/`cli.deploy()` return a structured **`DeployReport`** (was `void`) and gained verbs
+>   (`seed`, `checkInfra`, `verifyAuth`, `doctor`, `whoami`, `wrangler`, …). New exported types
+>   `DeployReport`, `SeedConfig`, `WorkerPluginCtx`, `PluginCtx`. `cli` config is now empty (port via
+>   `dev({ port })`).
+> - **`createApp` gained `onReady`/`onError`/`onStart`/`onStop`** and auto-bridges `config.stage` + a
+>   workerd-safe `process.env` provider.
+> - **6 new global `WorkerEvents`:** `provision:plan` `{exists,missing,ships,account}`, `provision:skip`
+>   `{kind,name}`, `auth:verified` `{account,accountId,scopes}`, `dev:phase` `{phase,detail?}`,
+>   `dev:rebuilt` `{files,ms}`, `dev:error` `{message}`; plugin-local events unchanged (`server:matched`,
+>   `queue:message`); `queues` gained `maxBatchTimeout` (0.8.0).
+>
+> **Catalog source:** the **0.9.2 npm tarball + `v0.9.2` tag source (`src/**`)** — upstream
+> `main`/`llms.txt`/`llms-full.txt` are **still stale at 0.1.0** (never regenerated through 0.5→0.9), so
+> per the "source wins" policy the released surface (not the llms prose) is authoritative. ⚠️ Worth
+> nudging worker upstream to wire catalog regeneration into its publish workflow. `moku-worker-version`
+> now fires for projects behind 0.9.2; consumers crossing the 0.7.0 keyed-map config boundary need the
+> config migration noted in `upgrade-migrations.md`.
 >
 > **Provenance of the `room` entry:** registered + **synced 2026-06-20** to `@moku-labs/room@0.1.1`
 > (npm `dist-tags.latest`; public repo `github.com/moku-labs/room`). **`role: "plugin-pack"`** — room
@@ -142,21 +164,32 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > (WebRTC) + `qrcode`; engines node ≥24 / bun ≥1.3.14. **Catalog source:** the published **0.1.1 tarball
 > README** (upstream `main` was at `0.1.0`). 6 plugins (4 engines + 2 role facades); WebRTC P2P, no TURN.
 
-> **Provenance of the `core` entry:** synced against `@moku-labs/core@0.1.4` (npm `latest`,
-> published 2026-06-11, gitHead `dd723ce` = GitHub tag `v0.1.4`). **0.1.3 → 0.1.4 delta:** a
-> **type-only fix** with no runtime/behavior change — (#13) `fix(types): PluginLike admits
-> core-plugin instances` widens the INTERNAL `PluginLike` constraint so a `createCorePlugin`
-> instance satisfies it, plus (#14) the release chore. `PluginLike` is **not** in the public
-> surface (`src/index.ts`), so the **public API/exports are unchanged** — `src/index.ts` is
+> **Provenance of the `core` entry:** synced against `@moku-labs/core@1.5.0` (npm `latest`,
+> published 2026-06-21, GitHub tag `v1.5.0`). **0.1.4 → 1.5.0 delta:** a **spec/convention rename
+> with no runtime change** — (#15) `refactor(sandbox,spec)!` renames the "components" SPA exemplar →
+> **"islands"** across `specification/15-PLUGIN-STRUCTURE.md` + the sandbox exemplars, plus a one-line
+> `require()` clarification in `08-CONTEXT.md` (core-plugin instances resolve through the same lookup
+> map; flat-injected `ctx.log`/`ctx.env` stay idiomatic). **No `src/` change** — `src/index.ts` is
 > byte-identical, still `createCoreConfig` + `createCorePlugin` plus the type-only exports; zero
-> runtime dependencies; engines `node >=24` / `bun >=1.3.8` (unchanged). **No skill edit:** the
-> `moku-core` SKILL.md documents the unchanged API form and pins no version — only `knownVersion`
-> moved here. (The vendored spec + sandbox are re-pinned separately by `spec-sync`, not this skill.)
-> `@moku-labs/web` now pins `@moku-labs/core@0.1.4` **exactly** (bumped from 0.1.3 in web v1.12.3,
-> PR moku-labs/web#75) — so core and web are now **lockstep** on 0.1.4; `dependsOn` ordering (core
-> before web) still holds. See the web provenance below.
+> runtime dependencies; engines `node >=24` / `bun >=1.3.8` (unchanged). The version jump
+> `0.1.4 → 1.5.0` is a deliberate release-version choice; the breaking-marker (`!`) reflects the
+> exemplar **naming** convention, not a public-API break. **No skill edit:** the `moku-core` SKILL.md
+> documents the unchanged API form and pins no version — only `knownVersion` moved here. (The vendored
+> spec + sandbox are re-pinned separately by `spec-sync` — now at `09affbb` / `v1.5.0`.) The whole
+> family now pins `@moku-labs/core@1.5.0` **exactly**: `@moku-labs/common@0.2.1`, `@moku-labs/web@2.0.1`,
+> `@moku-labs/worker@0.9.2` (each bumped in lockstep); `dependsOn` ordering (core before web/worker)
+> still holds.
 >
-> **Provenance of the `web` entry:** synced against `@moku-labs/web@1.12.3` (npm `latest`,
+> **Provenance of the `web` entry (latest sync):** synced to `@moku-labs/web@2.0.1` (npm `latest`,
+> published 2026-06-21). **2.0.0 → 2.0.1 is a dep-only release** (no `src/` change): it bumps
+> `@moku-labs/core` `0.1.4 → 1.5.0` and `@moku-labs/common` `0.2.0 → 0.2.1` to land web on the current
+> family line — the API form, plugin catalog, events, and exports are byte-identical to 2.0.0, so only
+> the version stamp + the core/common pins moved. The regenerated `plugin-index.md` (synced header
+> `2.0.1`) is authoritative for the plugin surface. The narrative below predates the **2.0.0** major
+> sync (#8) and is retained as historical catalog detail (1.8.0 → 1.12.3); where they differ, the
+> plugin-index is the source of truth.
+>
+> **Provenance of the `web` entry (history):** synced against `@moku-labs/web@1.12.3` (npm `latest`,
 > published 2026-06-16, GitHub tag `v1.12.3`). **1.12.2 → 1.12.3 is a dep-only release** — it bumped
 > `@moku-labs/core` `0.1.3 → 0.1.4` (PR moku-labs/web#75) with **no `src/` change**, so the API form,
 > plugin catalog, events, and exports are byte-identical to 1.12.2; only the core pin and version stamp

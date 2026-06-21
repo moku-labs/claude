@@ -2,6 +2,28 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.54.0 (2026-06-21)
+
+**Synced the vendored Moku Core spec + all family framework knowledge to the `@moku-labs/core@1.5.0`
+release line** (`spec-sync` + `moku-sync`). Re-pinned the vendored spec/sandbox `v0.1.3` → `v1.5.0`
+(commit `09affbb`) and refreshed every framework's teaching material against its latest npm release.
+
+### Changed
+- **Core spec re-vendored to `v1.5.0`:** `08-CONTEXT.md` `require()` clarification (core-plugin
+  instances resolve via the shared lookup map), and the `components → islands` SPA-exemplar rename in
+  the sandbox (`demo/blog/islands/*`); `spec-index.md` + `sandbox-index.md` re-pinned to `09affbb`.
+  `moku-core` `knownVersion` `0.1.4` → `1.5.0` (no API change — `src/index.ts` byte-identical; the
+  whole family now pins `@moku-labs/core@1.5.0`).
+- **`moku-web` `2.0.0` → `2.0.1`:** dep-only release — now pins `@moku-labs/core@1.5.0` +
+  `@moku-labs/common@0.2.1`; plugin catalog/API byte-identical.
+- **`moku-worker` `0.4.0` → `0.9.2`:** major catalog regeneration from the `v0.9.2` tarball/tag source
+  (upstream `llms.txt` is stale at `0.1.0`). Breaking **keyed-map resource config** (v0.7.0:
+  kv/d1/queues/storage/durableObjects take `Record<key, instance>` + `app.<kind>.use("key")`);
+  deploy/cli at package root with a structured `DeployReport`; `createApp` gained
+  `onReady`/`onError`/`onStart`/`onStop`; 6 new `WorkerEvents` (`provision:*`, `auth:verified`,
+  `dev:*`). The `moku-worker-version` migration now flags the 0.7.0 config boundary.
+- Version bumped to 0.54.0 in plugin.json and marketplace.json.
+
 ## 0.53.0 (2026-06-21)
 
 **Synced the `moku-web` skill to `@moku-labs/web@2.0.0`.** The SPA authoring API was renamed
