@@ -81,14 +81,14 @@ plugins/spa/
   types.ts           # SpaConfig, SpaState, SpaEvents, SpaCtx
   head/api.ts        # updateHead
   progress/state.ts, progress/api.ts  # start, done
-  components/types.ts, components/state.ts, components/api.ts  # createComponent, scanAndMount
+  islands/types.ts, islands/state.ts, islands/api.ts  # createIsland, scanAndMount
   router/types.ts, router/state.ts, router/api.ts  # createRouter, extractPageData
   __tests__/
 ```
 
-Consumer uses namespaced API: `app.spa.head.updateHead()`, `app.spa.router.createRouter()`, `app.spa.components.createComponent()`.
+Consumer uses namespaced API: `app.spa.head.updateHead()`, `app.spa.router.createRouter()`, `app.spa.islands.createIsland()`.
 
-If a project has separate `spaHead`, `spaProgress`, `spaRouter`, `components` plugins — they should be merged into one `spa` Very Complex plugin.
+If a project has separate `spaHead`, `spaProgress`, `spaRouter`, `islands` plugins — they should be merged into one `spa` Very Complex plugin.
 
 ## SSG Plugins
 Static site generation, content loading, template rendering.

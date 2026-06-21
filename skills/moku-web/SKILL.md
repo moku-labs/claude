@@ -34,7 +34,7 @@ the root-config inventory, the data-layer strategies, routing patterns, the hard
 | Framework | `@moku-labs/web` (SSG + SPA over Preact) |
 | Build | Framework `build` plugin (`Bun.build` bundle phase) + `cli` plugin dev loop — no Vite |
 | CSS | Vanilla CSS + @scope + @layer |
-| Interactivity | Island architecture (vanilla TS, `createComponent`) |
+| Interactivity | Island architecture (vanilla TS, `createIsland`) |
 | Package Manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
 | TypeScript | Strict mode, `jsxImportSource: "preact"`, `types: ["bun","node"]` (TS6) |
 | Tests | Vitest (unit/integration, coverage on `lib/`+`i18n/`) + Playwright (e2e + visual, frozen fixture corpus) |
@@ -129,7 +129,7 @@ custom plugins with `createPlugin("name", spec)` (types infer from the spec; doc
 with a directly-preceding JSDoc block — never destructure exports, see moku-core "Public Export
 Shape"). SEO `<head>` helpers (`meta/og/twitter/jsonLd/canonical/hreflang/feedLink/
 buildArticleHead`), the `route()`/`defineRoutes()` builders, `createUrls(routes, defaultLocale?)`,
-`createComponent` + the built-in `lazyEmbed` island, and the `::embed`/`::gallery` default components
+`createIsland` + the built-in `lazyEmbed` island, and the `::embed`/`::gallery` default components
 `EmbedFacadeButton`/`GalleryTrack` are top-level exports.
 
 **Full catalog — plugins, events, config, the `ctx`/`app` property index, usage:**
@@ -148,7 +148,7 @@ src/
     *.tsx             # Preact components
     *.css             # Per-component CSS (colocated, @scope)
   islands/           # Vanilla TS client-side interactivity
-    index.ts          # Island registry → pluginConfigs.spa.components
+    index.ts          # Island registry → pluginConfigs.spa.islands
     share-buttons.ts, lightbox.ts, ...  # kebab-case, one island per file
   layouts/
     SiteLayout.tsx    # Master page chrome (applied via route .layout())
@@ -180,7 +180,7 @@ classList call anywhere (including examples) is the regression this rule prevent
 
 ```tsx
 // CORRECT
-<div data-component="titlebar">
+<div data-island="titlebar">
   <span data-title>{quote}</span>
 </div>
 
@@ -194,7 +194,7 @@ classList call anywhere (including examples) is the regression this rule prevent
 Each component has a colocated `.css` file using `@scope`:
 
 ```css
-@scope ([data-component="dashboard"]) {
+@scope ([data-island="dashboard"]) {
   :scope {
     display: grid;
     gap: 0.75rem;
@@ -227,19 +227,19 @@ Primitive tokens (raw values) + semantic tokens (purpose-based aliases):
 ```
 
 ### Island Architecture
-Client-side interactivity via vanilla TS, not framework components. `createComponent` comes from
-`@moku-labs/web/browser`; **every lifecycle hook receives a `ComponentContext` `{ el, data }`**
+Client-side interactivity via vanilla TS, not framework components. `createIsland` comes from
+`@moku-labs/web/browser`; **every lifecycle hook receives a `IslandContext` `{ el, data }`**
 (`el` = the bound element, `data` = the page payload from `script#__DATA__`):
 
 ```typescript
-import { createComponent } from '@moku-labs/web/browser';
+import { createIsland } from '@moku-labs/web/browser';
 
-export const shareButtons = createComponent('share', {
+export const shareButtons = createIsland('share', {
   onMount({ el }) { /* attach listeners */ },
   onDestroy({ el }) { /* cleanup */ },
   onNavEnd({ el, data }) { /* update on SPA navigation */ },
 });
-// register via pluginConfigs.spa.components: [shareButtons] (or app.spa.register)
+// register via pluginConfigs.spa.islands: [shareButtons] (or app.spa.register)
 ```
 
 ## Common Mistakes — DON'T Do These
@@ -247,7 +247,7 @@ export const shareButtons = createComponent('share', {
 ```tsx
 // DON'T: Use className — all styling via data-* attributes
 <div className="card active">           // WRONG
-<div data-component="card" data-active> // CORRECT
+<div data-island="card" data-active> // CORRECT
 
 // DON'T: Use React hooks — Preact components are pure, state in islands
 function Counter() {
@@ -257,7 +257,7 @@ function Counter() {
 
 // DON'T: Use classes in CSS selectors
 .card { padding: 1rem; }                 // WRONG
-@scope ([data-component="card"]) {
+@scope ([data-island="card"]) {
   :scope { padding: 1rem; }              // CORRECT — scoped via data attr
 }
 
@@ -267,7 +267,7 @@ article { background: var(--surface-card); }  // CORRECT — semantic token
 
 // DON'T: Write unscoped CSS — component styles must use @scope
 article { padding: 1rem; }              // WRONG — global pollution
-@scope ([data-component="card"]) {
+@scope ([data-island="card"]) {
   article { padding: 1rem; }            // CORRECT — scoped
 }
 ```
@@ -318,18 +318,18 @@ export const rendererPlugin = createPlugin('renderer', {
 // moku-web: Preact component (pure, no hooks)
 export function ArticleCard({ title, summary }: Props) {
   return (
-    <article data-component="article-card">
+    <article data-island="article-card">
       <h2 data-title>{title}</h2>
       <p>{summary}</p>
     </article>
   );
 }
 // Colocated CSS: ArticleCard.css
-// @scope ([data-component="article-card"]) { ... }
+// @scope ([data-island="article-card"]) { ... }
 
 // moku-web: Island for client interactivity
-// article-card.ts — vanilla TS, event-driven; hooks receive ComponentContext { el, data }
-export const articleCard = createComponent('article-card', {
+// article-card.ts — vanilla TS, event-driven; hooks receive IslandContext { el, data }
+export const articleCard = createIsland('article-card', {
   onMount({ el }) { el.querySelector('h2')?.addEventListener('click', expand); },
 });
 ```

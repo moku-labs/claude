@@ -25,7 +25,7 @@ type SiteLayoutProps = {
 
 export function SiteLayout({ locale, activeTab, children }: SiteLayoutProps): VNode {
   return (
-    <main data-component="page-fx">
+    <main data-island="page-fx">
       <header data-sticky>
         <TopBar quote={QUOTES[0] ?? ""} />
         <TabNav locale={locale} activeTab={activeTab} />
@@ -171,7 +171,7 @@ export const app = createApp({
       template: "src/index.html",                   // app-owned shell: <!--moku:lang/head/assets/body-->
       ogImage: { fontDir: "assets/fonts/og", render: OgTemplate, defaultCard: OgDefaultCard, fonts: [/* … */] },
     },
-    spa: { components: islands, viewTransitions: false, progressBar: true },
+    spa: { islands, viewTransitions: false, progressBar: true },
     data: { outputDir: "_data", baseUrl: "/_data/" },
     deploy: { target: "cloudflare-pages", outDir: "dist", productionBranch: "main", ci: true },
     cli: { outDir: "dist", port: Number(process.env.PORT ?? 4173) },
@@ -196,7 +196,7 @@ const app = createApp({
     i18n: i18nConfig,
     router: { routes },
     head: { titleTemplate: `%s — ${SITE.name}` },
-    spa: { components: islands, viewTransitions: false, progressBar: true },
+    spa: { islands, viewTransitions: false, progressBar: true },
     data: { baseUrl: "/_data/" },
   },
 });

@@ -130,7 +130,7 @@ export { spaPlugin } from "./spa";
 
 // ─── Helpers ────────────────────────────────────────────────
 export { route } from "./router";           // builder helper (not the plugin)
-export { createComponent } from "./spa";
+export { createIsland } from "./spa";
 
 // ─── Namespaced Types ───────────────────────────────────────
 export type * as Build from "./build/types";

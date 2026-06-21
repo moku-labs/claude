@@ -164,9 +164,9 @@ See [layout-structure.md](layout-structure.md) for the full builder contract.
 - **`components/`** — pure Preact `*.tsx` + colocated `*.css` (`@scope`). Group by role: **chrome/nav**
   (header, nav, footer), **views** (list/grid, detail, section blocks), **cards/items**, **interactive
   facades** (forms, media, embeds). All styling via `data-*` attributes — never `className`.
-- **`islands/`** — vanilla-TS client behavior (`createComponent` from `@moku-labs/web/browser`), one
-  kebab file each, re-exported from `islands/index.ts` (→ `pluginConfigs.spa.components`). An island
-  pairs with a component by `data-component="name"`. See [component-patterns.md](component-patterns.md).
+- **`islands/`** — vanilla-TS client behavior (`createIsland` from `@moku-labs/web/browser`), one
+  kebab file each, re-exported from `islands/index.ts` (→ `pluginConfigs.spa.islands`). An island
+  pairs with a component by `data-island="name"`. See [component-patterns.md](component-patterns.md).
 
 ## 8. i18n (optional)
 
@@ -258,7 +258,7 @@ The structure (§2) and rules (§11) are constant; what changes is the data laye
 
 > **Minimal compositions exist.** Not every project needs the full skeleton. An **embeddable widget**
 > or a single-screen tool can skip the router and most dirs: compose `createApp` over the defaults
-> (or just `spa` + your island), mount one `data-component`, and ship one bundled island. Scale up to
+> (or just `spa` + your island), mount one `data-island`, and ship one bundled island. Scale up to
 > the full structure (§2) only as the project grows routes, pages, and data.
 
 ## 14. Scaffold sequence (any project)

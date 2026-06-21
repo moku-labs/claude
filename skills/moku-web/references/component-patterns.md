@@ -16,7 +16,7 @@ interface Props {
 
 export function TopBar({ quote }: Props) {
   return (
-    <div data-component="titlebar">
+    <div data-island="titlebar">
       <span data-title>{quote}</span>
     </div>
   );
@@ -27,31 +27,31 @@ export function TopBar({ quote }: Props) {
 - **No classes in markup** — all styling via `data-*` attributes
 - **Props interface defined explicitly** — never inline
 - **Pure, functional** — no hooks, no state (state lives in islands)
-- **Semantic data attributes** — `data-component`, `data-variant`, `data-id`, `data-status`
+- **Semantic data attributes** — `data-island`, `data-variant`, `data-id`, `data-status`
 
 ### Naming Convention
 - **Components:** `PascalCase` — `TopBar.tsx`, `DashboardGrid.tsx`
-- **Data attributes:** `kebab-case` — `data-component="split-pane"`
+- **Data attributes:** `kebab-case` — `data-island="split-pane"`
 - **Element attributes:** `data-variant`, `data-id`, `data-status`
 
 ## Vanilla TS Islands (Client-Side Interactivity)
 
 Islands provide client-side behavior. They are NOT framework components — they are imperative,
-event-driven TypeScript, authored with `createComponent(name, hooks)` from
-**`@moku-labs/web/browser`** and registered via `pluginConfigs.spa.components` (or
+event-driven TypeScript, authored with `createIsland(name, hooks)` from
+**`@moku-labs/web/browser`** and registered via `pluginConfigs.spa.islands` (or
 `app.spa.register`). The spa plugin mounts an island on every element whose
-`data-component="<name>"` matches.
+`data-island="<name>"` matches.
 
-**Every lifecycle hook receives a `ComponentContext` `{ el, data }`** — `el` is the bound `Element`,
+**Every lifecycle hook receives a `IslandContext` `{ el, data }`** — `el` is the bound `Element`,
 `data` is the page payload parsed from the inline `script#__DATA__` element. There is no
 bare-element or `{ doc }` hook form.
 
 ```typescript
 // islands/share-buttons.ts
-import { createComponent } from "@moku-labs/web/browser";
+import { createIsland } from "@moku-labs/web/browser";
 
 /** Share-buttons island: wires the copy-link button to the Clipboard API. */
-export const shareButtons = createComponent("share", {
+export const shareButtons = createIsland("share", {
   onMount({ el }) {
     el.querySelector('[data-share="copy"]')?.addEventListener("click", handleCopyClick);
   },
@@ -66,7 +66,7 @@ export const shareButtons = createComponent("share", {
 import { shareButtons } from "./share-buttons";
 import { lightbox } from "./lightbox";
 
-/** All SPA islands registered for hydration — passed to `pluginConfigs.spa.components`. */
+/** All SPA islands registered for hydration — passed to `pluginConfigs.spa.islands`. */
 export const islands = [shareButtons, lightbox];
 ```
 
@@ -77,10 +77,10 @@ added on mount and removed on unmount/destroy.
 - File: `islands/<kebab-case-name>.ts` (e.g. `share-buttons.ts`, `tab-nav.ts`), one island per file,
   re-exported from `islands/index.ts`
 - Export: `camelCase` const (e.g. `shareButtons`)
-- Mount on elements with `data-component="xxx"`
-- Use `createComponent` from **`@moku-labs/web/browser`**
+- Mount on elements with `data-island="xxx"`
+- Use `createIsland` from **`@moku-labs/web/browser`**
 
-### Island Lifecycle Hooks (all receive `ComponentContext { el, data }`)
+### Island Lifecycle Hooks (all receive `IslandContext { el, data }`)
 | Hook | When | Purpose |
 |------|------|---------|
 | `onCreate` | Instance created (before DOM attach) | One-time init |
@@ -103,10 +103,10 @@ Pure Preact markup lives in `components/` with its scoped CSS; client behavior l
 components/
   DashboardGrid.tsx     # Preact component
   DashboardGrid.css     # Scoped CSS (@scope)
-  ShareButtons.tsx      # Preact markup (renders data-component="share")
+  ShareButtons.tsx      # Preact markup (renders data-island="share")
   ShareButtons.css      # Scoped CSS
 islands/
-  share-buttons.ts      # Client-side behavior (createComponent("share", …))
+  share-buttons.ts      # Client-side behavior (createIsland("share", …))
   index.ts              # Island registry
 ```
 
@@ -144,7 +144,7 @@ There is no `.parse()` step — on a client DATA navigation the fetched JSON is 
 
 ## Component taxonomy (organize by role, not by feature)
 
-Group components by role; each renders a `data-component="…"` root (its CSS scope). Names below are
+Group components by role; each renders a `data-island="…"` root (its CSS scope). Names below are
 generic roles — use whatever your project needs:
 
 | role | what it is | scope/notes |
@@ -157,7 +157,7 @@ generic roles — use whatever your project needs:
 
 ## Component ↔ island pairing
 
-A static Preact component renders markup at build; a same-named island (`data-component="name"`)
+A static Preact component renders markup at build; a same-named island (`data-island="name"`)
 adds client behavior. Three general patterns:
 
 - **Plain pairing.** A component renders markup carrying its data (e.g. a copy button with
@@ -166,7 +166,7 @@ adds client behavior. Three general patterns:
 - **Customizing the framework `::gallery` directive.** The Markdown directive
   `::gallery{src="./images/dir/"}` is rendered by YOUR Preact component (wired via
   `content.gallery: { component: MyGallery }`); the framework wraps it in
-  `<div data-component="gallery">`. Pair it with your own gallery island for paging/lightbox — the
+  `<div data-island="gallery">`. Pair it with your own gallery island for paging/lightbox — the
   framework ships only the static markup. (Content-pipeline projects only.)
 - **Customizing the framework `::embed` directive.** `::embed{src title}` renders YOUR facade
   component (wired via `content.embed: { facade: MyFacade }`) — a static click-to-activate

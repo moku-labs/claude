@@ -26,7 +26,7 @@ Scan all `.tsx` files for CSS class usage:
 
 - **BLOCKER**: `className="..."` with styling classes (not `className` for third-party libs)
 - **BLOCKER**: `class="..."` in JSX
-- **OK**: `data-component="..."`, `data-*` attributes for styling
+- **OK**: `data-island="..."`, `data-*` attributes for styling
 - **OK**: `className` only when interfacing with third-party libraries (must be documented)
 
 **How to check:**
@@ -39,15 +39,15 @@ Scan all `.tsx` files for CSS class usage:
 For each component with a colocated `.css` file:
 
 - **BLOCKER**: CSS file without `@scope` (styles leak globally)
-- **BLOCKER**: `@scope` selector doesn't match `[data-component="..."]` pattern
+- **BLOCKER**: `@scope` selector doesn't match `[data-island="..."]` pattern
 - **WARNING**: Component `.tsx` missing corresponding `.css` file (unstyled component)
 - **WARNING**: `:scope` pseudo-class not used for the root element styles
-- **OK**: `@scope ([data-component="name"]) { ... }`
+- **OK**: `@scope ([data-island="name"]) { ... }`
 
 **How to check:**
 - For each `.tsx` in `src/components/`, find matching `.css`
-- Read each `.css` and verify `@scope` with `data-component` selector
-- Ensure the data-component value matches between `.tsx` and `.css`
+- Read each `.css` and verify `@scope` with `data-island` selector
+- Ensure the data-island value matches between `.tsx` and `.css`
 
 ### 3. @layer Ordering
 
@@ -87,13 +87,13 @@ Check `src/styles/tokens.css` for proper token architecture:
 Validate client-side interactivity patterns:
 
 - **BLOCKER**: Framework-heavy interactivity (React/Preact hooks for DOM manipulation instead of vanilla TS islands)
-- **WARNING**: Island file not using `createComponent` factory pattern
+- **WARNING**: Island file not using `createIsland` factory pattern
 - **WARNING**: Island missing `onDestroy` cleanup (memory leak risk)
-- **OK**: `*Island.ts` files with `createComponent` pattern, proper lifecycle
+- **OK**: `*Island.ts` files with `createIsland` pattern, proper lifecycle
 
 **How to check:**
 - Find all `*Island.ts` files in `src/components/`
-- Verify they use `createComponent` with `onCreate`, `onDestroy`
+- Verify they use `createIsland` with `onCreate`, `onDestroy`
 - Check for `useState`, `useEffect` used for DOM manipulation (should be islands instead)
 
 ### 6. Component Naming Conventions
@@ -172,7 +172,7 @@ Internal links must be built from the route map's `urls` builder (`createUrls`) 
 - Violations: [none / list with file:line]
 
 ### @scope Encapsulation
-| Component | CSS File | @scope | data-component Match | Status |
+| Component | CSS File | @scope | data-island Match | Status |
 |-----------|----------|--------|---------------------|--------|
 | Dashboard | Dashboard.css | YES | YES | PASS |
 | Header | (missing) | — | — | WARN |
@@ -189,7 +189,7 @@ Internal links must be built from the route map's `urls` builder (`createUrls`) 
 - Dark mode (light-dark): [YES / PARTIAL / NO]
 
 ### Island Architecture
-| Island | createComponent | onCreate | onDestroy | Status |
+| Island | createIsland | onCreate | onDestroy | Status |
 |--------|----------------|----------|-----------|--------|
 | ShareButtons | YES | YES | YES | PASS |
 | Navigation | YES | YES | NO | WARN |
