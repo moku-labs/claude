@@ -86,10 +86,11 @@ Create `.planning/decisions.md` if it doesn't exist (use template from `plan-tem
 
 #### Structure Constraints
 
-Enforce these constraints on the proposed structure:
-- **Root has config and index files only** — `src/config.ts` and `src/index.ts`
-- **No folders that are NOT plugins** — everything under `src/plugins/`. No `src/utils/`, `src/services/`, `src/helpers/`
-- **CLI/client/server entry point files** are allowed ONLY if absolutely necessary (e.g., `src/cli.ts` for a CLI framework that needs a bin entry). Must be explicitly explained and justified to the user.
+Enforce these constraints on the proposed structure (re-checked post-build by `moku-verifier` + `moku-spec-validator` against the real `src/` filesystem — keep all three in sync). The `@moku-labs/web` root (`config.ts`, `index.ts`, `browser.ts`, `testing.ts`, `plugins/`) is the exemplar:
+- **Root has config and index files only** — `src/config.ts` and `src/index.ts`. This also forbids loose helper FILES at root (`src/instances.ts`, `src/env-provider.ts`, `src/utils.ts`, …), not just folders.
+- **No folders that are NOT plugins** — everything under `src/plugins/`. No `src/utils/`, `src/services/`, `src/helpers/`, `src/lib/`, `src/internal/`, `src/shared/`.
+- **Shared-across-plugins helpers never live as a loose root module.** Co-locate the helper INSIDE the one owning plugin (siblings import it via `../<owner>/<file>`) or make it its own plugin (Nano/Micro, or a core plugin for a utility many plugins need, reached via `ctx.require()`). The ONLY sanctioned shared *root* module is one re-exported publicly through `src/index.ts` (part of the package's public surface).
+- **CLI/client/server entry point files** (`src/cli.ts`, `src/browser.ts`, …) are allowed ONLY if absolutely necessary AND declared as a `package.json` `exports` subpath. Must be explicitly explained and justified to the user.
 
 #### Output: Plugin Tree Diagram + Planned Skeleton
 

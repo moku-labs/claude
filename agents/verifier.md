@@ -49,6 +49,10 @@ Check that all files required by the plugin's complexity tier are present.
 **Framework-level (frameworks only):**
 - `src/config.ts` exists
 - `src/index.ts` exists
+- **`src/` root is CLEAN** — run `ls src` (Bash) or Glob `src/*`. The root may contain ONLY `config.ts`, `index.ts`, the `plugins/` directory, and additional **entry-point files** that are each declared as a `package.json` `exports` subpath (e.g. `src/browser.ts` → `"./browser"`, `src/testing.ts` → `"./testing"`). To confirm an extra root file is a real entry point, grep `package.json` `exports` for a subpath whose build output matches it; if absent, it is NOT one. Raise a **BLOCKER** (`rule: "structure — src/ root"`, cite `spec/01-ARCHITECTURE.md` + plan-stages §Structure Constraints) for EITHER:
+  - a loose helper file at root (e.g. `src/instances.ts`, `src/env-provider.ts`, `src/utils.ts`) that is not a declared entry point — **Fix:** move a cross-plugin helper INTO its owning plugin (`src/plugins/<owner>/<file>.ts`; siblings import `../<owner>/<file>`) or make it its own plugin; co-locate a single-consumer helper beside its consumer.
+  - a non-plugin folder at root (`src/utils/`, `src/services/`, `src/helpers/`, `src/lib/`, `src/internal/`, `src/shared/`) — **Fix:** everything non-entry lives under `src/plugins/`.
+  The `@moku-labs/web` root (`config.ts`, `index.ts`, `browser.ts`, `testing.ts`, `plugins/`) is the exemplar. This check is **frameworks only** — Layer-3 consumer apps (see the row below) are exempt.
 
 **Consumer app (Layer 3):** no `src/config.ts`; the entry is `src/main.ts`/`src/index.ts` (`createApp`). Custom plugins live in `src/plugins/{name}/` (same per-tier files as above); the `src/plugins/index.ts` barrel is optional. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`.
 
