@@ -118,6 +118,7 @@ Auto-loaded context — they trigger when relevant topics come up, no invocation
 | `moku-web` | `@moku-labs/web` patterns: Preact, CSS `@scope`/`@layer`/tokens, islands, Vite-free bundling — synced against the framework source (the upstream docs lag; `src/` is treated as authoritative) |
 | `moku-testing` | TDD protocol for build waves, mock context factories, integration + type-level test patterns, test layout |
 | `moku-readable-code` | The story-by-layout stanza style — prose structure for code, checked by its validator |
+| `moku-readme` | The moku-labs main-README house style — masthead, badge palette, mermaid palette, table-centric body; drives the build's root-doc wave |
 | `moku-sync` | Maintainer skill: re-syncs each framework's knowledge from its latest npm/GitHub release |
 | `spec-sync` | Maintainer skill: re-vendors the Moku Core spec + sandbox exemplars at a pinned SHA, then chains `moku-sync` across the family |
 

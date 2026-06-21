@@ -53,6 +53,13 @@ Spawn a single documentation agent with full framework context:
 
 ### Root README
 
+**House style:** write the root README in the moku-labs main-README house style — the
+`moku-readme` skill is the authority (masthead, badge palette, nav line, mermaid palette,
+the "why" bullet pattern, table-centric body, callout conventions, the canonical footer).
+Pick the repo shape (library / framework / toolkit / app) per `moku-readme` §2 and follow
+that section order. The coverage list below is the *content* checklist; `moku-readme` is
+the *form*.
+
 Generate (or fully regenerate) `README.md` at the project root covering:
 
 1. **Project overview** — what it is, why it exists, core architecture concept

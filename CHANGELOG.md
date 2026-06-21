@@ -2,6 +2,27 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.52.1 (2026-06-21)
+
+**New `moku-readme` skill — the moku-labs main-README house style.** Captures how the family's repo
+front pages (`common` / `web` / `claude`) are written, and wires it into the build flow's root-doc waves
+so generated READMEs match the family look.
+
+### Added
+- **`moku-readme` skill** — the authoritative house style for root/main READMEs across the moku-labs
+  family: masthead anatomy (H1 → tagline → what-it-is-*not* paragraph → brand-colored badge row → nav
+  line), the section menu by repo shape (library / framework / toolkit / consumer app), voice rules, the
+  badge + mermaid palettes, GitHub-callout conventions, and a 13-point authoring checklist. Ships
+  `references/template.md` (copy-paste annotated skeleton + shape deltas) and `references/exemplars.md`
+  (the three live READMEs distilled side by side).
+
+### Changed
+- **Build flow now defers to `moku-readme` for root-README form.** `build-final.md` Step 5.6 (Root README)
+  and `build-app.md` Step 8 reference the skill for house style (masthead, palettes, table-centric body),
+  keeping their existing content checklists; app READMEs use the consumer-app shape.
+- Listed `moku-readme` in the plugin README's Skills table.
+- Version bumped to 0.52.1 in plugin.json and marketplace.json.
+
 ## 0.52.0 (2026-06-20)
 
 **Comprehensive E2E + visual-baseline testing for Layer-3 web apps.** Every screen and feature is now

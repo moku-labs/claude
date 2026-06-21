@@ -165,7 +165,10 @@ tests alone — only a green real-browser run counts (or an explicitly confirmed
 Generate or update the project root `README.md` (and any per-custom-plugin READMEs) now that the app
 is built — follow `build-final.md` Step 5.6 (Root README) scoped to an app: what the app is, how to
 run it (`bun run dev`/`build`/`start`), its plugin composition + config, entry point, and deployment
-notes. If a `README.md` already exists (rebuild/update), refresh the changed sections rather than
+notes. Use the **`moku-readme` skill** for the house style — pick the **consumer-app** shape
+(`moku-readme` §2 / `references/template.md` app deltas): the Quick start must show the *exact*
+documented run command (the one Step 7's smoke test actually runs), and apps carry no npm badge.
+If a `README.md` already exists (rebuild/update), refresh the changed sections rather than
 overwriting hand-written prose. Run `bun run format`.
 
 ## Step 9: CI/CD, deployment & publication (user chooses)
