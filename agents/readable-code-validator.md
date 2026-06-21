@@ -30,6 +30,7 @@ A function qualifies as a "wall of text" when its **body** is non-trivial (rough
 5. **Compound boolean inline** in `if`/`while`/`?:` that should be a named predicate. (Rule 6)
 6. **Magic literals** — non-obvious numbers / sentinel strings inline (exempt `0`/`1`/`-1`/`""`). (Rule 7)
 7. **Mixed altitudes / fused concerns** — high-level orchestration interleaved with low-level fiddling in one uninterrupted block. (Rules 8–9)
+8. **Opaque public entry signature** — a public Layer-2 entry export (`createApp` / `createPlugin` in `src/index.ts`) annotated as `typeof <privateBinding>` with an **untyped** arrow param: `export const createApp: typeof boundCreateApp = options => …`. The reader can't see the params or return of the framework's front-door factory — they're hidden behind `typeof` of a private const, and `options` has no visible type at the call site. Flag as **WARNING**, with the fix: a plain binding re-export (`export const createApp = framework.createApp`, whose type is the binding's and fully visible at source) or an explicitly-typed function signature (`export function createApp<…>(options?: CreateAppOptions<…>): App<…>`). This is the readability half only — the type-safety half (body casts to inject config) is the type-validator's BLOCKER under R6/R9 (Check 2.6); do not double-emit a blocker here.
 
 ## What You MUST NOT Flag (exemptions — avoid false positives)
 
@@ -37,6 +38,7 @@ A function qualifies as a "wall of text" when its **body** is non-trivial (rough
 - Pure data / object-literal returns, config objects, type definitions, type-level code.
 - Trivial 1–3 line accessors / delegators.
 - Functions that are mostly JSX / markup.
+- A plain binding re-export of the entry factory — `export const createApp = framework.createApp` / `export const { createApp, createPlugin } = framework`. This is the RECOMMENDED form (its type is the binding's, fully visible at source); never flag it. The opacity flag (#8) targets only the `typeof <private> = options =>` wrapper form.
 - Test files (`**/__tests__/**`, `*.test.ts`) and config files (`*.config.ts`) — EXEMPT.
 
 When uncertain whether a function is genuinely glued vs. acceptably compact, report it as **INFO**, not WARNING. A weak signal is INFO; a clear black box is WARNING. Precision over recall — a false WARNING erodes trust in the whole pipeline.
@@ -50,7 +52,7 @@ When uncertain whether a function is genuinely glued vs. acceptably compact, rep
 ## Process
 
 1. Glob the target scope's source files (`src/**/*.ts`, `src/**/*.tsx`), excluding tests/config.
-2. For each file, read it and locate every function/method whose body is non-trivial.
+2. For each file, read it and locate every function/method whose body is non-trivial. In `src/index.ts`, also check the `createApp` / `createPlugin` entry exports for the opaque `typeof <private> = options =>` form (flag #8).
 3. Apply the "What You Flag" checks; apply the exemptions strictly.
 4. For each genuine offender, record: file, the function name, the body's start/end lines, body line count, the violated rule number(s), and a concrete fix — which stanzas to split (and the intent comment for each), which compound boolean → named predicate, which literal → named constant, which block → extracted helper (balanced; cite Rule 9 if extraction would be over-extraction and a stanza suffices).
 5. Prefer fewer, high-confidence findings over an exhaustive list.
