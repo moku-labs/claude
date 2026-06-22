@@ -314,6 +314,69 @@ round with zero new findings is the only success.)
 
 ---
 
+## Human-QA & whole-experience testing (explore → judge → improve → verify → regress)
+
+The goal is not just "find bugs" but **human-QA behavior**: test the *whole experience* — does it work, is it
+right, does it feel good — and **improve it in every direction** toward the best UX the design supports. Three
+complementary roles run as a loop (a finder + a judge + a verifier, kept separate so no agent rubber-stamps
+its own work):
+
+- **Tester** (`web-e2e-tester`) — deterministic coverage of the *known*: functional, visual, console/server
+  errors, behavioral correctness; owns the regression suite and the loop.
+- **Explorer** (`web-qa-explorer`) — human-QA exploratory testing of the *unknown*: **charters** + **tours** +
+  **oracles** to probe for what no test was written for, across the whole experience.
+- **Experience judge** (`web-ux-reviewer`) — holistic UX evaluation + improvement: personas, journeys, and
+  heuristics, applied with the reliability discipline below.
+
+### Test like a human QA — charters, tours, oracles
+The explorer doesn't replay scripts; it takes a **charter** ("Explore (target) with (resources) to discover
+(information)"), runs a themed **tour** (FedEx / Saboteur / OCD / Supermodel / Antisocial / Rained-Out …),
+and decides *whether things are right* with **layered oracles** — implicit (`pageerror`/`console.error`,
+4xx/5xx via `response.status()`, hangs) → accessibility-vs-rendered (axe; dead affordances) → **invariants /
+metamorphic relations** (badge == list length; add-then-remove restores the total; submit-twice ≠ two records)
+→ visual diff → **FEW HICCUPPS** consistency oracles (is it consistent with its History · brand Image ·
+Comparable products · stated Claims · Users' desires · the Product's own internal patterns · its Purpose ·
+Standards · Familiarity-with-known-bugs · Explainability · the World?). **Surprise is an oracle.** Full method:
+the `web-qa-explorer` agent.
+
+### Judge the whole experience — personas, journeys, heuristics
+Evaluate as real users, not isolated screens: walk the core jobs as a **first-time**, **power**, **screen-
+reader** (drive the a11y tree, deny vision), and **mobile-on-the-go** persona across awareness → first-run →
+core task → return; score the **cognitive-walkthrough** questions per step (will the user know what to do? is
+the control discoverable? is the outcome guessable? is there feedback?); apply Nielsen's heuristics + the WCAG
+floor + microcopy/error-message quality. Map the friction and emotional dips; the deepest dips are the ranked
+improvement targets. Full method: the `web-ux-reviewer` agent.
+
+### Reliability discipline (non-negotiable — this is what keeps "improve everything" from hallucinating)
+LLM experience judgment is high-recall but **high-false-positive** on absolute/visual calls, so:
+- **Ground every finding in a citable artifact** — a console line, a 4xx/5xx, a screenshot region, a measured
+  value (contrast, tap-target px), a DOM role/name/ref, or a failed step. **No citation → discard.** Each
+  finding also **names the oracle** (or heuristic / WCAG criterion) it violated.
+- **Prefer the deterministic floor** — `@axe-core/playwright`, measured geometry/contrast, task success/time,
+  console/network signals — over aesthetic opinion, and judge **comparatively** (before-vs-after) rather than
+  scoring an absolute "UX = 7/10".
+- **Propose, don't impose.** Apply only **clear, low-risk, reversible, standards-grounded** changes (a11y
+  fixes, design-token conformance); flag everything subjective / visual / high-blast-radius as a proposal.
+  **No change without a citation** (a heuristic, a WCAG criterion, a design token, or task-failure evidence),
+  and snap to the existing design tokens/components — "improving" one screen to differ from the family only
+  creates inconsistency.
+- **Gate by severity × confidence** (0–4; only P0/P1 with full evidence may block), and **independently
+  verify** a blocker before it gates (an adversarial "is this real?" pass — the e2e analogue of `moku-skeptic`)
+  so no agent rubber-stamps itself.
+
+### Make it durable (regress)
+Exploration's output is not a transient note — a **confirmed functional bug becomes a committed Playwright
+regression test** (reproduce → author a discriminating test with role/text locators + `toMatchAriaSnapshot` →
+prove it goes red on the bug) so the finding can never silently regress. Applied experience improvements are
+re-verified against the full suite; proposals are recorded for the user.
+
+### The loop
+`explore → observe (a11y + console + network + screenshot) → judge (oracle/heuristic + severity + evidence) →
+improve (apply clear wins / propose the rest) → verify (re-run; no regressions) → regress (commit durable
+tests)` — **loop-until-dry**: stop only when a full pass surfaces nothing new ≥ P2, bounded by FIX_BUDGET.
+
+---
+
 ## The gate (final App-Build stage — mandatory, skippable-with-confirmation)
 
 Runs after build → validation → **runtime smoke test** (the boot gate). Order: it is the **last

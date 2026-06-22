@@ -154,7 +154,7 @@ Test-Agents/MCP accelerator and the latest assertion APIs (ARIA snapshots, axe a
    **and control catalog**, **gap-analyzes the whole app** (incl. features built in earlier waves),
    scaffolds/extends the Playwright suite + frozen fixture corpus + per-engine/per-OS visual baselines, **runs
    it for real** on **desktop and mobile** with **dual-side (browser + server) error capture**, checks **every
-   control's behavior**, spawns the **`web-ux-reviewer`** (modern-UX + mobile/responsive) pass, and **fixes
+   control's behavior**, runs the **human-QA loop** (`web-qa-explorer` exploratory charters/tours/oracles → durable regression tests, plus `web-ux-reviewer` modern-UX/mobile), and **fixes
    every functional bug / behavioral defect / runtime error / visual or UX regression it finds** (app source,
    moku-web conventions) — **looping until clean**, not just green. The build is **not done** until it returns
    `PASS` — do not proceed to README/report on a red or partially-covered suite.

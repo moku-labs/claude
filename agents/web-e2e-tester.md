@@ -67,12 +67,17 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
    `maxDiffPixelRatio: 0.02`, fixed `deviceScaleFactor`/`colorScheme`/`reducedMotion`, chromium font/color
    flags; freeze the clock; `await document.fonts.ready`). Engine matrix: chromium = full suite; webkit +
    firefox = baselines + boot-guard only.
-5. **Loop until clean (not just green).** After functional green, **spawn the `web-ux-reviewer` agent**
-   (modern-UX + responsive/mobile expert; pass APP_ROOT, the design context as REFERENCE, the control
-   catalog, and the served URL) for the UX + mobile pass, and feed its findings into the fix loop. Iterate
-   run→capture(functional+console+server+behavior)→UX/mobile→fix→re-run up to FIX_BUDGET rounds, exiting only
-   when a full pass finds **nothing new** (green, zero errors both sides, every control behaves, no UX/mobile
-   blockers, mobile verified). If findings remain at the budget, STOP and report them — never fake clean.
+5. **Loop until clean — explore + judge, not just green.** After functional green, run the human-QA loop
+   (`e2e-testing.md` → "Human-QA & whole-experience"): **spawn `web-qa-explorer`** (charters + tours + oracles
+   — finds what no test covered; returns durable regression tests + evidence-grounded findings) **and
+   `web-ux-reviewer`** (modern-UX + mobile/responsive experience judge). Pass each APP_ROOT, the design context
+   as REFERENCE, the control catalog, and the served URL. Fold their findings into the fix loop, **keep every
+   regression test the explorer authored**, and re-run. Iterate run→explore→judge→fix→re-run up to FIX_BUDGET
+   rounds, exiting only when a full pass finds **nothing new** ≥ P2 (green, zero errors both sides, every
+   control behaves, no UX/mobile blockers, mobile verified). Honour the reliability discipline — a finding
+   needs a **citable artifact + a named oracle/heuristic** to count, and only **clear, standards-grounded,
+   reversible** changes are applied (the rest are proposals). If P0/P1 findings remain at the budget, STOP and
+   report them — never fake clean.
 6. **Stay in the app; don't commit.** Edit app source/tests/config under APP_ROOT only. Never `git commit`.
    Never touch `.planning/STATE.md` (the caller records the gate outcome). Generated `dist-e2e/`,
    `test-results/`, `playwright-report/` are build artifacts (gitignored).
@@ -90,8 +95,10 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
 5. **Run** `bun run test:e2e` (install browsers if needed). Capture failures + any browser/server errors.
 6. **Diagnose + fix:** real functional bug, behavioral defect, console/server error, or visual regression →
    fix app source → re-run (≤ FIX_BUDGET). Intended visual change → deliberate, reported baseline update.
-7. **UX + mobile pass:** once functional is green, **spawn `web-ux-reviewer`** (desktop + mobile); apply its
-   clear wins, fold its findings into the fix loop, and re-run to confirm no regression.
+7. **Explore + judge pass:** once functional is green, **spawn `web-qa-explorer`** (human-QA charters/tours/
+   oracles → durable regression tests) **and `web-ux-reviewer`** (UX + mobile); keep the regression tests,
+   apply the clear standards-grounded wins, fold findings into the fix loop, and re-run to confirm no
+   regression.
 8. **Confirm — loop until clean:** repeat until a full pass finds nothing new — green, zero errors both
    sides, every control behaves, no UX/mobile blockers, mobile verified.
 9. Report the coverage table + defects-found-and-fixed + UX/mobile applied+proposed + baselines-updated + the
@@ -101,8 +108,10 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
 
 A prose **coverage report**: a table of **every** inventory item × `tested` / `baselined` / `behavior-checked`
 / `confirmed` (✓/✗), the engines + OS exercised (desktop **and** mobile), the count of defects **found and
-fixed** (with one-line each), the **UX/mobile findings applied + proposed** (from `web-ux-reviewer`), any
-baselines updated (with the reason), and the final verdict. Then end with the output contract JSON:
+fixed** (with one-line each), the **exploratory findings + durable regression tests added** (from
+`web-qa-explorer`, each with its named oracle), the **UX/mobile findings applied + proposed** (from
+`web-ux-reviewer`), any baselines updated (with the reason), and the final verdict. Then end with the output
+contract JSON:
 - **verdict: PASS** — suite green AND every inventory item `tested + confirmed`.
 - **verdict: FAIL** — any red remaining, or any inventory item uncovered/unconfirmed (list each as a blocker
   with the exact spec/screen + the fix needed).

@@ -2,6 +2,21 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.60.0 (2026-06-22)
+
+**E2E becomes human-QA: explore the whole experience, judge it reliably, and improve it.** A new **`web-qa-explorer`** agent tests like a skilled manual QA — exploring with **charters** + themed **tours** + a layered **oracle** ladder (incl. FEW HICCUPPS consistency oracles) to find what the scripted suite never covered, naming the oracle each finding violates, and turning confirmed bugs into **durable committed regression tests**. The gate now runs an **explore → judge → improve → verify → regress** loop across three complementary roles (tester + explorer + experience judge), governed by a research-backed **reliability discipline** that keeps "improve everything" from hallucinating.
+
+### Added
+- **`web-qa-explorer` agent** (new): human-QA exploratory testing — **charters** ("Explore X with Y to discover Z"), **SFDIPOT** coverage, themed **tours** (FedEx / Saboteur / OCD / Supermodel / Antisocial / Rained-Out…), and a **layered oracle ladder** (implicit console/network → accessibility-vs-rendered → invariants / metamorphic → visual → **FEW HICCUPPS** consistency oracles; surprise as an oracle). Grounds every finding in a citable artifact, drives the accessibility tree, and writes durable role/text-locator regression tests.
+- **`e2e-testing.md` → "Human-QA & whole-experience" section:** the three-role loop (tester / explorer / experience judge, kept separate to avoid self-rubber-stamping), persona- & journey-based evaluation (first-time / power / screen-reader / mobile-on-the-go; cognitive-walkthrough questions), and the **reliability discipline** — evidence-grounding (no citation → discard), a deterministic floor (axe + measured geometry/contrast), comparative-not-absolute judging, propose-vs-apply, a design-token allow-list, and independent verification of blockers.
+
+### Changed
+- **`web-ux-reviewer` agent:** gains a "Judge reliably" discipline (evidence-or-it-didn't-happen, deterministic floor, comparative judging, no-change-without-a-citation + snap-to-design-tokens, severity × confidence gate) and an explicit persona/journey lens.
+- **`web-e2e-tester` agent:** its loop now spawns **both** `web-qa-explorer` and `web-ux-reviewer`, keeps the explorer's durable regression tests, and enforces the reliability discipline (a finding needs a citable artifact + a named oracle; only standards-grounded, reversible changes are applied).
+- **`/moku:e2e` command + `build-app.md` Step 7.5:** describe the human-QA explore → judge → improve → verify → regress loop.
+- **SKILL-INVENTORY.md:** agent count 26 → 27; the E2E section now lists three agents.
+- Version bumped to 0.60.0 in plugin.json and marketplace.json.
+
 ## 0.59.0 (2026-06-22)
 
 **The E2E gate now tests behavior, errors, UX, and mobile — and loops until clean.** A green suite is no longer sufficient: the gate also captures **browser-console + server-side errors** on every interaction, verifies **every control behaves as specified** (a control-level catalog with weird/dead/off-reference detection), runs a **modern-UX + mobile/responsive review** (a new agent) that applies the clear wins and proposes the rest, exercises **every screen on mobile**, and **loops run→capture→review→fix→re-run until a full pass finds nothing new**.
