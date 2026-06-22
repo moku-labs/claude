@@ -136,8 +136,9 @@ Record the result (command run, surface checked, status) in the Step 10 report.
 
 ## Step 7.5: Comprehensive E2E + visual-baseline gate (LAST verification — web apps)
 
-The smoke test (Step 7) proves the app **boots**; this proves it **works** — every screen and feature,
-in a real browser, pinned with visual baselines. Full process:
+The smoke test (Step 7) proves the app **boots**; this proves it **works** — every screen, feature, and
+control, in a real browser on **desktop and mobile**, pinned with visual baselines, with browser-console +
+server errors caught and a modern-UX + responsive review. Full process:
 `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`. **Pin Playwright `^1.61`** there; the
 process also checks each screen against the design context (when one exists) and covers the agentic
 Test-Agents/MCP accelerator and the latest assertion APIs (ARIA snapshots, axe a11y, soft assertions).
@@ -149,12 +150,14 @@ Test-Agents/MCP accelerator and the latest assertion APIs (ARIA snapshots, axe a
    fixed."* — options: **"Run it (Recommended)"** · **"Skip — I confirm"** (desc: "ship without comprehensive
    e2e; recorded as skipped"). The skip is a **deliberate, confirmed** choice — never a silent default.
 3. **On run:** spawn the **`web-e2e-tester`** agent (INVENTORY_SOURCES = the design context §6 inventory if
-   present, the specs + what each wave delivered, and the app source; `MODE=gate`). It builds the full
-   feature inventory, **gap-analyzes the whole app** (incl. features built in earlier waves), scaffolds/extends
-   the Playwright suite + frozen fixture corpus + per-engine/per-OS visual baselines, **runs it for real**,
-   **fixes every functional bug / visual regression it finds** (app source, moku-web conventions) and re-runs
-   until **green with full coverage**. The build is **not done** until it returns `PASS` — do not proceed to
-   README/report on a red or partially-covered suite.
+   present, the specs + what each wave delivered, and the app source; `MODE=gate`). It builds the full feature
+   **and control catalog**, **gap-analyzes the whole app** (incl. features built in earlier waves),
+   scaffolds/extends the Playwright suite + frozen fixture corpus + per-engine/per-OS visual baselines, **runs
+   it for real** on **desktop and mobile** with **dual-side (browser + server) error capture**, checks **every
+   control's behavior**, spawns the **`web-ux-reviewer`** (modern-UX + mobile/responsive) pass, and **fixes
+   every functional bug / behavioral defect / runtime error / visual or UX regression it finds** (app source,
+   moku-web conventions) — **looping until clean**, not just green. The build is **not done** until it returns
+   `PASS` — do not proceed to README/report on a red or partially-covered suite.
 4. **On skip:** record it **prominently** in the Step 10 report ("⚠️ comprehensive E2E skipped by user — N
    screens unverified"), and write the outcome (run/skipped + coverage) to STATE.md so it is visible, not
    silent. (The standalone `/moku:e2e` command runs the same agent any time, without the skip offer.)

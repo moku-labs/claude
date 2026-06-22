@@ -13,7 +13,7 @@ maxTurns: 80
 skills:
   - moku-core
   - moku-web
-tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
+tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Agent"]
 ---
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the
@@ -47,11 +47,14 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
    the e2e webServer (never the dev server against live data). If the harness/config/scripts don't exist,
    scaffold them to the standard pattern in `e2e-testing.md` (`playwright.config.ts`, `scripts/e2e-server.ts`, `test:e2e*`
    scripts, devDeps, `bunx playwright install`). **Pin `@playwright/test` + `playwright` at `^1.61`** (Docker
-   `v1.61.0-noble`; see `e2e-testing.md` → Toolchain).
-2. **Comprehensive — gap-analyze the WHOLE app.** Build the full feature inventory (Step 1 of
-   `e2e-testing.md`), map existing coverage, and add a functional assertion **and** a visual baseline for
-   **every** uncovered item — including features built/changed in earlier build waves or other stages. A
-   feature with no e2e coverage is a FAIL.
+   `v1.61.0-noble`; see `e2e-testing.md` → Toolchain). **Capture errors on both sides every run** — browser
+   (`pageerror`/`console.error`/failed responses via `page.pageErrors()`/`consoleMessages()`/`requests()`)
+   AND the server's stdout/stderr — and assert ZERO errors for **every feature interaction**, not just boot.
+2. **Comprehensive — gap-analyze the WHOLE app, down to the control level.** Build the full feature **and
+   control catalog** (Step 1 of `e2e-testing.md`): every screen + every interactive control + **how each
+   should behave**. Add a functional assertion, a visual baseline, **and a behavioral-correctness check**
+   (does the control do what it should?) for **every** item — including features from earlier build waves. A
+   feature with no e2e coverage, or a control with weird / dead / off-reference behavior, is a FAIL.
 3. **Fix real defects in the app source** (moku-web conventions — `data-*`, tokens, `@scope`/`@layer`,
    node-free client bundle), then re-run. Distinguish a **real regression** (fix the app; keep the baseline)
    from an **intended change** (deliberate baseline update, reported). **Never blanket `--update-snapshots`
@@ -64,8 +67,12 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
    `maxDiffPixelRatio: 0.02`, fixed `deviceScaleFactor`/`colorScheme`/`reducedMotion`, chromium font/color
    flags; freeze the clock; `await document.fonts.ready`). Engine matrix: chromium = full suite; webkit +
    firefox = baselines + boot-guard only.
-5. **Bounded loop.** Iterate run→diagnose→fix→re-run up to FIX_BUDGET rounds. If reds remain, STOP and
-   report the exact failing items + the fix needed — do not loop forever and do not fake green.
+5. **Loop until clean (not just green).** After functional green, **spawn the `web-ux-reviewer` agent**
+   (modern-UX + responsive/mobile expert; pass APP_ROOT, the design context as REFERENCE, the control
+   catalog, and the served URL) for the UX + mobile pass, and feed its findings into the fix loop. Iterate
+   run→capture(functional+console+server+behavior)→UX/mobile→fix→re-run up to FIX_BUDGET rounds, exiting only
+   when a full pass finds **nothing new** (green, zero errors both sides, every control behaves, no UX/mobile
+   blockers, mobile verified). If findings remain at the budget, STOP and report them — never fake clean.
 6. **Stay in the app; don't commit.** Edit app source/tests/config under APP_ROOT only. Never `git commit`.
    Never touch `.planning/STATE.md` (the caller records the gate outcome). Generated `dist-e2e/`,
    `test-results/`, `playwright-report/` are build artifacts (gitignored).
@@ -73,23 +80,28 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
 ## Workflow
 
 1. Read `e2e-testing.md`. Detect the web surface (scope-gate; if none, return PARTIAL "no web surface").
-2. **Inventory** every screen/feature from INVENTORY_SOURCES (design-context §6 inventory first if present).
-3. **Map coverage:** read `tests/e2e/*`; mark each item `tested?` / `baselined?`.
-4. **Scaffold/extend** the harness + fixture corpus + the spec catalog (`no-js-errors`, `baseline`,
+2. **Inventory to the control level** — every screen/feature from INVENTORY_SOURCES (design-context §6 first
+   if present) **plus every interactive control + its expected behavior** (the control catalog).
+3. **Map coverage:** read `tests/e2e/*`; mark each item `tested?` / `baselined?` / `behavior-checked?`.
+4. **Scaffold/extend** the harness + fixture corpus + the spec catalog (`no-js-errors`, `baseline`, `a11y`,
    `navigation`/`links`, `seo`, `build-validation`, + one spec per app feature; `api.spec.ts` for a worker
-   app) so every gap is closed. Derive expectations from the frozen fixtures.
-5. **Run** `bun run test:e2e` (install browsers if needed). Capture failures.
-6. **Diagnose + fix:** real functional bug or visual regression → fix app source → re-run (≤ FIX_BUDGET).
-   Intended visual change → deliberate, reported baseline update. New screens → review first render, then
-   bless the golden.
-7. **Confirm:** loop until green AND every inventory item is `tested + baselined + confirmed`.
-8. Report the coverage table + defects-found-and-fixed + baselines-updated + the engines/OS run, then the
-   output contract.
+   app), wiring **dual-side error capture** (browser console + server logs) and **mobile** viewports into the
+   runs. Derive expectations from the frozen fixtures.
+5. **Run** `bun run test:e2e` (install browsers if needed). Capture failures + any browser/server errors.
+6. **Diagnose + fix:** real functional bug, behavioral defect, console/server error, or visual regression →
+   fix app source → re-run (≤ FIX_BUDGET). Intended visual change → deliberate, reported baseline update.
+7. **UX + mobile pass:** once functional is green, **spawn `web-ux-reviewer`** (desktop + mobile); apply its
+   clear wins, fold its findings into the fix loop, and re-run to confirm no regression.
+8. **Confirm — loop until clean:** repeat until a full pass finds nothing new — green, zero errors both
+   sides, every control behaves, no UX/mobile blockers, mobile verified.
+9. Report the coverage table + defects-found-and-fixed + UX/mobile applied+proposed + baselines-updated + the
+   engines/OS run, then the output contract.
 
 ## Output
 
-A prose **coverage report**: a table of **every** inventory item × `tested` / `baselined` / `confirmed`
-(✓/✗), the engines + OS exercised, the count of defects **found and fixed** (with one-line each), any
+A prose **coverage report**: a table of **every** inventory item × `tested` / `baselined` / `behavior-checked`
+/ `confirmed` (✓/✗), the engines + OS exercised (desktop **and** mobile), the count of defects **found and
+fixed** (with one-line each), the **UX/mobile findings applied + proposed** (from `web-ux-reviewer`), any
 baselines updated (with the reason), and the final verdict. Then end with the output contract JSON:
 - **verdict: PASS** — suite green AND every inventory item `tested + confirmed`.
 - **verdict: FAIL** — any red remaining, or any inventory item uncovered/unconfirmed (list each as a blocker

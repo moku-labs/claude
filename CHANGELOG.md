@@ -2,6 +2,21 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.59.0 (2026-06-22)
+
+**The E2E gate now tests behavior, errors, UX, and mobile — and loops until clean.** A green suite is no longer sufficient: the gate also captures **browser-console + server-side errors** on every interaction, verifies **every control behaves as specified** (a control-level catalog with weird/dead/off-reference detection), runs a **modern-UX + mobile/responsive review** (a new agent) that applies the clear wins and proposes the rest, exercises **every screen on mobile**, and **loops run→capture→review→fix→re-run until a full pass finds nothing new**.
+
+### Added
+- **`web-ux-reviewer` agent** (new): a modern-UX-taste + responsive/mobile expert that drives the real app on desktop **and** mobile, judges each screen/flow/control against modern UX heuristics + the design context, flags questionable behavior, applies the clear low-risk wins (moku-web conventions), and proposes the subjective/larger ones.
+- **`e2e-testing.md` → "Beyond green" section:** dual-side error capture (browser `pageErrors`/`consoleMessages`/`requests` + a server stdout/stderr scan), behavioral-correctness checks over a control-level inventory, the UX + mobile review phase, mobile-first requirements (≥ 375×812 plus ~320/~430, touch, tap targets ≥ 44px, no overflow), and a loop-until-clean exit condition.
+- **Control catalog** (Comprehensive coverage, Step 1): the feature inventory now enumerates every interactive control + how each should behave.
+
+### Changed
+- **`web-e2e-tester` agent:** gains the `Agent` tool and orchestrates the full loop — dual-side error capture (rule 1), control-level behavioral correctness (rule 2), and a loop-until-clean that spawns `web-ux-reviewer` for the UX/mobile pass (rule 5); workflow + output updated for desktop+mobile and the UX/mobile findings.
+- **`/moku:e2e` command + `build-app.md` Step 7.5:** scope/descriptions updated for the behavior / error / UX / mobile + loop-until-clean process.
+- **SKILL-INVENTORY.md:** agent count 25 → 26; the E2E section now lists both e2e agents.
+- Version bumped to 0.59.0 in plugin.json and marketplace.json.
+
 ## 0.58.0 (2026-06-22)
 
 **Overhauled the comprehensive E2E + visual-baseline gate for the latest Playwright (≥ 1.61) and agentic testing.** `e2e-testing.md` — the authoritative process behind the App-Build E2E gate and `/moku:e2e` — now pins a current Playwright (an outdated Playwright on Node 24 deadlocks the test runner), prescribes the latest assertion APIs, gains a research-backed agentic-authoring section (Playwright Test Agents + the two MCP servers), captures the hard-won gotchas, and adds a **design-fidelity** requirement: when a design context exists, the gate checks every screen against it and fixes the implementation to get as close as possible to the intended design.

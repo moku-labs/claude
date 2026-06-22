@@ -1,5 +1,5 @@
 ---
-description: Comprehensively e2e-test a Layer-3 web app in a real browser (Playwright) with visual baselines — every screen and feature tested, confirmed working, and bugs/visual issues fixed before results are shown. Accepts free-form natural language.
+description: Comprehensively e2e-test a Layer-3 web app in a real browser (Playwright) — every screen, feature, and control tested for correct behavior + visual baselines, on desktop and mobile, with browser-console + server errors caught and a modern-UX + responsive review; bugs and UX issues fixed and looped until clean before results are shown. Accepts free-form natural language.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: (empty = cover everything) or {free-form: a screen/feature to focus} [--update-baselines]
 disable-model-invocation: true
@@ -16,9 +16,9 @@ Before any decision about architecture, the core API, lifecycle, events, types, 
 ## Project Configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 
-Comprehensively **e2e-test** a Layer-3 Moku **web** app and **prove it works** before showing the user anything. Every screen, panel, popup, and feature is exercised in a **real browser** (Playwright) and pinned with a **visual baseline**. **Nothing is assumed** — a functional bug or a real visual regression is **fixed** (and the suite re-run) until green. This is the same engine that runs as the final App-Build gate; here it runs **on demand**.
+Comprehensively **e2e-test** a Layer-3 Moku **web** app and **prove it works** before showing the user anything. Every screen, panel, popup, feature, **and control** is exercised in a **real browser** (Playwright) on **desktop and mobile**, pinned with a **visual baseline**, with **browser-console + server errors** caught and a **modern-UX + responsive** review. **Nothing is assumed** — a functional bug, a behavioral defect, a runtime error, or a real visual/UX regression is **fixed** (and the suite re-run), and it **loops until clean**, not just green. This is the same engine that runs as the final App-Build gate; here it runs **on demand**.
 
-The full process — the suite shape, the frozen fixture corpus, the engine/OS baseline matrix, the determinism knobs, and the confirm-don't-assume protocol — is **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`**.
+The full process — the suite shape, the frozen fixture corpus, the engine/OS baseline matrix, the determinism knobs, the **"beyond green" error / behavior / UX / mobile checks**, and the confirm-don't-assume protocol — is **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`**.
 
 ---
 
@@ -45,7 +45,7 @@ The full process — the suite shape, the frozen fixture corpus, the engine/OS b
 
 ## Route to the tester
 
-Spawn the **`web-e2e-tester`** agent (`Agent` tool) with: APP_ROOT (repo root), `MODE=standalone`, FOCUS, UPDATE_BASELINES, and the INVENTORY_SOURCES to enumerate from — a **design context** if one exists (`.planning/design/*/design-context.md` §6 inventory), the plan/specs (`.planning/specs/*`, `app-spec.md`) + what each build wave delivered, and the app source (`src/routes.tsx`, components/islands/pages, worker `endpoints.ts`). Instruct it to follow `e2e-testing.md` (the concrete template).
+Spawn the **`web-e2e-tester`** agent (`Agent` tool) with: APP_ROOT (repo root), `MODE=standalone`, FOCUS, UPDATE_BASELINES, and the INVENTORY_SOURCES to enumerate from — a **design context** if one exists (`.planning/design/*/design-context.md` §6 inventory), the plan/specs (`.planning/specs/*`, `app-spec.md`) + what each build wave delivered, and the app source (`src/routes.tsx`, components/islands/pages, worker `endpoints.ts`). Instruct it to follow `e2e-testing.md` (the concrete template). It loops until clean — functional + **dual-side console/server errors** + **behavioral correctness** of every control — and spawns the **`web-ux-reviewer`** agent for the modern-UX + mobile/responsive pass.
 
 When it returns, **present its coverage report** — but only treat the run as successful if its verdict is **PASS** (suite green AND every inventory item tested + confirmed). If **FAIL**, show the failing screens/features + the fix each needs and offer to continue fixing; do **not** present a "should work". If **PARTIAL** (no web surface, or Playwright/browsers unavailable here), say so plainly and how to enable it (`bunx playwright install`).
 

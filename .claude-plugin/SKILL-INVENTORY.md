@@ -32,14 +32,14 @@ a *spec, not source*) · `plan` · `build` (the 3-stage gated core) · `e2e` (co
 visual-baseline coverage for a web app — every screen/feature tested, confirmed, and fixed) · `next` ·
 `status` · `check` (incl. `check --usage`) · `clean` · `init` · `upgrade` (zero-arg stack migration).
 
-## Agents (25) — spawned on demand by commands/workflows, isolated context
+## Agents (26) — spawned on demand by commands/workflows, isolated context
 
 - **Validation (10):** spec, plugin-spec, type, jsdoc, test, web, readable-code, common, architecture validators + validation-coordinator
 - **Review/judgment (5):** verifier, code-reviewer, wave-judge, error-diagnostician, skeptic
 - **Brainstorm (3):** brainstorm-researcher, challenger, synthesizer
 - **Design (3):** design-generator (parallel concept prototypes), design-synthesizer (writes the design context), design-critic (round critique)
 - **Build/plan support (3):** builder, plan-checker, planning-phase `researcher`
-- **E2E (1):** web-e2e-tester (comprehensive Playwright e2e + visual baselines; runs the app for real, fixes what it finds)
+- **E2E (2):** web-e2e-tester (comprehensive Playwright e2e + visual baselines + dual-side error capture + behavioral correctness; runs the app for real on desktop + mobile, loops until clean) + web-ux-reviewer (modern-UX + responsive/mobile expert; reviews behavior/UX, applies the clear wins, proposes the rest)
 - Mechanical validators run at `effort: low` (haiku); deep reviewers (`code-reviewer`, `wave-judge`,
   `skeptic`) at `effort: high` — to keep the 20-agent surface cost-aware.
 

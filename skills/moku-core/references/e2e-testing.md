@@ -74,6 +74,11 @@ priority order:
 - the **app source** — routes (`src/routes.tsx` → every page + locale + params), components/islands/pages,
   and the worker `endpoints.ts` (every HTTP/WS route) for a full-stack app.
 
+Enumerate down to the **control level**, not just screens: for every screen, list each interactive control
+(button, link, input, toggle, tab, menu item, drag handle, …) and **how it should behave** — its effect, the
+resulting state/route/feedback, and its disabled/loading/empty/error states — derived from the design context
+/ specs. This **control catalog** is the target for the behavioral-correctness checks in "Beyond green" below.
+
 **Step 2 — map existing coverage.** Read `tests/e2e/*`; for each inventory item record `tested?` (a
 functional assertion exists) and `baselined?` (a visual golden exists).
 
@@ -259,6 +264,53 @@ When a visual diff appears, decide **before** touching goldens:
   render is correct** — never auto-bless an unreviewed first screenshot ("don't assume").
 
 Never blanket `--update-snapshots` to clear red. That converts a regression into a "passing" baseline.
+
+---
+
+## Beyond green — errors, behavior, UX, and mobile (loop until clean)
+
+A green suite + matching baselines is **necessary, not sufficient**. The gate also proves: **zero runtime
+errors on both sides**, **every control behaves as specified**, the **UX meets a modern bar + the design
+reference**, and it all **works on mobile** — and it keeps looping until a full pass finds nothing new.
+
+### Capture every error — browser console + server logs
+Wire error capture into *every* spec (not just the boot guard), and assert **zero** on both sides:
+- **Browser:** listen for `pageerror`, `console.error` / `console.warn`, unhandled rejections, and failed
+  responses (4xx/5xx) on every page **and during every interaction**; aggregate via `page.pageErrors()` /
+  `page.consoleMessages()` / `page.requests()` (1.56). A feature that works visually but logs a console error
+  is a bug. (Allowlist only documented, justified exceptions.)
+- **Server:** tee the e2e server's (and the worker's) stdout/stderr to a log file; after the run, scan for
+  error-level lines (uncaught exceptions, 5xx, unhandled rejections, `D1_ERROR`, …) and fail on any. A UI that
+  looks fine while the server logs an error is a bug.
+
+### Behavioral correctness — every control does what it should
+Drive the **control catalog** (Step 1): for **each** control, assert it (a) exists + is reachable + labeled
+(role/name), (b) responds with visible feedback, (c) produces its **expected effect** (state/route/data), and
+(d) handles its edge states (disabled/loading/empty/error). Flag as defects: **dead/no-op controls, wrong
+effect, missing feedback, stuck states, behavior that diverges from the reference**. "It rendered" is not "it
+behaves" — a control whose behavior is weird, surprising, or off-reference is a defect to fix.
+
+### UX + mobile review — modern taste, responsive (the `web-ux-reviewer` agent)
+After functional green, the gate spawns the **`web-ux-reviewer`** agent — a modern-UX + responsive/mobile
+expert. It drives the real app on **desktop and mobile**, judges each screen/flow/control against modern UX
+heuristics (feedback & affordance; loading/empty/error/success states; flow, focus & keyboard; motion;
+hierarchy/spacing/consistency/copy; accessibility) **and** the design context, then **applies the clear,
+low-risk wins** and **proposes** the subjective/larger ones. This is the agent that "processes questionable
+behaviors to improve behavior and UX."
+
+### Mobile-first — every screen, real responsive
+Every screen/feature is exercised at **mobile** widths (≥ 375×812, plus ~320 and ~430) with **touch** (not
+hover). Assert: no horizontal overflow / clipping / overlap, **tap targets ≥ 44×44px**, readable type,
+safe-area insets, and that mobile patterns (drawers, bottom sheets, sticky bars) work. The `web-ux-reviewer`
+(mobile lens) recommends the **best responsive solution** per screen and applies the clear wins. A
+desktop-correct, mobile-broken screen is a **fail**, not a deferral.
+
+### Loop until clean (not just until green)
+Iterate **run → capture (functional + console + server + behavior) → UX/mobile review → fix → re-run**, and
+exit only when a **full pass surfaces nothing new**: suite green, **zero errors both sides**, every control
+behaves, no open UX/mobile blockers, mobile verified. Bound it with `FIX_BUDGET` rounds; if findings remain at
+the budget, **STOP and report them** — never fake a clean pass. (This is the loop-until-dry pattern: a clean
+round with zero new findings is the only success.)
 
 ---
 
