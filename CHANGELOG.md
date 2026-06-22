@@ -2,6 +2,22 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.58.0 (2026-06-22)
+
+**Overhauled the comprehensive E2E + visual-baseline gate for the latest Playwright (≥ 1.61) and agentic testing.** `e2e-testing.md` — the authoritative process behind the App-Build E2E gate and `/moku:e2e` — now pins a current Playwright (an outdated Playwright on Node 24 deadlocks the test runner), prescribes the latest assertion APIs, gains a research-backed agentic-authoring section (Playwright Test Agents + the two MCP servers), captures the hard-won gotchas, and adds a **design-fidelity** requirement: when a design context exists, the gate checks every screen against it and fixes the implementation to get as close as possible to the intended design.
+
+### Added
+- **`e2e-testing.md` → Toolchain section:** pin `@playwright/test`/`playwright` at `^1.61` (Docker `v1.61.0-noble`) first — an outdated Playwright on Node 24 deadlocks the runner (0% CPU, no output), so an old pin won't even start.
+- **`e2e-testing.md` → Agentic authoring section:** the Playwright Test Agents (`init-agents --loop=claude`: planner → generator → healer, with the generator validating locators live), the `@playwright/mcp` vs `playwright-test` MCP distinction, an agentic-capability catalog (ARIA-snapshot perception, `locator.normalize()`, GUI-less `--debug=cli`/`trace`, cheap `--last-failed`/`--only-changed` heal loops), and the audit→fix→re-capture loop.
+- **`e2e-testing.md` → Hard-won rules section:** the `bun run dev` PATH fix, `networkidle`-vs-WebSocket, full-URL `waitForURL`, `fullPage:false` for fixed overlays, ESLint generated-dir ignores, `wrangler.jsonc` regen, `test-results` wipe, format-only sign-in, strict-mode multi-match.
+- **Latest-feature techniques + a new `a11y.spec.ts`** in the spec catalog: `expect.soft`, `page.clock`, `emulateMedia`, `routeWebSocket`, `dragTo`/`drop`, `localStorage`/`sessionStorage`, `addLocatorHandler`, enhanced screenshots; an `@axe-core/playwright` WCAG scan + ARIA snapshots + accessibility assertions.
+- **Design-fidelity requirement** (Prime directive #5 + `web-e2e-tester` rule + the audit loop): when `.planning/design/{slug}/design-context.md` exists, check each screen against it and fix the implementation to match as closely as possible.
+
+### Changed
+- **`playwright.config.ts` essentials:** `PW_EXTERNAL_SERVER` opt-out (reuse a running seeded server), `webServer.wait` boot detection, `trace: "on-first-retry"`.
+- **`build-app.md` Step 7.5 + the `web-e2e-tester` agent:** reference the Playwright `^1.61` pin and the design-context fidelity check.
+- Version bumped to 0.58.0 in plugin.json and marketplace.json.
+
 ## 0.57.0 (2026-06-21)
 
 **Flag the `createApp` entry-point wrapper anti-pattern.** A Layer-2 framework that wraps the core-bound `createApp` / `createPlugin` in `: typeof <private> = options =>` with body casts (to inject core-plugin config) violates R6 (inline assertions) + R9 (`Record<string, unknown>` widened then cast) at the framework's front door, and hides the public signature behind `typeof` of a private const. Validators now catch it and steer authors to the plain `createApp = framework.createApp` re-export, with core-plugin defaults seeded at `createCoreConfig` (the `@moku-labs/web` pattern).

@@ -138,7 +138,9 @@ Record the result (command run, surface checked, status) in the Step 10 report.
 
 The smoke test (Step 7) proves the app **boots**; this proves it **works** — every screen and feature,
 in a real browser, pinned with visual baselines. Full process:
-`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`.
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`. **Pin Playwright `^1.61`** there; the
+process also checks each screen against the design context (when one exists) and covers the agentic
+Test-Agents/MCP accelerator and the latest assertion APIs (ARIA snapshots, axe a11y, soft assertions).
 
 1. **Scope:** web surface present? (a `@moku-labs/web` client, incl. a worker-backed full-stack app or a
    `@moku-labs/room` app). If no web surface, skip with a one-line note (nothing to e2e) and continue.

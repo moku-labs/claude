@@ -46,7 +46,8 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
 1. **Real browser, real build.** Drive the app through Playwright against the **fixture build** served by
    the e2e webServer (never the dev server against live data). If the harness/config/scripts don't exist,
    scaffold them to the standard pattern in `e2e-testing.md` (`playwright.config.ts`, `scripts/e2e-server.ts`, `test:e2e*`
-   scripts, devDeps, `bunx playwright install`).
+   scripts, devDeps, `bunx playwright install`). **Pin `@playwright/test` + `playwright` at `^1.61`** (Docker
+   `v1.61.0-noble`; see `e2e-testing.md` → Toolchain).
 2. **Comprehensive — gap-analyze the WHOLE app.** Build the full feature inventory (Step 1 of
    `e2e-testing.md`), map existing coverage, and add a functional assertion **and** a visual baseline for
    **every** uncovered item — including features built/changed in earlier build waves or other stages. A
@@ -55,7 +56,10 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
    node-free client bundle), then re-run. Distinguish a **real regression** (fix the app; keep the baseline)
    from an **intended change** (deliberate baseline update, reported). **Never blanket `--update-snapshots`
    to clear red** — that hides regressions. New screens get goldens only after you've eyeballed the first
-   render is correct.
+   render is correct. **Match the design context (when one exists):** if `.planning/design/{slug}/design-context.md`
+   is present, check every screen against its intended layout/spacing/states/inventory and **fix the
+   implementation to get as close as possible** to it — a screen that works but visibly diverges from the
+   design is a defect (use the audit→fix→re-capture loop in `e2e-testing.md`).
 4. **Visual determinism.** Use the determinism knobs from `e2e-testing.md` (animations disabled, `caret: "hide"`, `scale: "css"`,
    `maxDiffPixelRatio: 0.02`, fixed `deviceScaleFactor`/`colorScheme`/`reducedMotion`, chromium font/color
    flags; freeze the clock; `await document.fonts.ready`). Engine matrix: chromium = full suite; webkit +
