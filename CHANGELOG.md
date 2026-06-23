@@ -2,6 +2,17 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.60.1 (2026-06-24)
+
+**README refresh — design + e2e and the rest of the roster.** The front page had drifted to `0.47.0`; it now documents the `/moku:design` and `/moku:e2e` commands, the Design and Browser-QA agent groups, and the `moku-common` / `moku-room` / `moku-worker` skills, with every count and badge brought current.
+
+### Changed
+- **README — commands:** document `/moku:design` (multi-round, human-in-the-loop concept exploration → a reusable `design-context.md`) and `/moku:e2e` (comprehensive real-browser Playwright QA + visual baselines + UX/mobile) across the commands table, workflow diagram, and quick-start steps (now 11 commands).
+- **README — agents:** add the **Design** (`design-generator` / `design-critic` / `design-synthesizer`) and **Browser QA** (`web-e2e-tester` / `web-qa-explorer` / `web-ux-reviewer`) groups plus `moku-common-validator` (now 27 agents).
+- **README — skills:** add `moku-common`, `moku-room`, and `moku-worker` (now 11 skills).
+- **README — figures:** refresh stale badges and counts (version, changelog size → 204 kB, hook scripts 21 → 22) and drop the now-inaccurate "233-word run-on `plugin.json`" line.
+- Version bumped to 0.60.1 in plugin.json and marketplace.json.
+
 ## 0.60.0 (2026-06-22)
 
 **E2E becomes human-QA: explore the whole experience, judge it reliably, and improve it.** A new **`web-qa-explorer`** agent tests like a skilled manual QA — exploring with **charters** + themed **tours** + a layered **oracle** ladder (incl. FEW HICCUPPS consistency oracles) to find what the scripted suite never covered, naming the oracle each finding violates, and turning confirmed bugs into **durable committed regression tests**. The gate now runs an **explore → judge → improve → verify → regress** loop across three complementary roles (tester + explorer + experience judge), governed by a research-backed **reliability discipline** that keeps "improve everything" from hallucinating.
