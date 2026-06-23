@@ -10,10 +10,10 @@ In which one AI orchestrates twenty other AIs to double-check the code a twenty-
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.47.0-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.60.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
-[![changelog](https://img.shields.io/badge/changelog-159%20kB-lightgrey)](./CHANGELOG.md)
+[![changelog](https://img.shields.io/badge/changelog-204%20kB-lightgrey)](./CHANGELOG.md)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 [Install](#install) · [Workflow](#the-workflow) · [Commands](#commands) · [Agents](#agents) · [Skills](#skills) · [Hooks](#hooks) · [Workflows](#dynamic-workflows) · [Config](#configuration)
@@ -24,9 +24,9 @@ In which one AI orchestrates twenty other AIs to double-check the code a twenty-
 
 ## What this is
 
-Commands, skills, validation agents, and hooks for building Moku frameworks, plugins, and consumer apps with full specification compliance — wave-based parallel builds, a 20-agent validation pipeline, TDD waves, lean execution mode (~40–60% context savings), and cross-session state in `.planning/`.
+Commands, skills, validation agents, and hooks for building Moku frameworks, plugins, and consumer apps with full specification compliance — a gated **brainstorm → design → plan → build** flow, wave-based parallel builds, a multi-agent validation pipeline, TDD waves, real-browser e2e + visual testing for web apps, lean execution mode (~40–60% context savings), and cross-session state in `.planning/`.
 
-Yes, it ships a **wall-of-text validator**. No, the irony of its own `plugin.json` description — a 233-word run-on whose longest sentence clocks 142 words — is not lost on anyone.
+Yes, it ships a **wall-of-text validator** — warnings only, it never quite brings itself to block you. (The 233-word run-on `plugin.json` description the old README loved to mock has since been rewritten into two civil sentences. Growth.)
 
 ## Install
 
@@ -54,40 +54,46 @@ You describe, it plans, an agent swarm builds, another swarm judges the first sw
 ```mermaid
 flowchart LR
   U["You<br/>(natural language)"] --> BS["/moku:brainstorm<br/>research + debate"]
-  BS --> P["/moku:plan<br/>3 gated stages"]
+  BS --> D["/moku:design<br/>concept rounds"]
+  D --> P["/moku:plan<br/>3 gated stages"]
   P --> B["/moku:build<br/>parallel waves of builders"]
   B --> V["validation pipeline<br/>spec · types · tests · JSDoc · prose"]
   V --> R["code review + wave judge"]
   R -->|"continue"| B
-  R -->|"done"| S["a framework exists"]
+  R -->|"done"| E["/moku:e2e<br/>real-browser QA + visual"]
+  E --> S["it works"]
   classDef u fill:#0b7285,stroke:#08525f,color:#fff;
   classDef m fill:#1864ab,stroke:#0d3d6e,color:#fff;
   class U,S u
-  class BS,P,B,V,R m
+  class BS,D,P,B,V,R,E m
 ```
 
-Or skip the ceremony — `/moku:next` figures out where you are and does the next sensible thing.
+`/moku:design` (UI apps) and `/moku:e2e` (web apps) are conditional; the rest is the spine. Or skip the ceremony — `/moku:next` figures out where you are and does the next sensible thing.
 
 ```text
-1. /moku:init my-framework                           # scaffold
-2. /moku:brainstorm "a static site generator"        # optional: research + debate first
-3. /moku:plan create framework "a static site generator"
-4. /moku:build                                       # no args = auto-resume; waves + validation
-5. /moku:check                                       # health check (graph for mermaid diagrams)
-6. /moku:clean                                       # distill learnings, reset .planning/ for the next cycle
+1. /moku:init kanban-app                              # scaffold
+2. /moku:brainstorm "a kanban board"                  # optional: research + debate first
+3. /moku:design "the board UI"                        # optional (UI apps): multi-round concepts → design-context.md
+4. /moku:plan create app "a kanban board" --context design/board/design-context.md
+5. /moku:build                                        # no args = auto-resume; waves + validation
+6. /moku:e2e                                          # web apps: real-browser e2e + visual + UX/mobile; fixes & loops til clean
+7. /moku:check                                        # health check (graph for mermaid diagrams)
+8. /moku:clean                                        # distill learnings, reset .planning/ for the next cycle
 ```
 
 ## Commands
 
-Nine of them — two of which the old README forgot it had. All take free-form natural language; the bracketed syntax is for people who enjoy bracketed syntax.
+Eleven of them — `design` and `e2e` are the newest. All take free-form natural language; the bracketed syntax is for people who enjoy bracketed syntax.
 
 | Command | What it does |
 |---|---|
 | `/moku:next [--dry-run]` | Auto-detect project state, run the next logical step |
 | `/moku:init [path]` | Scaffold a Moku dev environment with full tooling |
 | `/moku:brainstorm {idea} [--deep [N]\|--quick]` | Collaborative discovery: parallel research agents + a Present → Challenge → Decide debate loop. Also takes structured `create\|modify\|migrate\|feature` forms. Produces context files for planning |
-| `/moku:plan [create\|update\|add\|migrate\|resume] [type] {req} [--quick] [--context {file}]` | Plan a framework / app / plugin — 3-stage gated workflow. `--context` consumes brainstorm output |
+| `/moku:design {what to design} [resume\|list] [--count N] [--rounds] [--medium web\|cli\|tui]` | Multi-round, human-in-the-loop concept exploration for a UI: parallel concept prototypes → converge on a winner → polish in a live preview → capture a reusable `design-context.md` (a spec, not source) to ground plan/build |
+| `/moku:plan [create\|update\|add\|migrate\|resume] [type] {req} [--quick] [--context {file}]` | Plan a framework / app / plugin — 3-stage gated workflow. `--context` consumes brainstorm or design output |
 | `/moku:build [framework\|app\|plugin\|add\|resume\|fix] [name] [--dry-run\|--continue\|--lean]` | Build from specs in parallel waves. No args = auto-resume. `plugin #3`, `plugin #3-#5` work too |
+| `/moku:e2e [{screen/feature to focus}] [--update-baselines]` | Comprehensive real-browser (Playwright) e2e for a Layer-3 web app: every screen / feature / control tested for behavior + visual baselines, desktop + mobile, console & server errors caught, UX + responsiveness reviewed — bugs and UX issues fixed and looped until clean before results show |
 | `/moku:check [verbose\|self-test\|graph\|status\|plugin <name>\|diff <name>]` | Diagnostics: project state, tooling, plugin health, mermaid graphs, plugin self-test |
 | `/moku:status [--full]` | Consolidated dashboard — phase, wave progress, agent activity |
 | `/moku:upgrade [--dry-run]` | Migrate a Moku project to the current target stack (TS6 baseline · Node 24 floor). No version args, gated, resumable |
@@ -95,17 +101,19 @@ Nine of them — two of which the old README forgot it had. All take free-form n
 
 ## Agents
 
-Twenty subagents, summoned on demand. Grouped by what they judge:
+Twenty-seven subagents, summoned on demand. Grouped by what they judge:
 
 | Group | Agents |
 |---|---|
-| **Structure** | `moku-spec-validator` · `moku-plugin-spec-validator` · `moku-jsdoc-validator` · `moku-web-validator` |
+| **Structure** | `moku-spec-validator` · `moku-plugin-spec-validator` · `moku-jsdoc-validator` · `moku-web-validator` · `moku-common-validator` (family `@moku-labs/common` usage: branded CLI, `ctx.log`, `ctx.env`) |
 | **Quality** | `moku-plan-checker` · `moku-verifier` (3-level: exists → substantive → wired) · `moku-test-validator` · `moku-type-validator` · `moku-architecture-validator` · `moku-readable-code-validator` (the wall-of-text police; warnings only, never blocks) |
+| **Design** | `design-generator` (one art direction per concept, run in parallel) · `design-critic` (gaps + weak/duplicate directions before you pick) · `design-synthesizer` (writes the durable `design-context.md`) |
+| **Browser QA** | `web-e2e-tester` (Playwright coverage + visual baselines, fixes what it breaks) · `web-qa-explorer` (human-style exploratory tours, layered oracles → committed regression tests) · `web-ux-reviewer` (modern UX + mobile taste, applies the low-risk wins) |
 | **Review & judgment** | `moku-code-reviewer` · `moku-wave-judge` (continue / stop-for-review / fresh-retry) · `moku-error-diagnostician` · `moku-skeptic` |
 | **Builders & research** | `moku-builder` · `moku-researcher` (the only agent with web access) · `brainstorm-researcher` · `brainstorm-challenger` · `brainstorm-synthesizer` |
 | **Orchestration** | `moku-validation-coordinator` |
 
-After a full framework build, the coordinator runs spec, plugin-spec, JSDoc, and readable-code validators in parallel; then tests + types in parallel alongside a speculative cross-plugin architecture pass (re-run only if cross-plugin blockers surface). The wave judge decides whether you (the human) need to be involved. Usually not.
+After a full framework build, the coordinator runs spec, plugin-spec, JSDoc, and readable-code validators in parallel; then tests + types in parallel alongside a speculative cross-plugin architecture pass (re-run only if cross-plugin blockers surface). The wave judge decides whether you (the human) need to be involved. Usually not. For a web app, a separate browser gate then drives the real app — functional e2e, human-style exploratory QA, and a UX/mobile pass — fixing what it finds and looping until green.
 
 ## Skills
 
@@ -116,6 +124,9 @@ Auto-loaded context — they trigger when relevant topics come up, no invocation
 | `moku-core` | Architecture rules, factory chain, lifecycle, events, context tiers |
 | `moku-plugin` | Plugin structure spec, complexity tiers (Nano → VeryComplex), file layout, wiring harness |
 | `moku-web` | `@moku-labs/web` patterns: Preact, CSS `@scope`/`@layer`/tokens, islands, Vite-free bundling — synced against the framework source (the upstream docs lag; `src/` is treated as authoritative) |
+| `moku-common` | `@moku-labs/common`: the branded CLI renderer, `ctx.log` structured logging, `ctx.env` validated env — shared across the whole family |
+| `moku-room` | `@moku-labs/room`: the couch-multiplayer pack — shared screen + phones, WebRTC (trystero) peer sync, multi-device state, QR join |
+| `moku-worker` | `@moku-labs/worker`: the Cloudflare Workers backend — Durable Objects, Queues, R2, D1, and KV plugins that compose with the family |
 | `moku-testing` | TDD protocol for build waves, mock context factories, integration + type-level test patterns, test layout |
 | `moku-readable-code` | The story-by-layout stanza style — prose structure for code, checked by its validator |
 | `moku-readme` | The moku-labs main-README house style — masthead, badge palette, mermaid palette, table-centric body; drives the build's root-doc wave |
@@ -124,7 +135,7 @@ Auto-loaded context — they trigger when relevant topics come up, no invocation
 
 ## Hooks
 
-21 scripts on 12 lifecycle events. A short tour rather than a wall:
+22 scripts on 12 lifecycle events. A short tour rather than a wall:
 
 | When | What happens |
 |---|---|
