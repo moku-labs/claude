@@ -2,6 +2,19 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.62.1 (2026-06-24)
+
+**One verify — the `/moku-verify` workflow folds into the `/moku:verify` command.** v0.61.0 added the `/moku:verify` root/entrypoint conformance command; v0.62.0 made the separate `moku-verify` dynamic workflow aggressive. The two overlapped heavily (the workflow's fan-out already ran `moku-root-validator`), and the namespaced workflow surfaced as the awkward double-barrelled `/moku:moku-verify`. They are now a single command. `/moku:verify` keeps its root-first idiom focus and absorbs the workflow's full validator fan-out, aggressive verdict, uphold-biased cited skeptic pass, and find→fix→re-verify loop; the `moku-verify.js` workflow is removed.
+
+### Changed
+- **`/moku:verify` is the single verification entry point.** Beyond the root/entrypoint idiom check (I1–I5), it now runs the **full validator fan-out** (root, spec, plugin-spec, jsdoc, readable-code, common, type, test, web, architecture) with the **aggressive verdict** (any blocker, ANY warning, or any validator that did not return a verdict ⇒ FAIL; each retried up to 3×), the **uphold-biased cited** skeptic pass (a finding is dropped only on unanimous, cited refutation), and the **find → fix → re-verify loop** (default 3 cycles). New flags `--no-adversarial` and `--skeptics N` join `--report-only` and `--iterations N`.
+- **`/moku:init`** no longer copies a per-project verification workflow (step 14b removed) — `/moku:verify` ships with the plugin, available wherever it is enabled.
+- Docs realigned to the single command: `README.md` (intro, quickstart, commands table, workflows 3 → 2), `workflows/README.md`, `SKILL-INVENTORY.md` (workflows 3 → 2), and the `moku-skeptic` / `moku-root-validator` agent descriptions plus `moku-idioms.md` / `house-style.md` now point at `/moku:verify`.
+- Version bumped to 0.62.1 in plugin.json and marketplace.json.
+
+### Removed
+- **`workflows/moku-verify.js`** and its `/moku:moku-verify` slash command — merged into `/moku:verify`.
+
 ## 0.62.0 (2026-06-24)
 
 **Aggressive verification — `/moku:moku-verify` flips from pass-biased to surface-and-fix.** The validation pipeline was architecturally built to pass: validators defaulted uncertain findings to WARNING (preamble rule 5), the root-validator treated only **I1** as a hard blocker (I2–I5 were "guidance"), readable-code "never blocked", every validator downgraded a repeated pattern to an "established convention" the moment ≥2 plugins shared it, the adversarial skeptic's default stance was "the finding is wrong" (so a *repeated* mistake got refuted as house style), and the disposition ignored warnings entirely while a crashed validator merely yielded "INCONCLUSIVE". Net effect: real issues became warnings, warnings were ignored, and the few surviving blockers were refuted — the pipeline did almost nothing. 0.62.0 inverts every one of those defaults.

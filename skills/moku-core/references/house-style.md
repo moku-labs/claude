@@ -12,7 +12,7 @@ investigation cycle. Two rules prevent it:
 > **ADVISORY** ("consider a repo-wide change"), never a per-plugin blocker. Consistency with the repo
 > beats an idealized spec reading when the spec does not strictly forbid the pattern.
 
-The `moku-verify` adversarial skeptic pass enforces this automatically (it greps for the pattern in
+The `/moku:verify` adversarial skeptic pass enforces this automatically (it greps for the pattern in
 sibling plugins before letting a blocker stand). Validators should self-apply it too.
 
 ## Explicitly approved patterns (never re-flag these as per-plugin violations)

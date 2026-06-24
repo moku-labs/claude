@@ -7,7 +7,7 @@ description: >
   src/index.ts): a Layer-3 app must compose (createApp) and never define a framework (I1); one createApp
   per framework, no gratuitous duplicate entrypoints (I2); thin entries with logic in plugins/lib, not
   routers/entrypoints (I4); no stray scattered functions (I3); config declared in place, not generated.
-  Read-only — never modifies files. Used by /moku:verify and the moku-verify pipeline.
+  Read-only — never modifies files. Used by the /moku:verify command's validator fan-out.
   <example>Context: A built Layer-3 app, checking the root before shipping. user: "Is the app root structured the idiomatic Moku way?" assistant: launches moku-root-validator</example>
   <example>Context: Agent dumped logic into routes.tsx and duplicated entrypoints. user: "Check the entrypoints and routers for structural violations" assistant: launches moku-root-validator</example>
 model: opus

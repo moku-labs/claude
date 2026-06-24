@@ -103,8 +103,6 @@ Then configure all tooling files (these are **identical across all project types
 
 14. **.claude/settings.local.json** — Safe default permissions for Claude Code agents. Copy exact configuration from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-14b. **.claude/workflows/moku-verify.js** — Install the bundled validation workflow so the project gets a `/moku-verify` slash command (a parallel fan-out of all Moku validators). Copy `${CLAUDE_PLUGIN_ROOT}/workflows/moku-verify.js` into `.claude/workflows/`. (Requires Claude Code v2.1.154+; if workflows are unavailable the copied file is simply inert.) See `${CLAUDE_PLUGIN_ROOT}/workflows/README.md` for caveats.
-
 15. **CLAUDE.md** — Project-specific instructions for Claude Code. Generate from the template in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`, replacing the framework name and description with the actual project values. Adjust these sections to match the project type:
     - **Architecture:** Framework shows 3-layer model; Consumer shows `createApp` usage; Tools/Library omit this section.
     - **Moku Development Toolkit:** Adapt commands and workflows per project type:

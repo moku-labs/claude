@@ -46,11 +46,12 @@ iterates ≤3 cycles auto-fixing) · `next` · `status` · `check` (incl. `check
 - Mechanical validators run at `effort: low` (haiku); deep reviewers (`code-reviewer`, `wave-judge`,
   `skeptic`) at `effort: high` — to keep the 20-agent surface cost-aware.
 
-## Workflows (3) — opt-in dynamic fan-outs (Claude Code v2.1.154+)
+## Workflows (2) — opt-in dynamic fan-outs (Claude Code v2.1.154+)
 
-`moku-verify` (parallel validators → disposition; `{adversarial:true}` adds a skeptic pass) ·
 `moku-build-wave` (build one wave non-interactively) · `moku-migrate-sweep` (repo-wide mechanical
-change). `/moku:init` installs `moku-verify` into a project.
+change). Verification is the **`/moku:verify` command** (full validator fan-out + root/entrypoint
+idioms I1–I5 + uphold-biased cited skeptic + auto-fix loop) — the former `moku-verify` workflow was
+merged into it.
 
 ## Hooks (12 events / 22 scripts)
 

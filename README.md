@@ -24,7 +24,7 @@ In which one AI orchestrates twenty other AIs to double-check the code a twenty-
 
 ## What this is
 
-Commands, skills, validation agents, and hooks for building Moku frameworks, plugins, and consumer apps with full specification compliance — a gated **brainstorm → design → plan → build** flow, wave-based parallel builds, a multi-agent validation pipeline, **root/entrypoint idiom-conformance checking with auto-fix** (`/moku:verify`), TDD waves, real-browser e2e + visual testing for web apps, lean execution mode (~40–60% context savings), and cross-session state in `.planning/`.
+Commands, skills, validation agents, and hooks for building Moku frameworks, plugins, and consumer apps with full specification compliance — a gated **brainstorm → design → plan → build** flow, wave-based parallel builds, a **multi-agent validation pipeline with root/entrypoint idiom-conformance and auto-fix** (`/moku:verify`), TDD waves, real-browser e2e + visual testing for web apps, lean execution mode (~40–60% context savings), and cross-session state in `.planning/`.
 
 Yes, it ships a **wall-of-text validator** — warnings only, it never quite brings itself to block you. (The 233-word run-on `plugin.json` description the old README loved to mock has since been rewritten into two civil sentences. Growth.)
 
@@ -77,7 +77,7 @@ flowchart LR
 4. /moku:plan create app "a kanban board" --context design/board/design-context.md
 5. /moku:build                                        # no args = auto-resume; waves + validation
 6. /moku:e2e                                          # web apps: real-browser e2e + visual + UX/mobile; fixes & loops til clean
-7. /moku:verify                                       # root/entrypoint idiom conformance (I1–I5); iterates ≤3 cycles, auto-fixing
+7. /moku:verify                                       # full validator fan-out + root/entrypoint idioms (I1–I5); iterates ≤3 cycles, auto-fixing
 8. /moku:check                                        # health check (graph for mermaid diagrams)
 9. /moku:clean                                        # distill learnings, reset .planning/ for the next cycle
 ```
@@ -95,7 +95,7 @@ Twelve of them — `verify` is the newest. All take free-form natural language; 
 | `/moku:plan [create\|update\|add\|migrate\|resume] [type] {req} [--quick] [--context {file}]` | Plan a framework / app / plugin — 3-stage gated workflow. `--context` consumes brainstorm or design output |
 | `/moku:build [framework\|app\|plugin\|add\|resume\|fix] [name] [--dry-run\|--continue\|--lean]` | Build from specs in parallel waves. No args = auto-resume. `plugin #3`, `plugin #3-#5` work too |
 | `/moku:e2e [{screen/feature to focus, or a visual feature to build/adjust}] [--update-baselines]` | Comprehensive real-browser (Playwright) e2e for a Layer-3 web app: every screen / feature / control tested for behavior + visual baselines, desktop + mobile, console & server errors caught, UX + responsiveness reviewed — bugs and UX issues fixed and looped until clean. Can also take a **visual feature request**, build/adjust it, then create its tests + baseline + QA/UX coverage |
-| `/moku:verify [{focus: web\|worker\|framework\|path}] [--iterations N] [--report-only]` | Root/entrypoint **idiom conformance** (I1–I5) — apps compose not define a framework, one createApp per framework, thin entries (logic in plugins/lib not routers), no stray functions, config declared in place. Whole project, **root-first**; **iterates (default 3 cycles), auto-fixing**, re-verifying each pass; never commits |
+| `/moku:verify [{focus: web\|worker\|framework\|path}] [--iterations N] [--report-only] [--no-adversarial]` | **The single verification command.** Root/entrypoint **idiom conformance** (I1–I5 — apps compose not define a framework, one createApp per framework, thin entries, no stray functions, config in place) **plus the full validator fan-out** (spec · plugin · jsdoc · readable-code · common · type · test · web · architecture). Whole project, **root-first**; **aggressive** (any blocker, any warning, or any un-run validator → FAIL); upholds each finding unless a skeptic **cites** a refutation; **iterates (default 3 cycles), auto-fixing**, re-verifying each pass; never commits |
 | `/moku:check [verbose\|self-test\|graph\|status\|plugin <name>\|diff <name>]` | Diagnostics: project state, tooling, plugin health, mermaid graphs, plugin self-test |
 | `/moku:status [--full]` | Consolidated dashboard — phase, wave progress, agent activity |
 | `/moku:upgrade [--dry-run]` | Migrate a Moku project to the current target stack (TS6 baseline · Node 24 floor). No version args, gated, resumable |
@@ -153,11 +153,10 @@ Full wiring: [`hooks/hooks.json`](hooks/hooks.json). There's also a custom statu
 
 ## Dynamic workflows
 
-Three opt-in [dynamic workflow](https://code.claude.com/docs/en/workflows) scripts (research preview, Claude Code ≥ 2.1.154) for the fan-out-heavy phases — parallel orchestration instead of turn-by-turn:
+Two opt-in [dynamic workflow](https://code.claude.com/docs/en/workflows) scripts (research preview, Claude Code ≥ 2.1.154) for the fan-out-heavy phases — parallel orchestration instead of turn-by-turn:
 
 | Workflow | Does |
 |---|---|
-| `/moku-verify` | The full validation pipeline as one parallel fan-out — adversarial skeptics on by default — then an aggregated report |
 | `/moku-build-wave` | One wave end-to-end without stopping: each plugin verified the moment its builder finishes, then a wave-judge disposition |
 | `/moku-migrate-sweep` | Parallel migration sweep across a repo — one agent per file, disjoint writes |
 

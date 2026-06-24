@@ -19,25 +19,16 @@ fan-out + deterministic control flow) instead of turn-by-turn.
 
 ## Scripts
 
-### `moku-verify.js` → `/moku-verify`  (consumer + framework projects)
-Runs the full validation pipeline as a parallel fan-out: `moku-spec-validator`,
-`moku-plugin-spec-validator`, `moku-jsdoc-validator`, `moku-readable-code-validator`,
-`moku-common-validator`, `moku-type-validator`, `moku-test-validator`, `moku-web-validator`,
-`moku-architecture-validator` — then aggregates a single deduped PASS/FAIL disposition. Mirrors
-`moku-validation-coordinator` but with true concurrency. **`/moku:init` installs this into a
-project's `.claude/workflows/`.**
-**Aggressive by default (0.62.0+):** any **blocker, ANY warning, or any validator that did not return
-a verdict** fails the run — warnings are not a free pass, and an un-run/crashed validator is a FAIL
-(the project wasn't fully verified), never a shrugged `INCONCLUSIVE`. Each validator is retried up to
-3× for a parseable contract before being counted un-run. Validator `agentType`s are namespaced
-(`moku:moku-spec-validator`, …) so they actually launch.
-**Adversarial mode (ON by default, uphold-biased):** each finding is challenged by N `moku-skeptic`
-agents (default 2) that now **uphold** it unless they can **cite** the spec/house-style section that
-disproves it; a finding is dropped only on **unanimous, cited** refutation (mere repetition across
-plugins is no longer a "convention"). Opt out with `{adversarial:false}` (or args `"no-adversarial"`).
-**Auto-fix loop:** unless `{reportOnly:true}` (args `"report-only"`), surviving issues are fixed and
-re-verified in a loop (default 3 cycles, `{iterations:N}` to cap) — `tsc`/`lint`/`test` gate each
-cycle, regressions are reverted, and it stops when clean or the budget is hit.
+### Verification → `/moku:verify`  (command, not a workflow)
+The former `moku-verify.js` workflow has been **merged into the `/moku:verify` command** — the single
+Moku verification entry point. `/moku:verify` runs the same aggressive full-validator fan-out
+(`moku-root-validator`, `moku-spec-validator`, `moku-plugin-spec-validator`, `moku-jsdoc-validator`,
+`moku-readable-code-validator`, `moku-common-validator`, `moku-type-validator`, `moku-test-validator`,
+`moku-web-validator`, `moku-architecture-validator`), the uphold-biased **cited** skeptic pass, and the
+auto-fix loop — with the **root/entrypoint idiom check (I1–I5) as its primary focus**. Aggressive by
+default: any blocker, ANY warning, or any validator that did not return a verdict fails. See
+[`../commands/verify.md`](../commands/verify.md); pass `--report-only`, `--iterations N`, or
+`--no-adversarial`.
 
 ### `moku-build-wave.js` → `/moku-build-wave`  (framework projects, opt-in)
 Builds ONE wave non-interactively: builders run in parallel over the wave's plugins. For waves with
@@ -53,8 +44,8 @@ without stopping. Pass `{plugins:[{name,tier,spec}]}` or omit to auto-detect the
 Mechanical repo-wide change: discover sites → transform each file in parallel (one agent owns a
 whole file = disjoint writes) → verify each → report failures. Pass `{pattern, change}`.
 
-## Installing into a project
+## Availability
 
-`/moku:init` copies the consumer-relevant workflow(s) into the project's `.claude/workflows/`,
-where Claude Code registers them as `/<name>` slash commands. (`.claude/` is gitignored in the
-plugin repo itself, which is why the canonical copies live here in `workflows/`.)
+These workflows ship with the plugin and are registered automatically as `moku:`-namespaced skills
+wherever the plugin is enabled — no per-project install step. (Verification is no longer a workflow:
+it lives in the `/moku:verify` command.)

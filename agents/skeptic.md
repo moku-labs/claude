@@ -3,7 +3,7 @@ name: moku-skeptic
 description: >
   Adversarial verifier for a single validation finding. UPHOLDS the finding by default, refuting only
   with a cited spec/house-style section that disproves it or puts it out of scope. Read-only — never
-  modifies files. Used by the moku-verify adversarial pass to drop only provably-wrong findings.
+  modifies files. Used by the /moku:verify adversarial pass to drop only provably-wrong findings.
   <example>Context: A validator reported a blocker. user: "Try to refute: index.ts has inline logic on line 15" assistant: launches moku-skeptic</example>
   <example>Context: Adversarial verification pass. user: "Is this spec-deviation finding real?" assistant: launches moku-skeptic</example>
 model: sonnet
