@@ -58,24 +58,25 @@ Build the summary (~20-30 lines max):
 
 Inject this summary as a `## Prior Findings (from Group A)` section in the prompts for Group B agents and the architecture-validator.
 
-### Group B + Architecture (parallel — quality + types + speculative arch)
-Spawn these 3 agents simultaneously, including the Prior Findings Summary:
+### Group B + Architecture (parallel — quality + types + structure + speculative arch)
+Spawn these 4 agents simultaneously, including the Prior Findings Summary:
 1. **moku-test-validator** — test quality per plugin
 2. **moku-type-validator** — TypeScript type correctness (whole project)
 3. **moku-architecture-validator** — cross-plugin architecture (whole framework) — **speculative start**
+4. **moku-root-validator** — ROOT/ENTRYPOINT/app-shape conformance I1–I5 (whole project): app-creation files, apps compose not define a framework (I1, BLOCKER), one createApp per framework / no gratuitous duplicate entrypoints (I2), thin entries — logic in plugins/lib not routers (I4), no stray functions (I3), config in place. NEVER flag the legitimate multi-createApp browser/server split.
 
 The architecture-validator now runs alongside Group B instead of after it (~10-15% total pipeline savings). It receives Group A's Prior Findings but not Group B's (those aren't available yet). This is a speculative optimization:
 - **If Group B finds no BLOCKERs**: the architecture-validator's results are final. No re-run needed.
 - **If Group B finds BLOCKERs that affect cross-plugin architecture** (e.g., type-validator finds a broken type export used by multiple plugins, or test-validator reveals a missing integration test for a cross-plugin flow): re-run the architecture-validator with Group B findings injected. This re-run is the cost of speculation — but it only happens when Group B finds architectural BLOCKERs, which is rare.
-- **Decision logic after all 3 complete**: Check Group B blockers. If any have category `missing-export`, `dependency`, `event-type`, or `cross-plugin` → discard arch-validator results and re-run with Group B findings. Otherwise → keep speculative results.
+- **Decision logic after all 3 complete**: Check Group B blockers. If any have category `missing-export`, `dependency`, `event-type`, or `cross-plugin` → discard arch-validator results and re-run with Group B findings. Otherwise → keep speculative results. (The root-validator runs independently in this wave — it is not part of the speculative-arch re-run logic.)
 
-Wait for all 3 to complete. Parse their output contract JSON blocks.
+Wait for all 4 to complete. Parse their output contract JSON blocks.
 
 ## Agent Spawning
 
 For each agent, provide the appropriate scope:
 - **Per-plugin validators** (spec, jsdoc, plugin-spec, readable-code, common, test): spawn with the list of plugin directories to check
-- **Project-wide validators** (type, architecture): spawn with the project root
+- **Project-wide validators** (type, architecture, root): spawn with the project root
 
 Use `maxParallelAgents` from project config (default: 3) to limit concurrent agents within each group.
 
@@ -95,6 +96,7 @@ Before spawning validators, assess project complexity to choose appropriate mode
 | moku-test-validator | sonnet | Test quality per plugin | ~3-5k per plugin |
 | moku-type-validator | sonnet | TypeScript correctness (whole project) | ~5-10k total |
 | moku-architecture-validator | sonnet | Cross-plugin architecture (whole project) | ~8-15k total |
+| moku-root-validator | opus | Root/entrypoint/app-shape I1–I5 (whole project) | ~4-8k total |
 
 **Complexity-based overrides:**
 

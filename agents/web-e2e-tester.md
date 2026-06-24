@@ -40,6 +40,11 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
 - **MODE** — `gate` (final build stage) or `standalone` (`/moku:e2e`). Behaviour is identical; in `gate`
   mode a skip was already offered upstream — if you were spawned, the user chose to run.
 - **FIX_BUDGET** — max fix→re-run rounds (default 4) before you stop and report remaining reds.
+- **FEATURE_REQUEST** *(optional)* — a visual feature to **build or change**, not just test. When present,
+  you FIRST implement/adjust it in app source (moku-web conventions) per `e2e-testing.md` → "Feature-request
+  mode", THEN treat it as a new inventory item and cover it (functional + visual baseline + a11y) and run the
+  explore/judge passes on it. A large multi-plugin feature is out of scope here — say so and point at
+  `/moku:build`.
 
 ## HARD RULES
 
@@ -85,6 +90,11 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
 ## Workflow
 
 1. Read `e2e-testing.md`. Detect the web surface (scope-gate; if none, return PARTIAL "no web surface").
+1.5. **If FEATURE_REQUEST is set — build/adjust it FIRST** (per `e2e-testing.md` → "Feature-request mode"):
+   implement or change the visual feature in app source (moku-web conventions — `data-*`, tokens,
+   `@scope`/`@layer`, islands), grounding in the design context if one exists; then add it to the inventory
+   as a new/changed item before you map coverage. If it's a large multi-plugin feature, return PARTIAL and
+   point at `/moku:build` instead of building it here.
 2. **Inventory to the control level** — every screen/feature from INVENTORY_SOURCES (design-context §6 first
    if present) **plus every interactive control + its expected behavior** (the control catalog).
 3. **Map coverage:** read `tests/e2e/*`; mark each item `tested?` / `baselined?` / `behavior-checked?`.

@@ -25,16 +25,19 @@ for the live component list and `/usage` (per-category) to see actual token spen
 > disclosure — they cost ~0 tokens until an agent opens them, which is why the vendored spec/sandbox
 > (~6,400 + ~4,000 lines) are *indexed*, not front-loaded.
 
-## Commands (11)
+## Commands (12)
 
 `brainstorm` · `design` (multi-round, human-in-the-loop design exploration → a reusable design context,
 a *spec, not source*) · `plan` · `build` (the 3-stage gated core) · `e2e` (comprehensive Playwright e2e +
-visual-baseline coverage for a web app — every screen/feature tested, confirmed, and fixed) · `next` ·
-`status` · `check` (incl. `check --usage`) · `clean` · `init` · `upgrade` (zero-arg stack migration).
+visual-baseline coverage for a web app — every screen/feature tested, confirmed, and fixed; can also
+build/adjust a requested visual feature, then cover it) · `verify` (root/entrypoint idiom conformance,
+I1–I5 — apps compose not define a framework, one createApp per framework, thin entries, config in place —
+iterates ≤3 cycles auto-fixing) · `next` · `status` · `check` (incl. `check --usage`) · `clean` · `init` ·
+`upgrade` (zero-arg stack migration).
 
-## Agents (27) — spawned on demand by commands/workflows, isolated context
+## Agents (28) — spawned on demand by commands/workflows, isolated context
 
-- **Validation (10):** spec, plugin-spec, type, jsdoc, test, web, readable-code, common, architecture validators + validation-coordinator
+- **Validation (11):** spec, root (root/entrypoint/app-shape I1–I5 — the build/verify-time idiom check, driven by `/moku:verify`), plugin-spec, type, jsdoc, test, web, readable-code, common, architecture validators + validation-coordinator
 - **Review/judgment (5):** verifier, code-reviewer, wave-judge, error-diagnostician, skeptic
 - **Brainstorm (3):** brainstorm-researcher, challenger, synthesizer
 - **Design (3):** design-generator (parallel concept prototypes), design-synthesizer (writes the design context), design-critic (round critique)

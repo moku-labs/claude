@@ -1,7 +1,7 @@
 ---
-description: Comprehensively e2e-test a Layer-3 web app in a real browser (Playwright) — every screen, feature, and control tested for correct behavior + visual baselines, on desktop and mobile, with browser-console + server errors caught and a modern-UX + responsive review; bugs and UX issues fixed and looped until clean before results are shown. Accepts free-form natural language.
+description: Comprehensively e2e-test a Layer-3 web app in a real browser (Playwright) — every screen, feature, and control tested for correct behavior + visual baselines, on desktop and mobile, with browser-console + server errors caught and a modern-UX + responsive review; bugs and UX issues fixed and looped until clean before results are shown. Can also take a visual feature request and build/adjust it, then create its tests + baseline + QA/UX coverage. Accepts free-form natural language.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-argument-hint: (empty = cover everything) or {free-form: a screen/feature to focus} [--update-baselines]
+argument-hint: (empty = cover everything) or {free-form: a screen/feature to focus, OR a visual feature to build/adjust} [--update-baselines]
 disable-model-invocation: true
 ---
 
@@ -11,7 +11,7 @@ Before any decision about architecture, the core API, lifecycle, events, types, 
 
 ## Input — natural language first
 
-`$ARGUMENTS` may be **natural language**. Resolve intent per **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`**: empty → cover **everything**; a phrase naming a screen/feature → focus there (but still gap-check the rest); `--update-baselines` (or "update the visual baselines / I redesigned X") → allow deliberate golden updates for intended changes. Echo a one-line `Interpreting as: …` only when NL was interpreted.
+`$ARGUMENTS` may be **natural language**. Resolve intent per **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`**: empty → cover **everything**; a phrase naming an existing screen/feature → focus there (but still gap-check the rest); a phrase describing a **visual feature to build or change** (verbs like add/build/create/implement/make/redesign/"turn X into Y") → **feature-request mode** — build/adjust it, then cover it; `--update-baselines` (or "update the visual baselines / I redesigned X") → allow deliberate golden updates for intended changes. Echo a one-line `Interpreting as: …` only when NL was interpreted.
 
 ## Project Configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
@@ -25,9 +25,10 @@ The full process — the suite shape, the frozen fixture corpus, the engine/OS b
 ## Intent Normalization (Pre-Parse)
 
 - `$ARGUMENTS` empty → **FOCUS = (all)** — cover every screen/feature.
-- A phrase naming a screen/feature (e.g. "the settings page", "the filter popup") → **FOCUS = that item**, but still run the gap analysis over the whole app and flag any other uncovered feature (don't silently narrow coverage — the user asked to *test*, and an untested neighbour is still a risk).
+- A phrase naming an **existing** screen/feature (e.g. "the settings page", "the filter popup") → **FOCUS = that item**, but still run the gap analysis over the whole app and flag any other uncovered feature (don't silently narrow coverage — the user asked to *test*, and an untested neighbour is still a risk).
+- A phrase describing a **visual feature to build or change** (add/build/create/implement/make/redesign/"turn X into Y" — e.g. "add a dark-mode toggle to the header", "make the board filter a slide-over") → **FEATURE_REQUEST = that phrase** — build/adjust it in app source first, then cover it (tests + visual baseline + QA/UX). Echo `Interpreting as: feature request — …`.
 - `--update-baselines` anywhere → **UPDATE_BASELINES = true** (deliberate golden refresh for intended changes only — never to clear a real regression).
-- Wrong-command detection: if the request is about *building* or *planning* (not testing), point at `/moku:build` / `/moku:plan` and stop.
+- Wrong-command detection: if the request is about *planning*, or building a **large, multi-plugin** feature (new routes + worker endpoints + state — not a focused visual change), point at `/moku:plan` / `/moku:build` and stop. A focused visual feature is in scope here (feature-request mode).
 
 ---
 
@@ -39,13 +40,13 @@ The full process — the suite shape, the frozen fixture corpus, the engine/OS b
    - **Web surface present** → proceed.
    - **No web surface** (pure framework/library, or a non-web app) → decline gracefully: "Nothing to e2e-test — `/moku:e2e` drives a browser, and this project has no web surface. (API-only? Add integration tests via `/moku:build`.)" Stop.
 
-3. **Parse FOCUS / UPDATE_BASELINES** (above).
+3. **Parse FOCUS / FEATURE_REQUEST / UPDATE_BASELINES** (above).
 
 ---
 
 ## Route to the tester
 
-Spawn the **`web-e2e-tester`** agent (`Agent` tool) with: APP_ROOT (repo root), `MODE=standalone`, FOCUS, UPDATE_BASELINES, and the INVENTORY_SOURCES to enumerate from — a **design context** if one exists (`.planning/design/*/design-context.md` §6 inventory), the plan/specs (`.planning/specs/*`, `app-spec.md`) + what each build wave delivered, and the app source (`src/routes.tsx`, components/islands/pages, worker `endpoints.ts`). Instruct it to follow `e2e-testing.md` (the concrete template). It loops until clean — functional + **dual-side console/server errors** + **behavioral correctness** of every control — and runs the **human-QA loop**: spawns **`web-qa-explorer`** (charters/tours/oracles → durable regression tests for what the scripted suite missed) and **`web-ux-reviewer`** (modern-UX + mobile/responsive experience judge), grounding every finding in evidence and applying only standards-backed fixes (the rest are proposals).
+Spawn the **`web-e2e-tester`** agent (`Agent` tool) with: APP_ROOT (repo root), `MODE=standalone`, FOCUS, UPDATE_BASELINES, **FEATURE_REQUEST** (when in feature-request mode — the agent builds/adjusts it first per `e2e-testing.md` → "Feature-request mode", then covers it), and the INVENTORY_SOURCES to enumerate from — a **design context** if one exists (`.planning/design/*/design-context.md` §6 inventory), the plan/specs (`.planning/specs/*`, `app-spec.md`) + what each build wave delivered, and the app source (`src/routes.tsx`, components/islands/pages, worker `endpoints.ts`). Instruct it to follow `e2e-testing.md` (the concrete template). It loops until clean — functional + **dual-side console/server errors** + **behavioral correctness** of every control — and runs the **human-QA loop**: spawns **`web-qa-explorer`** (charters/tours/oracles → durable regression tests for what the scripted suite missed) and **`web-ux-reviewer`** (modern-UX + mobile/responsive experience judge), grounding every finding in evidence and applying only standards-backed fixes (the rest are proposals).
 
 When it returns, **present its coverage report** — but only treat the run as successful if its verdict is **PASS** (suite green AND every inventory item tested + confirmed). If **FAIL**, show the failing screens/features + the fix each needs and offer to continue fixing; do **not** present a "should work". If **PARTIAL** (no web surface, or Playwright/browsers unavailable here), say so plainly and how to enable it (`bunx playwright install`).
 
@@ -64,4 +65,5 @@ When it returns, **present its coverage report** — but only treat the run as s
 
 - `/moku:e2e` — cover **every** screen and feature; run all engines; fix anything broken; report green coverage.
 - `/moku:e2e the board filter popup` — focus the filter popup (functional + visual), still gap-check the rest.
+- `/moku:e2e add a dark-mode toggle to the header` — **feature-request mode**: build/adjust the toggle in app source (moku-web conventions), then add its tests + visual baseline (desktop + mobile) + QA/UX coverage; loop until clean.
 - `/moku:e2e --update-baselines` — after an **intended** redesign, refresh the visual goldens (local + Linux) while re-confirming everything passes.

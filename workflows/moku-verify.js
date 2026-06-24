@@ -1,6 +1,6 @@
 export const meta = {
   name: 'moku-verify',
-  description: 'Fan out the full Moku validation pipeline (spec, plugin-structure, jsdoc, readability, types, tests, web, architecture) in parallel, then aggregate one disposition',
+  description: 'Fan out the full Moku validation pipeline (spec, root/entrypoint, plugin-structure, jsdoc, readability, types, tests, web, architecture) in parallel, then aggregate one disposition',
   whenToUse: 'After a build wave or before shipping — when you want every Moku validator run concurrently and a single pass/fail with deduped findings. Pass {adversarial:true} (or args "adversarial") to add a skeptic pass that downgrades unrefutable-but-weak blockers.',
   phases: [
     { title: 'Discover', detail: 'list plugins to validate' },
@@ -83,6 +83,7 @@ log(`Validating: ${pluginList}`)
 phase('Validate')
 const VALIDATORS = [
   { type: 'moku-spec-validator', focus: 'Moku Core specification compliance (layers, factory chain, config, lifecycle, events, state).' },
+  { type: 'moku-root-validator', focus: 'ROOT/ENTRYPOINT/app-shape conformance (I1–I5): app-creation files (app.ts/spa.tsx/server.ts/cloudflare/worker.ts/routes.tsx/config.ts), apps compose not define a framework (I1), one createApp per framework / no gratuitous duplicate entrypoints (I2), thin entries — logic in plugins/lib not routers (I4), no stray scattered functions (I3), config declared in place not generated. Ground in moku-idioms.md §I1–I5 + skeleton-conventions.md; NEVER flag the legitimate multi-createApp browser/server split.' },
   { type: 'moku-plugin-spec-validator', focus: 'plugin structure, complexity tier, file organization, domain-merge detection.' },
   { type: 'moku-jsdoc-validator', focus: 'JSDoc completeness and quality on all exports.' },
   { type: 'moku-readable-code-validator', focus: 'function-body readability — wall-of-text functions lacking blank-line stanzas / intent comments, nested ternaries, deep nesting, fused concerns. Cite readable-code rule numbers (not spec sections); WARNING/INFO only, never blocks.' },

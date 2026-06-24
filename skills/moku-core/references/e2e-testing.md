@@ -91,6 +91,35 @@ fully covered.
 
 ---
 
+## Feature-request mode — build/adjust a requested visual feature, then cover it
+
+By default the gate/command **covers what exists**. But `/moku:e2e <feature request>` (and the gate, given a
+`FEATURE_REQUEST`) may also be handed a **visual feature to build or change** — e.g. "add a dark-mode toggle
+to the header", "make the board filter a slide-over panel", "redesign the empty state". In that case the
+*intake* is the only thing that's new — every mechanism below (fixtures, baselines, beyond-green, human-QA,
+UX/mobile, loop-until-clean) is reused. Do this **before** the enumerate→cover→loop:
+
+1. **Scope it.** A focused visual feature/change (a component/island/style/interaction on existing screens)
+   is built here. A **large multi-plugin feature** (new routes + worker endpoints + state) is **out of
+   scope** — return/say PARTIAL and point at `/moku:build`. Don't half-build a big feature inside the e2e gate.
+2. **Ground it.** If `.planning/design/{slug}/design-context.md` exists, treat it as the visual + interaction
+   source of truth for the feature; otherwise build to the request + the app's existing design tokens and
+   patterns (snap to the family — never invent a one-off look that diverges from the rest of the app).
+3. **Implement/adjust in app source** (moku-web conventions — `data-*` selectors, tokens, `@scope`/`@layer`,
+   islands for client behaviour, node-free client bundle). Keep logic out of routers/entrypoints (the same
+   root-idiom rules `/moku:verify` enforces) — feature logic lives in a plugin or `lib/`, not jammed into
+   `routes.tsx`/`spa.tsx`.
+4. **Add it to the inventory** as a new/changed item (a screen, a state, and its controls + expected
+   behaviour) so the gap analysis and the control catalog now include it.
+5. **Cover + baseline it.** Add a functional assertion, a behavioral-correctness check, an a11y assertion,
+   and a visual baseline — but **eyeball the first render before blessing the new golden** (the
+   "never auto-bless an unreviewed first screenshot" rule below). Capture it on **desktop and mobile**.
+6. **Run the beyond-green + human-QA + UX/mobile passes on it**, fold findings into the fix loop, and
+   **loop until clean** — exactly as for any other feature. Report it in the coverage table as a built +
+   tested + confirmed item, and call out the new baseline(s).
+
+---
+
 ## The suite shape
 
 ### Frozen fixture corpus — baselines never drift on real data

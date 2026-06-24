@@ -10,10 +10,10 @@ In which one AI orchestrates twenty other AIs to double-check the code a twenty-
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.60.1-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.61.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugin-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
-[![changelog](https://img.shields.io/badge/changelog-204%20kB-lightgrey)](./CHANGELOG.md)
+[![changelog](https://img.shields.io/badge/changelog-210%20kB-lightgrey)](./CHANGELOG.md)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 [Install](#install) · [Workflow](#the-workflow) · [Commands](#commands) · [Agents](#agents) · [Skills](#skills) · [Hooks](#hooks) · [Workflows](#dynamic-workflows) · [Config](#configuration)
@@ -24,7 +24,7 @@ In which one AI orchestrates twenty other AIs to double-check the code a twenty-
 
 ## What this is
 
-Commands, skills, validation agents, and hooks for building Moku frameworks, plugins, and consumer apps with full specification compliance — a gated **brainstorm → design → plan → build** flow, wave-based parallel builds, a multi-agent validation pipeline, TDD waves, real-browser e2e + visual testing for web apps, lean execution mode (~40–60% context savings), and cross-session state in `.planning/`.
+Commands, skills, validation agents, and hooks for building Moku frameworks, plugins, and consumer apps with full specification compliance — a gated **brainstorm → design → plan → build** flow, wave-based parallel builds, a multi-agent validation pipeline, **root/entrypoint idiom-conformance checking with auto-fix** (`/moku:verify`), TDD waves, real-browser e2e + visual testing for web apps, lean execution mode (~40–60% context savings), and cross-session state in `.planning/`.
 
 Yes, it ships a **wall-of-text validator** — warnings only, it never quite brings itself to block you. (The 233-word run-on `plugin.json` description the old README loved to mock has since been rewritten into two civil sentences. Growth.)
 
@@ -57,7 +57,7 @@ flowchart LR
   BS --> D["/moku:design<br/>concept rounds"]
   D --> P["/moku:plan<br/>3 gated stages"]
   P --> B["/moku:build<br/>parallel waves of builders"]
-  B --> V["validation pipeline<br/>spec · types · tests · JSDoc · prose"]
+  B --> V["validation pipeline<br/>spec · structure · types · tests · JSDoc · prose"]
   V --> R["code review + wave judge"]
   R -->|"continue"| B
   R -->|"done"| E["/moku:e2e<br/>real-browser QA + visual"]
@@ -77,13 +77,14 @@ flowchart LR
 4. /moku:plan create app "a kanban board" --context design/board/design-context.md
 5. /moku:build                                        # no args = auto-resume; waves + validation
 6. /moku:e2e                                          # web apps: real-browser e2e + visual + UX/mobile; fixes & loops til clean
-7. /moku:check                                        # health check (graph for mermaid diagrams)
-8. /moku:clean                                        # distill learnings, reset .planning/ for the next cycle
+7. /moku:verify                                       # root/entrypoint idiom conformance (I1–I5); iterates ≤3 cycles, auto-fixing
+8. /moku:check                                        # health check (graph for mermaid diagrams)
+9. /moku:clean                                        # distill learnings, reset .planning/ for the next cycle
 ```
 
 ## Commands
 
-Eleven of them — `design` and `e2e` are the newest. All take free-form natural language; the bracketed syntax is for people who enjoy bracketed syntax.
+Twelve of them — `verify` is the newest. All take free-form natural language; the bracketed syntax is for people who enjoy bracketed syntax.
 
 | Command | What it does |
 |---|---|
@@ -93,7 +94,8 @@ Eleven of them — `design` and `e2e` are the newest. All take free-form natural
 | `/moku:design {what to design} [resume\|list] [--count N] [--rounds] [--medium web\|cli\|tui]` | Multi-round, human-in-the-loop concept exploration for a UI: parallel concept prototypes → converge on a winner → polish in a live preview → capture a reusable `design-context.md` (a spec, not source) to ground plan/build |
 | `/moku:plan [create\|update\|add\|migrate\|resume] [type] {req} [--quick] [--context {file}]` | Plan a framework / app / plugin — 3-stage gated workflow. `--context` consumes brainstorm or design output |
 | `/moku:build [framework\|app\|plugin\|add\|resume\|fix] [name] [--dry-run\|--continue\|--lean]` | Build from specs in parallel waves. No args = auto-resume. `plugin #3`, `plugin #3-#5` work too |
-| `/moku:e2e [{screen/feature to focus}] [--update-baselines]` | Comprehensive real-browser (Playwright) e2e for a Layer-3 web app: every screen / feature / control tested for behavior + visual baselines, desktop + mobile, console & server errors caught, UX + responsiveness reviewed — bugs and UX issues fixed and looped until clean before results show |
+| `/moku:e2e [{screen/feature to focus, or a visual feature to build/adjust}] [--update-baselines]` | Comprehensive real-browser (Playwright) e2e for a Layer-3 web app: every screen / feature / control tested for behavior + visual baselines, desktop + mobile, console & server errors caught, UX + responsiveness reviewed — bugs and UX issues fixed and looped until clean. Can also take a **visual feature request**, build/adjust it, then create its tests + baseline + QA/UX coverage |
+| `/moku:verify [{focus: web\|worker\|framework\|path}] [--iterations N] [--report-only]` | Root/entrypoint **idiom conformance** (I1–I5) — apps compose not define a framework, one createApp per framework, thin entries (logic in plugins/lib not routers), no stray functions, config declared in place. Whole project, **root-first**; **iterates (default 3 cycles), auto-fixing**, re-verifying each pass; never commits |
 | `/moku:check [verbose\|self-test\|graph\|status\|plugin <name>\|diff <name>]` | Diagnostics: project state, tooling, plugin health, mermaid graphs, plugin self-test |
 | `/moku:status [--full]` | Consolidated dashboard — phase, wave progress, agent activity |
 | `/moku:upgrade [--dry-run]` | Migrate a Moku project to the current target stack (TS6 baseline · Node 24 floor). No version args, gated, resumable |
@@ -101,11 +103,11 @@ Eleven of them — `design` and `e2e` are the newest. All take free-form natural
 
 ## Agents
 
-Twenty-seven subagents, summoned on demand. Grouped by what they judge:
+Twenty-eight subagents, summoned on demand. Grouped by what they judge:
 
 | Group | Agents |
 |---|---|
-| **Structure** | `moku-spec-validator` · `moku-plugin-spec-validator` · `moku-jsdoc-validator` · `moku-web-validator` · `moku-common-validator` (family `@moku-labs/common` usage: branded CLI, `ctx.log`, `ctx.env`) |
+| **Structure** | `moku-spec-validator` · `moku-root-validator` (root/entrypoint/app-shape idioms I1–I5 — the build/verify-time check behind `/moku:verify`) · `moku-plugin-spec-validator` · `moku-jsdoc-validator` · `moku-web-validator` · `moku-common-validator` (family `@moku-labs/common` usage: branded CLI, `ctx.log`, `ctx.env`) |
 | **Quality** | `moku-plan-checker` · `moku-verifier` (3-level: exists → substantive → wired) · `moku-test-validator` · `moku-type-validator` · `moku-architecture-validator` · `moku-readable-code-validator` (the wall-of-text police; warnings only, never blocks) |
 | **Design** | `design-generator` (one art direction per concept, run in parallel) · `design-critic` (gaps + weak/duplicate directions before you pick) · `design-synthesizer` (writes the durable `design-context.md`) |
 | **Browser QA** | `web-e2e-tester` (Playwright coverage + visual baselines, fixes what it breaks) · `web-qa-explorer` (human-style exploratory tours, layered oracles → committed regression tests) · `web-ux-reviewer` (modern UX + mobile taste, applies the low-risk wins) |
@@ -113,7 +115,7 @@ Twenty-seven subagents, summoned on demand. Grouped by what they judge:
 | **Builders & research** | `moku-builder` · `moku-researcher` (the only agent with web access) · `brainstorm-researcher` · `brainstorm-challenger` · `brainstorm-synthesizer` |
 | **Orchestration** | `moku-validation-coordinator` |
 
-After a full framework build, the coordinator runs spec, plugin-spec, JSDoc, and readable-code validators in parallel; then tests + types in parallel alongside a speculative cross-plugin architecture pass (re-run only if cross-plugin blockers surface). The wave judge decides whether you (the human) need to be involved. Usually not. For a web app, a separate browser gate then drives the real app — functional e2e, human-style exploratory QA, and a UX/mobile pass — fixing what it finds and looping until green.
+After a full framework build, the coordinator runs spec, plugin-spec, JSDoc, and readable-code validators in parallel; then tests + types + root/entrypoint conformance in parallel alongside a speculative cross-plugin architecture pass (re-run only if cross-plugin blockers surface). The wave judge decides whether you (the human) need to be involved. Usually not. For a web app, a separate browser gate then drives the real app — functional e2e, human-style exploratory QA, and a UX/mobile pass — fixing what it finds and looping until green.
 
 ## Skills
 

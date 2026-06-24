@@ -106,8 +106,12 @@ pattern*, not blocking.
 
 ## How the validators report it
 
-`brainstorm-challenger` and `moku-plan-checker` emit an **Idiomatic Architecture** section that checks
-I1–I5 **against the `demos/tracker` pattern**. Key rules for the validator:
+I1–I5 are checked at **two times**: at **plan time** by `brainstorm-challenger` and `moku-plan-checker`
+(an **Idiomatic Architecture** section), and at **build/verify time** by **`moku-root-validator`** (the
+read-only root/entrypoint finder driven by **`/moku:verify`** and the `moku-verify` pipeline) — which closes
+the long-standing gap where nothing enforced the app shape once code existed (`moku-verifier` even exempts
+Layer-3 apps from root-structure checks). All of them check I1–I5 **against the `demos/tracker` pattern**.
+Key rules for every one of these validators:
 
 - **Never flag** multiple `createApp` instances, multiple frameworks composed side-by-side, or
   folder-splitting — those are idiomatic (see "What's IDIOMATIC" above). Reporting them is a false

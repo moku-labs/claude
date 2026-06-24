@@ -2,6 +2,23 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.61.0 (2026-06-24)
+
+**`/moku:verify` — root/entrypoint idiom conformance, enforced and auto-fixed; e2e gains feature-request mode.** Moku's app-shape guardrails **I1–I5** (`moku-idioms.md`) were only checked at *plan* time — at build/verify time nothing inspected the root app-creation files, and `moku-verifier` even *exempts* Layer-3 apps from root-structure checks. That is exactly where agents most often break the framework: dumping logic into routers/entrypoints, generating config instead of declaring it in place, duplicating entrypoints beyond the legitimate browser/server split, and scattering one-off functions. The new **`/moku:verify`** command closes the gap — a whole-project conformance check with a **primary focus on the root/entrypoint files**, that **iterates (default 3 cycles), auto-fixing** toward clean idiomatic code and re-verifying each pass (never committing). Separately, **`/moku:e2e`** can now take a **visual feature request**, build/adjust it in app source, and create its tests + baseline + QA/UX coverage.
+
+### Added
+- **`/moku:verify` command** (new — 12th command): orchestrates a find → rank → (adversarially verify) → fix → re-verify loop (default 3 cycles, `--iterations N`, `--report-only`). Reuses the existing read-only validators and adds the missing root coverage; applies structure-only refactors (extract logic out of entries → relocate stray functions → collapse gratuitous entrypoints → config-in-place → drop a Layer-3 `@moku-labs/core` dep), re-verifying with `tsc`/`lint`/`test`.
+- **`moku-root-validator` agent** (new — 28th agent, 11th validator): the build/verify-time idiom finder. Read-only; detects project kind (L2 framework / L3 web / L3 worker / full-stack), checks **I1–I5** + root-file conventions (`app.ts`/`spa.tsx`/`routes.tsx`/`config.ts`, `server.ts`/`cloudflare/worker.ts`, framework `src/index.ts`) + skeleton/config rules, grounded in `moku-idioms.md` + `skeleton-conventions.md`. Has a loud false-positive guard: NEVER flags the legitimate multi-`createApp` browser/server split, two frameworks side-by-side, or folder-splitting; only **I1** is a hard BLOCKER.
+- **`structural-conformance.md` reference**: the `/moku:verify` detection + fix-recipe + 3-cycle-loop protocol (the verify counterpart to `e2e-testing.md`).
+- **`e2e-testing.md` → "Feature-request mode" section:** given a visual feature to build/change — scope it (large multi-plugin → `/moku:build`), ground it in the design context, implement/adjust in moku-web source, add it to the inventory, cover + baseline it (eyeball the first golden), then run the beyond-green + human-QA + UX/mobile passes and loop until clean.
+
+### Changed
+- **`/moku:e2e` command + `web-e2e-tester` agent:** accept an optional `FEATURE_REQUEST` (verbs add/build/create/implement/make/redesign) — build/adjust the feature *first*, then cover it. A focused visual feature is in scope; a large multi-plugin feature is pointed at `/moku:build`.
+- **`moku-verify` workflow + `validation-coordinator` agent:** run `moku-root-validator` in the parallel fan-out so the broad pipeline gains root/app-shape coverage too.
+- **`moku-idioms.md` → "How the validators report it":** I1–I5 are now enforced at **build/verify time** (`moku-root-validator` / `/moku:verify`), not just at plan time.
+- **SKILL-INVENTORY.md:** commands 11 → 12, agents 27 → 28 (validators 10 → 11).
+- Version bumped to 0.61.0 in plugin.json and marketplace.json.
+
 ## 0.60.1 (2026-06-24)
 
 **README refresh — design + e2e and the rest of the roster.** The front page had drifted to `0.47.0`; it now documents the `/moku:design` and `/moku:e2e` commands, the Design and Browser-QA agent groups, and the `moku-common` / `moku-room` / `moku-worker` skills, with every count and badge brought current.
