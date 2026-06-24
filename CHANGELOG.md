@@ -2,6 +2,15 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.61.1 (2026-06-24)
+
+**E2E setup guidance — inline `webServer` by default, not a bespoke server script.** The e2e reference taught builders to scaffold a `scripts/e2e-server.ts` to build + serve the fixture corpus; for the common case that over-engineers the boot. The Playwright `webServer` is now an **inline `command`** composing existing package scripts — `rm -rf .wrangler && bun run dev --seed` for worker apps, `bun run build:e2e && bun run preview` for SSG/SPA. A separate server script is reframed as the documented **exception** — only when the boot needs imperative supervision a shell line can't express (e.g. recovering the Apple-Silicon `workerd` SIGSEGV zombie via the `PW_EXTERNAL_SERVER` path), never scaffolded pre-emptively.
+
+### Changed
+- **`e2e-testing.md`:** `webServer` is an inline `command` by default — the fixture-corpus, `playwright.config.ts` essentials, "Scripts to ensure", and hard-won-rules sections all updated; `scripts/e2e-server.ts` is now the exception, not the norm; documents why the `rm -rf .wrangler` clean-DB wipe belongs in the command, not in `seed.sql` (the same seed is the `deploy --seed` production fixture, so a destructive clear would wipe prod).
+- **`web-e2e-tester` agent:** scaffolds a `playwright.config.ts` with an inline `webServer.command`, not a bespoke server script.
+- Version bumped to 0.61.1 in plugin.json and marketplace.json.
+
 ## 0.61.0 (2026-06-24)
 
 **`/moku:verify` — root/entrypoint idiom conformance, enforced and auto-fixed; e2e gains feature-request mode.** Moku's app-shape guardrails **I1–I5** (`moku-idioms.md`) were only checked at *plan* time — at build/verify time nothing inspected the root app-creation files, and `moku-verifier` even *exempts* Layer-3 apps from root-structure checks. That is exactly where agents most often break the framework: dumping logic into routers/entrypoints, generating config instead of declaring it in place, duplicating entrypoints beyond the legitimate browser/server split, and scattering one-off functions. The new **`/moku:verify`** command closes the gap — a whole-project conformance check with a **primary focus on the root/entrypoint files**, that **iterates (default 3 cycles), auto-fixing** toward clean idiomatic code and re-verifying each pass (never committing). Separately, **`/moku:e2e`** can now take a **visual feature request**, build/adjust it in app source, and create its tests + baseline + QA/UX coverage.
