@@ -29,7 +29,7 @@ Detect the project kind first — structural requirements differ, and applying f
 
 **Validate against the vendored spec, not memory.** Open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` to route, then read `spec/03-PLUGIN-SYSTEM.md` (`depends`), `spec/07-COMMUNICATION.md` + `spec/14-EVENT-REGISTRATION.md` (event flow/visibility), and `spec/11-INVARIANTS.md` (cross-cutting invariants) before judging the graph. Cite the spec section ID in every BLOCKER and WARNING.
 
-**Convention baseline (avoid false positives).** Before raising a pattern as a BLOCKER, grep whether ≥2 already-verified plugins use the same pattern; if so, downgrade to ADVISORY, not a per-plugin blocker. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md` (e.g. per-event `register<T>()` is house style, not a violation). A `depends` edge used only for ordering/presence (no `ctx.require(dep).method()` call) is a WARNING ("dead dep — document why inline or drop"), not a blocker.
+**Approved-pattern guard (the ONLY downgrade).** A pattern is exempt from a BLOCKER **only** if `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md` or the spec **explicitly approves it** (e.g. per-event `register<T>()`) — cite the entry. **Mere repetition is NOT a convention:** the same architectural violation in ≥2 plugins is a repeated BLOCKER, not an advisory. A `depends` edge used only for ordering/presence (no `ctx.require(dep).method()` call) is a dead dependency — flag it ("document why inline or drop").
 
 ## Reasoning Protocol
 

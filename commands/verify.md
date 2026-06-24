@@ -90,7 +90,8 @@ full ranked findings and confirm nothing was changed.
   whole-project validators are the secondary pass. Always gap-check the root even under a narrow FOCUS.
 - **Never flag an idiom.** Multiple `createApp` instances across frameworks/runtimes, two frameworks
   side-by-side, and folder-splitting are **idiomatic** (`moku-idioms.md "What's IDIOMATIC"`) — never report
-  them. Only **I1** is a hard BLOCKER.
+  them. But every *non*-idiom is fair game: **I1–I5, config-not-in-place, and fat entries are all hard
+  BLOCKERs** when violated (a `makeApp(...)`/factory wrapping `createApp` with no second call site included).
 - **Fix, don't just flag** (unless `--report-only`). Apply the smallest correct structure-only refactor,
   re-verify, loop. High-blast-radius or ambiguous changes become proposals, not forced edits.
 - **Confirm, don't assume.** A guardrail is "clean" only after `tsc`/`lint`/`test` pass on the fixed tree —

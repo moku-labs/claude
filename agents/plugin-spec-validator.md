@@ -22,7 +22,7 @@ You are a Moku plugin structure validator. Your job is to ensure every plugin fo
 
 **Tier ≠ directory shape.** A flat multi-file layout (one concern per file, no subdirectories) is a valid Complex/VeryComplex layout — the ≤30-line `index.ts` rule often forces flat. The presence (or absence) of subdirectories like `generators/` does NOT by itself determine or change the tier; judge tier by domain complexity. Do not raise "wrong tier" blockers based on folder nesting alone.
 
-**Convention baseline (avoid false positives).** Before raising a pattern as a BLOCKER, grep whether ≥2 already-verified plugins use the same pattern; if so, downgrade to ADVISORY, not a per-plugin blocker. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md` for explicitly-approved patterns to never re-flag.
+**Approved-pattern guard (the ONLY downgrade).** A pattern is exempt from a BLOCKER **only** if `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md` or the spec **explicitly approves it** — cite the entry. **Mere repetition is NOT an excuse:** the same structural violation in N plugins is N blockers, not a convention. Only the patterns house-style.md actually lists are off-limits.
 
 ## Validation Checklist
 
@@ -168,7 +168,7 @@ Validate for **Standard+ tier** plugins, and for any lower-tier plugin that alre
    - An API method, emitted event, or config key present in source but missing/wrong in the README (or a README entry that no longer exists in source) → **BLOCKER**, `rule: docs-sync`, `file: src/plugins/<name>/README.md`, with a `fix` naming the changed elements: "Public API changed — regenerate via the readme-generator agent or update the {API|Events|Config} section to match {elements}; then record the new README-API hash."
    - A Standard+ plugin missing `README.md` entirely → **BLOCKER** (`rule: docs-sync`).
    - Public-API hash changed but the README sections already match source → no finding (note it so the orchestrator refreshes `README-API Hash`).
-   - README merely lacks polish while the API matches → **WARNING** at most, never BLOCKER.
+   - README merely lacks cosmetic polish while the API/Events/Config all still match source → **WARNING** (cosmetic only — still fails the aggressive verdict and is auto-fixed; a *misleading* README, e.g. a stale "stub / not implemented" note on built code, is the **BLOCKER** above).
 
 Do NOT BLOCKER when only internal state/handler logic changed (public-API hash unchanged) — the narrow fingerprint exists precisely to avoid forcing README churn on internal refactors.
 

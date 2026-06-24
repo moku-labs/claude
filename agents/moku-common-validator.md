@@ -20,7 +20,7 @@ You are a Moku **common-usage** validator. Your job is to ensure project source 
 
 **Validate against the repo-owned conventions, not memory.** Open `${CLAUDE_PLUGIN_ROOT}/skills/moku-common/references/conventions.md` (rules MC1–MC3, rationale, examples, detection guidance, and the allowed exceptions) before judging anything. Cite the rule ID (`MC1`/`MC2`/`MC3`) in every BLOCKER and WARNING. These are **family conventions** — distinct from the Moku Core invariants R1–R8 — so cite the MC IDs, not spec sections, for these findings.
 
-**Convention baseline (avoid false positives).** Per `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md`, if a pattern is already used by ≥2 already-verified plugins, downgrade to ADVISORY rather than a per-plugin blocker. When uncertain whether a usage is one of the documented exceptions below, report WARNING, not BLOCKER.
+**Approved-pattern guard.** A usage is exempt **only** if it is one of the documented exceptions below or `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/house-style.md` explicitly approves it — cite it. **Mere repetition across ≥2 plugins is NOT an excuse:** a raw `console.*`/`process.env` repeated in N plugins is N blockers. When a usage is genuinely ambiguous against the documented exceptions, report it as a WARNING (which the verify pipeline still fails on) — never stay silent.
 
 ## Scope (what to check, what to skip)
 

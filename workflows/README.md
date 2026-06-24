@@ -26,14 +26,18 @@ Runs the full validation pipeline as a parallel fan-out: `moku-spec-validator`,
 `moku-architecture-validator` — then aggregates a single deduped PASS/FAIL disposition. Mirrors
 `moku-validation-coordinator` but with true concurrency. **`/moku:init` installs this into a
 project's `.claude/workflows/`.**
-**Adversarial mode (ON by default):** each surviving blocker is challenged by N `moku-skeptic`
-agents (default 2) that try to *refute* it — including checking whether ≥2 already-verified plugins
-use the same pattern (a house convention, not a per-plugin violation); a majority-refuted blocker is
-downgraded to a warning. Kills plausible-but-wrong findings before they fail the build. Opt out with
-`{adversarial:false}` (or args `"no-adversarial"`).
-**Verdict:** `PASS` requires *every* validator to have run and returned a parseable contract;
-if any is missing the verdict is `INCONCLUSIVE` (never a vacuous `PASS`). Validator `agentType`s are
-namespaced (`moku:moku-spec-validator`, …) so they actually launch.
+**Aggressive by default (0.62.0+):** any **blocker, ANY warning, or any validator that did not return
+a verdict** fails the run — warnings are not a free pass, and an un-run/crashed validator is a FAIL
+(the project wasn't fully verified), never a shrugged `INCONCLUSIVE`. Each validator is retried up to
+3× for a parseable contract before being counted un-run. Validator `agentType`s are namespaced
+(`moku:moku-spec-validator`, …) so they actually launch.
+**Adversarial mode (ON by default, uphold-biased):** each finding is challenged by N `moku-skeptic`
+agents (default 2) that now **uphold** it unless they can **cite** the spec/house-style section that
+disproves it; a finding is dropped only on **unanimous, cited** refutation (mere repetition across
+plugins is no longer a "convention"). Opt out with `{adversarial:false}` (or args `"no-adversarial"`).
+**Auto-fix loop:** unless `{reportOnly:true}` (args `"report-only"`), surviving issues are fixed and
+re-verified in a loop (default 3 cycles, `{iterations:N}` to cap) — `tsc`/`lint`/`test` gate each
+cycle, regressions are reverted, and it stops when clean or the budget is hit.
 
 ### `moku-build-wave.js` → `/moku-build-wave`  (framework projects, opt-in)
 Builds ONE wave non-interactively: builders run in parallel over the wave's plugins. For waves with

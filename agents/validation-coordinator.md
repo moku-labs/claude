@@ -27,7 +27,7 @@ Spawn these 5 agents simultaneously:
 1. **moku-spec-validator** — specification compliance per plugin
 2. **moku-jsdoc-validator** — documentation quality per plugin
 3. **moku-plugin-spec-validator** — structure compliance per plugin
-4. **moku-readable-code-validator** — function-body readability per plugin (wall-of-text / stanza style; WARNING/INFO only — never blocks)
+4. **moku-readable-code-validator** — function-body readability per plugin (wall-of-text / stanza style; clear black boxes are BLOCKERs, borderline are WARNINGs)
 5. **moku-common-validator** — family-level `@moku-labs/common` usage per plugin/CLI/script (branded CLI MC1, `ctx.log` not `console.*` MC2, `ctx.env` not `process.env` MC3)
 
 Wait for all 5 to complete. Parse their output contract JSON blocks.
@@ -91,7 +91,7 @@ Before spawning validators, assess project complexity to choose appropriate mode
 | moku-spec-validator | sonnet | Spec compliance per plugin | ~3-5k per plugin |
 | moku-jsdoc-validator | sonnet | JSDoc quality per plugin | ~2-4k per plugin |
 | moku-plugin-spec-validator | sonnet | Structure compliance per plugin | ~3-5k per plugin |
-| moku-readable-code-validator | sonnet | Function-body readability per plugin (WARNING/INFO only) | ~2-4k per plugin |
+| moku-readable-code-validator | sonnet | Function-body readability per plugin (clear wall-of-text = BLOCKER) | ~2-4k per plugin |
 | moku-common-validator | sonnet | `@moku-labs/common` usage per plugin/CLI/script (MC1–MC3) | ~2-4k per plugin |
 | moku-test-validator | sonnet | Test quality per plugin | ~3-5k per plugin |
 | moku-type-validator | sonnet | TypeScript correctness (whole project) | ~5-10k total |
