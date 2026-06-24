@@ -123,15 +123,18 @@ UX/mobile, loop-until-clean) is reused. Do this **before** the enumerate→cover
 ## The suite shape
 
 ### Frozen fixture corpus — baselines never drift on real data
-The Playwright `webServer` builds and serves a **frozen fixture build**, NOT the real site. Do this in a
-small `scripts/e2e-server.ts` that builds a fixture corpus into a dedicated dir and previews it:
+The Playwright `webServer` builds and serves a **frozen fixture build**, NOT the real site. **Default to an
+inline `webServer.command`** — a shell one-liner composing the existing package scripts. Do NOT scaffold a
+bespoke server script for this; a separate `scripts/e2e-server.ts` is the documented exception, not the norm
+(see "`playwright.config.ts` essentials" below):
 
 ```ts
-import { makeApp } from "../src/app";
-// build the FIXTURE corpus into a dedicated dir, then preview it
-const app = makeApp("production", { contentDir: "tests/fixtures/content", outDir: "dist-e2e" });
-await app.cli.build();
-await app.cli.preview();
+// playwright.config.ts — SSG/SPA: build the FIXTURE corpus into a dedicated dir, then preview it.
+// package.json "build:e2e" = app.cli.build({ contentDir: "tests/fixtures/content", outDir: "dist-e2e" }).
+webServer: { command: "bun run build:e2e && bun run preview", url: BASE_URL, reuseExistingServer: !process.env.CI }
+
+// worker-backed app — clean local state, then the documented dev boot + seed (one line, no script):
+webServer: { command: "rm -rf .wrangler && bun run dev --seed", url: BASE_URL, reuseExistingServer: !process.env.CI }
 ```
 
 Fixtures deliberately include the edge cases real data may lack (pagination, locale fallback, code blocks,
@@ -167,11 +170,21 @@ blocking overlays; enhanced screenshots (`stylePath`, `maskColor`, `maxDiffPixel
 regions.
 
 ### `playwright.config.ts` essentials
-- `webServer` runs the fixture build+preview; `port` honors `PORT` (so a stale preview on the default port
-  can't be tested by accident); `reuseExistingServer: !CI`. Add a **`PW_EXTERNAL_SERVER` opt-out** so a long
-  session can reuse an already-running seeded server instead of re-booting it each run. Prefer `webServer.wait`
-  (a regex on the server's stdout ready-line, 1.57) over URL-polling for deterministic boot detection, and set
+- **`webServer` is an INLINE `command` by default — not a custom script.** Compose existing package scripts as
+  a shell one-liner (`rm -rf .wrangler && bun run dev --seed` for worker apps; `bun run build:e2e && bun run
+  preview` for SSG/SPA). `port` honors `PORT` (so a stale server on the default port can't be tested by
+  accident); `reuseExistingServer: !CI`. Add a **`PW_EXTERNAL_SERVER` opt-out** so a long session can reuse an
+  already-running seeded server instead of re-booting it each run — and so the rare app that needs a supervised
+  server (next bullet) can plug one in without it being everyone's default. Prefer `webServer.wait` (a regex on
+  the server's stdout ready-line, 1.57) over URL-polling for deterministic boot detection, and set
   `trace: "on-first-retry"` (+ `video: "retain-on-failure"`) so CI keeps evidence exactly on failure.
+- **A `scripts/e2e-server.ts` is the EXCEPTION — only when the boot needs imperative logic a shell line can't
+  express** (e.g. supervising a dev runtime that crashes mid-run). Known case: `wrangler dev`'s workerd can
+  SIGSEGV on Apple-Silicon when a hibernatable-WebSocket Durable Object is evicted (workers-sdk#4995 /
+  workerd#1422) and go *zombie* — every request 503s instead of exiting, which `retries` can't recover. If that
+  actually bites a suite, write a small supervisor (poll `/health` → kill + restart the process tree,
+  preserving on-disk data) and run it via the `PW_EXTERNAL_SERVER` path; keep the inline command as the default
+  for everyone the bug doesn't hit. Don't scaffold this pre-emptively.
 - **Engine matrix:** **chromium runs the FULL suite** (functional logic is engine-agnostic; chromium also
   tracks the Navigation API). **webkit + firefox run ONLY** the visual baselines + the boot guard
   (`testMatch: /(baseline|no-js-errors)\.spec\.ts$/`) — rendering and boot-crashes are engine-specific;
@@ -192,8 +205,9 @@ Update them **deliberately**:
 
 ### Scripts to ensure (`package.json`)
 `test:e2e` (`playwright test`), `test:e2e:update` (`--update-snapshots`), `test:e2e:update:linux` (Docker,
-pinned **`v1.61.0-noble`** image). The e2e build/serve script (`scripts/e2e-server.ts`) and `playwright` +
-`@playwright/test` devDeps **pinned at `^1.61`** (see Toolchain).
+pinned **`v1.61.0-noble`** image). `playwright` + `@playwright/test` devDeps **pinned at `^1.61`** (see
+Toolchain) — the webServer is an inline `command` (above), so there's no separate serve script to maintain
+unless the supervised exception applies.
 Install browsers with `bunx playwright install` (and `--with-deps` in CI).
 
 ---
@@ -258,10 +272,12 @@ worked). Run it whenever a design context exists, and for any "make it comprehen
 
 ## Hard-won rules (each cost real debugging time)
 
-- **`scripts/e2e-server.ts` runs `bun run dev` (the package script), NOT `bun scripts/dev.ts`** — the package
+- **The webServer boot runs `bun run dev` (the package script), NOT `bun scripts/dev.ts`** — the package
   script puts `node_modules/.bin` on PATH so a worker app can spawn `wrangler` ("Executable not found:
-  wrangler" otherwise). `rm -rf .wrangler` before a seeded boot (the deterministic seed uses plain INSERTs and
-  IS the frozen fixture corpus).
+  wrangler" otherwise). Prefix `rm -rf .wrangler` before a seeded boot — the deterministic seed uses plain
+  INSERTs and IS the frozen fixture corpus, so it must land on a clean DB. Keep that wipe in the inline
+  `webServer.command`, NOT in `seed.sql`: the same seed is the `deploy --seed` production fixture, so a
+  destructive `DELETE`/`DROP` there would wipe prod.
 - **`waitForLoadState("networkidle")` never settles** when an island holds a live WebSocket (the board socket)
   → use `"load"` + an explicit `expect(locator).toBeVisible()`.
 - **Anchored `waitForURL(/^\/…/)` regexes test the FULL URL** (`http://host/…`), so `^/` never matches → use a

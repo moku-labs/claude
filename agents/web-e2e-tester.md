@@ -50,8 +50,9 @@ until the suite is green and every inventory item is `tested + confirmed`. "It p
 
 1. **Real browser, real build.** Drive the app through Playwright against the **fixture build** served by
    the e2e webServer (never the dev server against live data). If the harness/config/scripts don't exist,
-   scaffold them to the standard pattern in `e2e-testing.md` (`playwright.config.ts`, `scripts/e2e-server.ts`, `test:e2e*`
-   scripts, devDeps, `bunx playwright install`). **Pin `@playwright/test` + `playwright` at `^1.61`** (Docker
+   scaffold them to the standard pattern in `e2e-testing.md` (`playwright.config.ts` with an **inline
+   `webServer.command`** — not a bespoke server script; `test:e2e*` scripts, devDeps, `bunx playwright install`).
+   **Pin `@playwright/test` + `playwright` at `^1.61`** (Docker
    `v1.61.0-noble`; see `e2e-testing.md` → Toolchain). **Capture errors on both sides every run** — browser
    (`pageerror`/`console.error`/failed responses via `page.pageErrors()`/`consoleMessages()`/`requests()`)
    AND the server's stdout/stderr — and assert ZERO errors for **every feature interaction**, not just boot.
