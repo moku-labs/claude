@@ -9,8 +9,8 @@ description: >
 
 # Moku Worker Patterns
 
-> **Synced to `@moku-labs/worker@0.11.0`** (npm `dist-tags.latest`; surface from the published 0.11.0
-> tarball + the `v0.11.0` git tag source). Full surface — every plugin, its API/config/events, the
+> **Synced to `@moku-labs/worker@0.15.0`** (npm `dist-tags.latest`; surface from the published 0.15.0
+> tarball + the `v0.15.0` git tag source). Full surface — every plugin, its API/config/events, the
 > dependency graph, and the runtime-vs-node-only boundary — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in
 > [`moku-frameworks.md`](../moku-core/references/moku-frameworks.md) (`frameworks[worker]`).
@@ -51,12 +51,14 @@ stays thin), and read env/secrets via `ctx.env` (not raw `process.env` or bare b
 moku-common conventions (MC2/MC3). The one hard rule: this is a **Layer-3 app** — `createApp` only, never
 `createCoreConfig`/`createCore` or a direct `@moku-labs/core` dependency.
 
-## Framework API (@moku-labs/worker v0.11.0)
+## Framework API (@moku-labs/worker v0.15.0)
 
 One entry: **`@moku-labs/worker`**. The node-only deploy/CLI plugins (`deployPlugin`/`cliPlugin`) ship from
 the same root export and are tree-shaken out unless you list them — never in the runtime bundle otherwise.
 (The `./cli` back-compat subpath was removed in 0.11.0.) `createApp` is **synchronous** (built once per
-isolate, frozen). Bindings are threaded as a **call argument** (`env`), never stored.
+isolate, frozen). Bindings are threaded as a **call argument** (`env`), never stored. There is **no stage
+plugin** (removed in 0.12.0): deployment stage is plain global config — set `config.stage`, read it via
+`ctx.global.stage`.
 
 ```tsx
 import { createApp, endpoint, kvPlugin } from "@moku-labs/worker";
@@ -79,10 +81,28 @@ export default { fetch: (r, env, ctx) => app.server.handle(r, env, ctx) } satisf
 **Resource plugins** (`@moku-labs/worker`): `kvPlugin`, `d1Plugin`, `queuesPlugin`, `storagePlugin` (R2),
 `durableObjectsPlugin` — each env-first, configured as a keyed map of named instances, with `app.<kind>.get`
 on the default and `app.<kind>.use("key")` for the rest. Defaults `bindingsPlugin` + `serverPlugin` are
-pre-wired; core `log`/`env`/`stage` are flat-injected on `ctx`. Helpers: `endpoint(path)`,
+pre-wired; core `log`/`env` are flat-injected on `ctx`. Helpers: `endpoint(path)`,
 `defineDurableObject(name)`. Author consumer plugins with `createPlugin` (generics inferred), typing context
 via `WorkerPluginCtx<Config, State, Events?>`. **Deploy** (from the package root): `deployPlugin` +
-`cliPlugin` — `deploy.run()`/`cli.deploy()` resolve to a structured `DeployReport`.
+`cliPlugin` — `deploy.run()`/`cli.deploy()` resolve to a structured `DeployReport`; `cli.deploy({ delete:
+true, stage })` (the `--delete` flag) routes to `deploy.destroy()` to tear a stage's infrastructure back
+down (since 0.13.0).
 
-Full catalog (all 10 plugins, every API/config/event, the keyed-map config, the dependency graph, the
+**Guards (`endpoint.new`, since 0.14.0).** `endpoint.new(guard)` derives a NEW factory (callable exactly
+like `endpoint`) that runs `guard` before every handler it builds; chain `.new` to stack guards. A guard
+returning a `Response` **short-circuits** (401 etc.); returning `void` continues. Since 0.15.0 a guard may
+also return an **object** → it is merged into the context handed to the handler (and later guards), read as
+a **typed field** (e.g. `ctx.actor`) — so a guard resolves a value once and the handler reuses it (no
+re-resolve, no null-check):
+
+```ts
+const authed = endpoint.new(async (ctx) => {
+  const actor = await ctx.require(authPlugin).resolve(ctx.request, ctx.env);
+  if (!actor) return new Response("Unauthorized", { status: 401 }); // gate
+  return { actor };                                                  // enrich → ctx.actor
+});
+authed("/me").get((ctx) => Response.json({ id: ctx.actor.id }));     // typed, no null-check
+```
+
+Full catalog (all 9 plugins, every API/config/event, the keyed-map config, the dependency graph, the
 runtime-vs-node-only boundary): **[`references/plugin-index.md`](references/plugin-index.md)**.

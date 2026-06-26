@@ -2,6 +2,21 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.62.2 (2026-06-26)
+
+**Moku-family knowledge sync — `/moku:moku-sync` across web, worker, and room.** Brought every moku-family framework's skill + plugin index in step with its latest upstream release: web `2.0.1 → 2.2.2`, worker `0.11.0 → 0.15.0`, room `0.1.1 → 0.2.0` (core already current at `1.5.0`). This finished an in-progress sync whose `knownVersion` stamps were bumped but whose skill content + provenance lagged, advanced web past it to the newest upstream, and fully regenerated room for its breaking `0.1.x → 0.2.0` re-architecture.
+
+### Changed
+- **`@moku-labs/web` → 2.2.2.** `createChannel` gained a `shouldReconnect?(event)` guard (suppress reconnect on terminal close codes like `4401`); folded in the 2.1.0–2.2.0 SPA additions (module-level `navigate`/`hardNavigate`, per-route `.transition()`/`.scroll()`, `createChannel`). Skill API form + plugin-index headers + provenance brought current.
+- **`@moku-labs/worker` → 0.15.0.** Documented `endpoint.new(guard)` request guards (typed context enrichment, 0.15.0) and the `deploy --delete` teardown (`deploy.destroy()`, 0.13.0). Registry/provenance now record the breaking **0.12.0 stage-plugin removal** (stage is plain global config — `config.stage` / `ctx.global.stage`) and the `@moku-labs/common` bump to `0.3.0` — the family is **no longer lockstep on common** (web/room stay on `0.2.1`).
+- **`@moku-labs/room` → 0.2.0 — fully regenerated for a breaking re-architecture.** Room moved from a plugin-pack spread into a `@moku-labs/web` app to a **standalone `@moku-labs/core` framework** you `createApp` from. Registry entry: `role` plugin-pack → framework, `dependsOn` web → core. New plugin-index + skill cover the two cores (client `.` + opt-in `./server` Cloudflare signaling tier), 7 plugins (added `hubPlugin` + the `Hub` Durable Object), 3 signaling adapters (added `serverSignaling`), the dropped `./browser` entry, `session.codeLength`, and the new `room:network-warning "room-evicted"` reason. Catalog generated from the `v0.2.0` tag source (upstream `llms.txt` is stale at the old plugin-pack — "source wins").
+- **`upgrade-migrations.md`:** rewrote `moku-room-version` (room no longer depends on web; flags the `0.1.x → 0.2.0` source rewrite) and annotated `moku-worker-version` (0.12.0 stage-plugin removal; current target 0.15.0).
+- **Registry + inventory:** bumped `knownVersion` (web 2.2.2, worker 0.15.0, room 0.2.0), refreshed all provenance notes, and updated `SKILL-INVENTORY.md` for the room re-architecture + worker plugin set.
+- Version bumped to 0.62.2 in plugin.json and marketplace.json.
+
+### Fixed
+- Corrected two stale refs left in the in-progress worker sync: "10 plugins" → "9" (stage plugin removed) and `@moku-labs/common@0.2.1` → `0.3.0`.
+
 ## 0.62.1 (2026-06-24)
 
 **One verify — the `/moku-verify` workflow folds into the `/moku:verify` command.** v0.61.0 added the `/moku:verify` root/entrypoint conformance command; v0.62.0 made the separate `moku-verify` dynamic workflow aggressive. The two overlapped heavily (the workflow's fan-out already ran `moku-root-validator`), and the namespaced workflow surfaced as the awkward double-barrelled `/moku:moku-verify`. They are now a single command. `/moku:verify` keeps its root-first idiom focus and absorbs the workflow's full validator fan-out, aggressive verdict, uphold-biased cited skeptic pass, and find→fix→re-verify loop; the `moku-verify.js` workflow is removed.

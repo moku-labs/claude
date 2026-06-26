@@ -40,7 +40,7 @@ the root-config inventory, the data-layer strategies, routing patterns, the hard
 | Tests | Vitest (unit/integration, coverage on `lib/`+`i18n/`) + Playwright (e2e + visual, frozen fixture corpus) |
 | Deploy | Cloudflare Pages (`deploy` plugin + `wrangler`); GitHub Actions CI gates deploy |
 
-## Framework API (@moku-labs/web v2.0.1)
+## Framework API (@moku-labs/web v2.2.2)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
@@ -89,8 +89,14 @@ await app.cli.build();   // or app.build.run() — dist/<path>/index.html + (mod
 ```ts
 // Client bundle — node-free entry, env auto-wired (browserEnv is the default provider)
 import { createApp, dataPlugin } from "@moku-labs/web/browser";
+// Consumer helpers (node-free): route/island builders + realtime + programmatic nav
+import { createIsland, createUrls, route, createChannel, navigate, hardNavigate } from "@moku-labs/web/browser";
 const app = createApp({ plugins: [dataPlugin], config: { mode: "hybrid" }, pluginConfigs: { router: { routes } } });
 await app.start();
+// createChannel<T>(opts) — client realtime WebSocket (v2.1.0; v2.2.2 adds a shouldReconnect(event) guard —
+// return false to stop reconnecting on a terminal close, e.g. code 4401); navigate(path, { scroll? }) / hardNavigate(url)
+// are module-level (v2.2.0), bound to the booted app (no-op pre-boot). hardNavigate crosses a layout/auth
+// boundary the SPA can't swap. Per-route: route(...).transition("morph") / .scroll("preserve").
 ```
 
 **Breaking since 0.5.6 (v1.0.0):** route handlers are **ctx-based** — `.load((ctx) => D)` gets
@@ -129,8 +135,10 @@ custom plugins with `createPlugin("name", spec)` (types infer from the spec; doc
 with a directly-preceding JSDoc block — never destructure exports, see moku-core "Public Export
 Shape"). SEO `<head>` helpers (`meta/og/twitter/jsonLd/canonical/hreflang/feedLink/
 buildArticleHead`), the `route()`/`defineRoutes()` builders, `createUrls(routes, defaultLocale?)`,
-`createIsland` + the built-in `lazyEmbed` island, and the `::embed`/`::gallery` default components
-`EmbedFacadeButton`/`GalleryTrack` are top-level exports.
+`createIsland` + the built-in `lazyEmbed` island, the `::embed`/`::gallery` default components
+`EmbedFacadeButton`/`GalleryTrack`, and (v2.1.0–v2.2.0) `createChannel<T>` (client realtime
+WebSocket) + the module-level `navigate`/`hardNavigate` programmatic navigators are top-level
+exports.
 
 **Full catalog — plugins, events, config, the `ctx`/`app` property index, usage:**
 [`references/plugin-index.md`](references/plugin-index.md). Consult it first when wiring an

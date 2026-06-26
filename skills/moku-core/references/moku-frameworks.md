@@ -62,7 +62,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "2.0.1",
+      "knownVersion": "2.2.2",
       "skill": "skills/moku-web",
       "pluginIndex": "skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -84,7 +84,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.11.0",
+      "knownVersion": "0.15.0",
       "skill": "skills/moku-worker",
       "pluginIndex": "skills/moku-worker/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -105,11 +105,11 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "repo": "https://github.com/moku-labs/room",
       "localClone": "../room",
       "layer": 2,
-      "role": "plugin-pack",
-      "knownVersion": "0.1.1",
+      "role": "framework",
+      "knownVersion": "0.2.0",
       "skill": "skills/moku-room",
       "pluginIndex": "skills/moku-room/references/plugin-index.md",
-      "dependsOn": ["@moku-labs/web"],
+      "dependsOn": ["@moku-labs/core"],
       "detect": { "packageJsonDep": "@moku-labs/room" },
       "releaseSource": {
         "npm": "https://registry.npmjs.org/@moku-labs/room",
@@ -125,13 +125,27 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `worker` entry (latest sync):** **re-synced 2026-06-21** to `@moku-labs/worker@0.11.0`
-> (npm `dist-tags.latest`). **`0.9.2 → 0.11.0` delta:** `0.10.0` was docs (root-README rewrite) + MIT LICENSE
-> + branded migrate/seed/KV-reset deploy output (no public-surface change); `0.11.0` (#42)
-> `refactor(structure)` cleared `src/` root to `config.ts` + `index.ts` and **removed the `./cli` subpath
-> export** — `deployPlugin`/`cliPlugin` + `ExternalManifest`/`ResourceManifest` now ship **only** from the
-> package root. **No plugin/API/event/config change** (still 10 plugins, same set); the regenerated
-> `plugin-index.md` (synced header `0.11.0`) drops every `./cli` mention.
+> **Provenance of the `worker` entry (latest sync):** **re-synced 2026-06-26** to `@moku-labs/worker@0.15.0`
+> (npm `dist-tags.latest`; surface from the `v0.15.0` tag source). **`0.11.0 → 0.15.0` delta — breaking +
+> additive, the plugin set shrinks 10 → 9:**
+> - **`0.12.0` (BREAKING, #43) `refactor(core)!`:** removed the **`stage` plugin** (deployment stage is now
+>   plain global config — set `config.stage`, read via `ctx.global.stage`), made `createApp` "plain", and
+>   rebranded the framework id to **`"worker"`**. This is the 10 → **9 plugins** change (the surviving set:
+>   bindings, server, kv, d1, queues, storage, durableObjects, deploy, cli).
+> - **`0.12.1` (#44):** sourced the env provider `workerSafeProcessEnv` from `@moku-labs/common`, bumping the
+>   bundled `@moku-labs/common` **`0.2.1 → 0.3.0`**. ⚠️ The family is **no longer lockstep on `common`**:
+>   web@2.2.2 / room@0.2.0 stay on `0.2.1`; only worker moved to `0.3.0`.
+> - **`0.13.0` (#45):** `deploy --delete` teardown — `cli.deploy({ delete: true, stage })` routes to
+>   `deploy.destroy()` to tear a stage's infra back down (`0.13.1`/#46 fixed the queue↔Worker cycle).
+> - **`0.14.0` (#47):** `endpoint.new(guard)` — a chainable guard factory; a guard returning a `Response`
+>   short-circuits (401 etc.), `void` continues.
+> - **`0.15.0` (#48):** a guard may also return an **object**, merged onto the handler context as a **typed
+>   field** (e.g. `ctx.actor`) — resolve-once, no re-resolve / null-check.
+>
+> `@moku-labs/core` stays `1.5.0`; `wrangler` an optional peer (`>=3`); engines node ≥24 / bun ≥1.3.14;
+> exports only `.` (the `./cli` subpath was removed back in 0.11.0). The regenerated `plugin-index.md` (synced
+> header `0.15.0`) is authoritative. `moku-worker-version` fires for projects behind 0.15.0; the **0.7.0
+> keyed-map config** boundary AND the **0.12.0 stage-plugin removal** are the breaking crossings to flag.
 >
 > **Provenance of the `worker` entry (0.9.2 history):** registered 2026-06-20 (at 0.4.0); **re-synced 2026-06-21** to
 > `@moku-labs/worker@0.9.2` (npm `dist-tags.latest`; public repo `github.com/moku-labs/worker`). Deps
@@ -164,13 +178,27 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > now fires for projects behind 0.9.2; consumers crossing the 0.7.0 keyed-map config boundary need the
 > config migration noted in `upgrade-migrations.md`.
 >
-> **Provenance of the `room` entry:** registered + **synced 2026-06-20** to `@moku-labs/room@0.1.1`
-> (npm `dist-tags.latest`; public repo `github.com/moku-labs/room`). **`role: "plugin-pack"`** — room
-> is **not a framework**: it has no Layer-2 shell and never calls `createApp`; you spread its
-> `roomPlugins.stage`/`.controller` arrays into a `@moku-labs/web` app. **Built on `@moku-labs/web`** (peer
-> dep `^1.12.4`; `dependsOn: ["@moku-labs/web"]`, upgrade order core → web → room) + bundled `trystero`
-> (WebRTC) + `qrcode`; engines node ≥24 / bun ≥1.3.14. **Catalog source:** the published **0.1.1 tarball
-> README** (upstream `main` was at `0.1.0`). 6 plugins (4 engines + 2 role facades); WebRTC P2P, no TURN.
+> **Provenance of the `room` entry:** **re-synced 2026-06-26** to `@moku-labs/room@0.2.0` (npm
+> `dist-tags.latest`; public repo `github.com/moku-labs/room`). **BREAKING re-architecture (`#4`
+> `refactor(room)!`): `role` `plugin-pack` → `framework`; `dependsOn` `["@moku-labs/web"]` →
+> `["@moku-labs/core"]`.** 0.1.x was a *plugin pack* with no `createApp` — you spread
+> `roomPlugins.stage`/`.controller` arrays into a `@moku-labs/web` app. 0.2.0 **rebuilds Room as its own
+> `@moku-labs/core` framework** (sibling to web/worker, NOT built on them): the `@moku-labs/web` dependency is
+> **gone**; `@moku-labs/core@1.5.0` + `@moku-labs/common@0.2.1` are now **bundled** (not peers), alongside
+> bundled `trystero` + `qrcode`; engines node ≥24 / bun ≥1.3.14. **Two cores / entries:** `.` (client —
+> `createApp` with the four engines [transport, session, intent, sync] wired as defaults; an app adds the
+> `stagePlugin`/`controllerPlugin` facade) and a NEW opt-in `./server` (Cloudflare Worker signaling tier —
+> `hubPlugin` + the `Hub` Durable Object). **No more role arrays** (`roomPlugins` removed) and **no `./browser`
+> entry** (the one client entry serves browser + node). **7 plugins** (was 6): +`hubPlugin`. **3 signaling
+> adapters** (was 2): +`serverSignaling(url)` (worker-backed — in-band discovery + host-reload reclaim). New:
+> `session.codeLength` (set `8` for `serverSignaling`, D24) + a 4th `room:network-warning` reason
+> `"room-evicted"` (server-core only). **Catalog source:** the `v0.2.0` tag **source** + the root README. ⚠️
+> The upstream `llms.txt`/`llms-full.txt` **were not regenerated** after #4 — they still describe the 0.1.x
+> *plugin-pack* (`@moku-labs/web` peer dep, `roomPlugins`, `roomHubPlugin`/`RoomHub`), so per the registry's
+> "source wins" policy the v0.2.0 tag source is authoritative (the server plugin/DO are `hubPlugin`/`Hub`).
+> Worth nudging room upstream to wire catalog regeneration into publish, same as worker. Upgrade order is now
+> **core → room** (web is no longer in room's chain). `moku-room-version` (rewritten in `upgrade-migrations.md`) fires for projects behind
+> 0.2.0 — the 0.1.x → 0.2.0 crossing is a full rewrite (spread arrays → `createApp` from Room).
 
 > **Provenance of the `core` entry:** synced against `@moku-labs/core@1.5.0` (npm `latest`,
 > published 2026-06-21, GitHub tag `v1.5.0`). **0.1.4 → 1.5.0 delta:** a **spec/convention rename
@@ -188,14 +216,27 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > `@moku-labs/worker@0.9.2` (each bumped in lockstep); `dependsOn` ordering (core before web/worker)
 > still holds.
 >
-> **Provenance of the `web` entry (latest sync):** synced to `@moku-labs/web@2.0.1` (npm `latest`,
-> published 2026-06-21). **2.0.0 → 2.0.1 is a dep-only release** (no `src/` change): it bumps
-> `@moku-labs/core` `0.1.4 → 1.5.0` and `@moku-labs/common` `0.2.0 → 0.2.1` to land web on the current
-> family line — the API form, plugin catalog, events, and exports are byte-identical to 2.0.0, so only
-> the version stamp + the core/common pins moved. The regenerated `plugin-index.md` (synced header
-> `2.0.1`) is authoritative for the plugin surface. The narrative below predates the **2.0.0** major
-> sync (#8) and is retained as historical catalog detail (1.8.0 → 1.12.3); where they differ, the
-> plugin-index is the source of truth.
+> **Provenance of the `web` entry (latest sync):** **re-synced 2026-06-26** to `@moku-labs/web@2.2.2` (npm
+> `latest`, published 2026-06-26). **`2.0.1 → 2.2.2` delta — additive SPA/realtime features, no breaking
+> change:**
+> - **`2.1.0`:** `createChannel<T>(opts)` — a client realtime WebSocket primitive (top-level export, `.` +
+>   `./browser`); per-route `route(...).transition("none"|"crossfade"|"slide"|"morph")` + `.scroll("top"|
+>   "preserve")` (typed first-class, NOT `.meta()` keys); `spa.viewTransitions` widened `boolean → TransitionMode`;
+>   new `spa.scrollRestoration`; `RenderResult` now also allows `null` (render nothing but stay mountable).
+> - **`2.1.1`:** `app.spa.navigate` now commits the address bar (`history.pushState`).
+> - **`2.2.0`:** module-level `navigate(path, opts?)` / `hardNavigate(url)` (bound to the booted app, no-op
+>   pre-boot); `hardNavigate` does a REAL full-page load across a layout/auth boundary the SPA can't swap;
+>   island ctx gains an always-present `ctx.navigate`.
+> - **`2.2.1` (#91):** internal SPA fix (own the skipped-transition `ready` AbortError in `runSwap`) — no
+>   public-surface change.
+> - **`2.2.2` (#92):** `createChannel` gained a `shouldReconnect?(event: CloseEvent): boolean` guard — return
+>   `false` to suppress the reconnect backoff on a terminal close (e.g. code `4401`); omitted = always reconnect.
+>
+> Deps unchanged from 2.0.1 (`@moku-labs/core@1.5.0` exact, `@moku-labs/common@0.2.1`, `mermaid-isomorphic`
+> optional peer); engines node ≥24 / bun ≥1.3.14. The regenerated `plugin-index.md` (synced header `2.2.2`) is
+> authoritative for the plugin surface. The narrative below predates the **2.0.0** major sync (#8) and is
+> retained as historical catalog detail (1.8.0 → 1.12.3); where they differ, the plugin-index is the source
+> of truth.
 >
 > **Provenance of the `web` entry (history):** synced against `@moku-labs/web@1.12.3` (npm `latest`,
 > published 2026-06-16, GitHub tag `v1.12.3`). **1.12.2 → 1.12.3 is a dep-only release** — it bumped
