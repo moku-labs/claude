@@ -2,6 +2,15 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.62.4 (2026-06-27)
+
+**`moku-sync` — room synced `0.2.0 → 0.3.1` (the `./server` tier is a plugin, not a core).** Checked every framework in the registry against upstream: core (`1.5.0`), web (`2.2.2`), and worker (`0.15.0`) are all current; `@moku-labs/room` shipped `0.3.1`. The breaking change (`#6`): `@moku-labs/room/server` is **no longer a server core** — it now exports `hubPlugin` (a `@moku-labs/worker` plugin) + the `Hub` Durable Object, which a Layer-3 app composes into its **own single `@moku-labs/worker` `createApp`** (the one-worker idiom, `moku-idioms.md §I6`). `@moku-labs/worker@^0.15.0` is now an optional `peerDependency`. The client core + the 6 other plugins are unchanged. Synced from the authoritative `v0.3.1` tag source — upstream `llms-full.txt` is stale (it still documents the old server core), so "source wins."
+
+### Changed
+- **`@moku-labs/room` → 0.3.1.** Regenerated the room skill + plugin index for the server-tier re-architecture: `./server` exports `hubPlugin`/`Hub` (no `createApp` from it). Rewrote §4 (server tier), the "two cores" framing → "one core + an opt-in server-plugin tier", the plugin table (row 7 `hubPlugin` = a `@moku-labs/worker` plugin), the config + dependency-graph + idiomatic-placement sections, and the Stack table (the new optional `@moku-labs/worker` peer) — cross-referencing the one-worker guardrail (`moku-idioms.md §I6`, added in 0.62.3).
+- **Registry + migration.** Bumped `frameworks[room].knownVersion` `0.2.0 → 0.3.1`, led the room provenance note with the `0.3.1` re-sync, and extended `moku-room-version` (`upgrade-migrations.md`) to cover the `0.2.0 → 0.3.1` crossing (server core → `hubPlugin` composed into a `@moku-labs/worker` app) + the optional worker peer. Refreshed `SKILL-INVENTORY.md`.
+- Version bumped to 0.62.4 in plugin.json and marketplace.json.
+
 ## 0.62.3 (2026-06-27)
 
 **Idiom hardening — a non-idiomatic app build can no longer pass silently.** A real Layer-3 app build shipped riddled with non-idiomatic patterns that every validator PASSED, then needed a manual 10-violation refactor. This release turns each of those violations into a specific, checkable rule (exact anti-pattern → idiomatic target, with a spec/reference citation) across the plan-time checkers, the build/verify validators, and the build references — and adds a new app-shape guardrail. Rules are stated abstractly, with no dependence on any specific demo app or incident.

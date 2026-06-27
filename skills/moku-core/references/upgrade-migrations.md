@@ -247,28 +247,35 @@ the block below.
 - **Stack:** — (registry-driven, stack-independent)
 - **Applies to:** app
 - **Default:** on
-- **Depends on:** — (room@0.2.0 is a standalone `@moku-labs/core` framework that **bundles** core +
-  common; it no longer depends on `@moku-labs/web`, so there is **no** `moku-web-version` prerequisite. A
-  consumer app must NOT add a direct `@moku-labs/core` dependency.)
+- **Depends on:** — (room is a standalone `@moku-labs/core` framework that **bundles** core + common; it
+  does not depend on `@moku-labs/web`, so there is **no** `moku-web-version` prerequisite. A consumer app must
+  NOT add a direct `@moku-labs/core` dependency. Since `0.3.1`, room declares `@moku-labs/worker@^0.15.0` as an
+  **optional peer** — needed only by apps that adopt the `./server` signaling tier.)
 - **Detect:** `package.json` dependencies contain `@moku-labs/room` AND its resolved/declared version
-  `< frameworks[room].knownVersion` in `moku-frameworks.md` (currently `0.2.0`).
+  `< frameworks[room].knownVersion` in `moku-frameworks.md` (currently `0.3.1`).
 - **Apply:**
   1. Read `frameworks[room].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set `@moku-labs/room` to that version (preserve the range operator; default exact).
-  3. Do NOT add a direct `@moku-labs/web` or `@moku-labs/core` dependency — room@0.2.0 bundles core +
-     common (the `@moku-labs/web` dependency was removed in 0.2.0). If the app carried `@moku-labs/web`
-     ONLY for room, it can be dropped.
-  4. `bun install` to resolve.
+  3. Do NOT add a direct `@moku-labs/web` or `@moku-labs/core` dependency — room bundles core + common. If the
+     app carried `@moku-labs/web` ONLY for room, it can be dropped.
+  4. **If the app uses the `./server` signaling tier:** ensure `@moku-labs/worker@^0.15.0` is a direct
+     dependency (the optional peer), and that `src/server.ts` composes `hubPlugin` (from
+     `@moku-labs/room/server`) into ONE `@moku-labs/worker` `createApp` — NOT `createApp` from
+     `@moku-labs/room/server` (removed in `0.3.1`). See `plugin-index.md §4` + `moku-idioms.md §I6`.
+  5. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
   error-diagnostician; fix against the regenerated `skills/moku-room/references/plugin-index.md`.
-- **Risk:** ⚠️ **Crossing 0.1.x → 0.2.0 is a breaking re-architecture (#4), not a routine version bump.**
-  Room went from a *plugin pack* spread into a `@moku-labs/web` app (`roomPlugins.stage`/`.controller`
-  arrays, `createPlugin` from web) to a **standalone `@moku-labs/core` framework** you `createApp` from. A
-  0.1.x consumer must replace `createApp({ plugins: [...roomPlugins.stage, game] })` (from web) with
-  `createApp({ plugins: [stagePlugin, game] })` imported from `@moku-labs/room`, drop `@moku-labs/web` if it
-  was only there for room, and optionally adopt the new `./server` core for self-hosted signaling. This is a
-  source rewrite — apply it against the regenerated `plugin-index.md`, never weaken types. Mitigation:
-  regenerated plugin index + release notes (`frameworks[room].releaseSource`).
+- **Risk:** ⚠️ **Two breaking re-architectures cross this migration — both are source rewrites, not routine
+  bumps.** (1) **0.1.x → 0.2.0 (#4):** room went from a *plugin pack* spread into a `@moku-labs/web` app
+  (`roomPlugins.stage`/`.controller`, `createPlugin` from web) to a **standalone `@moku-labs/core` framework**
+  you `createApp` from — replace `createApp({ plugins: [...roomPlugins.stage, game] })` (from web) with
+  `createApp({ plugins: [stagePlugin, game] })` from `@moku-labs/room`, drop `@moku-labs/web` if it was only
+  there for room. (2) **0.2.0 → 0.3.1 (#6):** the `./server` tier is **no longer a core** — an app that
+  `createApp`'d from `@moku-labs/room/server` must switch to composing `hubPlugin` (+ `durableObjects`/`deploy`/
+  `cli`) into its **own single `@moku-labs/worker` `createApp`** and add `@moku-labs/worker` as a direct dep
+  (the one-worker idiom, `moku-idioms.md §I6`). Pure-client apps are unaffected by (2). Apply against the
+  regenerated `plugin-index.md`, never weaken types. Mitigation: regenerated plugin index + release notes
+  (`frameworks[room].releaseSource`).
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.
 
 ---

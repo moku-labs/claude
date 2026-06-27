@@ -106,7 +106,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../room",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.2.0",
+      "knownVersion": "0.3.1",
       "skill": "skills/moku-room",
       "pluginIndex": "skills/moku-room/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
@@ -134,7 +134,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 >   bindings, server, kv, d1, queues, storage, durableObjects, deploy, cli).
 > - **`0.12.1` (#44):** sourced the env provider `workerSafeProcessEnv` from `@moku-labs/common`, bumping the
 >   bundled `@moku-labs/common` **`0.2.1 → 0.3.0`**. ⚠️ The family is **no longer lockstep on `common`**:
->   web@2.2.2 / room@0.2.0 stay on `0.2.1`; only worker moved to `0.3.0`.
+>   web@2.2.2 / room@0.3.1 stay on `0.2.1`; only worker moved to `0.3.0`.
 > - **`0.13.0` (#45):** `deploy --delete` teardown — `cli.deploy({ delete: true, stage })` routes to
 >   `deploy.destroy()` to tear a stage's infra back down (`0.13.1`/#46 fixed the queue↔Worker cycle).
 > - **`0.14.0` (#47):** `endpoint.new(guard)` — a chainable guard factory; a guard returning a `Response`
@@ -178,27 +178,29 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > now fires for projects behind 0.9.2; consumers crossing the 0.7.0 keyed-map config boundary need the
 > config migration noted in `upgrade-migrations.md`.
 >
-> **Provenance of the `room` entry:** **re-synced 2026-06-26** to `@moku-labs/room@0.2.0` (npm
-> `dist-tags.latest`; public repo `github.com/moku-labs/room`). **BREAKING re-architecture (`#4`
-> `refactor(room)!`): `role` `plugin-pack` → `framework`; `dependsOn` `["@moku-labs/web"]` →
-> `["@moku-labs/core"]`.** 0.1.x was a *plugin pack* with no `createApp` — you spread
-> `roomPlugins.stage`/`.controller` arrays into a `@moku-labs/web` app. 0.2.0 **rebuilds Room as its own
-> `@moku-labs/core` framework** (sibling to web/worker, NOT built on them): the `@moku-labs/web` dependency is
-> **gone**; `@moku-labs/core@1.5.0` + `@moku-labs/common@0.2.1` are now **bundled** (not peers), alongside
-> bundled `trystero` + `qrcode`; engines node ≥24 / bun ≥1.3.14. **Two cores / entries:** `.` (client —
-> `createApp` with the four engines [transport, session, intent, sync] wired as defaults; an app adds the
-> `stagePlugin`/`controllerPlugin` facade) and a NEW opt-in `./server` (Cloudflare Worker signaling tier —
-> `hubPlugin` + the `Hub` Durable Object). **No more role arrays** (`roomPlugins` removed) and **no `./browser`
-> entry** (the one client entry serves browser + node). **7 plugins** (was 6): +`hubPlugin`. **3 signaling
-> adapters** (was 2): +`serverSignaling(url)` (worker-backed — in-band discovery + host-reload reclaim). New:
-> `session.codeLength` (set `8` for `serverSignaling`, D24) + a 4th `room:network-warning` reason
-> `"room-evicted"` (server-core only). **Catalog source:** the `v0.2.0` tag **source** + the root README. ⚠️
-> The upstream `llms.txt`/`llms-full.txt` **were not regenerated** after #4 — they still describe the 0.1.x
-> *plugin-pack* (`@moku-labs/web` peer dep, `roomPlugins`, `roomHubPlugin`/`RoomHub`), so per the registry's
-> "source wins" policy the v0.2.0 tag source is authoritative (the server plugin/DO are `hubPlugin`/`Hub`).
-> Worth nudging room upstream to wire catalog regeneration into publish, same as worker. Upgrade order is now
-> **core → room** (web is no longer in room's chain). `moku-room-version` (rewritten in `upgrade-migrations.md`) fires for projects behind
-> 0.2.0 — the 0.1.x → 0.2.0 crossing is a full rewrite (spread arrays → `createApp` from Room).
+> **Provenance of the `room` entry:** **re-synced 2026-06-27** to `@moku-labs/room@0.3.1` (npm
+> `dist-tags.latest`; public repo `github.com/moku-labs/room`). **BREAKING (`#6` `feat(room)!`): the `./server`
+> tier is no longer a core.** Through 0.2.0, `./server` was its own server *core* you `createApp`'d from; in
+> `0.3.1` `@moku-labs/room/server` **exports `hubPlugin` (a `@moku-labs/worker` plugin) + the `Hub` Durable
+> Object** instead — a Layer-3 app composes `hubPlugin` into its **own single `@moku-labs/worker` `createApp`**
+> (+ `durableObjects`/`deploy`/`cli`), the one-worker idiom (`moku-idioms.md §I6`). `@moku-labs/worker@^0.15.0`
+> is now an **optional `peerDependency`** (only `./server` adopters need it); `./server` ships **no `types`**
+> condition (import-only). `0.3.0` was a docs-only republish (no code change). Client core + the 6 other
+> plugins are **unchanged** from 0.2.0. **Catalog source:** the `v0.3.1` tag **source** (`src/server.ts`,
+> `src/plugins/hub/`) + the root README. ⚠️ The upstream `llms.txt`/`llms-full.txt` are **still stale** — they
+> describe the pre-0.3.1 server *core* (and the 0.1.x plugin-pack names), so per "source wins" the tag source
+> is authoritative. Worth nudging room upstream to wire catalog regeneration into publish, same as worker.
+>
+> **History — 0.1.x → 0.2.0 re-architecture (`#4` `refactor(room)!`):** `role` `plugin-pack` → `framework`;
+> `dependsOn` `["@moku-labs/web"]` → `["@moku-labs/core"]`. 0.1.x was a *plugin pack* (spread
+> `roomPlugins.stage`/`.controller` arrays into a `@moku-labs/web` app); 0.2.0 rebuilt Room as its own
+> `@moku-labs/core` framework (sibling to web/worker, NOT built on them) — `@moku-labs/web` dependency gone;
+> `@moku-labs/core@1.5.0` + `@moku-labs/common@0.2.1` bundled; **no more role arrays**; **no `./browser` entry**;
+> **7 plugins** (was 6, +`hubPlugin`); **3 signaling adapters** (was 2, +`serverSignaling(url)`); new
+> `session.codeLength` + the `"room-evicted"` `room:network-warning` reason (`./server` tier only). Upgrade
+> order is **core → room** (web is no longer in room's chain). `moku-room-version` (in `upgrade-migrations.md`)
+> covers BOTH crossings — 0.1.x→0.2.0 (spread arrays → `createApp` from Room) and 0.2.0→0.3.1 (server core →
+> `hubPlugin` composed into a `@moku-labs/worker` app).
 
 > **Provenance of the `core` entry:** synced against `@moku-labs/core@1.5.0` (npm `latest`,
 > published 2026-06-21, GitHub tag `v1.5.0`). **0.1.4 → 1.5.0 delta:** a **spec/convention rename
