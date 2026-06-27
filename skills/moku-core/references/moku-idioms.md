@@ -36,11 +36,12 @@ of this rubric wrongly did — that was a bug):
 
 ---
 
-## The real guardrails (I1–I5)
+## The real guardrails (I1–I6)
 
 Each: the **idiom**, the **anti-pattern** to reject, **how to detect**, the **fix**, and a **severity**.
-Only **I1** is a hard BLOCKER; the rest are WARNING/guidance — bias toward *guiding to the `tracker`
-pattern*, not blocking.
+The hard BLOCKERs are **I1** (an app defining a framework), **I6** (a facade/duplicate app on one runtime),
+and the duplicate/facade subcase of **I2**; **I3–I5** are WARNING/guidance — bias toward *guiding to the
+`tracker` pattern* there, but a confirmed I1/I2-facade/I6 departure FAILS the build.
 
 ### I1 — Apps COMPOSE; they don't DEFINE a framework  *(BLOCKER)*
 - **Idiom:** a Layer-3 app uses `createApp` (and `createPlugin`) **from a framework package**; it never
@@ -55,20 +56,27 @@ pattern*, not blocking.
 - **Severity:** **BLOCKER.** (This is the one structural rule that genuinely holds for every app —
   confirmed by `tracker`'s CLAUDE.md and source.)
 
-### I2 — Each `createApp` composes ONE framework's plugins; frameworks integrate at the edges  *(WARNING/guidance)*
+### I2 — Each `createApp` composes ONE framework's plugins; frameworks integrate at the edges  *(WARNING for fusing; BLOCKER for a duplicate/facade app on one runtime)*
 - **Idiom:** a full-stack app uses a **separate `createApp` per framework/runtime** — a web client app
   **and** a worker server app — wired together at the edges: the worker serves the client's built bundle
   (`env.ASSETS`) and the client calls the worker's HTTP/WS API. (`tracker`: `server.ts` worker app +
   `app.ts`/`spa.tsx` web apps; `cloudflare/worker.ts` branches `/api`+`/ws` to `server.server.handle` and
-  everything else to `ASSETS`.)
-- **Anti-pattern:** trying to **fuse** two frameworks' plugin sets into a single `createApp` (e.g. jamming
-  worker resource plugins into the web `createApp`), or inventing a bespoke "cross-framework mega-app"
-  glue layer. (Largely prevented by types, so this is guidance, not a gate.)
-- **Detect:** one `createApp` whose `plugins: [...]` mixes plugins imported from two different framework
-  packages.
-- **Fix:** one `createApp` per framework; integrate over the wire / via the ASSETS binding like `tracker`.
-- **Severity:** **WARNING.** Multiple instances and multiple frameworks are EXPECTED — only the *fusing*
-  shape is worth a note.
+  everything else to `ASSETS`.) For one runtime there is **exactly one** `createApp` — see the worked
+  worker-composition idiom in **I6** below.
+- **Anti-patterns:**
+  - **Fusing** two frameworks' plugin sets into a single `createApp` (e.g. jamming worker resource plugins
+    into the web `createApp`), or inventing a bespoke "cross-framework mega-app" glue layer. (Largely
+    prevented by types — *(WARNING)*.)
+  - **Two side-by-side apps for ONE runtime** — e.g. a worker `createApp` for the runtime plus a *second*
+    worker `createApp` whose only job is to generate `wrangler.jsonc` / wire deploy. This is **never**
+    idiomatic: one runtime gets one `createApp` that composes BOTH the runtime plugins AND the
+    deploy/cli plugins. *(BLOCKER — see I6.)*
+- **Detect:** one `createApp` whose `plugins: [...]` mixes plugins from two different framework packages
+  (fusing); **OR two `createApp` calls importing from the same framework package for the same runtime**
+  (duplicate/facade — count `createApp` calls per framework package, not just per framework).
+- **Fix:** one `createApp` per framework/runtime; integrate over the wire / via the ASSETS binding like
+  `tracker`. Collapse a second same-runtime app into the first (compose its plugins into the one app).
+- **Severity:** **WARNING** for fusing; **BLOCKER** for a duplicate/facade same-runtime app (I6).
 
 ### I3 — Plugin-shaped concerns are `createPlugin` plugins from the FRAMEWORK package  *(WARNING)*
 - **Idiom:** custom, plugin-shaped concerns (typed `app.<x>.method()` API, events, lifecycle, shared
@@ -102,23 +110,55 @@ pattern*, not blocking.
 - **Fix:** use framework plugins + `ctx.require`; build a `createPlugin` plugin if you need new behaviour.
 - **Severity:** **WARNING** (BLOCKER if it reintroduces a forbidden primitive from `invariants.md`).
 
+### I6 — ONE worker app composes resource plugins + the runtime plugin + deploy/cli; no facade app  *(BLOCKER)*
+- **Idiom (the worker-composition / "tracker" pattern):** a worker backend is a **single**
+  `@moku-labs/worker` `createApp` that composes, in one `plugins:[]`, **the resource plugins**
+  (`storage`/`kv`/`d1`/`queues`/`durableObjects` as the deploy plugin requires) **+ the app's runtime
+  plugin** (its own `createPlugin`, or a framework's runtime/hub plugin like `@moku-labs/room`'s
+  `hubPlugin`) **+ `deploy` + `cli`**. `server.<runtime>.handle` is the runtime fetch;
+  `server.cli.{dev,deploy}` generate `wrangler.jsonc` and run wrangler. The app owns its whole worker
+  composition. **Worked reference:** `tracker/src/server.ts` (full-stack worker) — ONE `createApp` over
+  `[storage, kv, d1, queues, durableObjects, hubPlugin, deploy, cli]`, configuring only the resources it
+  uses.
+- **Anti-pattern — the facade app:** a **second** app whose only purpose is to emit config — e.g. a
+  worker `createApp` for the runtime, plus a separate `createApp` (or in-framework plugin) that exists
+  solely to generate `wrangler.jsonc` / wire deploy because the first one "can't". The idiomatic answer is
+  always to compose `deploy`+`cli` INTO the one runtime app, not to stand up a config-only facade beside
+  it. (A facade worker app or a custom in-framework plugin standing in for deploy/cli is the rejected
+  anti-pattern.)
+- **Anti-pattern — assumed generator:** deciding "framework X's runtime IS the worker / auto-generates
+  the deploy config" **without confirming it ships a generator**. Never assume a framework's
+  runtime/server export ships a deploy-config generator (e.g. a `wrangler.jsonc` emitter); assuming one
+  forces a multi-iteration rework when it ships no cli/generator. **Never assume a framework capability
+  from memory or a spec doc** — verify it against the installed package's `exports` + `dist`/types (the
+  framework-capability verification step in `build-app.md` Step 2 / `build-framework.md` / `/moku:plan`).
+- **Detect:** two `createApp` for the same runtime where one configures no real runtime plugins (only
+  `deploy`/`cli`); a hand-rolled `wrangler.jsonc` generator or a `*-config`/`*-facade` app/plugin; a
+  composition/deploy decision that names a framework generator with no source citation.
+- **Fix:** collapse to one `createApp` composing resource plugins + the runtime plugin + `deploy` + `cli`;
+  delete the facade; route the runtime fetch through `server.<runtime>.handle`.
+- **Severity:** **BLOCKER.** A facade/duplicate-runtime app is a confirmed departure from the worker idiom.
+
 ---
 
 ## How the validators report it
 
-I1–I5 are checked at **two times**: at **plan time** by `brainstorm-challenger` and `moku-plan-checker`
+I1–I6 are checked at **two times**: at **plan time** by `brainstorm-challenger` and `moku-plan-checker`
 (an **Idiomatic Architecture** section), and at **build/verify time** by **`moku-root-validator`** (the
 read-only root/entrypoint finder driven by **`/moku:verify`**) — which closes
 the long-standing gap where nothing enforced the app shape once code existed (`moku-verifier` even exempts
-Layer-3 apps from root-structure checks). All of them check I1–I5 **against the `demos/tracker` pattern**.
+Layer-3 apps from root-structure checks). All of them check I1–I6 **against the `demos/tracker` pattern**.
 Key rules for every one of these validators:
 
 - **Never flag** multiple `createApp` instances, multiple frameworks composed side-by-side, or
   folder-splitting — those are idiomatic (see "What's IDIOMATIC" above). Reporting them is a false
   positive.
-- The only hard **BLOCKER** is **I1** — a Layer-3 app that defines a framework (`createCoreConfig`/
-  `createCore`) or depends on `@moku-labs/core` directly. Fold it into the blockers array, citing
-  `moku-idioms.md §I1` + `consumer-plugins.md` / `architecture.md`.
-- I2–I5 are **WARNING/guidance**: nudge toward the `tracker` shape; do not block a plan over them.
+- The hard **BLOCKERs** are **I1** (a Layer-3 app that defines a framework via `createCoreConfig`/
+  `createCore` or depends on `@moku-labs/core` directly), **I6** (one runtime composed by a single worker
+  `createApp` — a config-only facade app/plugin beside it fails), and the **duplicate/facade subcase of
+  I2** (a second `createApp` for the same framework+runtime). Fold these into the blockers array, citing
+  `moku-idioms.md §I1`/`§I2`/`§I6` + `consumer-plugins.md` / `architecture.md`.
+- **I3–I5** (and I2's *fusing* note) are **WARNING/guidance**: nudge toward the `tracker` shape; do not
+  block a plan over them.
 - When unsure whether an app shape is idiomatic, **compare it to `demos/tracker`** and prefer "matches the
   reference" over inventing a constraint.

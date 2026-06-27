@@ -1,5 +1,5 @@
 ---
-description: The single Moku verification command — combines root/entrypoint idiom conformance (I1–I5) with the full aggressive validator fan-out. Fans out EVERY Moku validator in parallel, root-first (root, spec, plugin-spec, jsdoc, readable-code, common, type, test, web, architecture), then FAILS on any blocker, ANY warning, or any validator that did not return a verdict; upholds each finding unless a skeptic can CITE the spec/house-style section that refutes it; then auto-fixes and re-verifies in a loop (default 3 cycles) toward clean idiomatic code. Root/entrypoint files (app.ts/spa.tsx/server.ts/cloudflare/worker.ts/routes.tsx/config.ts) are the primary focus — apps compose and never define a framework (I1), one createApp per framework with no gratuitous duplicate entrypoints (I2), thin entries with logic in plugins/lib not routers (I4), no stray scattered functions (I3), config declared in place not generated. Accepts free-form natural language. Pass --report-only to audit without editing.
+description: The single Moku verification command — combines root/entrypoint idiom conformance (I1–I6) with the full aggressive validator fan-out. Fans out EVERY Moku validator in parallel, root-first (root, spec, plugin-spec, jsdoc, readable-code, common, type, test, web, architecture), then FAILS on any blocker, ANY warning, or any validator that did not return a verdict; upholds each finding unless a skeptic can CITE the spec/house-style section that refutes it; then auto-fixes and re-verifies in a loop (default 3 cycles) toward clean idiomatic code. Root/entrypoint files (app.ts/spa.tsx/server.ts/cloudflare/worker.ts/routes.tsx/config.ts) are the primary focus — apps compose and never define a framework (I1), one createApp per framework/runtime with no gratuitous duplicate or facade entrypoints (I2/I6), one worker app composing resource+runtime+deploy/cli (I6), thin entries with logic in plugins/lib not routers (I4), no stray scattered functions + the lib-vs-plugin boundary (I3), committed scripts = build/dev/deploy triad only, config declared in place not generated. The web fan-out also checks reference-app conformance (flat components, zero island CSS, vendored fonts, ctx.params routing, runtime data off public/). Accepts free-form natural language. Pass --report-only to audit without editing.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
 argument-hint: (empty = whole project, root-first) or {focus: web|worker|framework|a path} [--iterations N] [--report-only] [--no-adversarial]
 disable-model-invocation: true
@@ -9,7 +9,7 @@ disable-model-invocation: true
 
 Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
 
-The idiomatic **app shape** rules are the guardrails **I1–I5** in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md`, the skeleton/`index.ts`/config rules in `skeleton-conventions.md`, and the canonical root layouts in the **moku-web** skill (`${CLAUDE_PLUGIN_ROOT}/skills/moku-web/references/layout-structure.md`) and the **moku-worker** skill (`${CLAUDE_PLUGIN_ROOT}/skills/moku-worker/SKILL.md`). The full detection + fix + loop protocol is **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md`** — read it; this command follows it. Every validator returns the JSON output contract defined in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md`.
+The idiomatic **app shape** rules are the guardrails **I1–I6** in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md`, the skeleton/`index.ts`/config rules in `skeleton-conventions.md`, and the canonical root layouts in the **moku-web** skill (`${CLAUDE_PLUGIN_ROOT}/skills/moku-web/references/layout-structure.md`) and the **moku-worker** skill (`${CLAUDE_PLUGIN_ROOT}/skills/moku-worker/SKILL.md`). The full detection + fix + loop protocol is **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md`** — read it; this command follows it. Every validator returns the JSON output contract defined in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md`.
 
 ## Input — natural language first
 
@@ -59,7 +59,7 @@ For cycle `1..ITERATIONS`:
 1. **Find (parallel, read-only).** Spawn the **full validator set** with the `Agent` tool in one parallel
    batch — reuse the fan-out pattern from `/moku:check`. Agent types **MUST** be namespaced (`moku:<name>`),
    or they silently fail to launch:
-   - **`moku:moku-root-validator`** (primary — the root/entrypoint/app-shape gap, I1–I5 + config-in-place).
+   - **`moku:moku-root-validator`** (primary — the root/entrypoint/app-shape gap, I1–I6 + lib-vs-plugin + non-triad scripts + config-in-place).
    - `moku:moku-spec-validator`, `moku:moku-plugin-spec-validator`, `moku:moku-jsdoc-validator`,
      `moku:moku-readable-code-validator`, `moku:moku-common-validator`, `moku:moku-type-validator`,
      `moku:moku-test-validator`, `moku:moku-architecture-validator`, and `moku:moku-web-validator`
@@ -101,7 +101,7 @@ them with their fixes** — never fake clean, never loop unbounded.
 every validator returned a verdict. Any surviving blocker, **any** warning, or **any** un-run validator → `FAIL`.
 
 Output the per-guardrail summary from `structural-conformance.md §"Output"` — project kind, the root-file
-checklist, a table of found/fixed/remaining per guardrail (I1–I5 + config + secondary), the validators that ran
+checklist, a table of found/fixed/remaining per guardrail (I1–I6 + lib-vs-plugin + scripts + config + secondary), the validators that ran
 vs. any that were un-run, the count of refuted-by-skeptic findings, cycles used, the `tsc`/`lint`/`test` result,
 and any remaining items with their concrete fix. If `REPORT_ONLY`, present the full ranked findings and confirm
 nothing was changed.

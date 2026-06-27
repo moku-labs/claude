@@ -2,6 +2,22 @@
 
 All notable changes to the Moku Claude Code Plugin will be documented in this file.
 
+## 0.62.3 (2026-06-27)
+
+**Idiom hardening — a non-idiomatic app build can no longer pass silently.** A real Layer-3 app build shipped riddled with non-idiomatic patterns that every validator PASSED, then needed a manual 10-violation refactor. This release turns each of those violations into a specific, checkable rule (exact anti-pattern → idiomatic target, with a spec/reference citation) across the plan-time checkers, the build/verify validators, and the build references — and adds a new app-shape guardrail. Rules are stated abstractly, with no dependence on any specific demo app or incident.
+
+### Added
+- **Guardrail I6 — ONE worker app; no facade.** `moku-idioms.md` gains `§I6`: a worker backend is a single `@moku-labs/worker` `createApp` composing resource plugins + the runtime plugin (own `createPlugin` or a framework runtime/hub plugin) + `deploy`/`cli` — the `tracker` `server.ts` shape. Two side-by-side apps for one worker, or a config-only facade app/plugin, is a **BLOCKER**. Enforced in `moku-root-validator`, `moku-plan-checker`, `brainstorm-challenger`, `structural-conformance.md`, and the app build.
+- **Framework-capability verification (hard gate).** Before any composition/deploy decision, confirm the assumed export/generator/CLI/subpath actually exists in the installed package (`exports` + `dist`/types) — never assume from memory or a spec doc. Added to `build-app.md` Step 2, `build-framework.md`, and the `/moku:plan` app flow (and checked at plan time by `moku-plan-checker` / `brainstorm-challenger`).
+- **Reference-app structural-conformance gate (app build).** `build-app.md` Step 5 Group C + new Step 5.5: a hard gate comparing the output against the nearest reference app (`tracker` full-stack / `blog` web-content) per axis — app composition, components, islands, lib, scripts, config placement, fonts, route selection, runtime data — FAILing on divergence.
+- **New validator checks.** `moku-web-validator §10–§14`: flat components (no folder-per-component), islands own zero CSS + right-sized + one-per-screen-concern, vendored fonts (no CDN `<link>`), route/role via `ctx.params` (no hand-parsed `location.pathname`), runtime app data via the data/content layer (not `public/`). `moku-plugin-spec-validator §17`: no per-plugin `config.ts` (config declared inline in `index.ts`). `moku-root-validator`: the lib-vs-plugin boundary (stateful/lifecycle/event code is a plugin, not a `lib/` helper) + committed `scripts/` = build/dev/deploy triad only.
+- **Release-dispatch discipline (`ci-release.md`).** Confirm the change is merged to `origin/main` and the working tree matches BEFORE dispatching publish (the workflow releases from `origin/main`, not your local tree); watch the run; then verify the published artifact's **contents** (not just its version) before any consumer adopts it. Added as rule 9 + a dedicated section + a gotcha.
+
+### Changed
+- Propagated the app-shape guardrail count `I1–I5 → I1–I6` across `/moku:verify`, `moku-validation-coordinator`, `moku-idioms.md`, and `structural-conformance.md`; the I2 facade / duplicate-same-runtime subcase is now a **BLOCKER** (was WARNING).
+- `moku-plugin` and `moku-web` skills gained the matching authoring-time anti-patterns (no per-plugin `config.ts`; flat components, zero island CSS, vendored fonts, `ctx.params` routing, runtime data off `public/`) so the build avoids them at authoring time, not just the validator catching them after.
+- Version bumped to 0.62.3 in plugin.json and marketplace.json.
+
 ## 0.62.2 (2026-06-26)
 
 **Moku-family knowledge sync — `/moku:moku-sync` across web, worker, and room.** Brought every moku-family framework's skill + plugin index in step with its latest upstream release: web `2.0.1 → 2.2.2`, worker `0.11.0 → 0.15.0`, room `0.1.1 → 0.2.0` (core already current at `1.5.0`). This finished an in-progress sync whose `knownVersion` stamps were bumped but whose skill content + provenance lagged, advanced web past it to the newest upstream, and fully regenerated room for its breaking `0.1.x → 0.2.0` re-architecture.

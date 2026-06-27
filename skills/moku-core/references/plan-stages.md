@@ -153,6 +153,18 @@ Search the project for:
 
 Read all relevant source files to understand what's available.
 
+**Framework-capability verification (verify, never assume).** Every composition/deploy claim the plan will
+make MUST be grounded in the **installed** package, not memory or a spec doc. For each capability you intend
+to rely on — an exported plugin (`hubPlugin`, `deployPlugin`), a generator (a `wrangler.jsonc` emitter, an
+SSG builder), a CLI (`server.cli.dev/deploy`), a `./subpath` export, a re-export — read the package's real
+`package.json` `exports` + its `dist`/types and confirm it exists with the assumed shape. If the plan is
+tempted to say "framework X IS the worker / auto-generates the deploy config," that claim is **invalid until
+a source citation backs it** — never assume a framework's runtime/server export ships a deploy-config
+generator (e.g. a `wrangler.jsonc` emitter); verify it against the installed package's `exports` +
+`dist`/types. A capability that does not exist is **not** something to hand-roll or wrap in a facade app —
+pick the framework that ships it, or record a framework-extension need. The build re-checks this at
+`build-app.md` Step 2.
+
 #### Step 3: Gap Analysis
 
 Compare requirements against available plugins:
@@ -168,7 +180,7 @@ Compare requirements against available plugins:
 2. **Config Overrides** — What global config values to set
 3. **Plugin Configs** — Per-plugin configuration
 4. **Custom Plugins** — The plugin-shaped concerns from Step 3, each authored as a custom Layer-3 plugin in `src/plugins/{name}/` (full specs; tier per the moku-plugin skill). Keep pure helpers in `lib/` and DOM behavior in islands — see `consumer-plugins.md`
-5. **Entry Point** — `createApp` call structure
+5. **Entry Point** — `createApp` call structure. For a worker backend, design to the **one-worker composition idiom** (`moku-idioms.md §I6`, the `tracker` `server.ts` shape): a **single** `@moku-labs/worker` `createApp` composing the resource plugins + the app's runtime plugin (own `createPlugin` or a framework runtime/hub plugin) + `deploy` + `cli`. Do **not** plan two side-by-side apps for one worker, and do **not** plan a facade app/plugin whose only job is to generate `wrangler.jsonc` — compose `deploy`+`cli` into the one app instead.
 
 #### Step 5: Plan Documentation
 

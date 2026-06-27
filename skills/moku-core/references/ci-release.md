@@ -350,6 +350,12 @@ jobs:
 8. **Verify ref vs package.json before publishing.** Fail closed on mismatch AND on an
    empty ref. Stable versions → `latest` dist-tag; prerelease (`-` in version) → `next`,
    so prereleases never clobber `latest`.
+9. **Confirm merged to `origin/main` BEFORE dispatching publish.** The publish workflow
+   releases from `origin/main` at run time, not from your local tree — so a dispatch on an
+   unmerged/blocked push ships the OLD code under a NEW version (and it can briefly become the
+   `latest` dist-tag). Gate the dispatch on: PR **merged**, `HEAD == origin/main`, working
+   tree clean; then watch the run; then verify the published tarball's **contents** (not just
+   its version) before any consumer adopts it. Full procedure: §"Release-dispatch discipline".
 
 ## First-time setup (one-time, manual — the npm side)
 
@@ -383,6 +389,32 @@ every release after. Do this once per package, in order:
 After this, every release is one action — **Actions → Release → Run workflow** (pick
 `patch`/`minor`/`major`/`prerelease`), or `gh workflow run publish.yml -f release_type=patch
 --ref main`. No tokens; provenance is automatic; prereleases go to the `next` dist-tag.
+
+## Release-dispatch discipline (confirm the change is merged BEFORE you publish)
+
+`main` is **PR-only** (the ruleset above) and the publish workflow cuts a release from **whatever
+`origin/main` points at when it runs** — not from your local working tree. So dispatching publish before
+your change has actually landed on `origin/main` publishes a new version of the **OLD** code (and it can
+briefly become the npm `latest` dist-tag). **Never dispatch publish on an unconfirmed or blocked push.**
+
+Before `gh workflow run publish.yml` (or the Actions UI dispatch), in order:
+
+1. **Confirm the change is on `origin/main`.** The PR is **merged** (not just open/green) and the commit is
+   the head of `origin/main`: `git fetch origin && git log -1 origin/main` shows your change; `gh pr view
+   <n> --json state,mergedAt,mergeCommit` is `MERGED`. A dispatch whose PR isn't merged publishes old code.
+2. **Confirm the working tree matches `origin/main`.** `git status` clean and `git rev-parse HEAD` ==
+   `git rev-parse origin/main` — so what you verified locally is exactly what will be packed.
+3. **Dispatch, then watch the run to completion.** `gh run watch` (or Actions UI) — confirm the `release`
+   and `publish` jobs both go green; a red/sk­ipped publish means nothing shipped.
+4. **Verify the published artifact's CONTENTS before any consumer adopts it.** Don't trust the version
+   number — confirm the tarball actually contains the change: `npm view <pkg> version dist-tags`, then
+   inspect (`npm pack <pkg>@<version>` + unpack, or `npm view <pkg>@<version>`) to confirm the changed
+   files/exports are present. Only then bump the consumer's dependency.
+5. **If you published the wrong code:** ship the corrected version immediately and `npm deprecate
+   <pkg>@<bad-version> "accidental publish — use <good-version>+"` (needs npm auth) so consumers don't
+   adopt the spurious one.
+
+This is also encoded as rule 9 below and a gotcha in "Gotchas to encode".
 
 ## Branch protection (repo ruleset — apply via `gh api`, not a workflow)
 
@@ -439,6 +471,11 @@ JSON
 - **PR head can lag the branch.** After pushing a follow-up commit to an open PR, confirm
   `gh pr view <n> --json headRefOid` caught up BEFORE merging — a merge at the stale head
   silently drops the new commit.
+- **Publish dispatched before the merge landed → ships OLD code.** The workflow releases from
+  `origin/main` at run time. Dispatching before your PR is merged (main is PR-only) publishes
+  a new version of the prior code, which can briefly become `latest`. Always confirm PR
+  **merged** + `HEAD == origin/main` first, then verify the published tarball's contents
+  (rule 9 / §"Release-dispatch discipline").
 - **Concurrency reuse / parent-child deadlock.** ci.yml keeps a `github.workflow`-scoped
   group so a push-to-main CI run (`CI-<ref>`) can't cancel a release's reused checks
   (`Release-<ref>`). But publish.yml MUST use a DIFFERENT literal group (`publish-<ref>`): if

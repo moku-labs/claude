@@ -45,6 +45,7 @@ For Standard+ plugins, verify:
 - `handlers.ts` exists if hooks have > 20 lines of logic
 - `helpers.ts` exists if `helpers` has > 20 lines of logic or multiple helpers
 - `README.md` exists with plugin documentation
+- **NO per-plugin `config.ts`** — config defaults are declared inline in `index.ts` (the `config:` field); the `Config` *type* lives in `types.ts`. A `config.ts` file is a BLOCKER (§17).
 - No barrel files beyond one level
 
 ### 3. index.ts Quality
@@ -172,6 +173,15 @@ Validate for **Standard+ tier** plugins, and for any lower-tier plugin that alre
 
 Do NOT BLOCKER when only internal state/handler logic changed (public-API hash unchanged) — the narrow fingerprint exists precisely to avoid forcing README churn on internal refactors.
 
+### 17. No Per-Plugin `config.ts` (config declared with the plugin)
+
+A plugin's config defaults are declared **inline in `index.ts`** — the `config:` field of the `createPlugin` spec (a typed-const literal, e.g. `const defaultConfig: Config = {...}` wired as `config: defaultConfig`, or an inline object literal). The **`Config` type** lives in `types.ts` when shared. A separate per-plugin **`config.ts` file is NOT part of the file-content contracts** — `spec/15-PLUGIN-STRUCTURE.md §5` lists exactly `index.ts`, `types.ts`, `state.ts`, `api.ts`, `handlers.ts`, `README.md`; there is no `config.ts`. A `config.ts` splits the config away from the wiring point that uses it, for no benefit.
+
+- **BLOCKER**: a `src/plugins/<name>/config.ts` (or a `config.ts` holding the plugin's `DEFAULT_CONFIG`/`defaultConfig` that `index.ts` imports). Cite `spec/15-PLUGIN-STRUCTURE.md §5` (file-content contracts — no `config.ts`) + `spec/12-PLUGIN-PATTERNS.md` (plugin = wiring harness; config declared with the plugin).
+- **OK**: the `config:` field declared inline in `index.ts` (object literal or a typed `defaultConfig`/`DEFAULT_CONFIG` const **in `index.ts`**); the `Config` **type** in `types.ts`; the nested-config convention for Very Complex plugins (`spec/15 §2.5 "Nested Config Convention"`) — still declared in `index.ts`, not a `config.ts`.
+
+**How to check:** Glob `src/plugins/*/config.ts` and `src/plugins/*/*/config.ts`. Any hit is a BLOCKER (this is NOT the app/framework root `src/config.ts`, which is legitimate — scope strictly to *per-plugin* directories). Fix: inline a typed `const defaultConfig: Config = {...}` in `index.ts` (annotate `: Config` to widen literal-derived values to the declared field types so consumers can override), delete `config.ts`, rewire the `config:` field.
+
 ## Process
 
 1. Find the plugin's root directory
@@ -182,7 +192,8 @@ Do NOT BLOCKER when only internal state/handler logic changed (public-API hash u
 6. Verify test existence and coverage
 7. **Scan all sibling plugins for domain merge opportunities**
 8. **Check README freshness vs public API** (§16) — for Standard+ (and any plugin with a README), compare the README's API/Events/Config sections against the source surface; flag `docs-sync` BLOCKERs when the public API changed but the README did not
-9. Report findings
+9. **Check for a per-plugin `config.ts`** (§17) — glob `src/plugins/*/config.ts`; any hit is a BLOCKER (config belongs inline in `index.ts`)
+10. Report findings
 
 ## Output Format
 
@@ -198,6 +209,7 @@ Reason: [why this tier]
 - [OK/MISSING] types.ts
 - [OK/MISSING] state.ts
 - [OK/MISSING] api.ts
+- [OK/BLOCKER] config.ts (must NOT exist — config inline in index.ts, §17)
 - [OK/MISSING] README.md
 - [OK/MISSING] __tests__/unit/
 - [OK/MISSING] __tests__/integration/

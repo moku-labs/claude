@@ -8,7 +8,7 @@ once code existed, and the `moku-verifier` even *exempts* Layer-3 apps from root
 document closes that gap.
 
 > **This file is the loop + detection protocol, not the rules.** The authoritative *rules* live in:
-> the app-shape guardrails **I1–I5** in [`moku-idioms.md`](moku-idioms.md); the skeleton/`index.ts`/config
+> the app-shape guardrails **I1–I6** in [`moku-idioms.md`](moku-idioms.md); the skeleton/`index.ts`/config
 > rules in [`skeleton-conventions.md`](skeleton-conventions.md); the code invariants **R1–R9** in
 > [`agent-preamble.md`](agent-preamble.md) (origin `spec/11-INVARIANTS.md`); the canonical web root in the
 > **moku-web** skill ([`../../moku-web/references/layout-structure.md`](../../moku-web/references/layout-structure.md))
@@ -54,16 +54,23 @@ A pure non-code or non-Moku dir → decline (like `check`). Layer-3 apps **never
 
 Run these in order; the first block is the user's top pain and the reason this command exists.
 
-### A. App composition & entrypoints — `moku-idioms.md` I1–I2
+### A. App composition & entrypoints — `moku-idioms.md` I1–I2 / I6
 - **I1 (BLOCKER):** a Layer-3 app must `createApp` from a *framework* package and must **not** call
   `createCoreConfig`/`createCore` or declare a direct `@moku-labs/core` dependency. **Detect:**
   `@moku-labs/core` in app `package.json`; `createCoreConfig`/`createCore` / `createPlugin` imported from
   `@moku-labs/core` in app source.
-- **I2 (WARNING):** **one `createApp` per framework/runtime.** Count `createApp` calls and the framework
-  each composes. The legit split is `app.ts` (web build) + `spa.tsx` (web browser) + `server.ts` (worker)
-  — **bless it.** Flag only: (a) **fusing** — one `createApp` whose `plugins:[]` mixes two framework
-  packages; or (b) **gratuitous duplication** — two `createApp` for the *same* framework+runtime with
-  overlapping plugin sets / copy-pasted entries that should be one.
+- **I2 (WARNING for fusing; BLOCKER for a facade/duplicate same-runtime app):** **one `createApp` per
+  framework/runtime.** Count `createApp` calls and the framework PACKAGE each imports from. The legit split
+  is `app.ts` (web build) + `spa.tsx` (web browser) + `server.ts` (worker) — **bless it.** Flag: (a)
+  **fusing** — one `createApp` whose `plugins:[]` mixes two framework packages *(WARNING)*; (b)
+  **duplication / facade** — two `createApp` for the *same* framework+runtime, or a second app/plugin whose
+  sole job is to emit config (see I6) *(BLOCKER)*.
+- **I6 (BLOCKER):** a worker backend is **one** `@moku-labs/worker` `createApp` composing resource plugins
+  + the runtime plugin (own `createPlugin` or a framework runtime/hub plugin) + `deploy` + `cli` — the
+  `tracker` `server.ts` shape. A **facade app** (a second `createApp`/plugin/module that only
+  generates `wrangler.jsonc` / wires deploy and configures no real runtime plugin) FAILS. Never assume a
+  framework's runtime/server export ships a deploy-config generator (e.g. a `wrangler.jsonc` emitter) —
+  verify it against the installed package's `exports` + `dist`/types. Cite `moku-idioms.md §I6`.
 
 ### B. Thin entries — logic belongs in plugins/lib — `moku-idioms.md` I4 + skeleton §1
 - **I4/R3 (WARNING; BLOCKER if egregious):** entries/adapters (`cloudflare/worker.ts`, framework
@@ -72,11 +79,16 @@ Run these in order; the first block is the user's top pain and the reason this c
   `server.ts`, or `app.ts`/`spa.tsx` rather than in a plugin (`ctx.require`) or `lib/`. A `routes.tsx`
   loader doing real work inline (not via `lib/content.ts`-style helpers) is the canonical offense.
 
-### C. No stray / scattered functions — `moku-idioms.md` I3 + skeleton §8
+### C. No stray / scattered functions + the lib-vs-plugin boundary — `moku-idioms.md` I3 + skeleton §8
 - **I3 (WARNING):** organize by concern, consistently. **Detect:** a one-off function dropped into a root
-  file or an unrelated file ("random function here and there"); a plugin-shaped concern (typed API +
-  events + state + deps) folded into `lib/` or config instead of a `createPlugin` plugin; a pure helper
-  living inside an entry instead of `lib/`. The fix is *relocation by logic*, not new behavior.
+  file or an unrelated file ("random function here and there"); a pure helper living inside an entry
+  instead of `lib/`. The fix is *relocation by logic*, not new behavior.
+- **lib-vs-plugin boundary (BLOCKER):** `lib/` holds **pure/shared helpers + the realtime seam only**. A
+  `lib/` module with an API surface + mutable state + lifecycle + events is a plugin in disguise → move it
+  to `src/plugins/{name}/` (`consumer-plugins.md` "When to make it a plugin"). **Detect:** a `lib/` file
+  that closes over module-level `let` state, emits/registers events, runs timers, or exposes
+  `start`/`stop`/`init`. A genuinely pure + genuinely shared helper (no state/lifecycle/events, ≥2
+  consumers) stays in `lib/`. Cite `consumer-plugins.md`.
 
 ### D. Config in place, not generated — `skeleton-conventions.md` §2 + moku-web `layout-structure.md`
 - **Detect:** config *assembled dynamically* (plugins array / `pluginConfigs` built by functions, loops,
@@ -85,13 +97,28 @@ Run these in order; the first block is the user's top pain and the reason this c
   (R6) is a BLOCKER. The idiom: a literal `createApp({ plugins:[…], config:{…}, pluginConfigs:{…} })` and a
   `config.ts` of plain constants.
 
-### E. Wiring `index.ts` + naming — `skeleton-conventions.md` §1/§8, R3/R4
+### E. Committed `scripts/` = the build/dev/deploy triad only — `layout-structure.md`
+- **Non-triad scripts (BLOCKER):** reference apps commit only thin `scripts/*.ts` for **build / dev(serve)
+  / deploy** (+`preview`), each a one-line `app.cli.*` / `server.cli.*` passthrough. Flag any committed
+  `scripts/*.ts` or `scripts/lib/**` beyond that triad (e.g. a data generator). Fix: move it
+  behind a plugin API or into a Claude skill/command. Cite `layout-structure.md`.
+
+### F. Reference-app structural conformance — the catch-all idiom gate
+- Compare the output against the **nearest reference app** (`tracker` for full-stack, `blog` for
+  web/content-only) on each axis: `components/` layout (flat `Foo.tsx`+`Foo.css`, not folder-per-component),
+  `islands/` (small, flat or module-split, **own zero CSS**), `lib/` (pure/shared only), `scripts/` (triad
+  only), per-plugin file layout (no `config.ts`), config placement (inline literal), and font/asset handling
+  (vendored, not CDN). A confirmed departure on any axis is a finding at that axis's severity (most are
+  BLOCKERs — see the per-axis rules). `moku-web-validator` owns the web axes; `moku-plugin-spec-validator`
+  owns `config.ts`; this command aggregates.
+
+### G. Wiring `index.ts` + naming — `skeleton-conventions.md` §1/§8, R3/R4
 - Plugin `index.ts` ≤30 effective lines, wiring only (R3). Plugin instance export uses the `<name>Plugin`
   suffix; the name string stays bare (R4). Framework `src/plugins/index.ts` barrel present (frameworks
   only). These reuse the existing validators — `/moku:verify` leans on `moku-plugin-spec-validator` /
   `moku-spec-validator` here rather than re-checking.
 
-### F. Whole-project pass (secondary)
+### H. Whole-project pass (secondary)
 After the root pass, the curated reuse set covers the rest: `moku-readable-code-validator` (wall-of-text),
 `moku-type-validator` (R6/R7/R9, `tsc`), `moku-architecture-validator` (cross-plugin), `moku-web-validator`
 (web patterns). Don't duplicate their checks — aggregate their findings.
@@ -99,8 +126,10 @@ After the root pass, the curated reuse set covers the rest: `moku-readable-code-
 ---
 
 ## NEVER flag (false-positive guard — copy into the report's ground rules)
-- Multiple `createApp` instances that map to distinct framework/runtime (web build + browser SPA + worker).
-- Two frameworks (`@moku-labs/web` + `@moku-labs/worker`) in one project.
+- Multiple `createApp` instances that map to **distinct** framework/runtime (web build + browser SPA +
+  worker). *(But two apps for the SAME runtime, or a config-only facade beside one, IS flagged — I2/I6.)*
+- Two frameworks (`@moku-labs/web` + `@moku-labs/worker`) in one project. *(Two apps on the same
+  framework+runtime is the I2/I6 duplicate — different thing.)*
 - Folder-splitting by concern (`components/`, `islands/`, `pages/`, `layouts/`, `lib/`, `plugins/`).
 - An app `config.ts` of constants (it is **not** `createCoreConfig`).
 - A flat multi-file plugin layout (tier ≠ directory shape — `skeleton-conventions.md §8`).
@@ -116,13 +145,26 @@ After the root pass, the curated reuse set covers the rest: `moku-readable-code-
    `routes.tsx`/`app.ts` into the owning plugin (reach it via `ctx.require`) or a pure `lib/` helper;
    leave the entry as adapter glue. Pattern: the `lib/content.ts` `allArticles(ctx)` shape from
    `moku-web/layout-structure.md`.
-3. **Relocate a stray function (I3):** move a misplaced helper to `lib/` (pure) or fold a plugin-shaped
-   concern into `src/plugins/{name}/` via `createPlugin`. Keep imports updated; no behavior change.
-4. **Collapse gratuitous entrypoints (I2):** merge duplicate same-framework `createApp`s into the canonical
-   one; split a *fused* `createApp` into per-framework apps wired at the edges (`ASSETS` + over-the-wire).
-5. **Config in place (skeleton §2):** replace dynamically-assembled config with a typed literal; hoist
+3. **Relocate a stray function / cross the lib-vs-plugin boundary (I3):** move a misplaced pure helper to
+   `lib/`; **promote a `lib/` module that owns API + state + lifecycle + events into `src/plugins/{name}/`
+   via `createPlugin`** (the consumer-plugins rule). Keep imports updated; no behavior change. A genuinely
+   pure + shared helper stays in `lib/`.
+4. **Collapse to one app / kill the facade (I2 / I6):** merge duplicate same-runtime `createApp`s into the
+   canonical one — compose the facade's `deploy`/`cli` (and any real plugins) INTO the single runtime app,
+   then delete the facade; split a *fused* `createApp` into per-framework apps wired at the edges (`ASSETS`
+   + over-the-wire). If a capability the plan assumed is missing (verify against the installed package's
+   `exports`/`dist`), compose the framework that ships it — never hand-roll it or keep a facade.
+5. **Per-plugin `config.ts` → inline (spec/15 §5):** delete the plugin's `config.ts`; declare a typed
+   `const defaultConfig: Config = {…}` in `index.ts` and wire `config: defaultConfig` (keep the `Config`
+   type in `types.ts`).
+6. **Non-triad `scripts/` → plugin API or skill:** move a bespoke committed script (e.g. a data generator)
+   behind a plugin API or into a Claude skill/command; leave `scripts/` as build/dev/deploy passthroughs.
+7. **Web axes (delegated to `moku-web-validator`):** flatten folder-per-component; delete co-located island
+   CSS; split oversized islands; vendor CDN fonts; replace hand-parsed `location.pathname` with `ctx.params`;
+   move runtime app data off `public/` onto the data/content layer (web-validator §10–§14).
+8. **Config in place (skeleton §2):** replace dynamically-assembled config with a typed literal; hoist
    inline `as` to a typed const / return-type annotation.
-6. **Then** the secondary-pass fixes (readability, types) as the validators prescribe.
+9. **Then** the secondary-pass fixes (readability, types) as the validators prescribe.
 
 Refactors are **structure-only** — never change a public signature, route, event name, or behavior. If a
 fix is high-blast-radius or ambiguous, downgrade to a proposal and surface it instead of forcing it.

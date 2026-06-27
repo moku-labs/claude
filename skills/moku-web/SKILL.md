@@ -280,6 +280,24 @@ article { padding: 1rem; }              // WRONG — global pollution
 }
 ```
 
+### Reference-app structural conformance (match `tracker`/`blog` — the build/verify gate FAILS on divergence)
+
+These are the common idiom departures `moku-web-validator` flags (§10–§14); build to them from the start:
+
+- **Flat components — no folder-per-component.** `src/components/Foo.tsx` + `Foo.css`, NOT
+  `src/components/Foo/Foo.tsx`. (§10.)
+- **Islands own ZERO `.css`.** Styling lives in `components/*.css` (`@scope`) or `styles/` — never a
+  `.css` beside an island or `import`ed by one. (§11.)
+- **Islands stay small.** A ~500-line "mega-View" island is the anti-pattern; split a complex screen into
+  several small islands or a module subdir (`islands/<name>/{render,state,handlers,lifecycle,types}.ts`),
+  and lift independent overlays (toasts/modals/banners/mute) into their own flat behavior-only islands. (§11.)
+- **Vendor fonts/assets — no CDN `<link>`.** woff2 under `public/fonts/<family>/` + local `@font-face`
+  (`references/css-architecture.md`); no `<link>` to `fonts.googleapis.com`/a CDN in `index.html`. (§12.)
+- **Route/role via `ctx.params`.** Let the matched route mount the island, which reads `ctx.params` in
+  `onMount`; never hand-parse `location.pathname` in `spa.tsx`. (§13.)
+- **Runtime app data via the data/content layer.** Build-authored route `data` sidecars / `dataPlugin` /
+  a content provider — not files dropped in `public/` and `fetch`ed by hand. (§14.)
+
 ## Bundle Targets
 - JS: < 8KB gzipped
 - CSS: < 10KB gzipped

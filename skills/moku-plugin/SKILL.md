@@ -166,6 +166,16 @@ export const authPlugin = createPlugin('auth', { api: createAuthApi })
 // A 15-line config-only plugin doesn't need types.ts, state.ts, api.ts
 // Use Nano/Micro tier — promote only when complexity demands it
 
+// DON'T: Split config into a per-plugin config.ts file (spec/15 §5 — no config.ts)
+// src/plugins/router/config.ts:
+export const DEFAULT_CONFIG = { basePath: "/" };          // WRONG — splits config from its wiring point
+// index.ts: import { DEFAULT_CONFIG } from "./config"; ... config: DEFAULT_CONFIG
+// CORRECT: declare config INLINE in index.ts; put the Config *type* in types.ts
+import type { Config } from "./types";
+const defaultConfig: Config = { basePath: "/" };          // typed const widens literals so consumers can override
+export const routerPlugin = createPlugin("router", { config: defaultConfig, /* ... */ });
+// (or, for Nano/Micro, just `config: { basePath: "/" }` inline — no config.ts either way)
+
 // DON'T: Add onStart/onStop to plugins that don't manage resources
 export const utilPlugin = createPlugin('util', {
   api: (ctx) => ({ format: (s: string) => s.trim() }),

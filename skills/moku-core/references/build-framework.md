@@ -16,6 +16,18 @@ Read the specification from the provided path (defaults to `.planning/specs/`). 
 
 If the plan is incomplete, ask the user to run `/moku:plan framework` first.
 
+### Framework-capability verification (hard gate — verify, never assume)
+
+Whenever the plan relies on a capability of **another** package — `@moku-labs/core` (the factory chain it
+re-exports), a peer/optional framework (`@moku-labs/worker`'s `deploy`/`cli`, `@moku-labs/room`'s
+`hubPlugin`), or any `./subpath` export — confirm it **actually exists in the installed package** before
+building to it: read that package's real `package.json` `exports` + its `dist`/types and prove the named
+export/generator/CLI/subpath is present and has the assumed shape. **Never assume a framework capability
+from memory or a spec doc** — in particular, never assume a framework's runtime/server export ships a
+deploy-config generator (e.g. a `wrangler.jsonc` emitter); verify it against the installed package's
+`exports` + `dist`/types (see `build-app.md` Step 2 for the full procedure). If a capability is absent,
+revise the plan — do not hand-roll it or stand up a facade (`moku-idioms.md §I6`).
+
 ## Steps 2–3: Wave Analysis, Pre-Flight & Execution
 
 → Read **`build-wave-execution.md`**

@@ -63,7 +63,7 @@ Spawn these 4 agents simultaneously, including the Prior Findings Summary:
 1. **moku-test-validator** — test quality per plugin
 2. **moku-type-validator** — TypeScript type correctness (whole project)
 3. **moku-architecture-validator** — cross-plugin architecture (whole framework) — **speculative start**
-4. **moku-root-validator** — ROOT/ENTRYPOINT/app-shape conformance I1–I5 (whole project): app-creation files, apps compose not define a framework (I1, BLOCKER), one createApp per framework / no gratuitous duplicate entrypoints (I2), thin entries — logic in plugins/lib not routers (I4), no stray functions (I3), config in place. NEVER flag the legitimate multi-createApp browser/server split.
+4. **moku-root-validator** — ROOT/ENTRYPOINT/app-shape conformance I1–I6 (whole project): app-creation files, apps compose not define a framework (I1, BLOCKER), one createApp per framework/runtime / no gratuitous duplicate or facade entrypoints (I2/I6, BLOCKER), one worker app composing resource+runtime+deploy/cli (I6), thin entries — logic in plugins/lib not routers (I4), no stray functions + the lib-vs-plugin boundary (I3), committed scripts = build/dev/deploy triad only, config in place. NEVER flag the legitimate multi-createApp browser/server split across distinct runtimes.
 
 The architecture-validator now runs alongside Group B instead of after it (~10-15% total pipeline savings). It receives Group A's Prior Findings but not Group B's (those aren't available yet). This is a speculative optimization:
 - **If Group B finds no BLOCKERs**: the architecture-validator's results are final. No re-run needed.
@@ -96,7 +96,7 @@ Before spawning validators, assess project complexity to choose appropriate mode
 | moku-test-validator | sonnet | Test quality per plugin | ~3-5k per plugin |
 | moku-type-validator | sonnet | TypeScript correctness (whole project) | ~5-10k total |
 | moku-architecture-validator | sonnet | Cross-plugin architecture (whole project) | ~8-15k total |
-| moku-root-validator | opus | Root/entrypoint/app-shape I1–I5 (whole project) | ~4-8k total |
+| moku-root-validator | opus | Root/entrypoint/app-shape I1–I6 (whole project) | ~4-8k total |
 
 **Complexity-based overrides:**
 

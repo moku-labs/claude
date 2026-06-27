@@ -20,12 +20,34 @@ illustrative, never required, and never assume it's checked out locally). **Spec
 reference for *what idiomatic looks like* and re-implement to the project's conventions — never copy a demo
 prototype's source.
 
-## Step 2: Verify Framework
+## Step 2: Framework-Capability Verification (hard gate — verify, never assume)
 
-Check that the framework package is available:
-- Read the framework's exports (createApp, createPlugin)
-- Verify all referenced plugins exist
-- Verify config types match
+Before finalizing **any** composition or deploy decision, confirm every framework capability the plan
+relies on **actually exists in the installed package** — by reading its real `package.json` `exports` +
+its `dist`/types, not from memory or a spec doc. This is a hard gate: a wrong assumption here forces a
+multi-iteration rework downstream.
+
+**Why this exists:** never assume a framework's runtime/server export ships a deploy-config generator (e.g.
+a `wrangler.jsonc` emitter) or CLI — verify it against the installed package's `exports` + `dist`/types. A
+single unverified capability assumption can force a reversal and a multi-wave rework downstream. **Never
+assume a framework capability from memory or a spec doc.**
+
+For each capability the plan names — an exported `createApp`/`createPlugin`, a specific plugin
+(`hubPlugin`, `deployPlugin`, …), a generator (`wrangler.jsonc` emitter, an SSG builder), a CLI
+(`server.cli.dev`/`deploy`), a re-export, or a `./subpath` export — **prove it exists:**
+
+1. Read the installed package's `package.json` (`node_modules/<pkg>/package.json`): confirm the `exports`
+   map actually has the subpath you intend to import (`"./server"`, `"./browser"`, …) **and** that it
+   declares a `types` condition if you'll import types from it.
+2. Read the resolved `dist`/types entry the export points at: confirm the named export (plugin, factory,
+   generator, CLI method) is actually present and has the shape the plan assumes (e.g. a `deploy`/`cli`
+   plugin that generates `wrangler.jsonc`; a runtime plugin with a `handle`).
+3. If a capability is **absent**, STOP and revise the plan to the real shape — do **not** hand-roll the
+   missing capability (a hand-rolled `wrangler.jsonc` generator was rejected) and do **not** invent a
+   facade app to paper over it (I6). Reach for the framework that genuinely ships it (e.g. compose
+   `@moku-labs/worker` for `deploy`/`cli`), or raise a framework-extension need.
+
+Record, in the build notes, each assumed capability and the file:line that confirms it. Only then proceed.
 
 ## Step 3: Build Custom Plugins
 
@@ -64,13 +86,35 @@ await app.start();
 // Application logic from spec
 ```
 
+### Server / worker composition — START from the one-worker (tracker) pattern
+
+For any worker backend, do **not** invent the composition — build to the **one-worker composition idiom**
+(`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md` §I6; worked reference `tracker/src/server.ts`):
+
+- **ONE** `@moku-labs/worker` `createApp`, whose `plugins:[]` composes, together: the **resource plugins**
+  the deploy plugin requires (`storage`/`kv`/`d1`/`queues`/`durableObjects`), **+ the app's runtime
+  plugin** (its own `createPlugin`, or a framework runtime/hub plugin like `@moku-labs/room`'s `hubPlugin`),
+  **+ `deploy` + `cli`**. `server.<runtime>.handle` is the runtime fetch (the thin `cloudflare/worker.ts`
+  delegates to it); `server.cli.{dev,deploy}` generate `wrangler.jsonc` + run wrangler.
+- Configure only the resource plugins you actually use; the rest sit at their empty `{}` default and emit
+  no bindings.
+
+**Forbidden (`moku-idioms.md §I6`):**
+- a **second** app for the same worker (e.g. a runtime `createApp` plus a separate `createApp` whose only
+  job is to generate `wrangler.jsonc`), and
+- a **facade** app/plugin that exists only to emit config.
+
+If the runtime framework you're composing does not itself ship a `wrangler.jsonc` generator / CLI (verified
+in Step 2), that is exactly why `@moku-labs/worker`'s `deploy`+`cli` go INTO the one app — never hand-roll a
+generator and never stand up a config-only facade.
+
 ## Step 5: Validate
 
 Run the post-build validation pipeline:
 
 **Parallel Group A:**
 - **moku-spec-validator** agent on all source files
-- **moku-plugin-spec-validator** agent on custom plugins
+- **moku-plugin-spec-validator** agent on custom plugins (flags per-plugin `config.ts`, §17)
 - **moku-jsdoc-validator** agent on all source files
 - **moku-readable-code-validator** agent on all source files (readability; WARNING/INFO only — never blocks)
 
@@ -78,7 +122,37 @@ Run the post-build validation pipeline:
 - **moku-test-validator** agent on custom plugin tests
 - **moku-type-validator** agent (once, whole project)
 
+**Parallel Group C — structural conformance (hard gate, see Step 5.5):**
+- **moku-root-validator** agent on the root/entrypoint files (I1–I6: app composition, the one-worker
+  pattern + facade detection, lib-vs-plugin boundary, non-triad `scripts/`, config-in-place)
+- **moku-web-validator** agent (web apps only) on `components/`/`islands/`/`styles/`/`index.html`
+  (flat components, island CSS, vendored fonts, `ctx.params` routing, runtime data placement)
+
 If BLOCKER issues found, enter gap closure. WARNINGs included in report.
+
+## Step 5.5: Reference-App Structural-Conformance Gate (hard gate — FAIL on divergence)
+
+"Follow the reference app" is **not** advisory here — it is an enforced gate. Compare the built output, axis
+by axis, against the **nearest reference app** — `tracker` for a full-stack app, `blog` for a
+web/content-only app — and FAIL the build on any confirmed divergence (Group C's validators produce these
+findings; this step is where they BLOCK rather than merely inform). The axes and where each is owned:
+
+| Axis | Idiomatic target | Owner check |
+|------|------------------|-------------|
+| App / worker composition | one `createApp` per runtime; the one-worker pattern; no facade app | root-validator I2/I6 |
+| `components/` layout | flat `Foo.tsx`+`Foo.css` — no folder-per-component | web-validator §10 |
+| `islands/` | small, flat or module-split; own **zero** `.css`; one per screen concern | web-validator §11 |
+| `lib/` | pure/shared helpers + realtime seam only — stateful/lifecycle/event code is a plugin | root-validator (lib-vs-plugin) |
+| `scripts/` | build/dev/deploy(+preview) triad only — passthroughs | root-validator §E |
+| per-plugin layout | no `config.ts`; config inline in `index.ts` | plugin-spec-validator §17 |
+| config placement | a directly-visible `createApp({...})` literal; `config.ts` = constants | root-validator §D |
+| fonts/assets | vendored under `public/fonts/` + local `@font-face` — no CDN `<link>` | web-validator §12 |
+| route/role selection | island `ctx.params` — no hand-parsed `location.pathname` | web-validator §13 |
+| runtime app data | the web data/content mechanism — not `public/` | web-validator §14 |
+
+Each confirmed departure is a **BLOCKER** (except the two web-validator WARNING axes — island sizing/count
+and `public/` data) and routes to gap closure. This single gate catches idiom violations that all other
+validators pass. Full protocol + fix recipes: `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md`.
 
 ## Step 6: Full-app integration tests (realistic end-to-end)
 
