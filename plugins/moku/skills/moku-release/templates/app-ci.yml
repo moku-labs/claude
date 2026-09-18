@@ -1,0 +1,28 @@
+name: CI
+
+# Thin caller for a Layer-3 moku app: validate on every PR, deploy to Cloudflare on push to main.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref. Safe here — app-deploy.yml sets no group of its own.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: moku-labs/ci/.github/workflows/app-deploy.yml@v1
+    with:
+      test_script: test:coverage
+      build_worker_script: build:worker # client build first — the worker dry-run reads dist/client
+      migrate_script: migrate:remote # wrangler d1 migrations apply <db> --remote
+      deploy_script: deploy # wrangler deploy
+    # Reusable workflows do NOT inherit secrets — pass each one explicitly.
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
