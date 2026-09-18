@@ -5,8 +5,6 @@
 # Only triggers on `git commit` commands during active build waves.
 # Runs bunx tsc --noEmit and bun run lint — blocks the commit if either fails.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
@@ -35,7 +33,6 @@ GITCMD=$(printf '%s' "$COMMAND" | sed -E "s/(-m|--message)[[:space:]]*(\"[^\"]*\
 case "$GITCMD" in
   *"git add"*|*"git stage"*|*"git commit"*)
     if printf '%s' "$GITCMD" | grep -Eq '(^|[[:space:]/])\.planning([/[:space:]]|$)'; then
-      log_diagnostic "PLANNING-GUARD" "git" "Blocked staging/committing .planning/" 2>/dev/null || true
       echo "BLOCKED: .planning/ is local-only state and must never be staged or committed. Remove the .planning path from this git command (it is gitignored on purpose). If .gitignore is missing the entry, add '.planning/' to .gitignore instead of force-adding." >&2
       exit 2
     fi
@@ -88,7 +85,6 @@ fi
 
 # --- Gate decision ---
 if [ -n "$ERRORS" ]; then
-  log_diagnostic "COMMIT-GATE" "git-commit" "Blocked: $ERRORS"
 
   # Escape for JSON
   ESCAPED=$(printf '%s' "$ERRORS" | sed 's/\\/\\\\/g; s/"/\\"/g')

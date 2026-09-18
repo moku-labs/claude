@@ -1,0 +1,119 @@
+#!/usr/bin/env node
+/**
+ * moku-astra: ask GPT-6 Astra (through the Codex CLI) for a UX review or for image assets.
+ *
+ * Modes: review | generate | edit | probe.
+ * Exit codes: 0 done, 1 usage error, 3 Astra unavailable for any reason.
+ * On exit 3 the caller falls back to Fable for reviews; images have no fallback.
+ */
+
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { codexArgs } from "../lib/astra/codex-args.mjs";
+import { editPrompt, generatePrompt, reviewPrompt } from "../lib/astra/prompts.mjs";
+
+const UNAVAILABLE = 3;
+const SCHEMAS = join(dirname(fileURLToPath(import.meta.url)), "..", "schemas");
+const TIMEOUT_MS = 10 * 60 * 1000;
+
+const [mode, ...rest] = process.argv.slice(2);
+const flags = parseFlags(rest);
+
+const MODES = { review, generate, edit, probe };
+if (!MODES[mode]) {
+  console.error("Usage: moku-astra <review|generate|edit|probe> [--images a.png,b.png] [--context design-context.md] [--focus text] [--brief text] [--instruction text] [--out dir|file] [--size 1024x1024] [--transparent]");
+  process.exit(1);
+}
+
+process.exit(MODES[mode]());
+
+/** Screenshots in, typed findings out. */
+function review() {
+  const images = list(flags.images);
+  if (images.length === 0) return usage("review needs --images");
+
+  const output = resolve(String(flags.out ?? ".planning/astra/findings.json"));
+  const designContext = typeof flags.context === "string" && existsSync(flags.context) ? readFileSync(flags.context, "utf8") : undefined;
+  const prompt = reviewPrompt({ designContext, focus: typeof flags.focus === "string" ? flags.focus : undefined });
+
+  return ask({ prompt, images, schema: join(SCHEMAS, "visual-findings.json"), output, sandbox: "read-only" });
+}
+
+/** A brief in, image files and a manifest out. */
+function generate() {
+  if (typeof flags.brief !== "string") return usage("generate needs --brief");
+
+  const outDir = String(flags.out ?? "assets/generated");
+  const prompt = generatePrompt({ brief: flags.brief, outDir, transparent: flags.transparent === true, size: String(flags.size ?? "1024x1024") });
+
+  return ask({ prompt, schema: join(SCHEMAS, "asset-manifest.json"), output: resolve(outDir, "manifest.json"), sandbox: "workspace-write" });
+}
+
+/** Existing images plus an instruction in, new versions out. */
+function edit() {
+  const images = list(flags.images);
+  if (images.length === 0 || typeof flags.instruction !== "string") return usage("edit needs --images and --instruction");
+
+  const outDir = String(flags.out ?? dirname(images[0]));
+  const prompt = editPrompt({ instruction: flags.instruction, outDir });
+
+  return ask({ prompt, images, schema: join(SCHEMAS, "asset-manifest.json"), output: resolve(outDir, "manifest-edit.json"), sandbox: "workspace-write" });
+}
+
+/** Cheap check that Codex is installed, logged in and can reach Astra. */
+function probe() {
+  return ask({ prompt: "Reply with the single word OK.", output: resolve(".planning/astra/probe.txt"), sandbox: "read-only" });
+}
+
+/**
+ * Run one Codex call. Any failure is reported as "unavailable" so callers have one fallback path.
+ *
+ * @param {Parameters<typeof codexArgs>[0]} call
+ * @returns {number} exit code
+ */
+function ask(call) {
+  mkdirSync(dirname(call.output), { recursive: true });
+
+  // stdin is closed on purpose: an open stdin makes `codex exec` wait for a prompt forever
+  const run = spawnSync("codex", codexArgs(call), { stdio: ["ignore", "pipe", "pipe"], encoding: "utf8", timeout: TIMEOUT_MS });
+
+  if (run.error || run.status !== 0 || !existsSync(call.output)) {
+    const why = run.error?.message ?? run.stderr?.trim().split("\n").at(-1) ?? "no output file";
+    console.error(`ASTRA_UNAVAILABLE: ${why}`);
+    return UNAVAILABLE;
+  }
+
+  console.log(call.output);
+  return 0;
+}
+
+/** @param {string} line */
+function usage(line) {
+  console.error(`Usage: ${line}`);
+  return 1;
+}
+
+/** @param {string | true | undefined} value */
+function list(value) {
+  return typeof value === "string" ? value.split(",").map((item) => item.trim()).filter(Boolean) : [];
+}
+
+/** @param {string[]} argv */
+function parseFlags(argv) {
+  /** @type {Record<string, string | true>} */
+  const parsed = {};
+
+  for (let index = 0; index < argv.length; index += 1) {
+    if (!argv[index].startsWith("--")) continue;
+
+    const next = argv[index + 1];
+    const hasValue = next !== undefined && !next.startsWith("--");
+    parsed[argv[index].slice(2)] = hasValue ? next : true;
+    if (hasValue) index += 1;
+  }
+
+  return parsed;
+}

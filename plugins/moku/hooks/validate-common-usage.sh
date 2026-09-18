@@ -4,8 +4,6 @@
 # error message so Claude can self-correct. Conservative by design — prefers NOT firing over a false
 # positive (see skills/moku-common/references/conventions.md).
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
@@ -45,7 +43,6 @@ esac
 # Be conservative — only block when there is at least one console.<level>( call that is NOT on a
 # line carrying the @log-sink marker.
 if printf '%s\n' "$CONTENT" | grep -E 'console\.(log|info|warn|error|debug|trace)\(' | grep -qv '@log-sink'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "raw console.* — use ctx.log (MC2)"
   echo 'BLOCKED: raw console.* detected in plugin/CLI/script source (MC2). Use ctx.log.info/warn/error/debug for diagnostics, or the branded console from @moku-labs/common/cli for user-facing CLI output. A single low-level log sink may use console.* — mark that line with a `// @log-sink` comment. See the moku-common skill (skills/moku-common/references/conventions.md MC2).' >&2
   exit 2
 fi
@@ -54,7 +51,6 @@ fi
 # legitimate passthrough (e.g. spreading process.env into a spawned subprocess) may mark
 # its line with `// @env-allow`. Only block when a process.env line lacks that marker.
 if printf '%s\n' "$CONTENT" | grep -E 'process\.env' | grep -qv '@env-allow'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "raw process.env — use ctx.env (MC3)"
   echo 'BLOCKED: raw process.env detected in plugin/CLI/script source (MC3). Use ctx.env.require("NAME") (must-exist) or ctx.env.get("NAME") (optional/defaulted) from the envPlugin in @moku-labs/common. Env providers are exempt; a legitimate passthrough (e.g. spreading process.env into a spawned subprocess) may mark that line with a `// @env-allow` comment. See the moku-common skill (skills/moku-common/references/conventions.md MC3).' >&2
   exit 2
 fi

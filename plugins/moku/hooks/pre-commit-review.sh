@@ -6,8 +6,6 @@
 # Only triggers during active Moku build waves (not arbitrary git commits).
 # Injects findings as additionalContext so Claude sees them immediately.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
 
 # Only act in a Moku project with active planning state
 [ -f .planning/STATE.md ] || exit 0
@@ -106,7 +104,6 @@ fi
 
 # --- Report findings ---
 if [ $FINDING_COUNT -gt 0 ]; then
-  log_diagnostic "SELF-REVIEW" "post-commit" "$FINDING_COUNT issue(s) detected in committed code"
 
   # Escape findings for JSON
   ESCAPED_FINDINGS=$(printf '%b' "$FINDINGS" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')

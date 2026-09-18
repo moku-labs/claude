@@ -1,0 +1,12 @@
+{
+  "name": "moku-claude-plugins",
+  "private": true,
+  "type": "module",
+  "description": "Repository tooling for the moku Claude Code plugins. Not published.",
+  "scripts": {
+    "test": "node --test \"plugins/*/tests/**/*.test.mjs\"",
+    "validate": "claude plugin validate . && for p in plugins/*; do claude plugin validate \"$p\" || exit 1; done",
+    "evals": "claude plugin eval plugins/moku --trust-plugin --no-publish --allow-tools Write Edit Bash"
+  },
+  "engines": { "node": ">=24" }
+}

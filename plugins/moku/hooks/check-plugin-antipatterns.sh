@@ -2,8 +2,6 @@
 # PreToolUse hook: detect common Moku anti-patterns in Write/Edit content.
 # Blocks the tool use with a clear error message so Claude can self-correct.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
@@ -36,7 +34,6 @@ esac
 
 # Check 1: Explicit generics on createPlugin (CRITICAL anti-pattern)
 if printf '%s\n' "$CONTENT" | grep -q 'createPlugin<'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "createPlugin< — explicit generics detected"
   echo "BLOCKED: Explicit generics on createPlugin detected (e.g. createPlugin<Config, State, ...>). This is a CRITICAL anti-pattern in Moku — all types must be inferred from the spec object. Remove the generic parameters and let TypeScript infer them. See the moku-plugin skill for correct patterns." >&2
   exit 2
 fi
@@ -45,14 +42,12 @@ fi
 # Word-bounded: matches the `as any` assertion (incl. `as any[]`, `as any)`), but not
 # prose/identifiers like "as anything" or "has any".
 if printf '%s\n' "$CONTENT" | grep -qE '\bas any\b'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "as any — unsafe type assertion"
   echo 'BLOCKED: "as any" detected in plugin source. Use proper typing or "as unknown as TargetType" if a cast is truly necessary. Moku plugins rely on type inference — "as any" defeats the type system.' >&2
   exit 2
 fi
 
 # Check 3: Explicit generics on createCorePlugin (same anti-pattern as createPlugin)
 if printf '%s\n' "$CONTENT" | grep -q 'createCorePlugin<'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "createCorePlugin< — explicit generics detected"
   echo "BLOCKED: Explicit generics on createCorePlugin detected. Same rule as createPlugin — all types must be inferred from the spec object. Remove the generic parameters." >&2
   exit 2
 fi
@@ -65,7 +60,6 @@ fi
 
 # Check 5: Wire factory pattern — function wireXxx wrapping createPlugin
 if printf '%s\n' "$CONTENT" | grep -qE 'function wire[A-Z]'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "wire factory pattern (function wireXxx)"
   echo "BLOCKED: Wire factory pattern detected (function wireXxx...). Moku plugins import createPlugin and dependencies directly — no factory indirection. See moku-plugin skill Common Mistakes." >&2
   exit 2
 fi
@@ -73,7 +67,6 @@ fi
 # Check 6: Inline type assertions in state/config (null as X, {} as X, [] as X, {content} as Type)
 # `null as` requires an uppercase type-name start so the legitimate `null as const` doesn't match.
 if printf '%s\n' "$CONTENT" | grep -qE 'null as [A-Z]|\{\} as |\[\] as |\} as [A-Z]'; then
-  log_diagnostic "ANTIPATTERN" "$FILE_PATH" "inline type assertion (null as X / {} as X / [] as X / {content} as Type)"
   echo "BLOCKED: Inline type assertion detected (e.g. null as Foo, {} as Bar, { key: val } as Record<K,V>). For Standard+ plugins, define a type and use a typed factory. For Nano/Micro, use a return-type annotation. See moku-plugin skill Common Mistakes." >&2
   exit 2
 fi

@@ -2,8 +2,6 @@
 # PreToolUse hook: validate plugins/*/index.ts content constraints.
 # Fast-path exits 0 immediately for all other files — no LLM, no delay.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
@@ -41,7 +39,6 @@ if [ "$IS_WRITE" = "yes" ]; then
     | grep -vE '^[[:space:]]*import[[:space:]]' \
     | wc -l | tr -d ' ')
   if [ "$EFFECTIVE" -gt 30 ]; then
-    log_diagnostic "INDEX-RULE" "$FILE_PATH" "index.ts has $EFFECTIVE effective wiring lines (max 30; blanks/comments/imports excluded)"
     echo "BLOCKED: plugins/*/index.ts must be ≤30 wiring lines (the JSDoc header, blank lines, and imports do NOT count), got $EFFECTIVE. Move logic into module files (state.ts/api.ts/handlers.ts). See skeleton-conventions.md for the literal wiring template." >&2
     exit 2
   fi
@@ -56,7 +53,6 @@ if printf '%s\n' "$CONTENT" | grep -qE '\bon(Start|Stop)\s*:'; then
   if printf '%s\n' "$CONTENT" | grep -qE '@no-resource-check'; then
     : # explicitly justified — allow
   elif ! printf '%s\n' "$CONTENT" | grep -qE '\.(listen|close|connect|disconnect|start|stop|end|destroy|kill|open|shutdown|init|initialize|cleanup|dispose|terminate|release|addEventListener|removeEventListener|subscribe|unsubscribe|observe|watch|unwatch|abort|flush)\('; then
-    log_diagnostic "INDEX-RULE" "$FILE_PATH" "onStart/onStop without real resource lifecycle"
     echo "BLOCKED: onStart/onStop in index.ts must manage a real resource (server/connection/listener). If this is intentional (e.g. DOM/nav listeners), add a one-line '// @no-resource-check — <why>' comment to suppress. Otherwise remove the lifecycle hooks." >&2
     exit 2
   fi

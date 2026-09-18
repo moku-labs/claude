@@ -2,8 +2,6 @@
 # PreToolUse hook: validate plugin directory structure on Write/Edit to plugin files.
 # Complements the anti-pattern hook by checking filesystem state.
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-source "$SCRIPT_DIR/diagnostics-logger.sh" 2>/dev/null || true
 
 INPUT=$(cat)
 
@@ -50,7 +48,6 @@ SOURCE_COUNT=$(find "$PLUGIN_DIR" -maxdepth 1 -name '*.ts' \
   -not -name 'index.ts' -not -name 'client.ts' -not -name 'lifecycle.ts' \
   -type f 2>/dev/null | wc -l | tr -d ' ')
 if [ "$SOURCE_COUNT" -gt 12 ]; then
-  log_diagnostic "STRUCTURE" "$PLUGIN_NAME" "$SOURCE_COUNT domain files — exceeds VeryComplex tier max (12)"
   emit_warning "WARNING: Plugin '$PLUGIN_NAME' has $SOURCE_COUNT domain source files (excluding index/client/lifecycle entry files) — exceeds VeryComplex tier max (12). Consider splitting into sub-modules or sub-plugins."
   exit 0
 fi
@@ -59,7 +56,6 @@ fi
 DEEP_DIRS=$(find "$PLUGIN_DIR" -mindepth 2 -maxdepth 2 -type d \
   ! -path '*__tests__*' ! -path '*/tests/*' ! -path '*/spec*' ! -path '*node_modules*' 2>/dev/null | head -1)
 if [ -n "$DEEP_DIRS" ]; then
-  log_diagnostic "STRUCTURE" "$PLUGIN_NAME" "deeply nested directories detected"
   emit_warning "WARNING: Plugin '$PLUGIN_NAME' has deeply nested directories. Moku plugins should be flat (1 level of sub-modules max)."
   exit 0
 fi
@@ -75,7 +71,6 @@ if [ -f "$PLUGIN_DIR/types.ts" ] && [ -s "$PLUGIN_DIR/index.ts" ]; then
   EXPORTED_VIA_BARREL=no
   [ -f "$BARREL" ] && grep -qE "from ['\"]\./$PLUGIN_NAME/types['\"]" "$BARREL" 2>/dev/null && EXPORTED_VIA_BARREL=yes
   if [ "$IMPORTED_LOCALLY" = "no" ] && [ "$EXPORTED_VIA_BARREL" = "no" ]; then
-    log_diagnostic "STRUCTURE" "$PLUGIN_NAME" "types.ts exists but neither imported in index.ts nor exported via the plugins barrel"
     emit_warning "WARNING: Plugin '$PLUGIN_NAME' has types.ts but it is neither imported in its index.ts nor re-exported from src/plugins/index.ts (barrel). Wire it one of those two ways."
     exit 0
   fi

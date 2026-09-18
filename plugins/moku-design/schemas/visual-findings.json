@@ -1,0 +1,24 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["summary", "findings"],
+  "properties": {
+    "summary": { "type": "string", "description": "Two sentences: the overall state of the screens and the single most important problem." },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["screen", "region", "severity", "category", "problem", "suggestion"],
+        "properties": {
+          "screen": { "type": "string", "description": "File name of the screenshot the finding is about." },
+          "region": { "type": "string", "description": "Where on the screen, in words: 'top bar, right side', 'third card'." },
+          "severity": { "type": "string", "enum": ["blocker", "major", "minor"] },
+          "category": { "type": "string", "enum": ["layout", "hierarchy", "readability", "consistency", "interaction", "responsive", "accessibility", "design-fidelity"] },
+          "problem": { "type": "string", "description": "What a user would experience, stated as an observation, not a taste judgment." },
+          "suggestion": { "type": "string", "description": "One concrete change." }
+        }
+      }
+    }
+  }
+}
