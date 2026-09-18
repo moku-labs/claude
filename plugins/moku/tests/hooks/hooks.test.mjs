@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -113,5 +113,26 @@ describe("session hook", () => {
     const root = project({ initialized: true });
 
     assert.match(hook("session-rails.mjs", { cwd: root }).out, /Rails: clean/);
+  });
+});
+
+describe("subagent stop hook", () => {
+  it("logs the verdict from a plugin-qualified agent's contract, even with nested findings", () => {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+    const report = 'Done.\n```json\n{"agent":"moku-builder","verdict":"FAIL","blockers":[{"file":"a.ts","line":1}],"warnings":[]}\n```';
+
+    hook("on-subagent-stop.mjs", { cwd: root, agent_type: "moku:moku-builder", last_assistant_message: report });
+
+    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /moku:moku-builder \| FAIL B:1 W:0/);
+  });
+
+  it("ignores agents that are not moku's", () => {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+
+    hook("on-subagent-stop.mjs", { cwd: root, agent_type: "Explore", last_assistant_message: "x" });
+
+    assert.equal(existsSync(join(root, ".planning", "build", "agent-log.md")), false);
   });
 });
