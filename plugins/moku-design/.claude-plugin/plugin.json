@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "moku-design",
+  "displayName": "Moku Design",
+  "version": "0.70.0",
+  "description": "Design station for Moku: multi-round UI, API and architecture design that ends in a design context, plus GPT-6 Astra (through Codex) as artist and second opinion on user experience.",
+  "author": {
+    "name": "Oleksandr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "design",
+    "prototype",
+    "astra",
+    "codex",
+    "assets"
+  ],
+  "dependencies": [
+    "moku"
+  ],
+  "userConfig": {
+    "astra": {
+      "type": "boolean",
+      "title": "Use Astra",
+      "description": "Ask GPT-6 Astra through the Codex CLI for UX second opinions and image assets. When off or unavailable, Fable reviews alone.",
+      "default": true
+    },
+    "art_backend": {
+      "type": "string",
+      "title": "Image backend",
+      "description": "codex uses your ChatGPT plan through the Codex CLI. api calls the OpenAI Images API and bills per image; it needs OPENAI_API_KEY in your environment.",
+      "options": [
+        "codex",
+        "api"
+      ],
+      "default": "codex"
+    }
+  }
+}

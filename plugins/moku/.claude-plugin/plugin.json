@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "moku",
+  "displayName": "Moku",
+  "version": "0.70.0",
+  "description": "The Moku Core toolkit: a conversational conductor that leads you from an idea through init, plan, build, verify and release, with strict lifecycle rails underneath, the vendored Moku Core specification, TDD build waves and a validation pipeline.",
+  "author": {
+    "name": "Oleksandr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "micro-kernel",
+    "plugin-framework",
+    "typescript",
+    "spec-driven",
+    "validation"
+  ],
+  "userConfig": {
+    "rails": {
+      "type": "string",
+      "title": "Lifecycle rails",
+      "description": "strict blocks source writes that skip a lifecycle station, warn only reports them, off disables the write guard.",
+      "options": [
+        "strict",
+        "warn",
+        "off"
+      ],
+      "default": "strict"
+    },
+    "max_parallel_agents": {
+      "type": "number",
+      "title": "Parallel agents",
+      "description": "How many builder or validator agents may run at once.",
+      "default": 3,
+      "min": 1,
+      "max": 8
+    }
+  }
+}
