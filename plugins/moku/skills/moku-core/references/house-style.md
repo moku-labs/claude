@@ -49,4 +49,4 @@ are approved house style — treat them as authoritative, not a per-project inve
    (not raw `process.env`). Authoritative, citable rules with rationale + examples + detection +
    the allowed exceptions (brand-kit source, the marked `// @log-sink`, env providers, tests) live
    in [`../../moku-common/references/conventions.md`](../../moku-common/references/conventions.md)
-   (the `moku-common` skill); the `moku-common-validator` agent enforces them.
+   (the `moku-common` skill); `moku-structure-validator` enforces them.

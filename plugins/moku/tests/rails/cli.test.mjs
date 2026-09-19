@@ -110,6 +110,17 @@ describe("moku-rails: the habit tracker walkthrough", () => {
     assert.match(rails(root, "status").text, /dirty-tree/);
   });
 
+  it("records the commit a change starts from, so verify can scope its diff", () => {
+    const root = project({ initialized: true });
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "--allow-empty", "-m", "start"], { cwd: root });
+    const head = execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8" }).trim();
+
+    rails(root, "open", "2026-09-26-fix", "--size", "S", "--type", "fix");
+
+    assert.match(rails(root, "status", "--json").text, new RegExp(`"startCommit":"${head}"`));
+  });
+
   it("keeps ideas in the backlog without opening a change", () => {
     const root = project({ initialized: true });
 

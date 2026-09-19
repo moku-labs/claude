@@ -19,6 +19,7 @@ import { dirname, join } from "node:path";
  * @property {Record<string, boolean>} checklist
  * @property {boolean} paused true while waiting for the user
  * @property {string} [note]
+ * @property {string} [startCommit] HEAD when the change was opened; verify scopes its diff from here
  */
 
 /** @typedef {{ version: 1, changes: Change[], ideas: string[] }} Ledger */

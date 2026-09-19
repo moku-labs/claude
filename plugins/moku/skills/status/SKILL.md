@@ -1,59 +1,84 @@
 ---
-description: Show consolidated Moku project dashboard — phase, wave progress, agent activity, quick actions
+name: status
+description: Shows where a Moku project stands — the rails ledger first (initialized or not, open and parked changes, debts, idea backlog), then the STATE.md dashboard with phase, wave progress, plugin table and recent agent activity. Use when the user asks where we are, what is in flight, or what to do next.
+when_to_use: A question about the current state of a Moku project — where are we, what is open, what is next. Read-only.
+argument-hint: "[--full | diagnostics]"
 allowed-tools: Read, Glob, Grep, Bash
-argument-hint: [--full]
-disable-model-invocation: true
+model: fable
+effort: low
 ---
 
-## Moku Core Specification (authoritative)
+# status — where the project stands
 
-Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+Two layers, read in order. The rails ledger is the machine truth about the lifecycle. `STATE.md` is
+the human-readable record of the current plan and build. Neither replaces the other.
 
-Show a consolidated dashboard of the current Moku project state. Reads multiple sources and presents a unified view.
+## Step 1 — the rails
 
-## Execution Guard
+```bash
+moku-rails status --json
+```
 
-Before reading any data source:
-- If `$ARGUMENTS` is non-empty and does not match `--full` or `diagnostics` (exact, case-sensitive), print:
-  `Unknown flag: {value}. Recognized flags: --full, diagnostics` — then continue with default (no-flag) behavior.
-- Read `.planning/STATE.md`. If the file does not exist, skip all STATE.md-dependent sections and render the
-  "No active plan" fallback (Phase/Verb/Target/Next Action all show "—") then proceed directly to
-  Quick Actions using the "No STATE.md" rows from the Quick Action Logic table. Stop after Quick Actions.
+Read four things from it and lead with them:
 
-## Data Sources
+| Field | What it tells you |
+|---|---|
+| `initialized` | Whether `.planning/moku.md` exists. `false` means only intake, brainstorm and design are possible. |
+| `changes` | Every change with its `id`, `size`, `type`, `title`, `status` (open, parked, closed), current `station`, `paused`, `done` stations and `checklist`. |
+| `debts` | Work the rails consider unsettled: a change stuck inside a station, uncommitted work no change accounts for. |
+| `ideas` | The backlog kept with `moku-rails idea`. |
 
-1. **`.planning/STATE.md`** — phase, verb, target, skeleton status, plugin table, wave progress, next action. **Read the `## Recovery` block first** (see `memory-schema.md`): use its `Last good step` / `Open blockers` / `Next action` to render the header line and Quick Actions in one read; fall back to the full tables for the detailed plugin/wave breakdown.
-2. **`.planning/build/agent-log.md`** — recent agent activity (last 10 entries); if file is absent or empty, show `"No agent activity recorded."` in the Recent Activity section
-3. **`.planning/notifications.log`** — recent notifications (last 5 entries)
-4. **`.planning/build/diagnostics.log`** — hook denials, tool failures, permission blocks (last 10 entries)
-5. **`.planning/memory.md`** — project-specific memory (if exists)
-6. **`src/plugins/`** — filesystem evidence of built plugins
-7. **`.planning/specs/`** — specification files count and names
+A brand-new directory has no ledger. `status` still works there and reports "not initialized".
 
-## Dashboard Format
+**Debts come first in the output.** They are the reason a next step is blocked.
 
-Wave Progress rows are derived from STATE.md as follows:
-- Wave list and plugin membership: read from the `## Plugin Table:` section of STATE.md (column: wave assignment).
-- Wave status values:
-  - `done` — all plugins in the wave have `status: verified` or `status: committed` in the plugin table
-  - `building` — current `## Phase:` value matches `build/wave-{N}` for this wave's index N
-  - `pending` — wave index is greater than the wave index embedded in `## Phase:`
-  - `queued` — use instead of `pending` when `## Skeleton: committed` but no plugin build has started yet (all plugins have status `not started`). This distinguishes "scaffolding ready, build not begun" from "build in progress, this wave is next".
+## Step 2 — the dashboard
+
+Read `.planning/STATE.md`. If it does not exist, render the "no active plan" fallback (phase, verb,
+target and next action all `—`) and go straight to Next Steps.
+
+Start from the `## Recovery` block (see
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/memory-schema.md`): its `Last good step`,
+`Open blockers` and `Next action` give the header line in one read. Fall through to the full tables
+for the plugin and wave breakdown.
+
+Other sources, each optional:
+
+| Source | Shows |
+|---|---|
+| `.planning/build/agent-log.md` | Recent agent completions with verdicts. "No agent activity recorded." when absent. |
+| `.planning/build/diagnostics.log` | Hook denials, tool failures, blocked writes. |
+| `.planning/memory.md` | Project-specific memory. |
+| `src/plugins/` | Filesystem evidence of what was actually built. |
+| `.planning/specs/` | Spec files and their count. |
+
+Wave rows come from the `## Plugin Table:` section of `STATE.md`:
+
+- `done` — every plugin in the wave is `verified` or `committed`.
+- `building` — `## Phase:` is `build/wave-{N}` for this wave's index.
+- `pending` — the wave index is past the one in `## Phase:`.
+- `queued` — instead of `pending` when `## Skeleton: committed` but no plugin has started. That
+  distinguishes "scaffolding ready" from "build running, this wave next".
+
+## Output
 
 ```
-Moku Project Dashboard
-══════════════════════
+Moku Project Status
+═══════════════════
 
-Phase:       [phase from STATE.md or "No active plan"]
+Rails:       initialized · 1 change open · 0 debts · 3 ideas parked
+Change:      2026-09-26-streak-midnight (S, fix) — inside "build"
+Route:       intake ✓ → build ▸ → verify → close
+
+Phase:       [from STATE.md, or "No active plan"]
 Verb:        [create|update|add|migrate]
 Target:      [framework|app|plugin]
 Skeleton:    [not-started | in-progress | verified | committed | —]
-Next Action: [next action from STATE.md]
 
 ── Wave Progress ──────────────────────────────────
-Wave 0 (core): [plugin list] .............. [done|building|pending]
-Wave 1:        [plugin list] .............. [done|building|pending]
-Wave 2:        [plugin list] .............. [done|building|pending]
+Wave 0 (core): env, logger ................ done
+Wave 1:        router, auth ............... building
+Wave 2:        renderer ................... pending
 
 ── Plugin Status ──────────────────────────────────
 | Plugin   | Tier     | Spec | Built | Tests | Status    |
@@ -63,50 +88,38 @@ Wave 2:        [plugin list] .............. [done|building|pending]
 | auth     | Standard | Yes  | No    | —     | pending   |
 
 ── Recent Activity ────────────────────────────────
-[last 5 agent completions from agent-log.md]
+[last 5 agent completions]
 
 ── Diagnostics ────────────────────────────────────
-[last 10 entries from diagnostics.log, grouped by category]
-PERM-DENY (N):   [summary of blocked operations]
-ANTIPATTERN (N): [summary of blocked patterns]
-TOOL-FAIL (N):   [summary of failed tools]
-STOP-BLOCK (N):  [summary of stop blocks]
-[If no diagnostics.log or empty: "No diagnostic events recorded."]
+[last 10 entries, grouped: PERM-DENY, ANTIPATTERN, TOOL-FAIL, STOP-BLOCK]
+[or "No diagnostic events recorded."]
 
-── Quick Actions ──────────────────────────────────
-→ [contextual suggestion based on state, e.g. "/moku:build resume"]
-→ [secondary suggestion if applicable]
-→ Tip: Run `/moku:next` to auto-detect and run the next step
+── Next ───────────────────────────────────────────
+→ [the single next step, in plain words]
 ```
 
-## Quick Action Logic
+## Naming the next step
 
-Suggest the most likely next command based on the current state:
+Say it in plain words, not as a command. The conductor runs the lifecycle; the user does not need to
+know which skill does what.
 
-| State | Suggestion |
-|-------|-----------|
-| No STATE.md, no plugins | `/moku:plan create framework "description"` |
-| No STATE.md, plugins exist | `/moku:check status` or `/moku:plan add plugin` |
-| Phase: stage1/* | `/moku:plan resume` |
-| Phase: stage2/* | `/moku:plan resume` |
-| Phase: stage3/* | `/moku:plan resume` |
-| Phase: complete, Skeleton: committed, all plugins `not started` | `/moku:build resume` — label as "(start plugin build — Wave 0)" |
-| Phase: build/wave-N | `/moku:build resume` (or `/moku:build resume --continue`) |
-| Phase: build/complete | `/moku:check verbose` |
-| Plugins with `needs-manual` | `/moku:build fix [plugin-name]` |
+| State | Next step |
+|---|---|
+| Not initialized | Set the project up first — the init station. |
+| A debt exists | Settle it: finish the stuck change, or park it with a reason. |
+| A change is open, inside a station | Continue that station. |
+| A change is open, between stations | The next station on its route. |
+| Every station done, checklist incomplete | The missing checklist item: tests, verify or docs. |
+| No open change | Open one, or pick something from the idea backlog. |
 
 ## Flags
 
-If `$ARGUMENTS` contains `--full`, also show:
-- Full plugin table with file counts and line counts
-- All agent log entries (not just last 10)
-- All notification log entries (not just last 5)
-- All diagnostics log entries (not just last 10) with category summary counts
-- Memory.md contents (if exists)
-- Git checkpoint history — if no `.git` directory exists in the project root, show
-  `"No git repository found."` in place of checkpoint history
+`--full` also shows the full plugin table with file and line counts, every agent-log and
+diagnostics entry, `memory.md`, and the git checkpoint history ("No git repository found." when
+there is no `.git`).
 
-If `$ARGUMENTS` contains `diagnostics`, show ONLY the diagnostics section:
-- Full `.planning/build/diagnostics.log` contents
-- Summary table: count per category (PERM-DENY, ANTIPATTERN, INDEX-RULE, TOOL-FAIL, STOP-BLOCK, STRUCTURE)
-- Top 5 most repeated issues (group by message similarity)
+`diagnostics` shows only the diagnostics section: the whole log, a count per category (PERM-DENY,
+ANTIPATTERN, INDEX-RULE, TOOL-FAIL, STOP-BLOCK, STRUCTURE), and the five most repeated issues.
+
+An unrecognized argument prints `Unknown flag: {value}. Recognized flags: --full, diagnostics` and
+then runs the default view.

@@ -1,194 +1,203 @@
 ---
-description: Clean the .planning/ workspace before a new effort — first distills a durable cycle summary (what was done, decisions taken, ideas used) into history.md so the next iteration has context, then removes ephemeral planning artifacts (no backup). Always keeps the cross-cycle durable knowledge.
+name: clean
+description: Resets the .planning/ workspace before a new effort — archives closed changes, distills a cycle trace into history.md, proposes a gate when the same agent mistake repeats, then removes the ephemeral artifacts while keeping the durable knowledge. Use when the workspace is cluttered after a finished cycle.
+when_to_use: A finished cycle whose planning workspace should be reset before the next effort. Destructive for ephemeral files, so it confirms first.
+argument-hint: "[--keep specs,context,state] [--no-summary] [--dry-run] [--force]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
-argument-hint: [--keep specs,context,state,archive] [--no-summary] [--dry-run] [--force]
-disable-model-invocation: true
+model: fable
+effort: low
 ---
 
-## Moku Core Specification (authoritative)
+# clean — reset the workspace, keep what is worth keeping
 
-Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+`clean` resets `.planning/` so a new effort starts from a clear workspace. Deletion is permanent and
+there is no backup, so before anything is removed `clean` does three things that carry knowledge
+forward: it archives closed changes, distills a cycle trace into `history.md`, and turns a repeated
+agent mistake into a proposed gate.
 
----
+## Moku Core specification
 
-Reset the `.planning/` workspace so a new large effort starts clean. **This deletes files
-permanently — there is no backup.** Before deleting, `clean` distills a short **cycle summary**
-(what was done, what decisions were taken, what ideas/approaches were used) from the ephemeral
-artifacts it is about to remove and appends it to the durable `.planning/history.md`, so the next
-iteration inherits the context. It then removes everything ephemeral, keeping the **cross-cycle
-durable knowledge** by default.
+Before any decision about architecture, the core API, the factory chain, config, lifecycle, events,
+`ctx`, types, invariants or plugin structure, read
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the `spec/NN-*.md` file it
+cites. Cite the section id in your output. `.planning/` is local-only state and is never staged or
+committed, including `history.md` and the archive.
 
-### Durable knowledge — always kept (never deleted by `clean`)
+## Durable knowledge — always kept
 
-`clean` keeps a **minimal** long-term memory by default — just the lightweight cross-cycle files,
-not heavy snapshots. (The bulky `.planning/archive/` from build cycles is **removed** by default;
-pass `--keep archive` to retain it.)
+- `.planning/learnings.md` — architecture learnings across sessions.
+- `.planning/decisions.md` — the decision graph: chose X over Y because Z.
+- `.planning/steering.md` — scope, MVP priorities, risk, CI and release choices.
+- `.planning/history.md` — the newest-first cycle trace this skill writes.
+- `.planning/archive/` — closed changes and cycle snapshots. History is annotated, never deleted.
 
-- `.planning/learnings.md` — durable architecture learnings.
-- `.planning/decisions.md` — the decision knowledge graph ("Chose X over Y because Z").
-- `.planning/steering.md` — scope boundaries, MVP priorities, risk assessment, CI/CD choices.
-- `.planning/history.md` — running, newest-first log of **minimal** cycle traces (this command writes it).
+Everything else under `.planning/` is ephemeral unless `--keep` names it.
 
-## Step 0: Locate the workspace
+## Step 0 — locate the workspace
 
 ```bash
 test -d .planning || { echo "No .planning/ directory here — nothing to clean."; exit 0; }
 ```
-If `.planning/` does not exist, report that and stop.
 
-## Step 1: Parse arguments
+## Step 1 — arguments
 
-- `--dry-run` — show the manifest and stop; delete nothing and write no summary.
-- `--no-summary` — skip the cycle-summary distillation (Step 4); still cleans.
-- `--force` / `--yes` — skip the confirmation gate (still respects mid-flight refusal unless
-  combined — see Step 2).
-- `--keep <list>` — comma-separated extra categories to preserve in addition to the durable set.
-  Recognized tokens:
-  - `specs` → keep `.planning/specs/` and `.planning/build/skeleton-spec.md`
-  - `context` → keep `.planning/context-*.md`
-  - `state` → keep `.planning/STATE.md`
-  - `archive` → keep `.planning/archive/` (build-cycle snapshots; removed by default)
-  - The durable-knowledge files above are **always** kept and need not be listed.
+| Flag | Effect |
+|---|---|
+| `--dry-run` | Show the manifest and stop. Nothing is written or deleted. |
+| `--no-summary` | Skip the `history.md` distillation. Still archives and cleans. |
+| `--force` / `--yes` | Skip the confirmation gate. |
+| `--keep <list>` | Extra categories to preserve: `specs` (`.planning/specs/` and `build/skeleton-spec.md`), `context` (`context-*.md`), `state` (`STATE.md`). |
 
-## Step 2: Mid-flight guard
+`archive` is no longer a `--keep` token: the archive is durable now and is never removed.
 
-Refuse to run (unless `--force`) when work is actively in progress:
+## Step 2 — the mid-flight guard
+
+Ask the rails whether work is in flight:
 
 ```bash
-# Brainstorm in progress
-test -f .planning/.brainstorm-active && echo "BRAINSTORM_ACTIVE"
-# Build in progress — STATE.md phase indicates an unfinished build
+moku-rails status --json
+```
+
+Refuse, unless `--force`, when a change is open and sitting inside a station, or when `STATE.md`
+shows an unfinished build:
+
+```bash
 grep -qiE '^## (Phase|Next Action):.*(build|in-progress|wave)' .planning/STATE.md 2>/dev/null && echo "BUILD_ACTIVE"
 ```
-If either marker is present and `--force` was not passed, stop with:
-> Active work detected (brainstorm or in-progress build). Re-run with `--force` to clean anyway, or finish/`/moku:status` first.
 
-## Step 3: Build the manifest
+> Work is still in flight ({change id} inside "{station}", or a build in progress). Finish it, park
+> it with a reason, or re-run with `--force`.
 
-Compute two lists from the actual contents of `.planning/` (use `find`, do not assume names).
+## Step 3 — archive closed changes
 
-**KEEP** (durable set, always — plus any `--keep` tokens):
-- `.planning/learnings.md`, `.planning/decisions.md`, `.planning/steering.md`,
-  `.planning/history.md` (always; omit ones that don't exist yet)
-- `.planning/specs/`, `.planning/build/skeleton-spec.md` — only if `specs` in `--keep`
-- `.planning/context-*.md` — only if `context` in `--keep`
-- `.planning/STATE.md` — only if `state` in `--keep`
-- `.planning/archive/` — only if `archive` in `--keep`
+For every change the ledger reports as `closed` that still has a folder at
+`.planning/changes/<id>/`, move the whole folder to `.planning/archive/changes/<id>/`. Move, never
+delete, and never overwrite an existing archived folder — if one is already there, keep both and say
+so.
 
-**REMOVE** (everything under `.planning/` not in KEEP), e.g.:
-- `.planning/STATE.md` (unless kept)
-- `.planning/specs/`, `.planning/build/skeleton-spec.md` (unless kept)
-- `.planning/context-*.md` (unless kept)
-- `.planning/archive/` (build-cycle snapshots — unless kept; the minimal `history.md` trace replaces it)
-- `.planning/build/` (agent logs, wave logs, findings, coverage)
-- `.planning/audit-*.md`
-- `.planning/brainstorm-*-position.md`, `.planning/brainstorm-*-research.md`, `.planning/brainstorm-*-analysis.md`
-- `.planning/notifications.log`, `.planning/diagnostics.log`
-- `.planning/.brainstorm-active` and any other markers
+```bash
+mkdir -p .planning/archive/changes
+mv ".planning/changes/<id>" ".planning/archive/changes/<id>"
+```
 
-Print the manifest grouped clearly:
+Each archived folder keeps or gains a short `outcome.md`: what changed, what was decided, why.
+Folders of changes that are still open or parked stay where they are.
+
+## Step 4 — build the manifest
+
+Compute two lists from the real contents of `.planning/` with `find`; do not assume filenames.
+
+**Keep:** the durable set above, plus anything named by `--keep`.
+
+**Remove:** everything else, typically `STATE.md`, `specs/`, `build/skeleton-spec.md`,
+`context-*.md`, `build/` (agent logs, wave logs, findings, coverage), `audit-*.md`,
+`brainstorm-*-position.md`, `brainstorm-*-research.md`, `brainstorm-*-analysis.md`,
+`notifications.log`, `diagnostics.log`, and any leftover marker files.
+
 ```
 .planning/ cleanup plan
+  ARCHIVE:
+    - changes/2026-09-12-streak-fix → archive/changes/2026-09-12-streak-fix
   KEEP (durable + extras):
-    - learnings.md, decisions.md, steering.md, history.md (durable)
-    - <any --keep additions (specs/context/state/archive)>
-  REMOVE (M) — no backup:
+    - learnings.md, decisions.md, steering.md, history.md, archive/
+    - <--keep additions>
+  REMOVE (M files) — no backup:
     - STATE.md
     - specs/ (K files)
     - build/ (K files)
-    - context-*.md (K files)
-    - ...
-  CYCLE SUMMARY → history.md  (distilled from STATE.md + context-*.md + build/ before delete)
+  CYCLE SUMMARY → history.md
+  GATE PROPOSAL   → 1 repeated mistake found
 ```
-Show total file/byte counts removed. (Omit the CYCLE SUMMARY line if `--no-summary`.)
 
-**If `--dry-run`:** stop here.
+Show the file and byte totals. Stop here on `--dry-run`.
 
-## Step 4: Confirm (destructive)
+## Step 5 — confirm
 
-Unless `--force`/`--yes`, require explicit confirmation with `AskUserQuestion`:
-- Question: "Permanently delete M files from .planning/? This cannot be undone (no backup). A minimal cycle trace will be saved to history.md first."
-- Header: "Confirm clean"
-- Options:
-  1. label: "Delete", description: "Write the history.md trace, then remove the M files listed above. Keeps the durable set{ + --keep extras}."
-  2. label: "Cancel", description: "Abort — change nothing (no summary written, no files deleted)."
-- multiSelect: false
+Unless `--force`, ask with `AskUserQuestion`, header "Confirm clean":
 
-If "Cancel": stop, change nothing (do not write the summary, do not delete).
+- Question: "Permanently delete M files from .planning/? This cannot be undone. Closed changes are
+  archived and a cycle trace is written to history.md first."
+- "Delete" — archive, write the trace, then remove the M files listed above.
+- "Cancel" — change nothing: no archive move, no summary, no deletion.
 
-## Step 5: Distill the cycle trace → `history.md`
+## Step 6 — distill the cycle trace
 
-**Skip this step entirely if `--no-summary` was passed.** (On `--dry-run` the command already
-stopped at Step 3; on Cancel it stopped at Step 4.) Run this only after confirmation/`--force`,
-while the ephemeral files still exist (delete happens in Step 6).
+Skip entirely on `--no-summary`. Run it after confirmation, while the ephemeral files still exist.
 
-The point of this step is the feature's core: carry forward a **minimal trace** of the path taken
-— *what was done, what was decided, what ideas were used* — so the next iteration starts informed
-instead of blind. This is a lightweight substitute for the full `archive/` (which is removed by
-default). Read the **ephemeral artifacts about to be deleted** and distill them tersely — do NOT
-re-summarize the durable files (they survive on their own; reference them instead). Keep it small.
+The point is a minimal trace of the path taken — what was done, what was decided, which ideas were
+used — so the next iteration starts informed. Read the files that are about to be deleted and
+distill them tersely. Do not re-summarize the durable files; they survive on their own.
 
-**Sources to read (only those present):**
-- `.planning/STATE.md` → `## Completed`, `## Validation Summary`, `## Previous Cycle Summary`,
-  `## Cycle:`, and the plugin table → **what was done** (plugins/waves built, coverage, test count).
-- `.planning/context-*.md` → `## Summary`, `### Architectural Decisions`, `## Proposed Approach`
-  (Architecture Direction, Key Assumptions, Explicit Non-Goals), `## Research Findings`,
-  `## Decisions Made`, `### Open Questions` → **ideas/approaches used** + open threads.
-- `.planning/build/findings.md`, `.planning/build/coverage.md` → outcomes/quality signals.
-- `.planning/brainstorm-*-position.md` (if present) → the settled position/ideas.
+| Source | Gives |
+|---|---|
+| `STATE.md` — `## Completed`, `## Validation Summary`, `## Cycle:`, the plugin table | what was done: plugins and waves built, coverage, test count |
+| `context-*.md` — `## Summary`, `### Architectural Decisions`, `## Proposed Approach`, `## Research Findings`, `## Decisions Made`, `### Open Questions` | ideas used and open threads |
+| `build/findings.md`, `build/coverage.md` | outcomes and quality signals |
+| `brainstorm-*-position.md` | the settled position |
 
-**Determine the cycle label:** read `## Cycle:` from STATE.md (default `1` if absent). Get the
-date with `date +%F` (do not guess).
-
-**Write the entry.** If `.planning/history.md` does not exist, create it with the header below;
-otherwise insert the new entry **directly under the `<!-- newest first -->` marker** (newest at
-top). Use the `Write` tool to create, `Edit` to prepend — never shell `echo`/`cat` for this.
+Read the cycle number from `## Cycle:` in `STATE.md`, defaulting to 1, and the date from
+`date +%F`. Create `history.md` with the header below when it does not exist; otherwise insert the
+new entry directly under the `<!-- newest first -->` marker. Use `Write` to create and `Edit` to
+prepend — not shell redirection.
 
 ```markdown
 # Planning History
 
 Minimal newest-first trace of cleaned cycles — the path taken, so the next iteration has context.
-Durable: survives `/moku:clean`. The full WHY-graph lives in `decisions.md`; architecture lessons
-in `learnings.md`; scope/constraints in `steering.md`. This file is the lightweight index over them.
+Durable: survives clean. The decision graph lives in decisions.md, architecture lessons in
+learnings.md, scope and constraints in steering.md. This file is the lightweight index over them.
 
 <!-- newest first -->
 
 ## {YYYY-MM-DD} — cycle {N}
-- **Did:** {one line — plugins/waves built + coverage %, from STATE.md; "(no build recorded)" if none}
-- **Decided:** {1–2 key trade-offs, terse; full record in decisions.md}
-- **Ideas:** {approach / patterns / key assumptions used — from context-*.md, steering.md}
-- **Open:** {unresolved threads to carry forward, or omit this line if none}
+- **Did:** {plugins and waves built, coverage; "(no build recorded)" if none}
+- **Decided:** {one or two trade-offs; the full record is in decisions.md}
+- **Ideas:** {approaches, patterns, key assumptions}
+- **Open:** {threads to carry forward, or omit this line}
 ```
 
-**Keep it minimal** — 3–4 bullets, one line each, bullets not prose. This is a trace, not a report.
-If NONE of the sources exist (e.g. a bare `.planning/` with only durable files), **skip silently**
-and note in the report: "No ephemeral planning state to summarize — history.md unchanged."
+Three or four bullets, one line each. It is a trace, not a report. When none of the sources exist,
+skip silently and note in the report: "No ephemeral planning state to summarize — history.md
+unchanged."
 
-Because `history.md` is in the always-KEEP set (Step 3), the entry you just wrote is never part of
-the REMOVE list in this same run.
+## Step 7 — a repeated mistake becomes a gate
 
-## Step 6: Delete
+Compound the cycle: a mistake that happened twice should stop happening by construction.
 
-Only after confirmation (or `--force`), remove each path in the REMOVE list. Never touch anything
-outside `.planning/`. Never delete a durable-knowledge file (`learnings.md`, `decisions.md`,
-`steering.md`, `history.md`). If `.planning/` becomes empty except for the durable set, that is the
-expected end state.
+While distilling, look at `build/agent-log.md`, `build/findings.md`, `diagnostics.log` and the
+cycle summary for the same agent mistake occurring twice or more — the same rule id, the same
+blocked pattern, the same class of fix. For each one, write a concrete proposal:
 
-Then report what was removed, the history.md entry written, and what remains:
+1. Name the mistake and quote the two occurrences with file and line.
+2. Propose one of two gates — a regex check for
+   `${CLAUDE_PLUGIN_ROOT}/hooks/check-plugin-antipatterns.sh`, written out in full and matching the
+   style of the checks already there, or a test in the project that would fail on the pattern.
+3. Say what the gate would have caught and what it might falsely catch.
+
+Present the proposals as text for the user to approve. Do not edit
+`check-plugin-antipatterns.sh` or any other hook: hooks are shared plugin infrastructure, a bad
+regex blocks every write, and the user decides what becomes a permanent rule. Write the accepted
+ones into `learnings.md` as a note so the proposal is not lost if the user acts on it later.
+
+## Step 8 — delete
+
+Only after confirmation or `--force`, remove each path in the Remove list. Stay inside `.planning/`.
+Never delete a durable file or anything under `.planning/archive/`. Ending with only the durable set
+left is the expected outcome.
+
 ```bash
 echo "Remaining in .planning/:"; ls -A .planning/ 2>/dev/null
 ```
 
+Report what was archived, what was removed, the `history.md` entry, any gate proposals, and what
+remains.
+
 ## Notes
 
-- `.planning/` is local-only and gitignored — never stage or commit it (including `history.md`).
-- `history.md` complements the other durable files: `decisions.md` records WHY (the trade-off
-  graph), `learnings.md` records architecture lessons, `steering.md` records scope/constraints,
-  and `history.md` is the newest-first **narrative** linking them per cycle. `clean` appends to
-  `history.md`; it never rewrites the other kept files (edit those by hand).
-- The build command's Cycle Archive (`build-final.md` Step 7.5) snapshots completed cycles to
-  `.planning/archive/cycle-{N}/`. `clean` deliberately keeps things **minimal**: it removes that
-  archive by default (use `--keep archive` to retain it) and instead distills a small `history.md`
-  trace of the path taken — so context survives without the heavy snapshots.
-- For a brand-new project with **no** durable knowledge worth keeping, run `/moku:clean` then
-  delete the durable files by hand if desired.
+- `history.md` is in the keep set, so the entry written in Step 6 is never part of the same run's
+  Remove list.
+- The four durable files divide the work: `decisions.md` records why, `learnings.md` records
+  architecture lessons, `steering.md` records scope and constraints, `history.md` links them per
+  cycle. `clean` appends to `history.md` and never rewrites the others; those are edited by hand.
+- For a brand-new project with no durable knowledge worth keeping, run `clean` and then delete the
+  durable files by hand.

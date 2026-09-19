@@ -58,7 +58,7 @@ and (if it changes the scaffold) update `tooling-config.md`.
   6. Run `bun install` to resolve the new versions.
 - **Verify:** `bunx tsc --noEmit` (clean) → `bun run lint` (clean) → `bun run test` (pass) →
   if the project publishes a library, `bun run build` then `bunx publint` + `bunx attw --pack .`
-  (emitted `.d.ts` intact). On `tsc` failure, route the output to the **error-diagnostician** agent;
+  (emitted `.d.ts` intact). On `tsc` failure, route the output to the **moku-error-diagnostician** agent;
   the most likely new errors come from the `strict`-by-default flip surfacing real issues in deep
   inference chains — fix locally, do not weaken `strict`.
 - **Risk:** (a) `types: []` default is the #1 silent breaker — covered by step 4. (b) A handful of
@@ -183,7 +183,7 @@ the block below.
      `ctx.component()`/`app.spa.component()` → `.island()`; config `spa.components` → `spa.islands`;
      the `mountIsland` test-harness `components` option → `islands`. No aliases remain (hard rename).
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test`. For a web project also
-  `bun run build` (SSG output intact). On failure, route to the **error-diagnostician** agent
+  `bun run build` (SSG output intact). On failure, route to the **moku-error-diagnostician** agent
   (bounded 3 rounds); breaking API changes between web versions are real source edits — fix
   against the regenerated `skills/moku-web/references/plugin-index.md`, never weaken types.
 - **Risk:** A minor/major `@moku-labs/web` bump can change plugin APIs/events. Mitigation:
@@ -206,7 +206,7 @@ the block below.
      note prereleases like `0.1.0-alpha.6` are exact-pinned — keep them exact).
   3. `bun install`.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` → (publishable framework)
-  `bun run build` + `bunx publint` + `bunx attw --pack .`. On failure → error-diagnostician.
+  `bun run build` + `bunx publint` + `bunx attw --pack .`. On failure → moku-error-diagnostician.
 - **Risk:** Core is the kernel; a bump can ripple into the factory chain. Mitigation: run for
   frameworks only, verify the emitted `.d.ts`, review core release notes.
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.
@@ -227,7 +227,7 @@ the block below.
      `@moku-labs/common`) itself.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build` for a publishable
-  package). On failure → **error-diagnostician** (bounded 3 rounds); breaking API changes are real source
+  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); breaking API changes are real source
   edits — fix against the regenerated `skills/moku-worker/references/plugin-index.md`, never weaken types.
 - **Risk:** A minor/major `@moku-labs/worker` bump can change the Cloudflare plugin APIs/bindings.
   ⚠️ **Crossing 0.7.0 is breaking — keyed-map resource config.** Projects on `< 0.7.0` configure each
@@ -264,7 +264,7 @@ the block below.
      `@moku-labs/room/server` (removed in `0.3.1`). See `plugin-index.md §4` + `moku-idioms.md §I6`.
   5. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
-  error-diagnostician; fix against the regenerated `skills/moku-room/references/plugin-index.md`.
+  moku-error-diagnostician; fix against the regenerated `skills/moku-room/references/plugin-index.md`.
 - **Risk:** ⚠️ **Two breaking re-architectures cross this migration — both are source rewrites, not routine
   bumps.** (1) **0.1.x → 0.2.0 (#4):** room went from a *plugin pack* spread into a `@moku-labs/web` app
   (`roomPlugins.stage`/`.controller`, `createPlugin` from web) to a **standalone `@moku-labs/core` framework**

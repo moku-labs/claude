@@ -43,6 +43,23 @@ export function reconcile(root, ledger) {
 }
 
 /**
+ * The commit a change starts from, so verify can scope itself to what the change touched.
+ * Undefined outside a repository or before the first commit.
+ *
+ * @param {string} root
+ * @returns {string | undefined}
+ * @example
+ * headCommit(process.cwd()); // "3f2a9c1..."
+ */
+export function headCommit(root) {
+  try {
+    return execFileSync("git", ["rev-parse", "HEAD"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Uncommitted paths according to git, or none outside a repository.
  *
  * @param {string} root

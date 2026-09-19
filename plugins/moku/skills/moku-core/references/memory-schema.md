@@ -25,7 +25,7 @@ cannot. It is local-only and gitignored. Treat these as the source of truth on r
 > **The durable set `/moku:clean` always keeps:** `learnings.md`, `decisions.md`, `steering.md`,
 > `history.md`. Before deleting the ephemeral artifacts, `/moku:clean` distills a minimal trace of
 > the cycle into `history.md` so the next iteration inherits "what was done, what was decided, what
-> ideas were used" without the heavy `archive/` snapshots. See `commands/clean.md`.
+> ideas were used" without the heavy `archive/` snapshots. See the `clean` skill.
 
 Anthropic's guidance (context-editing + server-side compaction): persist anything critical to a
 durable store so it survives compaction boundaries — for moku that store **is `.planning/`**. Do not
@@ -44,8 +44,8 @@ rehydration:
 - Updated: 2026-05-29T12:00:00Z
 ```
 
-**Producers** (`/moku:plan`, `/moku:build`) MUST rewrite this block every time they write STATE.md.
-**Consumers** (`/moku:next`, `/moku:status`, a fresh session) read it FIRST and only fall through to
+**Producers** (`/moku:plan`, `/moku:build`) rewrite this block every time they write STATE.md.
+**Consumers** (the `moku` conductor, `/moku:status`, a fresh session) read it FIRST and only fall through to
 parsing the full tables when it is missing or stale (`Updated` older than the file's real changes,
 or inconsistent with the plugin table).
 

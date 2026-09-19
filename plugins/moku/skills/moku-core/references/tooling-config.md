@@ -54,18 +54,38 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
     "vitest": "4.0.18"
   },
   "scripts": {
-    "build": "tsdown",
-    "validate": "publint && attw --pack . --profile node16",
     "lint": "biome check . && eslint .",
     "lint:fix": "biome check --write . && eslint --fix .",
     "format": "biome format --write .",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
-    "test:coverage": "vitest run --project unit --project integration --coverage"
+    "test:coverage": "vitest run --project unit --project integration --coverage",
+    "build": "tsdown",
+    "validate": "publint && attw --pack . --profile node16"
   }
 }
 ```
+
+### The script contract
+
+CI and the release commands call scripts by name, so the names are a contract. A package carries all
+eight; an app carries the first five.
+
+| Script | Who calls it | Present in |
+|---|---|---|
+| `lint` | `ci.yml`, lefthook | every project |
+| `typecheck` | `ci.yml` | every project |
+| `test` | `ci.yml`, lefthook | every project |
+| `build` | `ci.yml`, lefthook | every project |
+| `validate` | `ci.yml`, lefthook | packages (publint + attw) |
+| `release:setup` | the person, once per repository | packages |
+| `release:doctor` | the person, before the first release | packages |
+| `release` | `publish.yml` and the person | packages |
+
+The three `release:*` scripts come from `@moku-labs/common`. Take their exact bodies from the
+`moku:moku-release` skill's `templates/` rather than writing them from memory.
 
 > **`repository` is required for npm provenance.** Publishing with provenance (automatic under
 > OIDC Trusted Publishing — see [ci-release.md](ci-release.md)) fails `E422` unless `package.json`
@@ -375,6 +395,21 @@ pre-commit:
       run: bun run test:unit && bun run test:integration
 ```
 
+## .github/workflows
+
+Two thin files, scaffolded from the first commit. They call the shared reusable workflows in
+`moku-labs/ci`, so the project keeps no pipeline of its own.
+
+| Project kind | Files | Calls |
+|---|---|---|
+| Package (framework or library) | `ci.yml`, `publish.yml` | `moku-labs/ci/.github/workflows/*@v1` |
+| App | `ci.yml` | the app-deploy workflow in the same repository |
+
+Copy the exact YAML from the `moku:moku-release` skill's `templates/` — invoke that skill with the
+`Skill` tool, which prints its base directory. Do not write the workflow YAML by hand: the publish
+path is tokenless OIDC Trusted Publishing, and a hand-rolled variant breaks provenance. The
+rationale and the first-publish bootstrap live in [ci-release.md](ci-release.md).
+
 ## .editorconfig
 
 ```ini
@@ -501,60 +536,24 @@ Plugins go in `src/plugins/`.
 
 ## Moku Development Toolkit
 
-This project uses the **moku** Claude Code plugin for development workflows. Below are the available commands, skills, and agents.
+This project uses the **moku** Claude Code plugin. Talk to it in plain words — the `moku` conductor
+skill works out where the project stands and drives the lifecycle (intake, brainstorm, design, plan,
+build, verify, e2e, release, close). You never need to remember a command.
 
-### Commands (slash commands)
+Underneath the conversation, `moku-rails` enforces the order: a source file cannot be written before
+the station that is allowed to write it. When a write is refused, the reason names the missing step.
 
-**Planning:**
-- `/moku:plan [create|update|add|migrate|resume] [type] [args]` — 3-stage gated workflow to plan a framework, consumer app, or plugin. Supports: `create` (new project), `update` (modify existing), `add plugin` (quick single-pass), `migrate` (from existing code). Type synonyms: tool/engine/library → framework, application/service/server/game → app. Output goes to `.planning/specs/` (framework/plugin) or `.planning/app-spec.md` (app).
+Useful directly:
 
-**Building:**
-- `/moku:build [framework|app|plugin] [spec-or-name]` — Build from specifications. Auto-detects what to build based on existing spec files. Resumes if partially built. Supports `/moku:build plugin #3` for individual plugins.
+- `/moku:status` — where the project stands.
+- `/moku:check` — diagnostics on the installation and the project.
+- `/moku:verify` — the validator fan-out with the auto-fix loop.
+- `/moku:upgrade` — move the toolchain to the current target stack.
 
-**Setup:**
-- `/moku:init` — Initialize a new Moku project with full tooling (used to create this project).
-
-### Skills (automatic context)
-
-Skills are loaded automatically when relevant topics come up. You can also reference them explicitly:
-
-- **moku-core** — Architecture rules, factory chain, lifecycle, event system, context tiers. Use when working with `createCoreConfig`, `createCore`, `createApp`, or discussing the three-layer model.
-- **moku-plugin** — Plugin structure specification, complexity tiers (Nano → VeryComplex), file organization, wiring harness pattern. Use when creating or reviewing plugin code.
-- **moku-web** — Web patterns: Preact components, CSS architecture (@scope, @layer, tokens), island pattern. Use when building web-facing UI.
-
-### Agents (validation)
-
-Agents run autonomously to validate code. They are called automatically by build commands, but can also be triggered manually:
-
-- **moku-spec-validator** — Validates Moku Core specification compliance: three-layer separation, factory chain, config system, lifecycle, events, error formats.
-- **moku-plugin-spec-validator** — Validates plugin structure: correct tier, file organization, JSDoc coverage, test existence, no anti-patterns (no explicit generics on `createPlugin`, no unnecessary `onStart`/`onStop`).
-- **moku-jsdoc-validator** — Validates JSDoc completeness: all exports have descriptions, `@param`, `@returns`, and `@example` tags.
-
-### Typical Workflows
-
-**New framework from scratch:**
-1. `/moku:plan create framework "A static site generator"` — design plugins and structure (3 approval gates)
-2. `/moku:build framework` — implement everything from specs
-3. Validators run automatically after each plugin
-
-**Add a single plugin:**
-1. `/moku:plan add plugin auth "JWT-based authentication"` — create plugin spec
-2. `/moku:build add auth` — build, wire, and verify the planned plugin
-
-**Update an existing plugin:**
-1. `/moku:plan update plugin router "add nested route support"` — produces updated spec
-2. `/moku:build plugin router` — implement changes from updated spec
-
-**New consumer app:**
-1. `/moku:plan create app "A personal blog"` — design the app composition
-2. `/moku:build app` — implement from the plan
-
-**Migrate existing code:**
-1. `/moku:plan migrate framework ~/Projects/legacy-app` — analyze and map to Moku
-2. `/moku:build framework` — implement the migration
-
-**Manual validation:**
-- Ask Claude to "run the spec validator" or "validate JSDoc" on specific files
+Knowledge skills load themselves when the topic comes up: **moku-core** (architecture, factory
+chain, lifecycle, events), **moku-plugin** (plugin structure and tiers), **moku-common** (`ctx.log`,
+`ctx.env`, the branded CLI), **moku-testing**, **moku-readable-code**, plus the framework pack for
+whatever this project uses.
 
 ## Specification
 
@@ -659,5 +658,5 @@ factory-const case is caught at lint time too:
 
 This covers Gap B (factory-result consts). It does NOT catch Gap A (destructured
 `export const { … } = …`) — no lint rule does; that one is prevented by the
-explicit-re-export convention and flagged by `moku-jsdoc-validator`. A file-level
+explicit-re-export convention and flagged by `moku-style-validator`. A file-level
 `@file` comment must never be treated as satisfying a per-export requirement (Gap C).

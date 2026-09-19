@@ -1,68 +1,78 @@
-# Hook Patterns — informative, self-correcting hooks
+# Hook patterns — the hooks that exist, and the conventions they follow
 
-Conventions for moku's hook scripts so a blocked action teaches Claude what to do next instead of
-just failing. Applies to the scripts in `hooks/`.
+The core plugin's hooks live in `hooks/` and are registered in `hooks/hooks.json`. A blocked action
+should teach the session what to do next, so every refusal carries its remedy.
 
-## 1. Structured, self-correcting rejection reasons (PreToolUse deny)
+## The current roster
 
-A PreToolUse hook that denies should emit a `permissionDecision: "deny"` with a
-`permissionDecisionReason` that states **what to do instead**, not just what went wrong. The reason
-is fed back to Claude, so a good one turns a hard stop into a redirect.
+| Event | Matcher | Script | What it does |
+|---|---|---|---|
+| SessionStart | `*` | `detect-moku-project.sh` | Detects the project type, reads or writes the `.planning/moku.md` marker, and injects a short orientation as `additionalContext`. |
+| SessionStart | `*` | `session-rails.mjs` | Prints `moku-rails status` once per session: initialized or not, open changes, debts. Silent outside a moku project. |
+| PreToolUse | `Write\|Edit` | `pre-write.mjs` | The single write gate. Runs the rails guard first, then the content checks. |
+| PreToolUse | `Bash` | `verify-before-commit.sh` | Blocks a `git add`/`commit` that names `.planning/`, and gates a build-wave commit behind `tsc` and lint. |
+| PostToolUse | `Write\|Edit` | `format-on-save.sh` (async) | Formats the one file that was written, when biome and `node_modules` are present. |
+| PostToolUse | `Bash` | `pre-commit-review.sh` | After a wave checkpoint commit, reports stubs, `TODO`s, stray `console.*`, `tsc` and lint counts as `additionalContext`. Never blocks. |
+| PreCompact / PostCompact | `*` | `precompact-state.sh` / `postcompact-state.sh` | Re-inject the key `STATE.md` fields around a compaction boundary. |
+| SubagentStop | `moku-.*` | `on-subagent-stop.sh` | Appends the agent's verdict and blocker counts to `.planning/build/agent-log.md`. |
+| Stop | `*` | `on-stop.mjs` | Refuses to end the session while a change sits inside `build`, `verify` or `e2e` and is not paused. |
+
+`pre-write.mjs` calls four content checks in order, each a script reading the same payload and
+exiting 2 to refuse: `check-plugin-antipatterns.sh`, `validate-common-usage.sh`,
+`validate-plugin-structure.sh`, `validate-plugin-index.sh`. The first refusal wins.
+
+`moku-statusline.sh` is not a hook; it is the optional status line.
+
+## 1. A deny carries the remedy (PreToolUse)
+
+A PreToolUse hook refuses by writing the reason to stderr and exiting 2, or by emitting a
+`permissionDecision` payload. Either way the reason states the action to take instead, with the
+offending path or value interpolated so the message is specific.
 
 ```json
 {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",
-  "permissionDecisionReason":"<why> — <the concrete alternative action to take now>"}}
+  "permissionDecisionReason":"<why> — <the concrete next action>"}}
 ```
 
-Examples in this repo:
-- `brainstorm-guard.sh` — denies writes outside `.planning/` and tells Claude to write to `.planning/`
-  instead (or finish brainstorm and run `/moku:plan`), echoing the attempted path.
-- `verify-before-commit.sh` — blocks staging/committing `.planning/` and a failing commit gate, each
-  with the exact remedy (`bunx tsc --noEmit` / `bun run lint`; remove the `.planning` path).
+`pre-write.mjs` relays the rails reason verbatim (`moku rails: <reason>`), because `moku-rails`
+already phrases every refusal as a reason plus a named next step. `verify-before-commit.sh` names
+the command to run (`bunx tsc --noEmit`, `bun run lint`) or the path to remove.
 
-Rule: every `deny` includes the remedy. Interpolate the offending path/value so the message is specific.
+## 2. Two modes for the rails guard
 
-## 2. `continueOnBlock` (PostToolUse) — feed the reason back without aborting
+`pre-write.mjs` reads `CLAUDE_PLUGIN_OPTION_RAILS`. `strict` exits 2, `warn` prints the reason to
+stderr and lets the write through, `off` skips the guard entirely. The content checks run in all
+three modes: they are about what is written, not when.
 
-For **PostToolUse** hooks (which run *after* a tool succeeds), `continueOnBlock: true` lets the hook
-reject the result and feed its reason back to Claude so the turn continues and self-corrects, rather
-than hard-stopping. Use it when a post-check (e.g. "the file you wrote violates X") should prompt a
-fix in the same turn.
+## 3. `continueOnBlock` (PostToolUse) — reject without aborting
+
+A PostToolUse hook runs after the tool succeeded. `continueOnBlock: true` lets it feed its reason
+back so the turn self-corrects instead of hard-stopping.
 
 ```json
-// hooks.json entry
 { "type": "command", "command": "bash", "args": ["…/check.sh"], "continueOnBlock": true }
 ```
 
-Note: `continueOnBlock` is a **PostToolUse** field. moku's *gates* are PreToolUse denies (above);
-moku's PostToolUse hooks today are non-blocking (`format-on-save`, `pre-commit-review`), so none set
-`continueOnBlock` yet. Adopt it if a future PostToolUse check needs to reject-and-continue.
+moku's gates are PreToolUse denies, and its PostToolUse hooks (`format-on-save`,
+`pre-commit-review`) are non-blocking, so none set this yet. Reach for it if a future post-check
+needs to reject and continue.
 
-## 3. `PostToolUseFailure` additionalContext — route failures to a fix path
+## 4. Exec form vs shell form
 
-A `PostToolUseFailure` hook can attach a hint via `hookSpecificOutput.additionalContext`. moku's
-`log-tool-failure.sh` matches `tsc`/`lint`/`vitest` failure signatures and injects a hint to run the
-relevant check and spawn `moku-error-diagnostician` (and "don't delete tests to pass"). Hint only —
-it does not block.
-
-## 4. Exec form vs shell form for the command path
-
-Claude Code supports an **exec form** that avoids shell quoting of `${CLAUDE_PLUGIN_ROOT}`:
+Claude Code supports an exec form that avoids shell quoting of `${CLAUDE_PLUGIN_ROOT}`:
 
 ```json
 { "type": "command", "command": "bash", "args": ["${CLAUDE_PLUGIN_ROOT}/hooks/x.sh"] }
 ```
 
-It is the documented best practice for path placeholders that could contain spaces. moku's
-`hooks.json` currently uses the **shell form** (`"command": "${CLAUDE_PLUGIN_ROOT}/hooks/x.sh"`)
-deliberately: it works across more Claude Code versions, and the severe failure mode if a runtime
-ignored `args` (a PreToolUse hook running bare `bash` could exit non-zero and block all
-writes/commands) outweighs the marginal robustness gain for the typical space-free cache path.
-**Prefer exec form for any NEW hook**, and migrate the existing entries to exec form once the
-plugin's minimum Claude Code version is firmly ≥ 2.1.139 across the user base.
+`hooks.json` uses the shell form today because it works across more Claude Code versions, and
+because a runtime that ignored `args` would run a bare `bash`, exit non-zero, and block every write.
+Prefer the exec form for a new hook; migrate the rest once the minimum supported version is firmly
+past 2.1.139.
 
 ## 5. Degrade gracefully
 
-Every hook must `exit 0` (allow) when it cannot do its job — missing `jq`/`python3`, unparriseable
-input, not a moku project. A guard that errors must never become a hard block by accident. All moku
-hooks follow this (e.g. `brainstorm-guard.sh` exits 0 if no JSON parser is available).
+A hook that cannot do its job exits 0. Missing `jq` and `python3`, unparseable input, or a directory
+that is not a moku project all mean allow. A guard that errors must not become an accidental block.
+Every hook here follows this; `check-plugin-antipatterns.sh` even says so in its skipped-check
+message.

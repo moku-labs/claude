@@ -6,7 +6,7 @@ hooks + ESLint config — so every build the agent re-discovered the rules and r
 **permanent** and must be honored when WRITING spec/skeleton/plugin code, so the output is correct on
 the first try instead of being shrunk/fixed in review.
 
-The spec/skeleton generator (`/moku:plan` Stage 3) and every build sub-agent MUST emit code that
+The spec/skeleton generator (`/moku:plan` Stage 3) and every build sub-agent emits code that
 already satisfies these. Read this BEFORE writing any plugin source.
 
 ## 1. `index.ts` — wiring only, ≤30 effective lines
@@ -99,7 +99,7 @@ justification comment so the antipattern hook stays quiet, e.g.:
 ## 9. `@moku-labs/common` family conventions (MC1–MC3)
 
 Skeleton/plugin/CLI/script source must consume the shared `@moku-labs/common` package — these are
-enforced by the `validate-common-usage` hook and `moku-common-validator`, so emit compliant code on
+enforced by the `validate-common-usage` hook and `moku-structure-validator`, so emit compliant code on
 the first try. Full rules + examples + allowed exceptions: the **moku-common** skill
 (`../../moku-common/references/conventions.md`).
 
@@ -117,6 +117,6 @@ inherit `ctx.log`/`ctx.env`.
 ## Skeleton "revisit" TODOs are tracked, not lost
 
 If skeleton generation leaves a "revisit during build" note (e.g. a `.d.ts`/type concern), the
-generator MUST record it in STATE.md under a `## Skeleton Revisit TODOs` section (not only in
+generator records it in STATE.md under a `## Skeleton Revisit TODOs` section (not only in
 `skeleton-report.md`, which nobody re-reads). The build waves clear these before marking the
 framework complete.

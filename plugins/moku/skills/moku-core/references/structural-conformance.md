@@ -2,17 +2,15 @@
 
 The how-to for **`/moku:verify`**: prove a Moku project is structured the idiomatic way — with a
 **primary focus on the root/entrypoint files** agents most often botch — and **iterate, fixing**, until
-it is clean. This is the build/verify-time counterpart to the plan-time idiom check
-(`brainstorm-challenger` / `moku-plan-checker`): until now **nothing** enforced the app-shape guardrails
-once code existed, and the `moku-verifier` even *exempts* Layer-3 apps from root-structure checks. This
-document closes that gap.
+it is clean. It is the build/verify-time counterpart to the plan-time idiom check (`brainstorm-challenger`,
+`moku-plan-checker`): nothing else enforces the app-shape guardrails once code exists.
 
 > **This file is the loop + detection protocol, not the rules.** The authoritative *rules* live in:
 > the app-shape guardrails **I1–I6** in [`moku-idioms.md`](moku-idioms.md); the skeleton/`index.ts`/config
 > rules in [`skeleton-conventions.md`](skeleton-conventions.md); the code invariants **R1–R9** in
-> [`agent-preamble.md`](agent-preamble.md) (origin `spec/11-INVARIANTS.md`); the canonical web root in the
-> **moku-web** skill ([`../../moku-web/references/layout-structure.md`](../../moku-web/references/layout-structure.md))
-> and the worker root in the **moku-worker** skill ([`../../moku-worker/SKILL.md`](../../moku-worker/SKILL.md)).
+> [`agent-preamble.md`](agent-preamble.md) (origin `spec/11-INVARIANTS.md`); and the canonical web and worker roots, which live in their own packs — load the
+> `moku-web:moku-web` or `moku-worker:moku-worker` skill with the `Skill` tool and read the layout
+> reference it points to, rather than reaching for a pack file by path.
 > Cite those (`moku-idioms.md §I1`, `skeleton-conventions.md §1`, `spec/NN-*.md §N`) — never re-derive a rule here.
 
 ---
@@ -23,7 +21,7 @@ document closes that gap.
    routes are *declared* (`routes.tsx`/`endpoints.ts`), and where config *lives* (`config.ts` /
    `pluginConfigs`) determine whether the whole project reads clearly. A botched root makes every plugin
    harder to reason about. Check these **before** anything else.
-2. **Fix, don't just flag.** A confirmed violation is **refactored in source** (recipes below), then
+2. **Fix, do not just flag.** A confirmed violation is **refactored in source** (recipes below), then
    re-verified (`tsc`/`lint`/`test`). `/moku:verify` loops (default **3 cycles**) toward clean idiomatic
    code — it is not a report generator (unless `--report-only`).
 3. **Never flag an idiom.** The multiple-`createApp` browser/server/build split, two frameworks composed
@@ -36,7 +34,7 @@ document closes that gap.
 
 ## Step 0 — detect the project kind (the rules differ by kind)
 
-Mirror `architecture-validator.md §"Project context"`:
+Mirror `moku-architecture-validator` §"Project context":
 
 | Kind | Tell | Canonical root files |
 |------|------|----------------------|
@@ -68,7 +66,7 @@ Run these in order; the first block is the user's top pain and the reason this c
 - **I6 (BLOCKER):** a worker backend is **one** `@moku-labs/worker` `createApp` composing resource plugins
   + the runtime plugin (own `createPlugin` or a framework runtime/hub plugin) + `deploy` + `cli` — the
   `tracker` `server.ts` shape. A **facade app** (a second `createApp`/plugin/module that only
-  generates `wrangler.jsonc` / wires deploy and configures no real runtime plugin) FAILS. Never assume a
+  generates `wrangler.jsonc` / wires deploy and configures no real runtime plugin) is a violation. Never assume a
   framework's runtime/server export ships a deploy-config generator (e.g. a `wrangler.jsonc` emitter) —
   verify it against the installed package's `exports` + `dist`/types. Cite `moku-idioms.md §I6`.
 
@@ -90,18 +88,18 @@ Run these in order; the first block is the user's top pain and the reason this c
   `start`/`stop`/`init`. A genuinely pure + genuinely shared helper (no state/lifecycle/events, ≥2
   consumers) stays in `lib/`. Cite `consumer-plugins.md`.
 
-### D. Config in place, not generated — `skeleton-conventions.md` §2 + moku-web `layout-structure.md`
+### D. Config in place, not generated — `skeleton-conventions.md` §2 plus the moku-web pack's layout reference
 - **Detect:** config *assembled dynamically* (plugins array / `pluginConfigs` built by functions, loops,
   spreads, or conditionals at module load) or split across generated files, instead of **declared as a
   typed literal** so a reader sees the whole composition at a glance. Inline `as` in `config`/`createState`
   (R6) is a BLOCKER. The idiom: a literal `createApp({ plugins:[…], config:{…}, pluginConfigs:{…} })` and a
   `config.ts` of plain constants.
 
-### E. Committed `scripts/` = the build/dev/deploy triad only — `layout-structure.md`
+### E. Committed `scripts/` = the build/dev/deploy triad only — the moku-web pack's layout reference
 - **Non-triad scripts (BLOCKER):** reference apps commit only thin `scripts/*.ts` for **build / dev(serve)
   / deploy** (+`preview`), each a one-line `app.cli.*` / `server.cli.*` passthrough. Flag any committed
   `scripts/*.ts` or `scripts/lib/**` beyond that triad (e.g. a data generator). Fix: move it
-  behind a plugin API or into a Claude skill/command. Cite `layout-structure.md`.
+  behind a plugin API or into a Claude skill/command. Cite the `moku-web` pack's layout reference.
 
 ### F. Reference-app structural conformance — the catch-all idiom gate
 - Compare the output against the **nearest reference app** (`tracker` for full-stack, `blog` for
@@ -109,23 +107,24 @@ Run these in order; the first block is the user's top pain and the reason this c
   `islands/` (small, flat or module-split, **own zero CSS**), `lib/` (pure/shared only), `scripts/` (triad
   only), per-plugin file layout (no `config.ts`), config placement (inline literal), and font/asset handling
   (vendored, not CDN). A confirmed departure on any axis is a finding at that axis's severity (most are
-  BLOCKERs — see the per-axis rules). `moku-web-validator` owns the web axes; `moku-plugin-spec-validator`
-  owns `config.ts`; this command aggregates.
+  BLOCKERs — see the per-axis rules). `moku-web-validator`, from the `moku-web` pack, owns the web axes;
+  `moku-structure-validator` owns `config.ts`; the skill aggregates.
 
 ### G. Wiring `index.ts` + naming — `skeleton-conventions.md` §1/§8, R3/R4
 - Plugin `index.ts` ≤30 effective lines, wiring only (R3). Plugin instance export uses the `<name>Plugin`
   suffix; the name string stays bare (R4). Framework `src/plugins/index.ts` barrel present (frameworks
-  only). These reuse the existing validators — `/moku:verify` leans on `moku-plugin-spec-validator` /
-  `moku-spec-validator` here rather than re-checking.
+  only). `moku-structure-validator` owns these rules; `/moku:verify` aggregates its findings rather than
+  re-checking them.
 
 ### H. Whole-project pass (secondary)
-After the root pass, the curated reuse set covers the rest: `moku-readable-code-validator` (wall-of-text),
-`moku-type-validator` (R6/R7/R9, `tsc`), `moku-architecture-validator` (cross-plugin), `moku-web-validator`
-(web patterns). Don't duplicate their checks — aggregate their findings.
+After the root pass the rest is covered by `moku-style-validator` (wall-of-text bodies, JSDoc),
+`moku-quality-validator` (R6/R7/R9, `tsc`, tests), `moku-architecture-validator` (cross-plugin) and
+`moku-web-validator` (web patterns, when the pack is installed). Aggregate their findings rather than
+repeating their checks.
 
 ---
 
-## NEVER flag (false-positive guard — copy into the report's ground rules)
+## Do not flag these (false-positive guard — copy into the report's ground rules)
 - Multiple `createApp` instances that map to **distinct** framework/runtime (web build + browser SPA +
   worker). *(But two apps for the SAME runtime, or a config-only facade beside one, IS flagged — I2/I6.)*
 - Two frameworks (`@moku-labs/web` + `@moku-labs/worker`) in one project. *(Two apps on the same
@@ -143,8 +142,8 @@ After the root pass, the curated reuse set covers the rest: `moku-readable-code-
    `package.json`. *(Highest priority — the only hard BLOCKER.)*
 2. **Extract logic out of an entry (I4):** move inline business logic from `worker.ts`/`server.ts`/
    `routes.tsx`/`app.ts` into the owning plugin (reach it via `ctx.require`) or a pure `lib/` helper;
-   leave the entry as adapter glue. Pattern: the `lib/content.ts` `allArticles(ctx)` shape from
-   `moku-web/layout-structure.md`.
+   leave the entry as adapter glue. Pattern: the `lib/content.ts` `allArticles(ctx)` shape from the
+   `moku-web` pack's layout reference.
 3. **Relocate a stray function / cross the lib-vs-plugin boundary (I3):** move a misplaced pure helper to
    `lib/`; **promote a `lib/` module that owns API + state + lifecycle + events into `src/plugins/{name}/`
    via `createPlugin`** (the consumer-plugins rule). Keep imports updated; no behavior change. A genuinely
@@ -175,19 +174,20 @@ fix is high-blast-radius or ambiguous, downgrade to a proposal and surface it in
 
 ```
 for cycle in 1..ITERATIONS (default 3):
-  find    → spawn read-only validators in parallel: moku-root-validator (primary)
-            + readable-code / spec / plugin-spec / architecture / type (+ web if web)
+  find    → spawn read-only validators in parallel: moku-structure-validator (primary)
+            + moku-style / moku-quality / moku-architecture (+ moku-web when the pack is installed)
   rank    → dedupe by file+line+rule; sort root/structural blockers first
   verify? → (risky structural blockers) moku-skeptic refute-pass; drop the refuted
   fix     → apply recipes above, root/structural first  (skip entirely if --report-only)
   recheck → bun run format · bunx tsc --noEmit · bun run lint · bun run test  (skip absent scripts)
-  if a full pass surfaces nothing new (clean) → STOP early
+  if a full pass surfaces nothing new (clean) → stop early
 present → summary
 ```
 
 **Stop conditions:** clean pass (zero new findings) **or** `ITERATIONS` reached. If findings remain at the
-budget, **STOP and report them with their fixes** — never fake clean, never loop unbounded. Never commit;
-never touch `.planning/`.
+budget, stop and report them with their fixes. Never fake a clean pass and never loop unbounded. The
+orchestrating session commits after verification, so do not commit here, and leave `.planning/`
+alone.
 
 ---
 

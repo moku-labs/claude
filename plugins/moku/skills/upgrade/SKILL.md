@@ -1,25 +1,32 @@
 ---
-description: Upgrade an existing Moku project to the current target stack (TypeScript, tooling, tsconfig) — the official migration path
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, TodoWrite
-argument-hint: [--dry-run]
-disable-model-invocation: true
+name: upgrade
+description: Upgrades an existing Moku project to the target stack shipped with this plugin version — TypeScript, tooling versions, tsconfig defaults, engines floor, and moku-family framework versions. Detects what applies, presents one plan, applies it and verifies. Use when a project is behind the current Moku stack.
+when_to_use: Moving an already-Moku project's toolchain forward. Not for mapping foreign code into Moku, which is plan migrate.
+argument-hint: "[--dry-run]"
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
+model: fable
+effort: low
 ---
 
-## Moku Core Specification (authoritative)
+## Moku Core specification
 
-Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+Before any decision about architecture, the core API, the factory chain, config, lifecycle, events,
+`ctx`, types, invariants or plugin structure, read
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the `spec/NN-*.md` file it
+cites. The spec decides; memory does not. Justify a deviation against a cited section and cite the
+section id in your output. `.planning/` is local-only state and is never staged or committed.
 
-## What this command does
+## What this skill does
 
-`/moku:upgrade` brings an **existing Moku project** (framework, consumer app, plugin, or web project) up to the **target stack hardcoded into this version of the moku plugin**. It is the official, version-agnostic migration path: today it delivers the TypeScript 6 baseline + Node 24 engines floor; the same command will deliver TypeScript 7, build-tool swaps, and de-vibecoding migrations in future plugin versions, because the work is defined by a registry, not by this command's prose.
+`upgrade` brings an **existing Moku project** (framework, consumer app, plugin, or web project) up to the **target stack hardcoded into this version of the moku plugin**. It is the official, version-agnostic migration path: today it delivers the TypeScript 6 baseline + Node 24 engines floor; the same command will deliver TypeScript 7, build-tool swaps, and de-vibecoding migrations in future plugin versions, because the work is defined by a registry, not by this command's prose.
 
-**The target is hardcoded — there are no version arguments.** You run `/moku:upgrade` and it migrates the project to whatever the installed moku plugin's target stack is.
+The target is hardcoded and there are no version arguments: `upgrade` migrates the project to whatever the installed plugin's target stack is.
 
 - **Target stack:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md` (current: **Stack version 3**).
 - **Migration registry:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/upgrade-migrations.md`.
 - **Canonical configs:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
-**Not to be confused with `/moku:plan migrate`** — that maps *foreign / non-Moku* code *into* Moku architecture. `/moku:upgrade` operates on a project that is *already* Moku and only moves its *toolchain/stack* forward.
+Not to be confused with `/moku:plan migrate`: — that maps *foreign / non-Moku* code *into* Moku architecture. `/moku:upgrade` operates on a project that is *already* Moku and only moves its *toolchain/stack* forward.
 
 ### Arguments
 
@@ -28,8 +35,9 @@ There is one optional flag; the normal invocation is bare `/moku:upgrade`.
 - (no args) — detect → present the upgrade plan → single approval gate → apply → verify.
 - `--dry-run` — detect and print the plan, then **stop** (write nothing). Use to preview the diff.
 
-If `$ARGUMENTS` contains anything other than `--dry-run`, output:
-`Usage: /moku:upgrade [--dry-run] — no version arguments; the target is the stack shipped with this moku version.` and stop.
+Anything other than `--dry-run` prints
+`Usage: /moku:upgrade [--dry-run] — no version arguments; the target is the stack shipped with this moku version.`
+and stops.
 
 ---
 
@@ -95,7 +103,7 @@ Write `.planning/UPGRADE.md` (schema below) recording the plan and marking it `i
 1. **Apply** its steps exactly as written in `upgrade-migrations.md` (edit `package.json`, `tsconfig*.json`, configs). Edits must be **idempotent** — if a value is already at target, leave it. When adding `compilerOptions.types`, **merge** with any existing array; never clobber.
 2. Run `bun install` once after dependency edits for the migration (or batch installs across migrations applied in this pass, then install once).
 3. **Verify** with the migration's `Verify` chain: `bunx tsc --noEmit` → `bun run lint` → `bun run test`; for publishable libraries also `bun run build` → `bunx publint` → `bunx attw --pack .`.
-4. **On failure:** spawn the **error-diagnostician** agent (`${CLAUDE_PLUGIN_ROOT}/agents/error-diagnostician.md`) with the failing output. Apply targeted fixes (bounded to **3 rounds** per migration). The most common TS6 finding is the `strict`-by-default flip surfacing a genuine error in a deep inference chain — fix it locally; **never** weaken `strict`, and **never** commit with `--no-verify`. If still failing after 3 rounds, stop, record the migration as `blocked` in `.planning/UPGRADE.md` with the error summary, and report to the user — do not continue to later migrations.
+4. **On failure:** spawn the `moku:moku-error-diagnostician` agent with the failing output. Apply targeted fixes (bounded to **3 rounds** per migration). The most common TS6 finding is the `strict`-by-default flip surfacing a genuine error in a deep inference chain. Fix it locally: weakening `strict` would hide the error rather than resolve it, and `--no-verify` would push the failure into history. If still failing after 3 rounds, stop, record the migration as `blocked` in `.planning/UPGRADE.md` with the error summary, and report to the user — do not continue to later migrations.
 5. **On success:** mark the migration `done` in `.planning/UPGRADE.md`.
 
 For a large project, it is fine to apply one migration per invocation and stop-and-resume (like build waves) — record progress and tell the user to re-run `/moku:upgrade` to continue. For the small TS6 set, run them through in one pass.
@@ -118,7 +126,7 @@ Next: review the diff (`git diff`) and commit, e.g.
   git add -A && git commit -m "chore: upgrade to Moku stack v3 (TypeScript 6 + Node 24)"
 ```
 
-4. **Do not commit.** Leave the commit to the user (or `/ship`). Surface a suggested message only.
+4. **Do not commit.** The person commits, after reading the diff. Surface a suggested message only.
 
 ---
 
@@ -154,10 +162,10 @@ Re-running `/moku:upgrade` with an `in-progress` `.planning/UPGRADE.md`:
 - Re-runs the failing migration's verify before proceeding if the last status was `blocked`.
 - If the installed plugin's target stack version is **newer** than the `## Stack To:` recorded in the file (i.e. the plugin was updated mid-upgrade), discards the old plan and re-plans from Step 1.
 
-## Safety rules (hard)
+## Safety rules
 
-- **Never** weaken `strict` or any compiler strictness to make `tsc` pass — fix the real error.
-- **Never** commit, and **never** use `--no-verify`. The command edits and verifies; the user commits.
-- **Never** apply an `off`-by-default migration without an explicit user yes at the gate.
-- **Idempotent always** — a second run on an already-upgraded project must report "Nothing to upgrade."
-- **Never** touch `.planning/` in git; it is local-only state.
+- Do not weaken `strict` or any compiler strictness to make `tsc` pass. The error is real; fix it.
+- Do not commit and do not use `--no-verify`. This skill edits and verifies; the person commits.
+- An `off`-by-default migration is applied only after an explicit yes at the gate.
+- Every edit is idempotent: a second run on an upgraded project reports "Nothing to upgrade."
+- `.planning/` is local-only state and is never staged or committed.

@@ -1,134 +1,169 @@
 ---
-description: The single Moku verification command — combines root/entrypoint idiom conformance (I1–I6) with the full aggressive validator fan-out. Fans out EVERY Moku validator in parallel, root-first (root, spec, plugin-spec, jsdoc, readable-code, common, type, test, web, architecture), then FAILS on any blocker, ANY warning, or any validator that did not return a verdict; upholds each finding unless a skeptic can CITE the spec/house-style section that refutes it; then auto-fixes and re-verifies in a loop (default 3 cycles) toward clean idiomatic code. Root/entrypoint files (app.ts/spa.tsx/server.ts/cloudflare/worker.ts/routes.tsx/config.ts) are the primary focus — apps compose and never define a framework (I1), one createApp per framework/runtime with no gratuitous duplicate or facade entrypoints (I2/I6), one worker app composing resource+runtime+deploy/cli (I6), thin entries with logic in plugins/lib not routers (I4), no stray scattered functions + the lib-vs-plugin boundary (I3), committed scripts = build/dev/deploy triad only, config declared in place not generated. The web fan-out also checks reference-app conformance (flat components, zero island CSS, vendored fonts, ctx.params routing, runtime data off public/). Accepts free-form natural language. Pass --report-only to audit without editing.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-argument-hint: (empty = whole project, root-first) or {focus: web|worker|framework|a path} [--iterations N] [--report-only] [--no-adversarial]
-disable-model-invocation: true
+name: verify
+description: Verifies that a Moku project is structured the way Moku requires and fixes what is not. Fans out the structure, style, quality and architecture validators in parallel, root-first, challenges each finding with the skeptic, then auto-fixes and re-verifies for up to three cycles. Use at the verify station of a change, or when asked to check, validate or clean up a Moku project's structure.
+when_to_use: The verify station of an open change, or a direct request to verify, validate or audit the structure of a Moku project. Not for planning, building or e2e testing.
+argument-hint: (empty = the open change's scope) or {web|worker|framework|a path|whole project} [--iterations N] [--report-only] [--no-adversarial]
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, Skill, AskUserQuestion
+model: fable
+effort: medium
 ---
 
-## Moku Core Specification (authoritative)
+# verify — the single verification entry
 
-Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+`verify` proves a Moku project is structured the idiomatic way and repairs what is not. The
+emphasis is the root and entrypoint files, because that is where agents most often break the
+framework: logic dumped into routers and entrypoints, config generated instead of declared,
+entrypoints duplicated beyond the legitimate browser/server split, one-off functions scattered
+around. On top of that it runs the whole validator set, loops while fixing, and never commits.
 
-The idiomatic **app shape** rules are the guardrails **I1–I6** in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md`, the skeleton/`index.ts`/config rules in `skeleton-conventions.md`, and the canonical root layouts in the **moku-web** skill (`${CLAUDE_PLUGIN_ROOT}/skills/moku-web/references/layout-structure.md`) and the **moku-worker** skill (`${CLAUDE_PLUGIN_ROOT}/skills/moku-worker/SKILL.md`). The full detection + fix + loop protocol is **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md`** — read it; this command follows it. Every validator returns the JSON output contract defined in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md`.
+## Rails
 
-## Input — natural language first
+```bash
+moku-rails enter verify        # exit 2 = refused: relay the reason and the named next step, stop
+```
 
-`$ARGUMENTS` may be **natural language**. Resolve intent per **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`**: empty → verify the **whole project, root-first**; a phrase naming a surface (`web`, `worker`, `framework`, or a path/file) → focus there but still gap-check the root; `--iterations N` → cap the fix cycles (default **3**); `--report-only` (or "just report / don't change anything") → find + present, change nothing; `--no-adversarial` (or "skip the skeptic pass") → take findings as-is. Echo a one-line `Interpreting as: …` only when NL was interpreted.
+Run this first. Before stopping to ask the user anything mid-station,
+`moku-rails pause --reason "<why>"`. When the run ends clean:
 
-## Project Configuration
+```bash
+moku-rails check verify
+moku-rails done verify
+```
+
+`moku-rails check verify` records that the change's touched scope passed; the closing checklist
+needs it. A run that ends `FAIL`, or one with `--report-only`, records nothing — it still calls
+`moku-rails done verify` so the change is not stuck inside the station.
+
+Invoked directly with no open change, open one first
+(`moku-rails open <date-slug> --size S --type fix --title "…"`), so direct use and conductor use
+travel the same rails.
+
+## Moku Core specification
+
+Before any decision about architecture, the core API, the factory chain, config, lifecycle, events,
+`ctx`, types, invariants or plugin structure, read
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the `spec/NN-*.md` file it
+cites. Cite the section id in your output. `.planning/` is local-only state and is never staged or
+committed.
+
+The app-shape rules are guardrails I1–I6 in
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md` and the skeleton and `index.ts`
+rules in `skeleton-conventions.md`. The canonical root layouts for a web or worker project live in
+their packs: load the `moku-web:moku-web` or `moku-worker:moku-worker` skill with the `Skill` tool,
+which prints its base directory, and read the layout reference it points to. Do not reach for a pack
+file by path — `${CLAUDE_PLUGIN_ROOT}` resolves per plugin. The detection, fix and loop protocol is
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md` — read it and follow
+it. Every validator ends with the JSON output contract in `agent-preamble.md`.
+
+## Project configuration
 !`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
 
-**Verify** that a Moku project is structured the way Moku ideology requires — and **fix what isn't**. This is the
-**single verification entry point**: it merges the root/entrypoint idiom check with the full aggressive validator
-fan-out (the former `/moku-verify` workflow). The **emphasis is the root/entrypoint files** (where the app is
-composed, routes are declared, and config lives), because that is where agents most commonly violate the
-framework: dumping logic into routers and entrypoints, generating config instead of declaring it in place,
-duplicating entrypoints beyond the legitimate browser/server split, and scattering one-off functions. On top of
-that it runs **every** Moku validator (spec, plugin-spec, jsdoc, readable-code, common, type, test, web,
-architecture) so nothing is missed, **iterates (default 3 cycles), auto-fixing**, and never commits.
+## Step 0 — guards, scope and arguments
 
----
+1. A `package.json` must be present. Without one: "Not a Moku project — run from the project root."
+   Stop.
+2. Detect the project kind as `structural-conformance.md §"Step 0"` describes: Framework (L2), Web
+   app (L3), Worker app (L3), Full-stack (L3).
+3. Parse the arguments. `$ARGUMENTS` may be plain language; resolve it per `nl-args.md` and echo one
+   `Interpreting as: …` line when you interpreted something.
 
-## Intent Normalization (Pre-Parse)
+| Argument | Effect |
+|---|---|
+| (empty) | Scope defaults to the open change (below). |
+| `web`, `worker`, `framework`, a path | Focus there, and still gap-check the root. A broken neighbouring root is still a risk. |
+| "whole project" | The full tree, root-first. |
+| `--iterations N` | Cap the fix cycles. Default 3. `--report-only` forces one pass. |
+| `--report-only` | Find and present; change nothing. |
+| `--no-adversarial` | Skip the skeptic pass and take the findings as they are. |
+| `--skeptics N` | Skeptics per finding. Default 2. |
 
-- `$ARGUMENTS` empty → **FOCUS = (whole project)**, root pass first, then the whole-project pass.
-- A phrase naming a surface (`web` / `worker` / `framework` / a path) → **FOCUS = that surface**, but still
-  gap-check the root (don't silently narrow — a botched neighbour root is still a risk).
-- `--iterations N` anywhere → **ITERATIONS = N** (else **3**; `--report-only` forces a single pass).
-- `--report-only` anywhere → **REPORT_ONLY = true** — run the find + present the ranked findings, apply **no** fixes.
-- `--no-adversarial` anywhere → **ADVERSARIAL = false** — skip the skeptic pass (default **true**).
-- `--skeptics N` anywhere → **SKEPTICS_PER_FINDING = N** (else **2**).
-- Wrong-command detection: if the request is about *building*/*planning*/*e2e-testing*, point at
-  `/moku:build` · `/moku:plan` · `/moku:e2e` and stop.
+**Scope when a change is open.** Default to what this change touched:
+`git diff --name-only <change-start>...HEAD` plus the unstaged working tree, where `<change-start>`
+is the commit recorded when the change opened (`moku-rails status --json`; fall back to the merge
+base with the default branch). Say which scope you picked in one line. Widen to the whole project
+only when the user asks. The root files are always gap-checked, whatever the scope.
 
----
+4. Discover the plugin list with `Glob src/plugins/*/`. An empty list means a root-only run.
 
-## Step 0: Guards & Scope Gate
+A request that is really about building, planning or e2e testing belongs to `moku:build`,
+`moku:plan` or `moku-web:e2e`. Say so and stop.
 
-1. **Filesystem guard:** a `package.json` must be present. If none → "Not a Moku project — run from the project root." Stop.
-2. **Detect the project kind** (Framework L2 / Web app L3 / Worker app L3 / Full-stack L3) exactly as `structural-conformance.md §"Step 0"` describes. A pure non-Moku dir → decline like `/moku:check`.
-3. **Parse FOCUS / ITERATIONS / REPORT_ONLY / ADVERSARIAL / SKEPTICS_PER_FINDING** (above).
-4. **Discover scope:** `Glob src/plugins/*/` for the plugin list (empty list → whole-project / root-only run).
+## The validator fan-out
 
----
+Spawn these with the `Agent` tool in one parallel batch. Agent types are namespaced
+(`moku:<name>`), or they do not launch.
 
-## The loop (follow `structural-conformance.md` — default ITERATIONS = 3)
+| Agent | Covers |
+|---|---|
+| `moku:moku-structure-validator` | The primary pass: root, entrypoints and app shape (I1–I6), the lib-vs-plugin boundary, non-triad scripts, config declared in place, spec conformance, plugin structure and tiers, `@moku-labs/common` usage (MC1–MC3). |
+| `moku:moku-style-validator` | Function-body readability and JSDoc completeness. |
+| `moku:moku-quality-validator` | Runs `tsc`, tests and lint through Bash as facts, then judges test quality. |
+| `moku:moku-architecture-validator` | Cross-plugin dependency graph, event flow, API consistency. |
+| `moku-web:moku-web-validator` | Web patterns and reference-app conformance. |
+
+The web validator comes from the `moku-web` pack. Run it only when that pack is installed **and**
+the project is a web app. When the project is a web app and the pack is absent, skip it and say so
+in the report: the web axes were not checked because `moku-web` is not installed.
+
+Each validator ends with the JSON output contract. Retry one that returns no parseable verdict, up
+to three times. A validator that still returns no verdict did not run, which means the project was
+not fully checked — that is a `FAIL`, not a shrug.
+
+## The loop
 
 For cycle `1..ITERATIONS`:
 
-1. **Find (parallel, read-only).** Spawn the **full validator set** with the `Agent` tool in one parallel
-   batch — reuse the fan-out pattern from `/moku:check`. Agent types **MUST** be namespaced (`moku:<name>`),
-   or they silently fail to launch:
-   - **`moku:moku-root-validator`** (primary — the root/entrypoint/app-shape gap, I1–I6 + lib-vs-plugin + non-triad scripts + config-in-place).
-   - `moku:moku-spec-validator`, `moku:moku-plugin-spec-validator`, `moku:moku-jsdoc-validator`,
-     `moku:moku-readable-code-validator`, `moku:moku-common-validator`, `moku:moku-type-validator`,
-     `moku:moku-test-validator`, `moku:moku-architecture-validator`, and `moku:moku-web-validator`
-     (the web validator self-skips with PASS on non-web projects).
-   - Each validator must end with the JSON output contract (`agent-preamble.md`). **Retry a validator up to
-     3×** if it returns no parseable verdict. A validator that *still* returns no verdict is **un-run** — that
-     means the project was **not fully verified**, which is a **FAIL**, never a shrug.
-2. **Rank.** Dedupe findings by `file+line+rule` (plain logic); sort **root/structural blockers first**
-   (I1 → I2 → I4 → I3 → config → secondary). Under the aggressive verdict, **blockers AND warnings are both
-   fail-worthy issues** — warnings are not a free pass — but keep the severity for fixing and the report.
-3. **Adversarial uphold pass** (skip if `ADVERSARIAL = false`). Challenge **every** finding with
-   `SKEPTICS_PER_FINDING` (default 2) `moku:moku-skeptic` agents. Each skeptic **upholds by default** and may
-   **refute only by citing** the specific spec/house-style section that proves the finding is not a violation
-   (or that it is out of scope — test/type-only/generated file — or misquotes the rule). A pattern repeated
-   across plugins is **not** automatically a convention; refute on repetition only if `house-style.md`
-   explicitly approves it (cite it). Drop a finding **only on unanimous, cited refutation** — the finding wins
-   every tie. Log `N refuted (cited), M upheld`.
-4. **Fix** (skip entirely if `REPORT_ONLY`): apply the recipes in `structural-conformance.md §"Step 2"` —
-   **root/structural first** (drop a core dep from a Layer-3 app → extract logic out of entries → relocate
-   stray functions → collapse gratuitous entrypoints → inline a `makeApp(...)`/factory wrapper back to a bare
-   `export const app = createApp({ … })` literal when the parameter has no second call site), then the
-   secondary fixes the validators prescribe. **Structural refactors are behaviour-preserving** — never change a
-   public signature, return type, route, event name, error-message text, or runtime behaviour. **Real gaps get
-   real fixes:** missing tests → write them (match the sibling plugins' conventions); stale/misleading docs →
-   correct them against the source; missing type-guards / JSDoc / `import type` → add them.
-5. **Re-verify:** `bun run format`, `bunx tsc --noEmit`, `bun run lint`, `bun run test` (skip gracefully if a
-   script is absent). If a fix regressed a check, **revert or correct it** before the next cycle — never leave
-   the tree red.
-6. **Stop early** when a full pass surfaces nothing new (no issues **and** no un-run validators).
+1. **Find.** The parallel fan-out above, read-only.
+2. **Rank.** Dedupe by `file+line+rule`; sort root and structural blockers first
+   (I1 → I2 → I4 → I3 → config → secondary). Blockers and warnings are both fail-worthy; keep the
+   severity for the fix order and the report.
+3. **Challenge.** Skip when `--no-adversarial`. Send every finding to `SKEPTICS_PER_FINDING`
+   `moku:moku-skeptic` agents. A skeptic upholds by default and may refute only by citing the spec
+   or house-style section that proves the finding is not a violation, is out of scope (test,
+   type-only or generated file), or misquotes the rule. A pattern repeated across plugins is not
+   automatically a convention; refute on repetition only when `house-style.md` approves it, with the
+   citation. Drop a finding only on unanimous, cited refutation. Log `N refuted (cited), M upheld`.
+   The validators are Sonnet, so they never close the gate: the skeptic filters, and the final
+   verdict is yours.
+4. **Fix.** Skip entirely when `--report-only`. Apply the recipes in
+   `structural-conformance.md §"Step 2"`, structural first: drop a core dependency from a Layer-3
+   app, extract logic out of entries, relocate stray functions, collapse gratuitous entrypoints,
+   inline a `makeApp(...)` wrapper back to a bare `export const app = createApp({ … })` when the
+   parameter has no second call site. Then the secondary fixes. Structural refactors preserve
+   behaviour: no public signature, return type, route, event name, error-message text or runtime
+   behaviour changes. Real gaps get real fixes — missing tests get written to match the sibling
+   plugins' conventions, stale docs get corrected against the source, missing type guards, JSDoc and
+   `import type` get added.
+5. **Re-check.** `bun run format`, `bun run typecheck`, `bun run lint`, `bun run test`. Skip a script
+   that does not exist. A fix that regressed a check is corrected or reverted before the next cycle.
+6. **Stop early** when a full pass surfaces nothing new and no validator went un-run.
 
-**Stop conditions:** clean pass OR `ITERATIONS` reached. If findings remain at the budget, **STOP and report
-them with their fixes** — never fake clean, never loop unbounded.
+Stop conditions: a clean pass, or `ITERATIONS` reached. If findings remain at the budget, report
+them with their fixes. Never fake a clean pass and never loop unbounded.
 
----
+## Verdict and report
 
-## Disposition & Present
+`PASS` only when the final pass is fully clean — zero blockers, zero warnings — and every validator
+returned a verdict. Any surviving blocker, any warning, or any un-run validator is `FAIL`.
 
-**Verdict — aggressive:** `PASS` **only if** the final pass is fully clean (zero blockers, zero warnings) **and**
-every validator returned a verdict. Any surviving blocker, **any** warning, or **any** un-run validator → `FAIL`.
-
-Output the per-guardrail summary from `structural-conformance.md §"Output"` — project kind, the root-file
-checklist, a table of found/fixed/remaining per guardrail (I1–I6 + lib-vs-plugin + scripts + config + secondary), the validators that ran
-vs. any that were un-run, the count of refuted-by-skeptic findings, cycles used, the `tsc`/`lint`/`test` result,
-and any remaining items with their concrete fix. If `REPORT_ONLY`, present the full ranked findings and confirm
-nothing was changed.
+Report the per-guardrail summary from `structural-conformance.md §"Output"`: project kind, the scope
+you verified, the root-file checklist, found/fixed/remaining per guardrail, the validators that ran
+and any that did not, the refuted-finding count, cycles used, the typecheck/lint/test result, and
+each remaining item with its concrete fix. Under `--report-only`, present the ranked findings and
+confirm nothing changed.
 
 ## Rules
 
-- **Root files first.** The app-composition / entrypoint / config conformance is the primary job; the
-  whole-project validators are the secondary pass. Always gap-check the root even under a narrow FOCUS.
-- **Aggressive by default.** A blocker, ANY warning, or any validator that did not run fails the verification —
-  an un-run validator means the project was not fully checked, so it is a FAIL, not a pass.
-- **Uphold findings.** The skeptic pass exists to drop only *provably-wrong* findings; a finding survives unless
-  it is refuted **unanimously and with a citation**. When uncertain, the finding stands.
-- **Never flag an idiom.** Multiple `createApp` instances across frameworks/runtimes, two frameworks
-  side-by-side, and folder-splitting are **idiomatic** (`moku-idioms.md "What's IDIOMATIC"`) — never report
-  them. But every *non*-idiom is fair game: **I1–I5, config-not-in-place, and fat entries are all hard
-  BLOCKERs** when violated (a `makeApp(...)`/factory wrapping `createApp` with no second call site included).
-- **Fix, don't just flag** (unless `--report-only`). Apply the smallest correct structure-only refactor,
-  re-verify, loop. High-blast-radius or ambiguous changes become proposals, not forced edits.
-- **Confirm, don't assume.** A guardrail is "clean" only after `tsc`/`lint`/`test` pass on the fixed tree —
-  never report green on an unverified change.
-- **Stay in source; don't commit.** Edit app/framework source only. Never stage or commit `.planning/`;
-  never `--no-verify`; never write to the plugin cache.
-
-## Examples
-
-- `/moku:verify` — whole project, root-first; full validator fan-out + skeptic pass; fix all structural + secondary violations across ≤3 cycles; aggressive PASS/FAIL.
-- `/moku:verify web` — focus the web root (`app.ts`/`spa.tsx`/`routes.tsx`/`config.ts`), still gap-check the rest.
-- `/moku:verify the worker entrypoint --report-only` — find structural + validator issues in `server.ts`/`cloudflare/worker.ts` and report; change nothing.
-- `/moku:verify --iterations 5` — allow up to 5 fix cycles for a project with deep root debt.
-- `/moku:verify --no-adversarial` — skip the skeptic pass and take every validator finding at face value.
+- Root files first. Gap-check the root under any scope.
+- A blocker, a warning, or an un-run validator fails the run. An un-run validator means the project
+  was not fully checked.
+- Findings survive unless refuted unanimously with a citation. When uncertain, the finding stands.
+- Never flag an idiom. Multiple `createApp` instances across frameworks and runtimes, two frameworks
+  side by side, and folder-splitting are idiomatic (`moku-idioms.md`). Every non-idiom is fair game:
+  I1–I5, config not declared in place, and fat entries are blockers, including a `makeApp(...)`
+  factory wrapping `createApp` with no second call site.
+- Fix rather than only flag, unless `--report-only`. A high-blast-radius or ambiguous change becomes
+  a proposal instead of a forced edit.
+- A guardrail is clean only after typecheck, lint and tests pass on the fixed tree.
+- Edit source only. The orchestrating session commits after verification, so do not commit here,
+  never pass `--no-verify`, and never write to the plugin cache or `.planning/`.

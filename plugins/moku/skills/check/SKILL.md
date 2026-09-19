@@ -1,283 +1,235 @@
 ---
-description: Run diagnostics on the Moku plugin installation and project state
+name: check
+description: Runs diagnostics on a Moku project and on the moku plugin installation — project type, environment (moku-rails, node, bun), tooling files, which packs are installed against what the project actually uses, planning state, plugin health, and a build smoke check. Use when something is misconfigured, when setup needs confirming, or when the user asks what is wrong.
+when_to_use: Diagnosing a Moku project or the moku plugin installation. Read-only except where a subcommand says otherwise.
+argument-hint: "[verbose|self-test|graph|status|astra|usage|plugin <name>|diff <name>]"
 allowed-tools: Read, Bash, Glob, Grep, Agent
-argument-hint: [verbose|self-test|graph|status|plugin <name>|diff <name>]
-disable-model-invocation: true
+model: fable
+effort: low
 ---
 
-## Moku Core Specification (authoritative)
+# check — diagnostics
 
-Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+## Moku Core specification
 
-Before routing to any subcommand, validate the raw arguments:
-- If `$ARGUMENTS` is empty, proceed to the default full diagnostic (Checks 1–6).
-- If `$ARGUMENTS` is `plugin` with no following token, stop and output:
-  `Usage: /moku:check plugin <name>` — then list all plugin names found in `src/plugins/`.
-- If `$ARGUMENTS` is `diff` with no following token, stop and output:
-  `Usage: /moku:check diff <name>` — then list all spec files found in `.planning/specs/`.
-- If `$ARGUMENTS` is `usage`, jump to the **Usage / Footprint** subcommand below.
-- If `$ARGUMENTS` contains an unrecognized subcommand (not one of: verbose, self-test, graph, status, plugin, diff, usage), stop and output:
-  `Unknown subcommand: <token>. Valid subcommands: verbose | self-test | graph | status | plugin <name> | diff <name> | usage`
+Before any decision about architecture, the core API, the factory chain, config, lifecycle, events,
+`ctx`, types, invariants or plugin structure, read
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the `spec/NN-*.md` file it
+cites. Cite the section id in your output. `.planning/` is local-only state and is never staged or
+committed.
 
-## Subcommand: usage (`/moku:check usage`)
+## Routing
 
-Report the moku plugin's context/token footprint so the user can manage cost (Claude Code's
-`/usage` itemizes spend per skill, subagent, plugin, and MCP server — v2.1.149+).
+| `$ARGUMENTS` | Runs |
+|---|---|
+| (empty) | Checks 1–7 below, summary only |
+| `verbose` | Checks 1–7 with full detail per check |
+| `self-test` | Validates the moku plugin installation instead of the project |
+| `graph` | Mermaid diagrams: dependencies, event flow, waves (frameworks) |
+| `status` | Compact plugin overview |
+| `astra` | Probes the Astra backend — the one check that costs quota |
+| `usage` | The plugin's context footprint |
+| `plugin <name>` | Targeted validation of one plugin |
+| `diff <name>` | Spec against implementation for one plugin |
 
-1. Print the component inventory and rough sizes from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/SKILL-INVENTORY.md`
-   (skills, 10 commands, 25 agents, 4 workflows, vendored spec/sandbox line counts).
-2. Compute on-disk sizes as a proxy for context cost:
-   ```bash
-   echo "skills:   $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills 2>/dev/null | cut -f1)"
-   echo "  spec/   $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec 2>/dev/null | cut -f1) ($(ls ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec/*.md 2>/dev/null | wc -l | tr -d ' ') files, index-loaded)"
-   echo "  sandbox/ $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox 2>/dev/null | cut -f1) ($(find ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox -type f 2>/dev/null | wc -l | tr -d ' ') files, index-loaded)"
-   echo "agents:   $(ls ${CLAUDE_PLUGIN_ROOT}/agents/*.md 2>/dev/null | wc -l | tr -d ' ') agents"
-   ```
-3. Remind the user that `spec/` and `sandbox/` are **index + fetch on demand** (≈0 tokens until an
-   agent opens a file), the heavy cost is the 25-agent fan-outs, and `/usage` shows the real
-   per-category breakdown. Suggest: run waves one-per-session, prefer `effort: low` validators for
-   routine checks. Then stop (do not run Checks 1–6).
+`plugin` or `diff` with no name prints its usage line and lists the candidates from `src/plugins/`
+or `.planning/specs/`. Anything else prints
+`Unknown subcommand: <token>. Valid: verbose | self-test | graph | status | astra | usage | plugin <name> | diff <name>`
+and stops.
 
-Run a diagnostic check on the current Moku project and plugin installation. Reports issues with project structure, planning state, and plugin health.
+## Check 1 — project detection
 
-## Checks
+- `src/config.ts` with `createCoreConfig` → Framework (Layer 2).
+- `createApp` imported from a framework package → Consumer App (Layer 3).
+- `package.json` only → generic project.
+- None of these → stop with: "This does not appear to be a Moku project. No package.json found in
+  the current directory. Run check from the root of a Node.js or Moku project."
 
-### 1. Project Detection
+Report the type and, where it applies, the framework name and whether `.planning/moku.md` exists.
 
-Detect the project type:
-- Check for `src/config.ts` with `createCoreConfig` → Framework (Layer 2)
-- Check for `createApp` import from a framework package → Consumer App (Layer 3)
-- Check for `package.json` → Generic project
-- If none of the above match (no `package.json`, no `src/config.ts`, no `createApp` import found),
-  stop all further checks and output:
-  `This does not appear to be a Moku project. No package.json found in the current directory.`
-  `Run /moku:check from the root of a Node.js or Moku project.`
-- Report: project type, framework name (if applicable)
+## Check 2 — environment
 
-### 2. Tooling Verification
+| Item | How | Failure |
+|---|---|---|
+| `moku-rails` on PATH | `command -v moku-rails` | The lifecycle rails cannot run. The core plugin ships `bin/moku-rails`; a missing binary means the plugin is not installed or its bin directory is not on PATH. |
+| Node ≥ 24 | `node --version` | The hooks and `moku-rails` are ESM modules that need Node 24. Report the version found. |
+| Bun | `bun --version` against `.bun-version` | Advisory. |
+| Rails mode | `moku-rails status` | Reports initialized or not, open changes, debts. |
 
-Check that required tooling is configured:
-- `package.json` exists with expected scripts (`build`, `lint`, `format`, `test`)
-- `biome.json` exists
-- `tsconfig.json` exists with strict mode
-- `vitest.config.ts` exists
-- `.gitignore` includes `.planning/`, `dist/`, `node_modules/`
-- Report: PASS/MISSING for each
+## Check 3 — packs against the project
 
-### 3. Planning State
+Read `package.json` dependencies and compare with the installed plugins (`/plugins` or the plugin
+cache). Suggest, do not install.
 
-Check `.planning/STATE.md`:
-- If exists: report current phase, completed stages, next action
-- If not: report "No active plan"
-- Check for stale state (last updated > 7 days ago)
-- Check `.planning/specs/` directory for spec files
+| Dependency found | Pack | Without it |
+|---|---|---|
+| `@moku-labs/web` | `moku-web` | The web validator and the e2e station are unavailable. |
+| `@moku-labs/worker` | `moku-worker` | No worker knowledge skill. |
+| `@moku-labs/room` | `moku-room` | No room knowledge skill. |
+| any UI surface | `moku-design` | The design station is unavailable; the conductor will offer to continue without it. |
 
-### 4. Plugin Health (Framework projects)
+Report each as installed, missing-and-wanted, or installed-but-unused. An installed pack that the
+project does not use costs only context, so it is informational.
 
-For each plugin in `src/plugins/`:
-- Check file count matches expected tier
-- Check `index.ts` exists and is < 50 lines
-- Check `README.md` exists
-- Check `__tests__/` directory exists
-- Report: plugin name, tier assessment, health status
+When `moku-design` is installed and its `astra` option is on, also check that `codex` is on PATH
+(`command -v codex`). Without it Astra is unavailable and Fable reviews alone. Do not run
+`moku-astra probe` here: a probe spends model quota. `check astra` does that on request.
 
-### 5. Build Status
+## Check 4 — tooling
 
-Run quick checks (skip if no package.json):
-- `bunx tsc --noEmit` — type check
-- `bun run lint` — lint check
-- Report: PASS/FAIL for each
+- `package.json` carries the script contract: `lint`, `typecheck`, `test`, `build`, plus `validate`,
+  `release:setup`, `release:doctor` and `release` for a package.
+- `biome.json`, `tsconfig.json` with `strict`, `vitest.config.ts` exist.
+- `.gitignore` covers `.planning/`, `dist/`, `node_modules/`.
+- Packages: `.github/workflows/ci.yml` and `publish.yml` exist. Apps: `ci.yml` exists.
 
-### 6. Dependency Check
+Report PASS or MISSING for each.
 
-- Check `@moku-labs/core` version (if framework project)
-- Check for outdated dependencies
-- Report any peer dependency warnings
-- **Target-stack check:** compare against `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md`.
-  If `package.json` pins `typescript` below `^6`, or `tsconfig.json` is missing `compilerOptions.types`,
-  or `typescript-eslint < 8.58.0` / `tsdown < 0.22.1`, report:
-  `INFO: project is below the current Moku target stack (v2, TypeScript 6) — run /moku:upgrade` and
-  show the one-line diff. Do not auto-fix here; `/moku:upgrade` owns that.
+## Check 5 — planning state
+
+`.planning/STATE.md`: current phase, completed stages, next action, and whether it is stale (last
+updated more than seven days ago). Report "No active plan" when it is absent. Count the files in
+`.planning/specs/`. Note any change folder under `.planning/changes/` whose change is closed in the
+ledger — `clean` archives those.
+
+## Check 6 — plugin health (frameworks)
+
+For each directory in `src/plugins/`: file count against the expected tier, `index.ts` present and
+under 50 lines, `README.md` present, `__tests__/` present. Report name, tier assessment and health.
+
+## Check 7 — build and dependencies
+
+- `bun run typecheck` and `bun run lint`. Report PASS or FAIL.
+- `@moku-labs/core` version for a framework; peer-dependency warnings.
+- Target stack: compare against
+  `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md`. When `typescript` is pinned
+  below `^6`, `tsconfig.json` has no `compilerOptions.types`, `typescript-eslint` is below 8.58.0 or
+  `tsdown` below 0.22.1, report
+  `INFO: project is below the current Moku target stack (v3, TypeScript 6) — run /moku:upgrade` with
+  the one-line diff. Do not fix it here; `upgrade` owns that.
 
 ## Output
 
-Present a summary table:
-
 ```
 Moku Project Diagnostic Report
-===============================
-Project type: Framework (Layer 2)
-Framework: my-framework
+==============================
+Project type:  Framework (Layer 2) — my-framework
+Rails:         initialized · 1 change open · 0 debts
 
-Tooling:       [PASS] All config files present
-Planning:      [ACTIVE] Phase: stage2/approved (3 specs created)
+Environment:   [PASS] moku-rails on PATH · node 24.4.0 · bun 1.3.14
+Packs:         [INFO] moku-web suggested (@moku-labs/web in dependencies)
+Tooling:       [PASS] all config files and the script contract present
+Planning:      [ACTIVE] Phase: stage2/approved (3 specs)
 Plugins:       [OK] 5 plugins (2 Nano, 1 Micro, 2 Standard)
-TypeScript:    [PASS] tsc --noEmit clean
-Lint:          [PASS] Zero warnings
-Dependencies:  [OK] @moku-labs/core@1.0.0
+Types:         [PASS] bun run typecheck clean
+Lint:          [PASS] zero warnings
+Dependencies:  [OK] @moku-labs/core@0.1.3
 
 Issues:
-- WARNING: Plugin "cache" has no __tests__/ directory
+- WARNING: plugin "cache" has no __tests__/ directory
 - INFO: .planning/STATE.md last updated 3 days ago
 ```
 
-If `$ARGUMENTS` contains "verbose", show full details for each check. Otherwise show the summary only.
+`verbose` adds the full detail of each check.
 
-If `$ARGUMENTS` contains "graph", generate mermaid diagrams for the project (Framework projects only):
+## Subcommand — astra
 
-### Dependency Graph
-Build a mermaid flowchart from all plugin `depends: [...]` declarations:
-```mermaid
-graph TD
-  env["env (Nano)"]
-  logger["logger (Micro)"]
-  router["router (Standard)"]
-  renderer["renderer (Complex)"]
-  logger --> env
-  router --> logger
-  renderer --> router
-  renderer --> logger
-```
-- Each node shows plugin name and tier
-- Arrows flow from dependent → dependency
-- Color-code by tier: Nano=green, Micro=blue, Standard=orange, Complex=red, VeryComplex=purple
+Only on request, because it costs quota. Requires the `moku-design` pack.
 
-### Event Flow Map
-Build a mermaid flowchart showing event declarations, emitters, and listeners:
-- To find **emitters**: scan `src/plugins/*/index.ts` for `events:` fields (the register callbacks).
-  Also check `src/config.ts` for the `Events` interface — this lists all known event names for the project.
-- To find **listeners**: scan `src/plugins/*/index.ts` for `hooks:` fields.
-- Use the `Events` interface in `src/config.ts` as the authoritative list of event names.
-  Any event name in a plugin's `events:` or `hooks:` that does not appear in `src/config.ts Events` is flagged as orphaned.
-```mermaid
-graph LR
-  subgraph Emitters
-    router_emit["router"]
-    auth_emit["auth"]
-  end
-  subgraph Events
-    nav["router:navigated"]
-    login["auth:login"]
-    logout["auth:logout"]
-  end
-  subgraph Listeners
-    analytics_hook["analytics"]
-    logger_hook["logger"]
-  end
-  router_emit --> nav
-  auth_emit --> login
-  auth_emit --> logout
-  nav --> analytics_hook
-  nav --> logger_hook
-  login --> analytics_hook
-```
-- Left: plugins that emit, Center: event names, Right: plugins that hook
-- Orphan events (no listeners) shown in dashed style
-- Dead hooks (no emitter) shown in red
-
-### Wave Execution Plan
-If `.planning/STATE.md` has wave grouping, generate a Gantt-style diagram:
-- Wave grouping is read from lines beginning with `## Waves:` in `.planning/STATE.md`.
-  Each wave entry lists the plugin names for that wave separated by commas.
-  If no `## Waves:` field exists in STATE.md, skip this diagram and note "No wave data in STATE.md."
-```mermaid
-gantt
-  title Build Wave Execution
-  dateFormat X
-  axisFormat %s
-  section Wave 1
-    env     :0, 1
-    logger  :0, 1
-  section Wave 2
-    router  :1, 2
-    auth    :1, 2
-  section Wave 3
-    renderer :2, 3
+```bash
+moku-astra probe        # exit 3 = unavailable for any reason
 ```
 
-Output all three diagrams with brief descriptions. If the project has no plugins yet, report "No plugins found — nothing to graph."
+Report the backend in use (`codex` or `api`), whether the probe succeeded, and what happens when it
+does not: Fable reviews alone with the same findings schema, and image assets fall back to SVG or
+CSS placeholders plus a to-draw list. The gate is never skipped.
 
-If `$ARGUMENTS` contains "self-test", skip project checks and instead validate the Moku Claude plugin itself:
-1. Verify all agent `.md` files exist in `${CLAUDE_PLUGIN_ROOT}/agents/` and have valid YAML frontmatter (name, description, model, tools). Count them dynamically — do not hardcode an expected number.
-2. Verify all skill directories exist with SKILL.md files in `${CLAUDE_PLUGIN_ROOT}/skills/`
-3. Verify `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` parses as valid JSON
-4. Verify all referenced hook scripts exist and are executable.
-   Check executability using `test -x <absolute-path>` in Bash for each script path found in
-   `hooks.json`. Report the exact path of any script that fails the test.
-5. Verify all reference files mentioned in skills/commands exist.
-   Extract referenced paths by grepping skill `SKILL.md` files and command `.md` files for patterns
-   matching `` `references/ `` or `references/*.md`. Resolve each path relative to
-   `${CLAUDE_PLUGIN_ROOT}` and check that the file exists with `Read` or `Bash test -f`.
-6. Verify `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` parses correctly
-7. Verify version in `plugin.json` matches version in `marketplace.json` (prevents version drift regression)
-8. Report PASS/FAIL for each check
+## Subcommand — self-test
 
-If `$ARGUMENTS` contains "status", show a compact overview of all plugins and their current state (Framework projects only):
+Validates the installation, not the project. Count everything dynamically; never assume a number.
 
-1. List all plugins in `src/plugins/` with:
-   - Plugin name
-   - Assessed complexity tier (based on file count and structure)
-   - File count
-   - Whether `__tests__/` exists
-   - Whether `README.md` exists
-   - Build status from `.planning/STATE.md` (if it exists)
-2. Show total plugin count and tier distribution
-3. Show planning state summary (if active)
+1. Every agent `.md` in `${CLAUDE_PLUGIN_ROOT}/agents/` parses with valid frontmatter carrying
+   `name`, `description`, `model`, `tools`, and no agent lists `Agent` in `tools`.
+2. Every skill directory under `${CLAUDE_PLUGIN_ROOT}/skills/` has a `SKILL.md` with valid YAML
+   frontmatter and both `model` and `effort`.
+3. `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` parses as JSON.
+4. Every script named in `hooks.json` exists and passes `test -x`. Report the exact failing path.
+5. Every `references/` path mentioned in a `SKILL.md` resolves to a file that exists.
+6. `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/plugin.json` parses, and its version matches the entry in
+   the marketplace manifest.
+7. No frontmatter anywhere lists `TodoWrite` or a `Task*` tool: those do not exist on current
+   models.
 
-Example output:
-```
-Moku Plugin Status
-==================
-| Plugin   | Tier     | Files | Tests | README | Build   |
-|----------|----------|-------|-------|--------|---------|
-| env      | Nano     | 3     | Yes   | Yes    | done    |
-| logger   | Micro    | 3     | Yes   | Yes    | done    |
-| router   | Standard | 8     | Yes   | Yes    | done    |
-| renderer | Complex  | 12    | Yes   | Yes    | pending |
+Report PASS or FAIL per item.
 
-Total: 4 plugins (1 Nano, 1 Micro, 1 Standard, 1 Complex)
-Plan: stage2/approved — Next: /moku:build #4
-```
+## Subcommand — graph
 
-If `$ARGUMENTS` contains "plugin" followed by a plugin name, run targeted validation on that single plugin:
+Frameworks only. Three mermaid diagrams, each with a short description. "No plugins found — nothing
+to graph." when `src/plugins/` is empty.
 
-1. Verify the plugin directory exists in `src/plugins/<name>/`
-2. Assess its complexity tier from file structure
-3. Run fast checks first: `bun run format`, `bun run lint`, `bunx tsc --noEmit`, `bun run test`
-4. If all fast checks pass, report PASS and skip agent-based validation (unless `--full` flag is also present)
-5. If fast checks fail OR `--full` is present, spawn 4 validators in parallel:
-   - **moku-plugin-spec-validator** — tier compliance, file organization, index.ts quality
-   - **moku-type-validator** — tsc --noEmit, import type compliance, no `as any`
-   - **moku-jsdoc-validator** — JSDoc completeness on all exports
-   - **moku-readable-code-validator** — function-body readability (wall-of-text / stanza style; WARNING/INFO only)
-6. Report results with PASS/WARN/FAIL for each validator
-7. If any BLOCKER issues found, list them with fix suggestions
+**Dependencies** — a flowchart from every plugin's `depends: [...]`, node label `name (Tier)`,
+arrows from dependent to dependency, colour by tier (Nano green, Micro blue, Standard orange,
+Complex red, VeryComplex purple).
 
-If `$ARGUMENTS` contains "diff" followed by a plugin name, compare the spec against the implementation:
+**Event flow** — emitters from the `events:` fields in `src/plugins/*/index.ts`, listeners from the
+`hooks:` fields, and the `Events` type in `src/config.ts` as the authoritative name list. Left
+emitters, centre event names, right listeners. An event name that appears in a plugin but not in
+`Events` is orphaned; an event with no listener is dashed; a hook with no emitter is red.
 
-1. Find the spec file in `.planning/specs/*-<name>.md`
-   - Spec sections are identified by H2 headers (`## `) with these exact names: `Config`, `State`,
-     `API`, `Events`, `Dependencies`, `Hooks`. Any other headers in the spec file are ignored.
-   - If no spec file matching `*-<name>.md` is found in `.planning/specs/`, stop and output:
-     `No spec found for plugin "<name>". Expected: .planning/specs/*-<name>.md`
-2. Read the spec's Config, State, API, Events, Dependencies, and Hooks sections
-3. Read the implementation from these files in `src/plugins/<name>/`:
-   `types.ts`, `api.ts`, `state.ts`, `index.ts` — read each that exists; treat absent files as empty.
-4. Compare each spec section against the implementation:
+**Waves** — a gantt from the `## Waves:` lines in `.planning/STATE.md`, one section per wave. Skip
+it with "No wave data in STATE.md." when that field is absent.
+
+## Subcommand — status
+
+Frameworks only. A table of every plugin with tier, file count, `__tests__/`, `README.md` and build
+status from `STATE.md`, then the total count, the tier distribution and the planning summary.
+
+## Subcommand — plugin `<name>`
+
+1. `src/plugins/<name>/` must exist.
+2. Assess the tier from the file structure.
+3. Fast checks first: `bun run format`, `bun run lint`, `bun run typecheck`, `bun run test`.
+4. All green and no `--full` → report PASS and stop. The agent fan-out is the expensive path.
+5. Otherwise spawn in parallel: `moku:moku-structure-validator` (tier, file organization, index
+   quality, spec conformance), `moku:moku-style-validator` (readability and JSDoc),
+   `moku:moku-quality-validator` (types and test quality).
+6. Report PASS, WARN or FAIL per validator, and list each blocker with its fix.
+
+## Subcommand — diff `<name>`
+
+1. Find `.planning/specs/*-<name>.md`. Absent → `No spec found for plugin "<name>". Expected:
+   .planning/specs/*-<name>.md` and stop. Spec sections are the H2 headers `Config`, `State`, `API`,
+   `Events`, `Dependencies`, `Hooks`; other headers are ignored.
+2. Read `types.ts`, `api.ts`, `state.ts` and `index.ts` from `src/plugins/<name>/`, treating an
+   absent file as empty.
+3. Compare section by section and report MATCH, GAP (the spec promised it, the code lacks it) or
+   EXTRA (the code has more than the spec).
 
 ```
-Spec-vs-Implementation Diff: [plugin-name]
-============================================
-| Section      | Spec                    | Implementation          | Status |
-|--------------|-------------------------|-------------------------|--------|
-| Config       | basePath, trailingSlash | basePath, trailingSlash | MATCH  |
+Spec-vs-Implementation Diff: router
+===================================
+| Section      | Spec                    | Implementation               | Status         |
+|--------------|-------------------------|------------------------------|----------------|
+| Config       | basePath, trailingSlash | basePath, trailingSlash      | MATCH          |
 | State        | currentPath, routes     | currentPath, routes, history | EXTRA: history |
-| API          | navigate, current, back | navigate, current       | GAP: back |
-| Events       | router:navigated        | router:navigated        | MATCH  |
-| Dependencies | env                     | env                     | MATCH  |
-| Hooks        | app:started             | app:started             | MATCH  |
+| API          | navigate, current, back | navigate, current            | GAP: back      |
 ```
 
-5. Report MATCH (spec matches implementation), GAP (spec has item, implementation missing), EXTRA (implementation has item not in spec)
-6. GAP items are flagged as BLOCKER — the spec promised this API/feature
-7. EXTRA items are flagged as INFO — implementation added beyond spec (may need spec update)
+A GAP is a blocker: the spec promised that API. An EXTRA is informational and may mean the spec
+needs updating.
+
+## Subcommand — usage
+
+Print the component inventory from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/SKILL-INVENTORY.md` when it
+exists, then on-disk sizes as a proxy for context cost:
+
+```bash
+echo "skills:   $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills 2>/dev/null | cut -f1)"
+echo "  spec/   $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec 2>/dev/null | cut -f1)"
+echo "  sandbox/ $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox 2>/dev/null | cut -f1)"
+echo "agents:   $(ls ${CLAUDE_PLUGIN_ROOT}/agents/*.md 2>/dev/null | wc -l | tr -d ' ')"
+```
+
+`spec/` and `sandbox/` are index-and-fetch: near zero tokens until an agent opens a file. The real
+cost is the validator fan-outs. Claude Code's own `/usage` shows the per-category breakdown. Then
+stop; do not run Checks 1–7.

@@ -9,7 +9,7 @@ import { relative, resolve } from "node:path";
 
 import { guardWrite } from "./guard.mjs";
 import { findChange, isInitialized, isMokuProject, loadLedger, newChange, saveLedger } from "./ledger.mjs";
-import { reconcile } from "./reconcile.mjs";
+import { headCommit, reconcile } from "./reconcile.mjs";
 import { OPTIONAL_STATIONS, routeFor } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
 
@@ -61,7 +61,9 @@ export function open({ root, positional, flags }) {
   const stuck = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused);
   if (stuck) return refused(`Change "${stuck.id}" is still inside station "${stuck.station}". Finish it, or park it with a reason, before opening "${id}".`);
 
-  ledger.changes.push(newChange({ id, size: /** @type {"S"} */ (size), type: String(flags.type ?? "feature"), title: String(flags.title ?? id) }));
+  const change = newChange({ id, size: /** @type {"S"} */ (size), type: String(flags.type ?? "feature"), title: String(flags.title ?? id) });
+  change.startCommit = headCommit(root);
+  ledger.changes.push(change);
   saveLedger(root, ledger);
 
   return ok(`Opened ${id} (size ${size}). Route: ${routeFor(/** @type {"S"} */ (size)).join(" → ")}.`);
