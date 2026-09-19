@@ -6,7 +6,10 @@
   "scripts": {
     "test": "node --test \"plugins/*/tests/**/*.test.mjs\"",
     "validate": "claude plugin validate . && for p in plugins/*; do claude plugin validate \"$p\" || exit 1; done",
-    "evals": "claude plugin eval plugins/moku --trust-plugin --no-publish --allow-tools Write Edit Bash"
+    "evals": "claude plugin eval plugins/moku --trust-plugin --no-publish --allow-tools Write Edit Bash",
+    "check": "node scripts/check-manifests.mjs"
   },
-  "engines": { "node": ">=24" }
+  "engines": {
+    "node": ">=24"
+  }
 }
