@@ -1,0 +1,52 @@
+{
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/detect-moku-project.sh", "timeout": 5 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-rails.mjs", "timeout": 5 }
+      ] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-prompt.mjs", "timeout": 5 }
+      ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Write|Edit", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-write.mjs", "timeout": 10 }
+      ] },
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-bash.mjs", "timeout": 5 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/verify-before-commit.sh", "timeout": 60 }
+      ] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Write|Edit", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/format-on-save.sh", "timeout": 15, "async": true }
+      ] },
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit-review.sh", "timeout": 30 }
+      ] }
+    ],
+    "PreCompact": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/precompact-state.sh", "timeout": 10 }
+      ] }
+    ],
+    "PostCompact": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/postcompact-state.sh", "timeout": 10 }
+      ] }
+    ],
+    "SubagentStop": [
+      { "matcher": ".*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-stop.mjs", "timeout": 5 }
+      ] }
+    ],
+    "Stop": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-stop.mjs", "timeout": 5 }
+      ] }
+    ]
+  }
+}

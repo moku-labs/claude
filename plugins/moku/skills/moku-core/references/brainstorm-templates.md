@@ -1,0 +1,149 @@
+# Brainstorm Templates
+
+Templates the `brainstorm` skill writes from: the context file it hands to plan, and the position document the debate runs on.
+
+---
+
+## Context File Template
+
+Saved to `.planning/context-{name}.md`. This is the primary output of `/moku:brainstorm` and the primary input to `/moku:plan ... --context`.
+
+```markdown
+# Brainstorm Context: {NAME}
+
+## Meta
+- Category: {create|modify|migrate|feature}
+- Depth: {quick|standard|deep} (score: {N}/9)
+- Created: {ISO timestamp}
+- Plan command: `/moku:plan {VERB} {TYPE} "{NAME}" --context context-{NAME}.md`
+
+## Summary
+{1–2 paragraph executive summary: what is being built, why, and the recommended approach}
+
+## Analysis Summary
+
+### Auto-Detected Context
+{project context discovered during Phase 1a: domain assessment, workspace state, existing plugins/code, dependency landscape, novelty evaluation}
+
+### Scope Assessment
+{estimated scope: capabilities, plugins, integrations — all auto-detected from DESCRIPTION and project analysis}
+
+### Architectural Decisions
+{decisions made during collaborative discussion in Phase 1b, with chosen approach, rejected alternatives, and rationale. If 0 decisions were needed: "No architectural decisions required — context was clear from analysis."}
+
+## Migration Source (migrate only — omit for other categories)
+- Path: {MIGRATE_PATH}
+- Tech stack: {framework, runtime, build tool, test framework}
+- Architecture: {detected pattern}
+- Size: {file count, ~LOC}
+- State patterns: {detected patterns}
+- Key challenges: {obstacles for Moku migration}
+
+## Research Findings
+
+### Ecosystem Landscape
+{key packages, patterns, competitive landscape from researcher agents — 3–5 bullet points}
+
+### Technical Patterns
+{TypeScript patterns, architecture patterns relevant to the domain — 3–5 bullet points}
+
+### Risks & Pitfalls
+{confirmed risks from research, with mitigations — bulleted list}
+
+## Proposed Approach
+
+### Architecture Direction
+{1–3 sentences describing the chosen architectural approach}
+
+### Key Assumptions
+- {assumption 1}
+- {assumption 2}
+- ...
+
+### Explicit Non-Goals
+- {what this will NOT do — derived from debate challenges scoped out}
+
+### Open Questions (For Planning Stage)
+- {question not resolved in brainstorm — plan command should address}
+
+## Decisions Made
+| Decision | Chosen | Rejected | Rationale |
+|---|---|---|---|
+| {topic} | {chosen option} | {alternative} | {1-sentence reason} |
+
+## Spec Alignment
+Each key architectural decision mapped to the authoritative Moku Core spec. The `/moku:plan` stage verifies specs against these same sections.
+
+| Decision / Approach | Spec section | Aligns? | Note |
+|---|---|---|---|
+| {decision} | spec/NN-*.md §N | YES / DEVIATES | {if DEVIATES: why, and the accepted-risk justification} |
+
+> No decision may silently contradict `spec/11-INVARIANTS.md`. Any DEVIATES row must carry an explicit accepted-risk note or be removed before planning.
+
+## Recommended Plan Approach
+
+### Suggested VERB + TYPE
+`/moku:plan {VERB} {TYPE} "{NAME}" --context context-{NAME}.md`
+
+### Suggested Plugins (Preliminary)
+{list of likely plugins with 1-line descriptions, or "Plugin analysis deferred to plan stage" for quick mode}
+
+### Risks Requiring Spec Attention
+- {Risk 1} → flag for Stage 2 spec of plugin X
+- {Risk 2} → flag for Stage 2 spec of plugin Y
+```
+
+---
+
+## Position Document Schema
+
+The scratch document the debate runs on. The orchestrating session writes it, `brainstorm-challenger` reads it. Saved to `.planning/brainstorm-{NAME}-position.md`.
+
+Keep it short enough to force prioritisation: at most 5 assumptions, 3 risks, 3 open questions, each one actionable and traceable to a research finding or a decision made with the user. On a later iteration, evolve it — carry earlier decisions forward and turn resolved questions into decisions.
+
+```markdown
+# Position: {NAME} — Iteration {i}
+
+## Proposed Approach
+{1–2 sentence headline}
+
+## Key Assumptions
+- {assumption 1}
+- {assumption 2}
+- {max 5}
+
+## Identified Risks
+- {risk 1}
+- {risk 2}
+- {max 3}
+
+## Open Questions
+- {question 1}
+- {max 3}
+
+## Spec Alignment
+| Key decision | Spec section | Aligns? | Note |
+|---|---|---|---|
+| {decision} | spec/NN-*.md §N | YES / DEVIATES | {note} |
+
+## Decisions Made This Iteration
+| Challenge | Resolution | Rationale |
+|---|---|---|
+| {challenge text} | {chosen resolution} | {why} |
+```
+
+---
+
+## Plan Command Mapping
+
+The context file maps onto the steering inputs in `plan-verb-create.md`:
+
+| Context File Section | Steering Equivalent |
+|---|---|
+| `## Explicit Non-Goals` | `## Boundaries (NOT in scope)` |
+| `## Analysis Summary` → scope assessment | `## Primary User` |
+| `### Suggested Plugins (Preliminary)` (top 3) | `## MVP Priorities` |
+| `### Ecosystem Landscape` (first reference) | `## Reference Point` |
+| `## Risks Requiring Spec Attention` (first) | `## Biggest Risk` |
+| `## Spec Alignment` | Spec-section citations carried into Stage 2 spec validation |
+| `## Migration Source` → Path (migrate only) | `MIGRATE_PATH` (skips "Where is the code?" question in plan migrate) |

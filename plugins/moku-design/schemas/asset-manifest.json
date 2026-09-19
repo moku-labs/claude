@@ -1,0 +1,21 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["assets"],
+  "properties": {
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["file", "prompt", "size", "transparent"],
+        "properties": {
+          "file": { "type": "string", "description": "Path of the written image, relative to the output directory." },
+          "prompt": { "type": "string", "description": "The exact prompt used, so the asset can be regenerated." },
+          "size": { "type": "string", "description": "Pixel size, e.g. 1024x1024." },
+          "transparent": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}

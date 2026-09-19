@@ -1,0 +1,64 @@
+{
+  "plugins": "moku marketplace @0.70.0 (all six plugins)",
+  "date": "2026-09-19",
+  "runsPerCase": 2,
+  "ablation": "with-without",
+  "judge": "sonnet",
+  "aggregates": {
+    "casesTotal": 12,
+    "casesPassed": 9,
+    "overallScore": 0.9166666666666666,
+    "overallPassRate": 0.875,
+    "meanDelta": 0.8055555555555555
+  },
+  "cases": {
+    "astra-when-not": {
+      "with": 1,
+      "delta": 1
+    },
+    "design-api-mode": {
+      "with": 0.75,
+      "delta": 0.25
+    },
+    "room-standalone-core": {
+      "with": 1,
+      "delta": 1
+    },
+    "e2e-ux-gate-fallback": {
+      "with": 1,
+      "delta": 1
+    },
+    "web-island-attrs": {
+      "with": 1,
+      "delta": 0.8333333333333334
+    },
+    "worker-one-app": {
+      "with": 1,
+      "delta": 0.5
+    },
+    "conductor-idea": {
+      "with": 0.5,
+      "delta": 0.5
+    },
+    "nano-plugin-shape": {
+      "with": 1,
+      "delta": 0.8333333333333334
+    },
+    "rails-no-init": {
+      "with": 0.75,
+      "delta": 0.75
+    },
+    "readable-stanzas": {
+      "with": 1,
+      "delta": 1
+    },
+    "release-first-publish": {
+      "with": 1,
+      "delta": 1
+    },
+    "thin-root": {
+      "with": 1,
+      "delta": 1
+    }
+  }
+}

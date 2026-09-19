@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "moku-FRAMEWORK",
+  "displayName": "Moku FRAMEWORK",
+  "version": "0.70.0",
+  "description": "@moku-labs/FRAMEWORK pack: one sentence saying what the framework is for.",
+  "author": {
+    "name": "Oleksandr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "FRAMEWORK"
+  ],
+  "dependencies": [
+    "moku"
+  ],
+  "defaultEnabled": false
+}

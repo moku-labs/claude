@@ -1,14 +1,65 @@
 {
   "name": "moku",
+  "description": "Moku: the core toolkit plus one pack per moku framework. Install `moku`, then add the packs for the frameworks you use.",
   "owner": {
     "name": "Oleksandr Kucherenko"
   },
   "plugins": [
     {
       "name": "moku",
-      "version": "0.62.4",
-      "source": "./",
-      "description": "Development toolkit for Moku Core, the micro-kernel TypeScript plugin framework: it scaffolds projects and drives a gated brainstorm \u2192 design \u2192 plan \u2192 build workflow with parallel research, multi-round design exploration, TDD build waves, and a multi-agent validation pipeline. The authoritative Moku Core specification is vendored and injected into every command and agent for spec-grounded decisions.",
+      "version": "0.71.0",
+      "source": "./plugins/moku",
+      "description": "The Moku Core toolkit: a conversational conductor that leads you from an idea through init, plan, build, verify and release, with strict lifecycle rails underneath, the vendored Moku Core specification, TDD build waves and a validation pipeline.",
+      "author": {
+        "name": "Oleksandr Kucherenko"
+      },
+      "category": "development"
+    },
+    {
+      "name": "moku-web",
+      "version": "0.71.0",
+      "source": "./plugins/moku-web",
+      "description": "@moku-labs/web pack: Preact islands, scoped CSS and tokens, the web validator, and real-browser e2e with exploratory QA and UX review.",
+      "author": {
+        "name": "Oleksandr Kucherenko"
+      },
+      "category": "development"
+    },
+    {
+      "name": "moku-design",
+      "version": "0.71.0",
+      "source": "./plugins/moku-design",
+      "description": "Design station for Moku: multi-round UI, API and architecture design that ends in a design context, plus GPT-6 Astra (through Codex) as artist and second opinion on user experience.",
+      "author": {
+        "name": "Oleksandr Kucherenko"
+      },
+      "category": "development"
+    },
+    {
+      "name": "moku-worker",
+      "version": "0.71.0",
+      "source": "./plugins/moku-worker",
+      "description": "@moku-labs/worker pack: the Cloudflare Workers backend framework, with Durable Objects, Queues, R2, D1 and KV plugins.",
+      "author": {
+        "name": "Oleksandr Kucherenko"
+      },
+      "category": "development"
+    },
+    {
+      "name": "moku-room",
+      "version": "0.71.0",
+      "source": "./plugins/moku-room",
+      "description": "@moku-labs/room pack: couch multiplayer with a shared screen and phones, WebRTC state sync and QR join.",
+      "author": {
+        "name": "Oleksandr Kucherenko"
+      },
+      "category": "development"
+    },
+    {
+      "name": "moku-maintainer",
+      "version": "0.71.0",
+      "source": "./plugins/moku-maintainer",
+      "description": "Maintainer tools for the moku plugin repository itself: re-vendor the Moku Core spec and sync framework knowledge from upstream releases. Not needed to build with Moku.",
       "author": {
         "name": "Oleksandr Kucherenko"
       },

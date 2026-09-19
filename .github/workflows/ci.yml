@@ -1,0 +1,28 @@
+name: CI
+
+# The plugins are mostly prose, but the rails, the hooks and the wrappers are code with tests.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # v6.0.0
+        with:
+          node-version: 24
+      - run: npm test
+      - name: Manifests and eval files are valid JSON / have frontmatter
+        run: node scripts/check-manifests.mjs

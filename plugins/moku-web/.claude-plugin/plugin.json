@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "moku-web",
+  "displayName": "Moku Web",
+  "version": "0.71.0",
+  "description": "@moku-labs/web pack: Preact islands, scoped CSS and tokens, the web validator, and real-browser e2e with exploratory QA and UX review.",
+  "author": {
+    "name": "Oleksandr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "web",
+    "preact",
+    "islands",
+    "e2e",
+    "playwright"
+  ],
+  "dependencies": [
+    "moku"
+  ]
+}

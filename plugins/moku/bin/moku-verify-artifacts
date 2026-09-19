@@ -1,0 +1,67 @@
+#!/usr/bin/env node
+/**
+ * moku-verify-artifacts: the deterministic artifact check after a build wave.
+ *
+ * Three levels: the tier's files exist, they carry real content, the plugin is wired.
+ * Exit codes: 0 pass, 1 usage or runtime error, 2 verification failed.
+ * Thin entry: parse arguments, verify, print.
+ */
+
+import { exitCodeFor, formatJson, formatReport } from "../lib/verify/report.mjs";
+import { normalizeTier, TIERS } from "../lib/verify/tiers.mjs";
+import { verifyPlugin } from "../lib/verify/verify.mjs";
+
+const USAGE = `Usage: moku-verify-artifacts <plugin-name> [--root dir] [--tier ${TIERS.join("|")}] [--run] [--json]`;
+
+const args = parse(process.argv.slice(2));
+const [name] = args.positional;
+
+// No plugin named, or a tier that is not one: usage error
+// Tiers are accepted the way the docs spell them too: `VeryComplex` is `very-complex`
+const tier = typeof args.flags.tier === "string" ? normalizeTier(args.flags.tier) : null;
+if (!name || (args.flags.tier !== undefined && tier === null)) {
+  console.error(USAGE);
+  process.exit(1);
+}
+
+// Verify, then print for a person or for a skill
+let report;
+try {
+  report = verifyPlugin({ root: args.root, name, tier, run: args.flags.run === true });
+} catch (error) {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exit(1);
+}
+
+const code = exitCodeFor(report);
+const output = args.flags.json ? formatJson(report) : formatReport(report).join("\n");
+(code === 0 ? console.log : console.error)(output);
+process.exit(code);
+
+/**
+ * Split argv into positionals and `--flag [value]` pairs.
+ *
+ * @param {string[]} argv arguments after the script name
+ * @returns {{ root: string, positional: string[], flags: Record<string, string | true> }}
+ * @example
+ * parse(["streak", "--tier", "nano", "--json"]).flags; // { tier: "nano", json: true }
+ */
+function parse(argv) {
+  const positional = [];
+  const flags = {};
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const token = argv[index];
+    if (!token.startsWith("--")) {
+      positional.push(token);
+      continue;
+    }
+
+    const next = argv[index + 1];
+    const hasValue = next !== undefined && !next.startsWith("--");
+    flags[token.slice(2)] = hasValue ? next : true;
+    if (hasValue) index += 1;
+  }
+
+  return { root: typeof flags.root === "string" ? flags.root : process.cwd(), positional, flags };
+}

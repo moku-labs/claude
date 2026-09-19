@@ -1,0 +1,6 @@
+{
+  "name": "moku-plugin-runtime",
+  "private": true,
+  "type": "module",
+  "description": "Marks this plugin's bin and hook scripts as ES modules. Not published."
+}

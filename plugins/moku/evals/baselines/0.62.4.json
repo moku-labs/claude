@@ -1,0 +1,21 @@
+{
+  "plugin": "moku@0.62.4",
+  "date": "2026-09-19",
+  "runsPerCase": 1,
+  "ablation": "none",
+  "aggregates": {
+    "casesTotal": 7,
+    "casesPassed": 4,
+    "overallScore": 0.5714285714285714,
+    "overallPassRate": 0.5714285714285714
+  },
+  "cases": {
+    "conductor-idea": 0,
+    "nano-plugin-shape": 1,
+    "rails-no-init": 0,
+    "readable-stanzas": 1,
+    "release-first-publish": 0,
+    "thin-root": 1,
+    "web-island-attrs": 1
+  }
+}
