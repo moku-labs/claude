@@ -24,19 +24,9 @@ if [ -z "$PROJECT_TYPE" ]; then
   # First-run detection — welcome new users with decision tree
   if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; then
     if grep -q '@moku-labs' package.json 2>/dev/null; then
-      add "Welcome to Moku! Choose your path:"
-      add ""
-      add "  Quick start:"
-      add "    /moku:init            — scaffold a new project (framework, app, or tools)"
-      add "    /moku:plan add plugin — add a plugin to an existing framework"
-      add ""
-      add "  Full workflow:"
-      add "    /moku:plan create framework \"description\" — plan a new framework (3-stage gated)"
-      add "    /moku:plan create app \"description\"       — plan a consumer app"
-      add "    /moku:plan migrate ~/path/to/project       — migrate existing code to Moku"
-      add ""
-      add "  Diagnostics:"
-      add "    /moku:check — run project diagnostics"
+      add "This looks like a Moku project that has not been set up yet."
+      add "Describe what you want to build in plain words. The moku conductor takes it from there:"
+      add "it creates the project first, then leads through design, plan, build and verify."
     fi
   fi
 
@@ -109,7 +99,7 @@ if [ -f .planning/STATE.md ]; then
     if [ -n "$NEXT" ]; then
       add "Quick action: $NEXT"
     else
-      add "Resume with /moku:plan resume or /moku:build resume"
+      add "Say what you want next, or ask where things stand. The moku conductor resumes from the recorded state."
     fi
   fi
 fi
