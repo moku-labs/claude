@@ -31,7 +31,7 @@
 
 ## Research
 
-Spawn **moku-researcher** agent with the tech stack, domain description, and key dependencies found at `MIGRATE_PATH`. The unfamiliar codebase needs ecosystem investigation. Research output is saved to `.planning/build/research.md`.
+Spawn the **moku-researcher** agent with the tech stack, domain description, and key dependencies found at `MIGRATE_PATH`. The unfamiliar codebase needs ecosystem investigation. Research output is saved to `.planning/build/research.md`.
 
 ## Analysis
 
@@ -45,7 +45,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/migrate-flows.md` for th
 
 ## Save Context
 
-Write analysis results to `.planning/decisions.md` using the Migration decisions.md Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. The file MUST include a `## Migration Type` header with `Flow: from-existing` so the discussion phase detects it.
+Write analysis results to `.planning/decisions.md` using the Migration decisions.md Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. Include a `## Migration Type` header with `Flow: from-existing`, which is how the discussion phase detects it.
 
 Log to user: "Migration analysis complete. Saved to `.planning/decisions.md`. Proceeding to the create flow."
 
@@ -58,7 +58,7 @@ When migrating to a consumer app (TYPE is `app`), the analysis differs:
    - Options: list detected framework packages from the source project's dependencies, plus "New framework (will plan both)"
 2. **Route Mapping**: Map existing entry points and routes to Moku `createApp` composition
 3. **Custom Plugin Detection**: Identify app-specific logic that should become custom consumer-side plugins (e.g., app-specific middleware, custom UI components, authentication wrappers)
-4. **Import Rewriting**: Map existing imports to framework package imports (consumer code NEVER imports from `@moku-labs/core`)
+4. **Import Rewriting**: Map existing imports to framework package imports (consumer code never imports from `@moku-labs/core`)
 
 Write app migration analysis to `.planning/decisions.md` with `## Migration Type: app-from-existing`.
 

@@ -1,35 +1,32 @@
 # Brainstorm Debate Loop
 
-Implements the Present → Challenge → Decide cycle. Receives context from brainstorm-flow.md: CATEGORY, NAME, DESCRIPTION, EFFECTIVE_DEPTH, CUSTOM_ITERATIONS.
+The Present → Challenge → Decide cycle. Receives CATEGORY, NAME, DESCRIPTION, EFFECTIVE_DEPTH,
+CUSTOM_ITERATIONS from `brainstorm-flow.md`.
 
 ---
 
 ## Iteration Limits
 
-**Default iterations by depth:**
+**MAX_ITERATIONS is 1 at every depth.** One challenger pass is the default because repeated review
+rounds over the same artifact measured about 25 extra minutes for the same quality. Depth still
+decides how many researchers run (1 / 2 / 3).
 
-| Depth | MAX_ITERATIONS |
-|---|---|
-| `quick` | 1 |
-| `standard` | 2 |
-| `deep` | 3 |
-
-**CUSTOM_ITERATIONS override:** If CUSTOM_ITERATIONS is set (from `--deep N`), use it as MAX_ITERATIONS regardless of the depth table above. The depth tier still determines research agent count (1/2/3) — only the iteration limit is overridden. Examples: `--deep 5` → MAX_ITERATIONS=5 with 3 researchers. `--deep 1` → MAX_ITERATIONS=1 with 3 researchers.
+`--deep N` sets MAX_ITERATIONS to N explicitly, and the closing gate always offers one more round.
+Those are the two ways to get past one pass; do not add rounds on your own judgement.
 
 ---
 
 ## Initialization
 
-Spawn `brainstorm-synthesizer` agent in **position mode** to produce the initial position document.
+Write `.planning/brainstorm-{NAME}-position.md` yourself, using the Position Document Schema in
+`brainstorm-templates.md`. Inputs: the analysis (`.planning/brainstorm-{NAME}-analysis.md`), the
+merged research (`.planning/brainstorm-{NAME}-research.md`), and the decisions already made with the
+user. The position is the artifact the challenger attacks, so it states a real position — at most 5
+assumptions, 3 risks, 3 open questions, each one actionable. "Consider performance" is not a risk;
+"benchmark the event bus at 50+ listeners — research found O(n^2) registration in similar systems" is.
 
-Prompt must include:
-- `CATEGORY`, `NAME`, `DESCRIPTION`
-- Path to analysis: `.planning/brainstorm-{NAME}-analysis.md`
-- Path to research: `.planning/brainstorm-{NAME}-research.md`
-- Output path: `.planning/brainstorm-{NAME}-position.md`
-- Iteration: 1
-
-After synthesizer completes, read `.planning/brainstorm-{NAME}-position.md` and begin the loop.
+It also carries a Spec Alignment table citing the `spec/NN-*.md §N` sections behind each key
+decision, with any deviation flagged rather than dropped. Plan verifies against those same sections.
 
 ---
 
@@ -94,7 +91,7 @@ If EITHER deficiency is detected, construct a single re-spawn prompt addressing 
 
 Re-spawn at most ONCE — if the second attempt still produces weak challenges, proceed with what you have. Do not loop.
 
-Present the challenge findings as text output first, then call `AskUserQuestion` in the NEXT response turn (do NOT include AskUserQuestion in the same response as the challenge findings — the dialog overlay obscures the text above it):
+Present the challenge findings as text output first, then call `AskUserQuestion` in the NEXT response turn (the dialog overlay covers the text above it, so the findings need their own turn):
 
 **Text output (Turn 2a):** Display the full challenge report with details:
 ```
@@ -132,7 +129,7 @@ Present the challenge findings as text output first, then call `AskUserQuestion`
 
 Triggers when the user selects "Fresh directions" during Turn 2. This breaks out of the current DESCRIPTION framing to find unexpected angles.
 
-**Step 1: Spawn ideation agents.** Spawn 2 `brainstorm-researcher` agents **in parallel** with ideation-specific lenses:
+**Step 1: Spawn ideation agents.** Spawn 2 `moku-researcher` agents **in parallel** with ideation-specific lenses:
 
 | Agent | Lens | Guiding prompt |
 |---|---|---|
@@ -171,7 +168,7 @@ Then use `AskUserQuestion`:
 - Options: one per idea (do NOT add a manual "None" option — the system auto-appends "Other"). If user submits empty selection or "Other" with no text: stay the course, no ideas incorporated.
 - multiSelect: true
 
-**Step 3: Incorporate.** Selected ideas are passed to the synthesizer in the next position update as additional input: "Incorporate these fresh ideas into the position: {list}. Adjust the approach direction if they reveal a better path." The ideation scratch files (`.planning/brainstorm-{NAME}-ideation-*.md`) are added to the cleanup list.
+**Step 3: Incorporate.** Fold the selected ideas into the next position update, and change the approach direction when they reveal a better path. The ideation scratch files (`.planning/brainstorm-{NAME}-ideation-*.md`) are added to the cleanup list.
 
 **Ideation runs at most once per brainstorm session.** Before offering the "Explore fresh directions" option in Turn 2, check if `.planning/brainstorm-{NAME}-ideation-*.md` files already exist. If they do, ideation has already run — replace the option with: label: "Fresh directions (already explored)", description: "Ideas from iteration {N} are incorporated in the current position". Make this option non-functional (if selected, show the previous ideation summary instead of re-spawning agents).
 
@@ -206,15 +203,9 @@ For each challenge the user selected, ask a focused resolution question using `A
   3. "Note for planning" — description: "Worth considering during planning, but don't change brainstorm direction"
 - multiSelect: false
 
-After all selected challenges are resolved, collect the decisions and spawn `brainstorm-synthesizer` in **position mode** with the new decisions:
-
-Prompt must include:
-- All previous context (analysis, research)
-- Path to current position: `.planning/brainstorm-{NAME}-position.md`
-- The list of decisions made this round (challenge text + user's chosen resolution + rationale)
-- Instruction: "Update the position document to reflect these decisions. Preserve decisions from prior iterations."
-- New iteration number
-- Output path: same `.planning/brainstorm-{NAME}-position.md` (overwrite)
+After the selected challenges are resolved, rewrite `.planning/brainstorm-{NAME}-position.md`
+yourself with the new decisions folded in. Evolve the document, do not reset it: decisions from
+earlier rounds stay, resolved questions move into the decisions table, and the iteration number goes up.
 
 ---
 
@@ -228,26 +219,32 @@ The loop exits when:
 
 ## Context File Assembly
 
-After the loop exits, spawn `brainstorm-synthesizer` in **final mode**.
+After the loop exits, write `.planning/context-{NAME}.md` yourself from the Context File Template in
+`brainstorm-templates.md`, using the analysis, the merged research and the final position. You sat
+through the debate; a subagent writing this would have to reconstruct it from files.
 
-Prompt must include:
-- `FINAL_MODE=true`
-- `CATEGORY`, `NAME`, `DESCRIPTION`, `EFFECTIVE_DEPTH`, `COMPLEXITY_SCORE`
-- Path to analysis: `.planning/brainstorm-{NAME}-analysis.md`
-- Path to research: `.planning/brainstorm-{NAME}-research.md`
-- Path to final position: `.planning/brainstorm-{NAME}-position.md`
-- Template reference: `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-templates.md`
-- Output path: `.planning/context-{NAME}.md`
+Check before presenting it:
 
-After synthesizer completes with PASS verdict, verify the file exists and has content.
+1. No section is empty or holds only a header. Omit `## Migration Source` for non-migrate categories.
+2. Every debate decision appears in the Decisions Made table.
+3. Non-Goals come from decisions that scoped something out, not from invention.
+4. Research Findings trace to the merged research file.
+5. The Meta section's plan command matches CATEGORY: `create` → `plan create`, `modify`/`feature` →
+   `plan update`, `migrate` → `plan migrate`.
+6. Spec Alignment cites real `spec/NN-*.md §N` sections, and every deviation carries an accepted-risk
+   note.
+7. Open Questions holds only what is genuinely unresolved. Suggested Plugins is a preliminary list for
+   standard and deep depth, and "Plugin analysis deferred to plan stage" for quick.
 
-**If synthesizer returns FAIL** (missing sections): re-invoke it once with an explicit list of the missing sections noted in its blockers array. If it still returns FAIL after the retry, show the user: "Context file generated with incomplete sections — marked with [INCOMPLETE]. Review `.planning/context-{NAME}.md` before using with `/moku:plan`."
+A section you cannot populate is a gap in the brainstorm, not a formatting problem — fill it before
+the gate rather than marking it incomplete.
 
 ---
 
 ## Final User Gate
 
-Read `.planning/context-{NAME}.md` and present a summary to the user.
+Run `moku-rails pause --reason "waiting for brainstorm approval"`, then present a summary of
+`.planning/context-{NAME}.md`.
 
 Determine the correct plan command based on CATEGORY:
 - `create` → `/moku:plan create {TYPE} "{NAME}" --context context-{NAME}.md` (TYPE derived from analysis — framework, app, or plugin)
@@ -263,11 +260,11 @@ Use `AskUserQuestion`:
   3. label: "Refine further", description: "Run one more debate iteration to stress-test the approach"
 - multiSelect: false
 
-If user chooses "Plan (Recommended)": clean up scratch files (see Cleanup below), then tell the user "Run: `{plan command}` to start planning." Do NOT invoke the plan command directly — the user should start a fresh context window for planning.
+If user chooses "Plan (Recommended)": clean up scratch files (see Cleanup below), run `moku-rails done brainstorm`, and tell the user the plan command. Brainstorm does not invoke plan; the conductor or the user walks to that station.
 
 If user chooses "Review first": clean up scratch files (see Cleanup below).
 
-If user chooses "Refine further": do NOT clean up scratch files. Set `iteration = MAX_ITERATIONS`, increment `MAX_ITERATIONS` by 1, and re-enter the debate loop at Turn 2 (Challenge) for iteration `MAX_ITERATIONS`. Do NOT re-run research.
+If user chooses "Refine further": keep the scratch files. Set `iteration = MAX_ITERATIONS`, increment `MAX_ITERATIONS` by 1, and re-enter the loop at Turn 2 (Challenge). Research does not re-run.
 
 ---
 
@@ -281,7 +278,6 @@ Delete scratch files:
 - `.planning/brainstorm-{NAME}-research-*.md` (per-focus research files)
 - `.planning/brainstorm-{NAME}-position.md`
 - `.planning/brainstorm-{NAME}-ideation-*.md` (ideation scratch files, if any)
-- `.planning/.brainstorm-active` (session marker — deactivates the brainstorm-guard hook)
 
 Keep only the final output: `.planning/context-{NAME}.md` and `.planning/learnings.md`.
 
@@ -305,4 +301,4 @@ Keep only the final output: `.planning/context-{NAME}.md` and `.planning/learnin
 - {learning 3}
 ```
 
-3. Do NOT extract trivial or project-specific learnings. Only extract insights that would help someone brainstorming a DIFFERENT project in a similar domain. If no learnings are genuinely reusable, skip this step silently.
+3. Do not extract trivial or project-specific learnings. Only extract insights that would help someone brainstorming a DIFFERENT project in a similar domain. If no learnings are genuinely reusable, skip this step silently.

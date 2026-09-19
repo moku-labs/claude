@@ -1,6 +1,6 @@
 # Decision Knowledge Graph
 
-A structured log of "Chose X over Y because Z" decisions made during planning and building. Future agents consult this to understand WHY code is shaped a certain way — preventing them from undoing intentional choices or re-litigating settled trade-offs.
+A structured log of "chose X over Y because Z" decisions made during planning and building. Future agents consult this to understand WHY code is shaped a certain way — preventing them from undoing intentional choices or re-litigating settled trade-offs.
 
 ## Why This Matters
 
@@ -75,7 +75,7 @@ Record when:
 
 Record when:
 - User makes a judgment call during interactive triage (from build-findings-triage.md)
-- User overrides a wave judge recommendation
+- User overrides the orchestrator's wave disposition
 - User manually fixes a `needs-manual` plugin and explains why
 
 ## How Agents Use the Decision Log

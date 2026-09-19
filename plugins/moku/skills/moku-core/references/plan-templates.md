@@ -1,6 +1,67 @@
 # Plan Templates
 
-Templates used by the `/plan` command for specifications, STATE.md, and decisions.
+Templates used by the `plan` skill for specifications, delta specs, STATE.md, and decisions.
+
+---
+
+## Delta Spec Template
+
+Written to `.planning/changes/<id>/delta-spec.md` on the size-M route (see `plan-stages.md`). It
+records the difference, not the whole system: a field that does not change is not listed. The
+plugin specs in `.planning/specs/` are updated alongside it and stay the full picture.
+
+```markdown
+# Delta Spec: [change title]
+
+## Change
+- Id: [change id]
+- Size: M
+- Intake: .planning/changes/[id]/intake.md
+- Specs touched: [NN-name.md, …]
+
+## Scope
+[2–4 sentences: what changes, which plugins it lands in, and what stays untouched.]
+
+## Plugin: [name] ([tier], [new | existing])
+
+### Config
+| Field | Change | Type | Default | Why |
+|---|---|---|---|---|
+
+### State
+| Field | Change | Type | Why |
+|---|---|---|---|
+
+### API
+| Method | Change | Signature | Why |
+|---|---|---|---|
+
+### Events
+| Event | Change | Payload | Emitted when |
+|---|---|---|---|
+
+### Dependencies
+[Added or removed `depends` entries, or "unchanged".]
+
+### Tests
+- [New or changed test, and the behaviour it pins.]
+
+### Docs
+[Plugin README and root README impact, or "none".]
+
+(repeat the Plugin block per touched plugin)
+
+## Breaking Changes
+| What breaks | Who adapts | Migration |
+|---|---|---|
+
+[Or "None — additive only".]
+
+## Verification
+- [ ] [Observable condition that shows the change works.]
+- [ ] Tests for every changed behaviour are green.
+- [ ] Touched specs describe the post-change state.
+```
 
 ---
 
@@ -194,7 +255,7 @@ These methods are injected on every regular plugin's context as ctx.<name>.<meth
 ## Cycle: [1 | 2 | ... — incremented after each build/complete → archive cycle]
 
 ## Recovery
-<!-- Cold-start rehydration block. A fresh session (or /moku:next, /moku:status) reads THIS first
+<!-- Cold-start rehydration block. A cold session (or the conductor, or /moku:status) reads this first
      to route in one read, before parsing the full tables below. Keep it ≤ 6 lines and rewrite it
      every time STATE.md is written. -->
 - Last good step: [e.g. "Skeleton wave 2 verified" | "Plugin wave 1 (router, auth) verified" | "Stage 2 approved" | "not started"]

@@ -20,7 +20,7 @@
 8. If tier would change, flag explicitly
 9. If breaking changes are needed, flag them with migration notes
 10. Write updated spec to `.planning/specs/NN-{name}.md` (overwrite existing or create new)
-11. Proceed to Stage 2 directly (skip Stage 1 — we already know the structure)
+11. Size M with existing specs: take the delta route in `plan-stages.md`. Size L, or no specs yet: proceed to Stage 2 directly (the structure is already known)
 
 ## Update App (`update app {changes}`)
 
@@ -51,7 +51,7 @@
 
 ## Quick-mode auto-suggest (update skips Stage 1)
 
-All three update flows above skip Stage 1 and enter at Stage 2. Because the `--quick` auto-suggest in `plan.md` fires "before the FIRST approval gate of this run," for `update` that gate is the **Stage 2** gate. After the change set is assembled (the plugins/specs this update touches) and **before** presenting the Stage 2 gate, run the auto-suggest: if ≤ 4 plugins/changes are in scope AND QUICK_MODE is not already true, offer quick mode via the `AskUserQuestion` defined in `plan.md` ("Only [N] plugins detected. Switch to quick mode?"). This is the update-verb counterpart to the create-verb's pre-Stage-1 check — without it the auto-suggest would never fire for updates.
+All three update flows above skip Stage 1 and enter at Stage 2. Because the `--quick` auto-suggest fires before the first approval gate of a run, for `update` that gate is the **Stage 2** gate. After the change set is assembled (the plugins/specs this update touches) and **before** presenting the Stage 2 gate, run the auto-suggest: if ≤ 4 plugins/changes are in scope AND QUICK_MODE is not already true, offer quick mode via `AskUserQuestion` ("Only [N] plugins detected. Switch to quick mode?"). This is the update-verb counterpart to the create-verb's pre-Stage-1 check — without it the auto-suggest would never fire for updates.
 
 ## Next
 
@@ -59,4 +59,4 @@ After the update analysis, proceed to **Stage 2** (Specifications) and then **St
 
 Update `.planning/STATE.md` at each stage exit. Use `AskUserQuestion` at each gate (the stage gates in `plan-stages.md` define the exact options).
 
-**IMPORTANT — Plan never builds:** After all stages are approved, set `## Next Action:` to recommend the appropriate build command. Do NOT invoke any build steps. The plan command only creates/updates specs — the user runs `/moku:build resume` in a fresh context to execute the build. This ensures clean separation between planning and building, and gives the user full control over when building starts.
+Plan never builds. After the last gate, set `## Next Action:` to the build command and stop. Keeping the two apart is what lets the user decide when building starts.

@@ -1,69 +1,130 @@
 ---
-description: Comprehensively e2e-test a Layer-3 web app in a real browser (Playwright) — every screen, feature, and control tested for correct behavior + visual baselines, on desktop and mobile, with browser-console + server errors caught and a modern-UX + responsive review; bugs and UX issues fixed and looped until clean before results are shown. Can also take a visual feature request and build/adjust it, then create its tests + baseline + QA/UX coverage. Accepts free-form natural language.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion
-argument-hint: (empty = cover everything) or {free-form: a screen/feature to focus, OR a visual feature to build/adjust} [--update-baselines]
-disable-model-invocation: true
+name: e2e
+description: Proves a Moku web app works in a real browser. Covers every screen and control with Playwright, adds visual baselines, then runs exploratory QA and a UX gate on desktop and mobile screenshots, fixing what it finds. Use for the e2e station of a change with a web surface, not for unit or integration tests.
+when_to_use: A Layer-3 Moku app with a web surface reaches the e2e station, or the user asks for browser-level coverage of screens, features or controls.
+argument-hint: (empty = cover everything) or {a screen or feature to focus, or a visual feature to build} [--update-baselines]
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, Agent, AskUserQuestion
+model: fable
+effort: medium
 ---
 
-## Moku Core Specification (authoritative)
+# The e2e station
 
-Before any decision about architecture, the core API, lifecycle, events, types, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** For web patterns (the app under test), the **moku-web** skill (`references/project-spec.md`) is authoritative. Never stage or commit `.planning/`.
+You orchestrate browser proof for a Layer-3 Moku web app: functional coverage, exploratory QA, a UX gate, and
+a bounded fix loop. You spawn the agents; they do not spawn each other.
 
-## Input — natural language first
+## Enter the rails
 
-`$ARGUMENTS` may be **natural language**. Resolve intent per **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`**: empty → cover **everything**; a phrase naming an existing screen/feature → focus there (but still gap-check the rest); a phrase describing a **visual feature to build or change** (verbs like add/build/create/implement/make/redesign/"turn X into Y") → **feature-request mode** — build/adjust it, then cover it; `--update-baselines` (or "update the visual baselines / I redesigned X") → allow deliberate golden updates for intended changes. Echo a one-line `Interpreting as: …` only when NL was interpreted.
+```bash
+moku-rails enter e2e        # exit 2 = refused: stop, relay the reason and the named next step
+```
 
-## Project Configuration
-!`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
+Before you stop to ask the user anything mid-station: `moku-rails pause --reason "..."`. The last action of a
+finished run is `moku-rails done e2e`.
 
-Comprehensively **e2e-test** a Layer-3 Moku **web** app and **prove it works** before showing the user anything. Every screen, panel, popup, feature, **and control** is exercised in a **real browser** (Playwright) on **desktop and mobile**, pinned with a **visual baseline**, with **browser-console + server errors** caught, a **modern-UX + responsive** review, and the whole experience **explored like a human QA** (charters · tours · oracles, turning findings into durable regression tests). **Nothing is assumed** — a functional bug, a behavioral defect, a runtime error, or a real visual/UX regression is **fixed** (and the suite re-run), and it **loops until clean**, not just green. This is the same engine that runs as the final App-Build gate; here it runs **on demand**.
+## Knowledge you load
 
-The full process — the suite shape, the frozen fixture corpus, the engine/OS baseline matrix, the determinism knobs, the **"beyond green" error / behavior / UX / mobile checks**, and the confirm-don't-assume protocol — is **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`**.
+- `references/e2e-testing.md` (this pack) is the authoritative process: suite shape, fixtures, determinism,
+  oracles, tours, the UX gate procedure. Read it before spawning anything.
+- The **moku-web** skill (`references/project-spec.md`) is authoritative for the conventions of the app
+  under test.
+- For core knowledge — the agent preamble and output contract, rule ids, `moku-idioms.md`, `nl-args.md` —
+  load the `moku:moku-core` skill with the Skill tool, then read `references/<file>` under the base
+  directory it prints.
 
----
+`.planning/` is local state; it is never staged or committed.
 
-## Intent Normalization (Pre-Parse)
+## Input
 
-- `$ARGUMENTS` empty → **FOCUS = (all)** — cover every screen/feature.
-- A phrase naming an **existing** screen/feature (e.g. "the settings page", "the filter popup") → **FOCUS = that item**, but still run the gap analysis over the whole app and flag any other uncovered feature (don't silently narrow coverage — the user asked to *test*, and an untested neighbour is still a risk).
-- A phrase describing a **visual feature to build or change** (add/build/create/implement/make/redesign/"turn X into Y" — e.g. "add a dark-mode toggle to the header", "make the board filter a slide-over") → **FEATURE_REQUEST = that phrase** — build/adjust it in app source first, then cover it (tests + visual baseline + QA/UX). Echo `Interpreting as: feature request — …`.
-- `--update-baselines` anywhere → **UPDATE_BASELINES = true** (deliberate golden refresh for intended changes only — never to clear a real regression).
-- Wrong-command detection: if the request is about *planning*, or building a **large, multi-plugin** feature (new routes + worker endpoints + state — not a focused visual change), point at `/moku:plan` / `/moku:build` and stop. A focused visual feature is in scope here (feature-request mode).
+`$ARGUMENTS` may be plain language (resolve it per `nl-args.md` in the core skill):
 
----
+| Input | Means |
+|---|---|
+| empty | FOCUS = everything |
+| a phrase naming an existing screen or feature | FOCUS = that item; still gap-check the rest |
+| a phrase asking to build or change a visual feature (add, build, make, redesign, "turn X into Y") | FEATURE_REQUEST = that phrase; build it first, then cover it |
+| `--update-baselines`, or "I redesigned X" | UPDATE_BASELINES = true, for intended changes only |
 
-## Step 0: Guards & Scope Gate
+Echo a one-line `Interpreting as: …` only when plain language was interpreted. A large multi-plugin feature
+(new routes plus worker endpoints plus state) belongs in `/moku:plan` and `/moku:build`; say so and stop.
 
-1. **Filesystem guard:** the app must be present (a `package.json`). If none → "Not a Moku project — run from the app root." Stop.
+## Step 0 — guards
 
-2. **Scope gate (web Layer-3).** Playwright is a browser runner — detect a **web surface** the same way `check`/`build` do: a `createApp` import from a web framework (`@moku-labs/web`, or a web-bearing app on `@moku-labs/worker`/`@moku-labs/room`), an `src/index.html` + `src/routes.tsx`, or a built client (`dist/client`). 
-   - **Web surface present** → proceed.
-   - **No web surface** (pure framework/library, or a non-web app) → decline gracefully: "Nothing to e2e-test — `/moku:e2e` drives a browser, and this project has no web surface. (API-only? Add integration tests via `/moku:build`.)" Stop.
+1. A `package.json` must be present, otherwise: "Not a Moku project — run from the app root." Stop.
+2. **Web surface check.** A `createApp` from a web framework (`@moku-labs/web`, or a web-bearing app on
+   `@moku-labs/worker` / `@moku-labs/room`), an `src/index.html` plus `src/routes.tsx`, or a built
+   `dist/client`. No web surface: say that `/moku-web:e2e` drives a browser and this project has none, then
+   `moku-rails done e2e` with that note. Stop.
 
-3. **Parse FOCUS / FEATURE_REQUEST / UPDATE_BASELINES** (above).
+## Step 1 — functional coverage
 
----
+Spawn `moku-web-e2e-tester` with:
 
-## Route to the tester
+- `APP_ROOT` (repo root), `FOCUS`, `UPDATE_BASELINES`, `FEATURE_REQUEST` when set, `FIX_BUDGET` (default 4).
+- `INVENTORY_SOURCES`: a design context if one exists (`.planning/design/*/design-context.md` §6), the plan
+  and specs (`.planning/specs/*`, `app-spec.md`) plus what each build wave delivered, and the app source
+  (`src/routes.tsx`, components, islands, pages, worker `endpoints.ts`).
 
-Spawn the **`web-e2e-tester`** agent (`Agent` tool) with: APP_ROOT (repo root), `MODE=standalone`, FOCUS, UPDATE_BASELINES, **FEATURE_REQUEST** (when in feature-request mode — the agent builds/adjusts it first per `e2e-testing.md` → "Feature-request mode", then covers it), and the INVENTORY_SOURCES to enumerate from — a **design context** if one exists (`.planning/design/*/design-context.md` §6 inventory), the plan/specs (`.planning/specs/*`, `app-spec.md`) + what each build wave delivered, and the app source (`src/routes.tsx`, components/islands/pages, worker `endpoints.ts`). Instruct it to follow `e2e-testing.md` (the concrete template). It loops until clean — functional + **dual-side console/server errors** + **behavioral correctness** of every control — and runs the **human-QA loop**: spawns **`web-qa-explorer`** (charters/tours/oracles → durable regression tests for what the scripted suite missed) and **`web-ux-reviewer`** (modern-UX + mobile/responsive experience judge), grounding every finding in evidence and applying only standards-backed fixes (the rest are proposals).
+It enumerates screens and controls, closes coverage gaps, runs the suite, fixes real defects, and returns a
+coverage table with its verdict. A `FAIL` verdict stops the sequence here: present the failing items and the
+fix each needs, and offer to continue. Never present a "should work".
 
-When it returns, **present its coverage report** — but only treat the run as successful if its verdict is **PASS** (suite green AND every inventory item tested + confirmed). If **FAIL**, show the failing screens/features + the fix each needs and offer to continue fixing; do **not** present a "should work". If **PARTIAL** (no web surface, or Playwright/browsers unavailable here), say so plainly and how to enable it (`bunx playwright install`).
+## Step 2 — exploratory QA
 
----
+Once functional is green, spawn `moku-web-qa-explorer` with `APP_ROOT`, the control catalog and the served
+URL from Step 1. It runs charters, tours and the oracle ladder, and turns confirmed functional bugs into
+committed Playwright regression tests.
+
+Keep every regression test it authored. Feed its P0/P1 findings into the fix loop and re-run the suite.
+
+## Step 3 — the UX gate
+
+The gate is never skipped, and it is not "an agent's opinion" — it is two independent reviews plus your
+triage. The full procedure is `references/e2e-testing.md` → "The UX gate". In short:
+
+1. **Capture.** `moku-web-ux-reviewer` drives the app on desktop and mobile and writes one screenshot per
+   screen inventory item per viewport into `.planning/e2e/shots/`. It also returns its own heuristic
+   findings (measured geometry, contrast, tap targets, axe violations).
+2. **Astra.** If the `moku-design` pack is installed and `moku-astra` is on PATH:
+
+   ```bash
+   moku-astra review --images <comma-separated shots> --context <design-context.md if any> --out .planning/astra/findings.json
+   ```
+
+   Exit 3, or the pack absent, means Astra is unavailable: you review the same screenshots yourself using
+   the same findings shape, and the report names the reviewer.
+3. **Your own review.** You review the screenshots independently in every case, Astra present or not. Merge
+   your findings, Astra's and the reviewer's heuristic findings into one list.
+4. **Triage.** Ask four questions of every finding: is it reproducible in the browser? is it consistent with
+   `design-context.md`? is it consistent with the moku-web rules? is it worth its cost? Write every finding
+   to `.planning/astra/triage.md` as accepted or rejected, each with the reason.
+5. **Fix.** Accepted findings go back to `moku-web-ux-reviewer` (behavior, layout, responsive) or
+   `moku-web-e2e-tester` (functional and baselines). Re-screenshot and re-review. At most two review passes.
+
+## Step 4 — close
+
+Present, in this order: the coverage table (each inventory item tested, baselined, behavior-checked,
+confirmed), the engines and viewports exercised, defects found and fixed, exploratory findings with the
+regression tests added, the UX gate result naming the reviewers and the accepted/rejected counts, and any
+baselines updated with the reason.
+
+```bash
+moku-rails done e2e
+```
 
 ## Rules
 
-- **Confirm, don't assume.** Never report a screen/feature as working without a real browser run that passed. "I wrote the test" is not "it passes."
-- **Comprehensive.** Gap-analyze the **whole** app — every screen/panel/popup/feature, including ones built in earlier stages. An untested feature is a failure, not a deferral.
-- **Fix what you find.** Real functional bugs and real visual regressions are **fixed in the app source** (moku-web conventions), then re-verified. Only **intended** visual changes update the goldens (with `--update-baselines`), never to silence red.
-- **Per-engine/per-OS baselines.** chromium runs the full suite; webkit + firefox run the visual + boot-guard specs. Update goldens via `test:e2e:update` (local) and `test:e2e:update:linux` (pinned Docker) — never blanket-update to clear failures.
-- **Never present red or unverified.** Present results only when green and fully covered; otherwise present the gaps + fixes.
-- **Stay in the app; don't commit.** The agent edits app source/tests only. `.planning/` is never committed; `dist-e2e/`/`test-results/`/`playwright-report/` are gitignored artifacts.
+- Only a real browser run counts as proof. "I wrote the test" is not "it passes".
+- Gap-analyze the whole app, including features from earlier waves. An untested feature is a failure, not a
+  deferral.
+- Real regressions are fixed in the app source. Goldens are updated only for intended changes, never to
+  clear red.
+- The agents edit app source, tests and config. They do not commit; the orchestrator does.
+- `dist-e2e/`, `test-results/` and `playwright-report/` are gitignored build artifacts.
 
 ## Examples
 
-- `/moku:e2e` — cover **every** screen and feature; run all engines; fix anything broken; report green coverage.
-- `/moku:e2e the board filter popup` — focus the filter popup (functional + visual), still gap-check the rest.
-- `/moku:e2e add a dark-mode toggle to the header` — **feature-request mode**: build/adjust the toggle in app source (moku-web conventions), then add its tests + visual baseline (desktop + mobile) + QA/UX coverage; loop until clean.
-- `/moku:e2e --update-baselines` — after an **intended** redesign, refresh the visual goldens (local + Linux) while re-confirming everything passes.
+- `/moku-web:e2e` — cover every screen and feature, run the UX gate, report green coverage.
+- `/moku-web:e2e the board filter popup` — focus the filter popup, still gap-check the rest.
+- `/moku-web:e2e add a dark-mode toggle to the header` — build the toggle, then cover it.
+- `/moku-web:e2e --update-baselines` — after an intended redesign, refresh the goldens while re-confirming.

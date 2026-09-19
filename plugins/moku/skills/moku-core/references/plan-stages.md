@@ -1,6 +1,150 @@
 # Plan Stages — Detailed Instructions
 
-This file contains the detailed per-target instructions for Stages 1, 2, and 3 of the `/plan` command. The main command file references this for on-demand reading.
+The procedures behind the `plan` skill: the delta-spec route, the guards that protect existing
+planning work, and the three stages of a full plan. Read the section you need, not the whole file.
+
+---
+
+## Delta Spec (size M, existing project)
+
+A size-M change touches a system that already has specs. Replanning it from scratch discards work
+the user approved and invites builders to rewrite plugins that were fine. Write the difference
+instead. One user gate, not three.
+
+**Entry conditions.** `.planning/specs/` holds at least one spec, and the change is size M (or the
+user passed `--delta`). Otherwise take the full route — there is nothing to delta against.
+
+### 1. Locate the blast radius
+
+Read the intake (`.planning/changes/<id>/intake.md`), then the code:
+
+- Which plugins does the change touch? Grep `src/plugins/` for the domain, and read each candidate's
+  `index.ts`, `types.ts`, `state.ts`, `api.ts`, `handlers.ts`.
+- Which plugins depend on them, and which of their events or API methods are consumed elsewhere?
+- Does the change fit an existing plugin, or does it need a new one? A new plugin is plugin-shaped
+  when it needs its own typed API, its own events, lifecycle, or cross-cutting state. Otherwise it
+  belongs inside the plugin that owns the domain.
+- Does the change overlap a plugin domain enough to merge instead of adding? (`spaHead` + `spaRouter`
+  → one `spa` plugin.)
+
+Record the answers; they are the delta spec's Scope section.
+
+### 2. Write `.planning/changes/<id>/delta-spec.md`
+
+Use the Delta Spec Template in `plan-templates.md`. Per touched plugin it states what changes in
+config, state, api and events, which tests are added or changed, and whether the plugin README or the
+root README has to follow. A field that does not change is not listed — the delta is the difference,
+not a copy of the spec.
+
+Breaking changes carry a migration note naming the consumers that adapt. A tier promotion
+(Micro → Standard, and so on) is named explicitly, because it changes the plugin's file layout.
+
+### 3. Update the affected specs only
+
+For each touched plugin, edit its spec in `.planning/specs/` in place so it describes the
+post-change state. Untouched specs are not read, not renumbered and not rewritten. A new plugin gets
+a new spec at the next free number, from the Plugin Specification Template.
+
+### 4. Validate, then one gate
+
+Run `moku-plan-checker` over the delta spec plus the specs it touched, and fix every BLOCKER before
+the gate. Then `moku-rails pause --reason "waiting for delta-spec approval"` and present:
+
+- the delta spec, one screen per touched plugin;
+- the diff of what changed in each spec;
+- the plan-checker report, warnings included.
+
+`AskUserQuestion`: Approve (recommended) / Change the scope / Switch to a full plan. Approve writes
+`## Next Action: Run /moku:build resume` into `STATE.md` and ends the station.
+
+**`add plugin` is the same route** with one plugin in scope and no existing spec to edit; see
+`plan-verb-add.md`.
+
+---
+
+## Unbuilt-Plan Guard
+
+Every path that would delete or overwrite `.planning/specs/*.md` or
+`.planning/build/skeleton-spec.md` passes this gate first. An approved-but-unbuilt plan is real,
+user-approved design work, and deleting it silently is the incident this guard exists to prevent.
+
+**Why `complete` plus populated specs means unbuilt:** after a successful build, `/moku:build` moves
+the specs into `.planning/archive/cycle-N/` and resets `## Phase:` to `ready` or `build/complete`. So
+a `STATE.md` at phase `complete` (or any `stageN/*`) with spec files still in `.planning/specs/` is a
+plan that was never built.
+
+1. **Detect.** At risk when both hold: `.planning/specs/` contains at least one `*.md`
+   (`find .planning/specs -maxdepth 1 -name '*.md' -type f 2>/dev/null | head -1`), and `## Phase:`
+   is one of `stage1*`, `stage2*`, `stage3*`, `complete`. Phase `none`, `building`, `build/*`,
+   `ready`, or an empty specs directory means not at risk — continue normally.
+2. **Ask.** `AskUserQuestion`: "There is an approved but unbuilt plan in `.planning/specs/` (Target:
+   {current Target}, Phase: {phase}). Planning {new Target} would overwrite it."
+   - **Combine (recommended)** — keep the existing specs and plan the new work together with them.
+   - **Archive** — move the specs, the skeleton spec and a copy of `STATE.md` to
+     `.planning/archive/{slug}/`, then plan in a clean slot.
+   - **Replace** — drop the existing unbuilt specs. Only for an abandoned plan.
+3. **Route.**
+   - *Combine:* delete nothing. Set COMBINE_MODE=true, feed the existing spec set into the new cycle,
+     add any brainstorm context behind it to CONTEXT_FILES, renumber `01..NN` across the union, tag
+     each section with its source feature where two features touch one plugin, and set `## Target:`
+     to a combined label.
+   - *Archive:* run the helper below, then proceed as a clean cycle.
+   - *Replace:* back up `STATE.md` to `.planning/STATE.md.bak`, then delete `.planning/specs/*.md`
+     and `.planning/build/skeleton-spec.md`.
+4. **Non-interactive:** never auto-Replace. When the gate cannot be shown, Archive and log the path.
+
+**Archive-Plan helper.** Slugify the current `## Target:` (lowercase, `[a-z0-9-]`, spaces → `-`;
+fallback `plan`), suffix `-2`, `-3`, … if the directory exists, `mkdir -p .planning/archive/{SLUG}/`,
+and move in every `.planning/specs/*.md`, `.planning/build/skeleton-spec.md` if present, and a copy
+of `.planning/STATE.md`. Log the path. An archive is never deleted automatically.
+
+---
+
+## State Persistence Protocol
+
+Every stage reads `.planning/STATE.md` on entry and writes it on exit, so a stage can run alone and a
+dropped session can resume.
+
+All headers use the inline form `## HeaderName: value` — name, colon, space, value, one line. Each
+field appears exactly once: edit in place, never append a second copy. Fields that both plan and build
+write (`## Git Checkpoint:`, `## Phase:`, `## Skeleton:`) are collapsed to one line, most recent value
+winning, before writing.
+
+**On entry:** read `STATE.md`; verify `## Phase:` ends in `/approved`, otherwise tell the user the
+previous stage was not approved and resume from its pending-approval phase. A stage reached from its
+own `/pending-approval` phase skips this check — it is resuming itself. Then load verb, target type,
+decisions, plugin table and wave grouping.
+
+**On exit, before the user gate:**
+
+1. Copy `.planning/STATE.md` to `.planning/STATE.md.bak`. Write the new content to
+   `.planning/STATE.md.tmp` and validate it there. Required headers: `## Phase:`, `## Verb:`,
+   `## Target:`, `## Next Action:`, `## PluginTable:`, `## WaveGrouping:`, `## QuickMode:`,
+   `## Skeleton:`. Validation fails → delete the tmp file, leave `STATE.md` untouched, and stop with
+   the reason; the `.bak` is intact. Validation passes → rename tmp over `STATE.md`, which is atomic.
+   A failed rename leaves the tmp file in place; say so and stop.
+2. Record the phase, what the stage completed, the artifacts it created, and the next expected action.
+   Refresh the `## Recovery` block (last good step, open blockers, next action, updated) per
+   `plan-templates.md`, so a cold session rehydrates in one read.
+3. Set `## Phase:` to `stage{N}/pending-approval`; on approval set it to `stage{N}/approved`.
+4. `## Skeleton:` is advanced only by build. Preserve `in-progress`, `verified` or `committed` if
+   already set; otherwise write `not-started`.
+
+### Phase-to-Stage Jump Table
+
+| Phase value | Resume at |
+|---|---|
+| `none` or unrecognized | No plan started yet. Offer to begin one. |
+| `stage1`, `stage1/pending-approval` | Re-run Stage 1 |
+| `stage1/approved` | Stage 2 |
+| `stage2`, `stage2/pending-approval` | Re-run Stage 2 |
+| `stage2/approved` | Stage 3 |
+| `stage3`, `stage3/pending-approval` | Re-run Stage 3 |
+| `stage3/approved`, `complete` (verb `create`, `migrate`, `resume`) | The plan is complete; the next step is `/moku:build resume` |
+| `complete` (verb `update`, `add`) | Run the Unbuilt-Plan Guard, apply the user's choice, then set only `## Phase:` to `none` and plan the new work |
+
+A stored `## Verb: resume` is a defect: `resume` is an invocation verb, not a stored one. Tell the
+user to repair `## Verb:` to the verb the plan started with.
 
 ---
 
@@ -71,7 +215,7 @@ Using the **moku-core** and **moku-plugin** skills, for each identified regular 
 3. **Brief Description** — One sentence explaining what it does
 4. **Dependencies** — Which other plugins it depends on
 5. **Has Events** — Whether it declares its own events
-6. **Needs start/stop** — ONLY if it manages actual resources (servers, connections, listeners). Most plugins do NOT need start/stop.
+6. **Needs start/stop** — only if it manages a real resource (a server, a connection, a listener). Most plugins need neither.
 
 #### Record Key Decisions
 
@@ -86,9 +230,9 @@ Create `.planning/decisions.md` if it doesn't exist (use template from `plan-tem
 
 #### Structure Constraints
 
-Enforce these constraints on the proposed structure (re-checked post-build by `moku-verifier` + `moku-spec-validator` against the real `src/` filesystem — keep all three in sync). The `@moku-labs/web` root (`config.ts`, `index.ts`, `browser.ts`, `testing.ts`, `plugins/`) is the exemplar:
+Enforce these constraints on the proposed structure (re-checked post-build by `bin/moku-verify-artifacts` and `moku-structure-validator` against the real `src/` filesystem — keep all three in sync). The `@moku-labs/web` root (`config.ts`, `index.ts`, `browser.ts`, `testing.ts`, `plugins/`) is the exemplar:
 - **Root has config and index files only** — `src/config.ts` and `src/index.ts`. This also forbids loose helper FILES at root (`src/instances.ts`, `src/env-provider.ts`, `src/utils.ts`, …), not just folders.
-- **No folders that are NOT plugins** — everything under `src/plugins/`. No `src/utils/`, `src/services/`, `src/helpers/`, `src/lib/`, `src/internal/`, `src/shared/`.
+- **No folders other than plugins** — everything under `src/plugins/`. No `src/utils/`, `src/services/`, `src/helpers/`, `src/lib/`, `src/internal/`, `src/shared/`.
 - **Shared-across-plugins helpers never live as a loose root module.** Co-locate the helper INSIDE the one owning plugin (siblings import it via `../<owner>/<file>`) or make it its own plugin (Nano/Micro, or a core plugin for a utility many plugins need, reached via `ctx.require()`). The ONLY sanctioned shared *root* module is one re-exported publicly through `src/index.ts` (part of the package's public surface).
 - **CLI/client/server entry point files** (`src/cli.ts`, `src/browser.ts`, …) are allowed ONLY if absolutely necessary AND declared as a `package.json` `exports` subpath. Must be explicitly explained and justified to the user.
 
@@ -126,7 +270,7 @@ For each plugin, note:
 - Dependencies as arrows or notes
 - Files that will be created per tier
 
-**Do NOT create files yet** — this is a plan, not execution.
+No files are created here — this is a plan, not execution.
 
 ---
 
@@ -154,7 +298,7 @@ Search the project for:
 Read all relevant source files to understand what's available.
 
 **Framework-capability verification (verify, never assume).** Every composition/deploy claim the plan will
-make MUST be grounded in the **installed** package, not memory or a spec doc. For each capability you intend
+make is grounded in the **installed** package, not memory or a spec doc. For each capability you intend
 to rely on — an exported plugin (`hubPlugin`, `deployPlugin`), a generator (a `wrangler.jsonc` emitter, an
 SSG builder), a CLI (`server.cli.dev/deploy`), a `./subpath` export, a re-export — read the package's real
 `package.json` `exports` + its `dist`/types and confirm it exists with the assumed shape. If the plan is
@@ -170,7 +314,7 @@ pick the framework that ships it, or record a framework-extension need. The buil
 Compare requirements against available plugins:
 - Which requirements are covered by existing plugins (config / `pluginConfigs` only)?
 - Which requirements are **plugin-shaped** and need a new **custom Layer-3 plugin**? A requirement is plugin-shaped when it needs a typed `app.<x>.method()` API, custom events, lifecycle (`onInit`/`onStart`), shared cross-cutting state, or a dependency on another plugin. Author these in `src/plugins/{name}/` via the framework's `createPlugin` — see `consumer-plugins.md`.
-- Which requirements are better as a `lib/` helper (pure build-time data access / pure functions) or an island (client-only DOM behavior)? Do NOT turn these into plugins.
+- Which requirements are better as a `lib/` helper (pure build-time data access / pure functions) or an island (client-only DOM behavior)? Those do not become plugins.
 - Which requirements need framework extensions (i.e. belong in Layer 2, not this app)?
 - Are there missing dependencies?
 
@@ -212,17 +356,17 @@ Using the **moku-plugin** skill, assess:
 
 Select: Nano / Micro / Standard / Complex / VeryComplex
 
-**Domain merge check (CRITICAL):** Before planning a new plugin, scan existing plugins for domain overlap:
+**Domain merge check:** Before planning a new plugin, scan existing plugins for domain overlap:
 - Does the new plugin share a domain prefix with existing plugins? (e.g. `spaHead` + `spaRouter` → merge into `spa`)
 - Would the new plugin's events coordinate with an existing plugin's events?
 - Would consumers naturally configure the new plugin alongside an existing one?
 
-If overlap is detected: do NOT plan a separate plugin. Instead, plan to add a sub-module to the existing plugin (promoting it to Very Complex if needed).
+If overlap is detected, do not plan a separate plugin. Plan to add a sub-module to the existing plugin (promoting it to Very Complex if needed).
 
 Also determine lifecycle needs:
 - Does the plugin need `onStart`? (Only if opening connections, starting servers/listeners, mounting UI)
 - Does the plugin need `onStop`? (Only if closing connections, flushing buffers, unmounting)
-- If neither is needed, omit both entirely — do NOT add empty lifecycle methods
+- If neither is needed, omit both — empty lifecycle methods are noise
 
 #### Output: Plugin Design Summary
 
@@ -326,8 +470,7 @@ Each specification file must use the appropriate template from `${CLAUDE_PLUGIN_
 
 After all specs are created:
 1. Run the **moku-plan-checker** agent to validate cross-spec concerns (dependency graph, event flow, requirement coverage, section completeness)
-2. Run the **moku-plugin-spec-validator** agent on each plugin
-3. Run the **moku-spec-validator** agent to validate Moku specification compliance
+2. Run the **moku-structure-validator** agent over the plugin set (structure, tiers, spec compliance, family conventions)
 4. Resolve any BLOCKER issues found
 5. Re-run until all validators report zero BLOCKER violations
 
@@ -353,7 +496,7 @@ Save to `.planning/app-spec.md` (or user-specified path). Use the template from 
 #### Validate
 
 1. Run the **moku-plan-checker** agent on the application plan
-2. Use the **moku-spec-validator** agent to verify:
+2. Use the **moku-structure-validator** agent to verify:
    - Plugin ordering satisfies all `depends` constraints
    - No imports from `@moku-labs/core`
    - Config types match framework expectations
@@ -368,7 +511,7 @@ Write a plugin specification file to `.planning/specs/` (if within a framework p
 Include: overview, config, state, API, events, dependencies, hooks, lifecycle, communication, package dependencies, testing strategy, code example, and verification criteria.
 
 1. Run the **moku-plan-checker** agent to validate the spec
-2. Run the **moku-plugin-spec-validator** agent to validate the spec
+2. Run the **moku-structure-validator** agent to validate the spec
 
 ---
 
@@ -425,7 +568,7 @@ Route based on selection:
 
 #### Produce the Skeleton Spec Document
 
-Save to `.planning/build/skeleton-spec.md`. Use the Skeleton Specification Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. **Every code block you emit must already satisfy `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md`** (≤30-line wiring index from the literal template, typed-const config, `type` not `interface` for Config/Api, `createCoreConfig` third CorePlugins arg, JSDoc tag-line rules, no inline `as`, no `wireX`, structural injectable types) — so the build doesn't have to reconcile spec code against the hooks. The document must contain all five sections:
+Save to `.planning/build/skeleton-spec.md`. Use the Skeleton Specification Template from `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-templates.md`. **Every code block satisfies `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md`** (≤30-line wiring index from the literal template, typed-const config, `type` not `interface` for Config/Api, `createCoreConfig` third CorePlugins arg, JSDoc tag-line rules, no inline `as`, no `wireX`, structural injectable types) — so the build doesn't have to reconcile spec code against the hooks. The document must contain all five sections:
 
 1. **Architecture Overview** — entry structure, barrel pattern, core config registration
 2. **File Structure** — complete file tree with every file annotated (tier, purpose)
@@ -436,14 +579,14 @@ Save to `.planning/build/skeleton-spec.md`. Use the Skeleton Specification Templ
 **Delta vs full skeleton spec (`Verb: update`):** For an update build, the skeleton spec should add a `## Delta File Structure` section listing ONLY the NEW files the update introduces (alongside the full `## File Structure` for context). `build-skeleton.md` delta mode creates only those new files and never overwrites existing ones. If the update adds just a few new files, you may instead make `## File Structure` itself the new-files-only list and omit `## Delta File Structure` — build-skeleton treats a single structure as the delta when `Verb: update`. For `create`/`migrate`, emit one `## File Structure` (the complete framework); `## Delta File Structure` is ignored.
 
 **Skeleton Code Block Correctness Constraints:**
-- Plugin `index.ts` files MUST import `createPlugin` from `../../config` (the framework's config.ts), NOT from `@moku-labs/core`. `@moku-labs/core` only exports `createCoreConfig` and `createCorePlugin`. The `createPlugin` factory comes from destructuring `createCoreConfig`'s return value.
-- The plugin barrel (`src/plugins/index.ts`) MUST use namespace re-exports: `export * as [PascalCase] from "./[name]/types"` — NEVER `export type *` (causes ambiguous re-export when plugins share type names like Config/State/Api). Consumers access types as `PluginName.Config`, `PluginName.Api`, etc.
-- Use `@file` tag, NOT `@fileoverview` (ESLint jsdoc/check-tag-names rejects `@fileoverview`). Do NOT use `@module` in plugin files (flagged as redundant outside ambient context).
+- Plugin `index.ts` files import `createPlugin` from `../../config` (the framework's config.ts), not from `@moku-labs/core`. `@moku-labs/core` only exports `createCoreConfig` and `createCorePlugin`. The `createPlugin` factory comes from destructuring `createCoreConfig`'s return value.
+- The plugin barrel (`src/plugins/index.ts`) uses namespace re-exports: `export * as [PascalCase] from "./[name]/types"`, not `export type *` (causes ambiguous re-export when plugins share type names like Config/State/Api). Consumers access types as `PluginName.Config`, `PluginName.Api`, etc.
+- Use the `@file` tag, not `@fileoverview` (ESLint jsdoc/check-tag-names rejects it). Leave `@module` out of plugin files (flagged as redundant outside ambient context).
 - Common abbreviations (`ctx`, `fn`, `cb`) are allowed — they are whitelisted in the ESLint unicorn config. Unused stub parameters should still have an underscore prefix (e.g., `_ctx`).
-- Skeleton stub bodies must use `throw new Error("not implemented")` for complex return types — NEVER `return {} as X` (violates R6: no inline type assertions).
-- For plugins with `handlers.ts`, the plugin `index.ts` MUST import `createHandlers` and include a `hooks: createHandlers` field — do not create dead handler files.
+- Skeleton stub bodies use `throw new Error("not implemented")` for complex return types, not `return {} as X` (violates R6: no inline type assertions).
+- For plugins with `handlers.ts`, the plugin `index.ts` imports `createHandlers` and include a `hooks: createHandlers` field — do not create dead handler files.
 
-**Do NOT create actual source files** — this is a specification document only.
+No source files are created here — this is a specification document.
 
 ---
 
@@ -480,6 +623,6 @@ Present the completed skeleton spec document. Then use `AskUserQuestion`:
 - multiSelect: false
 
 Route based on selection:
-- **Approve**: Update `## Phase:` to `complete` (do NOT write `stage3/approved` — the jump table and `next.md` routing only recognize `complete` for this state), update `## Next Action:`
+- **Approve**: Update `## Phase:` to `complete` (not `stage3/approved` — the jump table recognizes only `complete` for this state), update `## Next Action:`
 - **Edit skeleton**: Ask what to change, apply edits, re-present gate
 - **Go back to Stage 2**: Reset phase to `stage2/pending-approval`, re-run Stage 2 gate

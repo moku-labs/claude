@@ -2,11 +2,11 @@
 
 **This step runs when VERB is `add` and TYPE is `plugin`.**
 
-This is a lightweight, single-session planning flow — analyze context, create a spec, and recommend the build command. It does NOT proceed to Stage 1/2/3 and does NOT build. The plan command only plans — building is done by `/moku:build add`.
+A single-pass flow on the delta route (see `plan-stages.md`): analyse the context, write one plugin spec, recommend the build. No stages, no source files.
 
 ## Prerequisites
 
-1. Verify `src/config.ts` exists and contains `createCoreConfig` — if not: "This requires a Moku Framework project. Run `/moku:init` first."
+1. Verify `src/config.ts` exists and contains `createCoreConfig` — if not: "This needs an initialized Moku framework project. Run the init station first."
 2. Parse REQUIREMENTS: first word is plugin name, rest is description
 3. If no name provided, ask: "What plugin do you want to add?"
 4. Check `src/plugins/{name}/` doesn't already exist — if it does, suggest `update plugin {name}` instead
@@ -83,4 +83,4 @@ Show the user:
 - Spec file location
 - **Next step recommendation:** "Spec saved to `.planning/specs/{NN}-{name}.md`. Run `/moku:build add {name}` to build, wire, and verify the plugin."
 
-**IMPORTANT:** Do NOT invoke the build command. Do NOT read `build-plugin.md`. The plan command only creates the spec — the user runs `/moku:build add {name}` in a fresh context to execute the build.
+Plan does not build: it creates the spec and stops. The user (or the conductor) runs `/moku:build add {name}` next.

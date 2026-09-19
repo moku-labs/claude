@@ -1,6 +1,9 @@
 # Brainstorm Flow
 
-Main flow coordinator for `/moku:brainstorm`. Receives context variables from the command: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG.
+The flow behind the `brainstorm` skill. Receives CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG.
+
+The orchestrating session writes every document itself, from the templates in
+`brainstorm-templates.md`. Only research and the challenge pass are delegated.
 
 ---
 
@@ -22,7 +25,7 @@ Before category-specific analysis, check for `.planning/learnings.md`. If it exi
 - If an entry references a specific plugin name (e.g., "the router plugin..."): Glob for `src/plugins/{name}/`. If the plugin no longer exists, the entry may be stale.
 - If an entry references a specific file or pattern (e.g., "in config.ts..."): Glob/Grep to verify it still exists. If not found, the entry may be stale.
 - If an entry is domain-level knowledge with no file/plugin references (e.g., "event bus O(n²) at 15+ plugins"): keep it — domain knowledge doesn't go stale.
-- **Never auto-delete learnings.** Instead, move stale entries to a `## Stale` section at the bottom of `.planning/learnings.md` with a note: `*(stale: src/plugins/{name}/ not found — {date})*`. This preserves information for manual review and avoids permanent data loss from incorrect staleness detection.
+- Never auto-delete learnings. Move stale entries to a `## Stale` section at the bottom of `.planning/learnings.md` with a note: `*(stale: src/plugins/{name}/ not found — {date})*`. This preserves information for manual review and avoids permanent data loss from incorrect staleness detection.
 - If entries were moved, log: "Refreshed learnings: moved {N} entries to Stale section (referenced plugins/files no longer exist)."
 
 **Step 2 — Surface:** From the validated entries, identify those relevant to DESCRIPTION or CATEGORY:
@@ -90,7 +93,7 @@ Before category-specific analysis, check for `.planning/learnings.md`. If it exi
    - If local: verify it exists and contains `package.json`
    - Store MIGRATE_PATH for context file
 
-2. **Lightweight source scan** (NOT the full 5-step plan analysis — just enough for complexity scoring and architectural discussion):
+2. **Lightweight source scan** (not the full 5-step plan analysis — just enough for complexity scoring and architectural discussion):
    - Read `package.json`: dependencies, scripts, entry points
    - Count source files and LOC (use `find` + `wc -l`)
    - Detect architecture pattern: look for directory structure (routes/, controllers/, middleware/, models/, etc.)
@@ -110,10 +113,10 @@ Before category-specific analysis, check for `.planning/learnings.md`. If it exi
 
 #### Step 1: Present Preliminary Assessment
 
-Display a structured assessment to the user. This is NOT a question — it is you sharing your findings.
+Display a structured assessment. This is not a question; it is you sharing findings.
 
 **Formatting rules for terminal rendering:**
-- Use `**BOLD CAPS**` for top-level section titles (NOT `##` headings — all heading levels render identically in the terminal)
+- Use `**BOLD CAPS**` for top-level section titles (not `##` headings — all heading levels render identically in the terminal)
 - Use `**Bold Mixed Case**` for sub-sections
 - Use `---` horizontal rules to separate major sections
 - Use `**key:** value` pairs for metadata (not bullet lists)
@@ -167,7 +170,7 @@ From your analysis, identify genuine architectural decisions — trade-offs wher
 3. The answer cannot be auto-detected from the project
 4. Different choices lead to meaningfully different code
 
-**What is NOT a genuine architectural decision (never ask these):**
+**Not genuine architectural decisions — never ask these:**
 - "How large is your codebase?" — you already measured it
 - "What's your timeline?" — irrelevant to architecture
 - "What integrations do you need?" — you already detected them from DESCRIPTION
@@ -181,7 +184,7 @@ From your analysis, identify genuine architectural decisions — trade-offs wher
 
 #### Question Validation Protocol
 
-**Before asking ANY question**, evaluate it against ALL five criteria. Only ask if every check passes — the bar is HIGH. When in doubt, don't ask. Make the decision yourself and explain your reasoning in the assessment instead.
+Evaluate every candidate question against all five criteria, and ask only when each passes. When in doubt, do not ask. Make the decision yourself and explain your reasoning in the assessment instead.
 
 | # | Check | Pass condition | If fails |
 |---|---|---|---|
@@ -197,22 +200,19 @@ From your analysis, identify genuine architectural decisions — trade-offs wher
 
 #### Step 3: Discuss Each Decision (Two-Turn Pattern)
 
-For each identified decision that passed the Question Validation Protocol, present it as a collaborative discussion. Every decision MUST include all of these elements — no exceptions:
+For each identified decision that passed the Question Validation Protocol, present it as a collaborative discussion. Every decision carries all four of these:
 
 1. **The trade-off framed clearly** — what is the tension?
 2. **2–3 concrete approaches with TypeScript code examples** — show how each would look in Moku plugin code (5–15 lines each)
 3. **Your recommendation with reasoning** — take a clear position, do not be neutral
 4. **Concerns about each alternative** — what could go wrong with each choice?
 
-**IMPORTANT — Two-turn pattern to prevent text blocking:** The AskUserQuestion dialog can obscure text output above it. To ensure the user can read the code examples and reasoning, split each decision into TWO response turns:
+**Two-turn pattern.** The AskUserQuestion dialog can cover the text above it, so split each decision into two response turns:
 
-> **Turn A is the primary deliverable — never skip or thin it.** The full TypeScript code examples
-> (5–15 lines per option), the clear recommendation with reasoning, and the concerns about each
-> alternative MUST appear as visible text in Turn A. Turn B's option descriptions are short
-> summaries for quick reference — they do NOT replace Turn A. Asking the user to decide WITHOUT
-> first showing the worked code examples and your recommendation is the regression this rule exists
-> to prevent. If you ever find yourself opening `AskUserQuestion` without having shown the examples,
-> stop and present Turn A first.
+> Turn A is the deliverable. The code examples (5–15 lines per option), the recommendation with its
+> reasoning, and the concerns about each alternative appear as visible text there. Turn B's option
+> descriptions are short summaries, not a replacement. Opening `AskUserQuestion` before the examples
+> have been shown asks the user to decide blind — present Turn A first.
 
 **Turn A — Present the full discussion (text only, NO AskUserQuestion in this turn):**
 
@@ -249,7 +249,7 @@ For each identified decision that passed the Question Validation Protocol, prese
 Use `AskUserQuestion`:
 - Question: "{decision title}"
 - Header: "Decision {N}"
-- Options: one per approach, the recommended one first and marked "(Recommended)". Do NOT add a "Neither" or "Other" option — the system auto-appends a free-text "Other" option.
+- Options: one per approach, the recommended one first and marked "(Recommended)". Do not add a "Neither" or "Other" option — the system auto-appends a free-text "Other" option.
 - Each option's `description` must be **self-contained** — summarize the trade-off in one clause so the user can decide even if the text above scrolled away. Example: `"Type-safe, explicit deps — more boilerplate but catches errors at compile time"` not just `"The first approach"`
 - multiSelect: false
 
@@ -316,7 +316,7 @@ After Phase 1 completes, save the full analysis to `.planning/brainstorm-{NAME}-
 
 ## Phase 2: Complexity Scoring
 
-The complexity score is computed from the auto-detected signals in Phase 1a — the user is NOT asked to self-report complexity.
+The complexity score is computed from the auto-detected signals in Phase 1a — the user is not asked to self-report complexity.
 
 ```
 raw_sum = sum of all 4 complexity signal scores (each 0–3)
@@ -335,10 +335,10 @@ Apply DEPTH_FLAG override:
 Report to user: "Complexity score: {COMPLEXITY_SCORE}/9 → **{EFFECTIVE_DEPTH}** mode. {cite the specific signals that drove the score — e.g., 'High domain novelty and multiple integration points pushed this into deep mode.'}."
 
 Briefly explain the depth (if CUSTOM_ITERATIONS is set, show the custom count instead of the default):
-- `quick`: "Quick research pass, 1 debate round. Good for well-understood domains."
-- `standard`: "Moderate research with 2 angles, 2 debate rounds. Balances speed and thoroughness."
-- `deep` (no CUSTOM_ITERATIONS): "Parallel deep research from 3 angles, 3 debate rounds. For novel or high-risk projects."
-- `deep` (CUSTOM_ITERATIONS=N): "Parallel deep research from 3 angles, {N} debate rounds. Extended depth requested via --deep {N}."
+- `quick`: "One research pass, one challenger round. Good for well-understood domains."
+- `standard`: "Research from 2 angles, one challenger round."
+- `deep` (no CUSTOM_ITERATIONS): "Parallel research from 3 angles, one challenger round. For novel or high-risk domains."
+- `deep` (CUSTOM_ITERATIONS=N): "Parallel research from 3 angles, {N} challenger rounds, as asked for with --deep {N}."
 
 If DEPTH_FLAG was `auto` (no override), ask the user to confirm:
 `AskUserQuestion`:
@@ -346,8 +346,8 @@ If DEPTH_FLAG was `auto` (no override), ask the user to confirm:
 - Header: "Depth"
 - Options:
   1. "{EFFECTIVE_DEPTH} mode (Recommended)" — description: "{depth explanation from above}"
-  2. "Switch to quick" — description: "Skip deep research, 1 debate round" (only if not already quick)
-  3. "Switch to deep" — description: "Full parallel research, 3 debate rounds" (only if not already deep)
+  2. "Switch to quick" — description: "One researcher, one challenger round" (only if not already quick)
+  3. "Switch to deep" — description: "Three researchers in parallel, one challenger round unless --deep N asks for more" (only if not already deep)
 - multiSelect: false
 
 Set EFFECTIVE_DEPTH based on user's choice.
@@ -384,7 +384,7 @@ Each researcher agent receives a **cognitive lens** that shapes its perspective.
 
 ### Spawning Researchers
 
-Spawn brainstorm-researcher agents using the `Agent` tool. For standard and deep modes, spawn all agents **in parallel** (multiple Agent tool calls in the same response).
+Spawn `moku-researcher` agents with the `Agent` tool. For standard and deep modes, spawn them **in parallel** — several Agent calls in one response.
 
 Each researcher prompt must include:
 1. The FOCUS parameter (ecosystem / technical-patterns / category-specific)
@@ -393,12 +393,12 @@ Each researcher prompt must include:
 4. The CATEGORY
 5. The analysis summary (from `.planning/brainstorm-{NAME}-analysis.md`) — this provides richer context including auto-detected signals and architectural decisions made with the user
 
-**Researchers return findings as text — they do NOT write files.** The `brainstorm-researcher` agent has no `Write` tool (`tools: ["Read","Grep","Glob","WebSearch","WebFetch"]`), and its output contract is the structured findings in its final message, which the runtime captures. Do NOT instruct a researcher to write an output path — capture each agent's returned text instead. (Writing the merged file is the parent session's job; the parent can write to `.planning/`.)
+**Researchers return findings as text, not files.** Their output contract is the structured findings in the final message. Do not hand a researcher an output path — capture the returned text, and write the merged file yourself.
 
 ### Merging Research
 
 After all researcher agents complete (the **parent** brainstorm session does this — it has Write access to `.planning/`):
-1. **Collect returned text:** Use each researcher agent's returned final message as its findings. If an agent returned nothing or errored (FAIL verdict), log: "Researcher {focus} returned no findings — proceeding without it." and skip it. Do NOT look for per-researcher files — they were never written.
+1. **Collect returned text:** Use each researcher agent's returned final message as its findings. If an agent returned nothing or errored (FAIL verdict), log: "Researcher {focus} returned no findings — proceeding without it." and skip it. Do not look for per-researcher files; they were never written.
 2. Gather all **available** returned findings (skip the FAILed ones).
 3. **The parent writes** a single `.planning/brainstorm-{NAME}-research.md` (one `### {focus}` section per researcher that returned text; a single-researcher `standard`/`quick` run yields one section):
    - Combine Key Findings from all researchers (deduplicate similar findings)

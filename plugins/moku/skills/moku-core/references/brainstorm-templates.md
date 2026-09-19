@@ -1,6 +1,6 @@
 # Brainstorm Templates
 
-Templates used by the `/moku:brainstorm` command for context files and intermediate documents.
+Templates the `brainstorm` skill writes from: the context file it hands to plan, and the position document the debate runs on.
 
 ---
 
@@ -97,7 +97,9 @@ Each key architectural decision mapped to the authoritative Moku Core spec. The 
 
 ## Position Document Schema
 
-Intermediate scratch document used during the debate loop. Written by brainstorm-synthesizer, read by brainstorm-challenger. Saved to `.planning/brainstorm-{NAME}-position.md`.
+The scratch document the debate runs on. The orchestrating session writes it, `brainstorm-challenger` reads it. Saved to `.planning/brainstorm-{NAME}-position.md`.
+
+Keep it short enough to force prioritisation: at most 5 assumptions, 3 risks, 3 open questions, each one actionable and traceable to a research finding or a decision made with the user. On a later iteration, evolve it — carry earlier decisions forward and turn resolved questions into decisions.
 
 ```markdown
 # Position: {NAME} — Iteration {i}
@@ -134,7 +136,7 @@ Intermediate scratch document used during the debate loop. Written by brainstorm
 
 ## Plan Command Mapping
 
-The context file maps to plan-verb-create.md's steering inputs:
+The context file maps onto the steering inputs in `plan-verb-create.md`:
 
 | Context File Section | Steering Equivalent |
 |---|---|

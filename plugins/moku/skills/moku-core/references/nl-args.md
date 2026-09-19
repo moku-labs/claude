@@ -1,9 +1,8 @@
 # Natural-language argument resolution
 
-How `/moku:brainstorm`, `/moku:plan`, and `/moku:init` turn free-form intent into their structured
-arguments. These three are the **idea/scaffold entry points** with rich syntax (verbs, types, flags,
-descriptions), so they accept plain language and translate it. The other moku commands take very
-simple arguments and do not use this protocol.
+How the `brainstorm`, `plan` and `init` skills turn free-form intent into their structured arguments.
+These three are the entry points with rich syntax (verbs, types, flags, descriptions), so they accept
+plain language and translate it. The other moku skills take simple arguments and skip this protocol.
 
 > **Goal:** users never have to memorize the `verb type "name" --flags` syntax. They describe what
 > they want; the command converts it. If it genuinely can't, it asks for just the missing piece —
@@ -29,7 +28,7 @@ or **natural language**. Resolve in this order:
 
 ## Echo format
 
-When NL was interpreted (case 3, confident), print exactly one line **before** doing the work:
+When plain language was interpreted (case 3, confident), print one line before doing the work:
 
 ```
 Interpreting as: /moku:<command> <canonical args>
@@ -40,18 +39,17 @@ empty or already-structured input.
 
 ## Asking (only when you must)
 
-Ask for the **smallest** missing piece — not a full restatement. All three commands have
-`AskUserQuestion` in their tools: offer the candidate interpretations as options, recommended
+Ask for the **smallest** missing piece — not a full restatement. All three have `AskUserQuestion`: offer the candidate interpretations as options, recommended
 candidate first. Never invent a required value (a plugin name, a path, a description) just to avoid
 asking — a wrong guess on a required value is worse than one more question.
 
 ## Safety — NL never bypasses gates
 
-Mapping NL onto an action does **not** skip the command's own gates. The interpreted invocation still
-runs the normal flow:
+Mapping plain language onto an action does not skip a skill's own gates. The interpreted invocation
+still runs the normal flow:
 
-- `plan` still hits its per-stage user checkpoints (analysis → specs → skeleton).
-- `brainstorm` still runs its Present → Challenge → Decide loop and approval gates.
+- `plan` still hits its user gate — one on the delta route, three on the full route.
+- `brainstorm` still runs its Present → Challenge → Decide loop and its approval gate.
 - A mapped flag (`--quick`, `--deep`, `--context`) is honored **only** if the user's words clearly
   imply it ("quick pass", "go deep"). Ambiguity → ask or omit the flag.
 

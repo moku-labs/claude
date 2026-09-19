@@ -1,238 +1,87 @@
 ---
-description: Brainstorm a Moku project idea — collaborative analysis, adaptive research, and debate-driven context generation before planning. Accepts free-form natural language.
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, EnterPlanMode, ExitPlanMode
-argument-hint: {free-form description} or [create|modify|migrate|feature] {name} "description" [--deep [N]|--quick]
-disable-model-invocation: true
+name: brainstorm
+description: Explores an idea for a Moku project before planning. Analyses the codebase, researches the domain, runs one challenger pass over the position, and writes the context file that the plan station consumes. Writes nothing outside .planning/.
+when_to_use: The brainstorm station of a size-L change, or any moment a user is unsure what to build and wants the idea explored before it is planned. Not for planning, building or unrelated repositories.
+argument-hint: "{free-form description} or [create|modify|feature|migrate] {name} \"description\" [--deep [N]|--quick]"
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, Skill
+model: fable
+effort: high
 ---
 
-## Moku Core Specification (authoritative)
+# Brainstorm
 
-Before any decision about architecture, the core API, factory chain, config, lifecycle, events, the `ctx` object, types, invariants, or plugin structure — **consult `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md` file.** The spec is the single source of truth; never rely on memory or guess. Justify any deviation against a cited section, and cite spec section IDs (`spec/NN-*.md §N`) in output. Never stage or commit `.planning/` — it is local-only state.
+Explore an idea with the user until the approach is decided, then write it down. The output is one file, `.planning/context-{NAME}.md`, which `/moku:plan` reads through `--context`. You are a colleague with opinions: analyse, propose, show code, take a position. Never ask a question you can answer by reading the project.
 
-## Input — natural language first
+## First action
 
-`$ARGUMENTS` may be **natural language** — you don't need the exact flags or patterns. Resolve intent per **`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`**: map the request onto this command's documented verbs/types/flags/targets, echo a one-line `Interpreting as: …`, then proceed. If a **required** value is missing or the request is ambiguous, ask only for that gap (don't make the user restate everything). Input that is already exact structured syntax is used verbatim (no echo). NL never bypasses this command's own confirmation gates.
+```bash
+moku-rails enter brainstorm
+```
 
-## Project Configuration
-!`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
+Exit code 2 means refused: relay the printed `Refused:` line and `Next step:` and stop. Brainstorm is one of the stations allowed before `init`, so an uninitialized project is not a reason to refuse — talking and sketching are safe there.
 
-Explore and contextualize a Moku project idea before planning. The output is a `.planning/context-{name}.md` file consumed by `/moku:plan ... --context`.
+Invoked directly with no change open? Open one first, then enter:
 
-This command runs an adaptive workflow:
-1. **Collaborative analysis** — auto-detect complexity from project context, discuss only genuine architectural decisions, and for each one show TypeScript code examples per option, a clear recommendation with reasoning, and specific concerns about the alternatives (opinionated colleague, not a passive interviewer)
-2. **Research** — 1–3 parallel researcher agents based on detected depth
-3. **Debate** — Present → Challenge → Decide loop to stress-test the approach
-4. **Context file** — structured output for the plan command
+```bash
+moku-rails open 2026-09-26-offline-mode --size L --type feature --title "Offline mode"
+moku-rails enter brainstorm
+```
 
-**Categories** mirror the plan command's verbs:
-- `create` — new framework, app, or plugin from scratch
-- `modify` — update an existing plugin or framework
-- `feature` — add a new capability to an existing project
-- `migrate` — migrate an existing codebase to Moku
+Before every user gate run `moku-rails pause --reason "<why>"`. At the end, after the context file is written, run `moku-rails done brainstorm`.
 
----
+## Ground every decision in the spec
 
-## Intent Normalization (Pre-Parse)
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the `spec/NN-*.md` files the description touches (architecture, plugin boundaries, events, types, invariants) before research and before the challenger pass. Spawn `moku-researcher` and `brainstorm-challenger` with the instruction to weigh every approach against cited sections. An approach that would break `spec/11-INVARIANTS.md` is surfaced as a challenge, not quietly adopted. The final context file carries a populated Spec Alignment table so plan verifies against the same sections.
 
-Before strict argument parsing, normalize free-form input to structured format.
+The one hard app-shape rule is I1 in `moku-idioms.md`: a Layer-3 app composes with `createApp` and does not define a framework (`createCoreConfig`, `createCore`, or a direct `@moku-labs/core` dependency). Fix a position that violates it. Several `createApp` instances, several frameworks side by side and folder splits are idiomatic; I2 to I6 are nudges toward the `demos/tracker` shape.
 
-**Skip when:** `$ARGUMENTS` is empty, OR the first token (after stripping `--deep`/`--quick`) is a recognized CATEGORY keyword (`create`, `new`, `build`, `modify`, `update`, `change`, `feature`, `add`, `extend`, `migrate`, `port`, `convert`). Proceed directly to Step 0.
+## Input
 
-**When to normalize:** If the first non-flag token is NOT a recognized keyword:
+`$ARGUMENTS` may be plain language. Resolve it per `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/nl-args.md`, echo one `Interpreting as: …` line, and ask only for what is genuinely missing.
 
-1. **Strip flags first:** Extract `--deep [N]`, `--quick` from anywhere.
-
-2. **Wrong-command detection:**
-   - Keywords suggesting plan intent (`plan`, `create spec`, `write spec`, `design the architecture`) → Use `AskUserQuestion`:
-     - Question: "It looks like you may want to plan, not brainstorm. What would you like to do?"
-     - Header: "Wrong command?"
-     - Options:
-       1. label: "Run plan instead", description: "Run `/moku:plan {rest of text}`"
-       2. label: "Continue brainstorming", description: "Keep going — I want to brainstorm, not plan"
-     - multiSelect: false
-     If "Run plan instead": delete `.planning/.brainstorm-active` if it exists, then tell user "Run: `/moku:plan {rest of text}`" and stop.
-     If "Continue brainstorming": proceed with normalization.
-   - Keywords suggesting build intent (`build`, `implement`, `compile`, `continue building`, `resume`) → Use `AskUserQuestion`:
-     - Question: "It looks like you may want to build, not brainstorm. What would you like to do?"
-     - Header: "Wrong command?"
-     - Options:
-       1. label: "Run build instead", description: "Run `/moku:build resume`"
-       2. label: "Continue brainstorming", description: "Keep going — I want to brainstorm, not build"
-     - multiSelect: false
-     If "Run build instead": delete `.planning/.brainstorm-active` if it exists, then tell user "Run: `/moku:build resume`" and stop.
-     If "Continue brainstorming": proceed with normalization.
-
-3. **Extract intent:**
-   - **CATEGORY:** "new", "from scratch", "greenfield" → `create`. "change", "improve", "refactor" → `modify`. "add capability", "extend", "new feature" → `feature`. "port", "convert", "migrate" → `migrate`. Default: `create`.
-   - **NAME:** Look for a short identifier (1-2 words, no spaces) that appears to name the project. If not found, derive from description.
-   - **DESCRIPTION:** Everything else.
-
-4. **Log and proceed:** "Normalized → CATEGORY={cat}, NAME={name}, DESCRIPTION=\"{desc}\""
-
-**Examples:**
-| User types | Normalized to |
+| Category | Means |
 |---|---|
-| `let's explore a caching system` | `create caching "a caching system"` |
-| `I want to think about adding search` | `feature search "adding search"` |
-| `what if we migrated the legacy API` | `migrate legacy-api "the legacy API"` |
+| `create` | New framework, app or plugin from scratch |
+| `modify` | Rethink an existing plugin or framework |
+| `feature` | Add a capability to an existing project |
+| `migrate` | Move an existing codebase onto Moku |
 
----
+NAME is a short slug: strip path separators, keep `[a-z0-9-_]`, cap at 50 characters, derive it from the first meaningful words of the description when no name token is given, and append `-project` when it collides with a category keyword. DESCRIPTION is everything else; ask for it when it is empty.
 
-## Step 0: Parse Arguments
+Depth flags: `--quick` and `--deep [N]` are mutually exclusive, and `--deep N` needs a positive integer with no upper cap. Depth sets how many researchers run and how many debate rounds are allowed. Run `mkdir -p .planning/build/` before the first write.
 
-**Ordered startup sequence:**
+**Existing context.** If `.planning/context-{NAME}.md` already exists, ask: resume from the saved scratch files, start fresh (delete `.planning/brainstorm-{NAME}-*` and the context file), or cancel. Resume restores the depth from the saved analysis instead of asking again.
 
-1. **Filesystem guard:** `mkdir -p .planning/build/`
-   **Brainstorm session marker:** `touch .planning/.brainstorm-active` — this activates the brainstorm-guard hook which prevents writes outside `.planning/`.
-   **Early-exit cleanup rule:** On any early exit (validation error, wrong-command redirect, Cancel), always delete `.planning/.brainstorm-active` before stopping. The marker must never be left orphaned between sessions.
+**Design context.** A finished `moku-design:design` run leaves `.planning/design/<slug>/design-context.md`. If one relates to this subject, offer to ground the session in it and treat it as the design specification the architecture has to realise: debate how to build it properly on the Moku stack, not what it should look like. Note in the context file that the design's prototype is demo-only and gets re-implemented from scratch, so plan inherits that constraint.
 
-2. **Empty-arguments smart prompt:** If `$ARGUMENTS` is empty, use `AskUserQuestion` instead of showing raw usage:
-   - Question: "What do you want to brainstorm?"
-   - Header: "Brainstorm"
-   - Options:
-     1. "New project" — description: "Explore a new framework, app, or tool from scratch"
-     2. "Modify existing" — description: "Rethink an existing plugin or framework design"
-     3. "New feature" — description: "Explore adding a new capability"
-     4. "Migration" — description: "Explore migrating existing code to Moku"
-   - multiSelect: false
-   Set CATEGORY from selection. Then ask for NAME and DESCRIPTION via follow-up `AskUserQuestion` calls. Proceed to Step 0 flag extraction (step 3).
+## The flow
 
-3. **Depth flag extraction:**
-   - **Conflict check (first):** If BOTH `--deep` AND `--quick` are present anywhere in `$ARGUMENTS`, delete `.planning/.brainstorm-active` and stop with error: "Conflicting depth flags — use `--deep` OR `--quick`, not both."
-   - If `--deep` is present anywhere in `$ARGUMENTS`:
-     - Check if the token immediately following `--deep` is an integer.
-       - If it is a positive integer ≥ 1 (e.g., `--deep 5`) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`{N}`, and strip both `--deep` and the number from `$ARGUMENTS`.
-       - If it is zero or negative (e.g., `--deep 0`, `--deep -1`) → delete `.planning/.brainstorm-active` and stop with error: "Invalid `--deep` value: iteration count must be a positive integer ≥ 1."
-       - If the next token is not a number (or `--deep` is the last token) → set DEPTH_FLAG=`deep`, CUSTOM_ITERATIONS=`null`, and strip only `--deep`.
-     - No upper cap on CUSTOM_ITERATIONS — never limit iterations.
-   - If `--quick` is present, set DEPTH_FLAG=`quick`, CUSTOM_ITERATIONS=`null`, and strip it. Otherwise DEPTH_FLAG=`auto`, CUSTOM_ITERATIONS=`null`.
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-flow.md` and follow it. Four phases: analysis, depth scoring, research, debate. The debate loop itself is in `brainstorm-debate.md`, and every document shape is in `brainstorm-templates.md`.
 
-### Token Extraction
+You write the position document and the final context file yourself, from those templates. There is no synthesizer agent: a subagent writing a document the orchestrating session then has to re-read costs a round trip and loses the debate it was not part of.
 
-**Tokenization:** Shell-like semantics — quoted strings are single tokens, quotes stripped.
+The challenger runs **one pass** by default. Repeated review loops over the same artifact measured about 25 extra minutes for identical quality, so more rounds are opt-in: `--deep N` sets N rounds, and the user can always ask for one more at the closing gate.
 
-1. **Extract CATEGORY** from first token, normalized:
-
-| Input | Normalized CATEGORY |
-|---|---|
-| `create`, `new`, `build` | `create` |
-| `modify`, `update`, `change` | `modify` |
-| `feature`, `add`, `extend` | `feature` |
-| `migrate`, `port`, `convert` | `migrate` |
-
-If first token is not a recognized category keyword, use `AskUserQuestion`:
-- Question: "What kind of brainstorm is this?"
-- Header: "Category"
-- Options:
-  1. "Create" — description: "New framework, app, or plugin from scratch"
-  2. "Modify" — description: "Update an existing plugin or framework"
-  3. "Feature" — description: "Add a new capability to an existing project"
-  4. "Migrate" — description: "Migrate an existing codebase to Moku"
-- multiSelect: false
-Set CATEGORY to the normalized answer. If the first token was not a category keyword, do NOT advance the token pointer — the unrecognized word stays in the stream for NAME/DESCRIPTION extraction.
-
-2. **Extract NAME** from next token:
-   - If the next token does not contain spaces and does not start with `"` → use as NAME
-   - If the next token is a quoted string (starts with `"`) → do NOT use it as NAME; treat the entire remaining token stream (including this token) as DESCRIPTION
-   - If no suitable NAME token → derive from first 2–3 meaningful words of DESCRIPTION, slugified (`[a-z0-9-]`, max 50 chars, no path separators)
-     - **Meaningful words defined:** Skip stop words — `a, an, the, to, for, of, in, on, with, and, or, by, from, that, this, it, is, be, are, was`. Use the first 2–3 non-stop-word tokens.
-   - **NAME sanitization:** Strip path separators (`/`, `\`, `..`), allow only `[a-z0-9-_]`, truncate to 50 characters. If empty after sanitization, derive from DESCRIPTION.
-   - **Reserved NAME guard:** If NAME (after sanitization) matches a recognized CATEGORY keyword (`create`, `new`, `build`, `modify`, `update`, `change`, `feature`, `add`, `extend`, `migrate`, `port`, `convert`) or a reserved word (`plan`, `resume`), append `-project`: NAME becomes `{original}-project`. Log: "Note: NAME `{original}` is a reserved word — using `{NAME}` instead."
-
-3. **Remaining tokens** → DESCRIPTION (free text).
-
-4. **DESCRIPTION validation:** If DESCRIPTION is empty after parsing, use `AskUserQuestion`:
-   - Question: "Describe what you want to build or explore."
-   - Header: "Description"
-   - Options:
-     1. "Web framework" — description: "e.g., static site generator, SPA framework, component library"
-     2. "CLI tool" — description: "e.g., bundler, linter, code generator"
-     3. "Backend service" — description: "e.g., API server, real-time system, data pipeline"
-     4. "Game or interactive" — description: "e.g., game engine, interactive editor, visualization"
-   - multiSelect: false
-   Use the selection or custom text as DESCRIPTION.
-
-### Existing Context Guard
-
-If `.planning/context-{NAME}.md` already exists, use `AskUserQuestion`:
-- Question: "Context file for `{NAME}` already exists. How do you want to proceed?"
-- Header: "Existing"
-- Options:
-  1. label: "Resume (Recommended)", description: "Continues from saved analysis and research — won't re-run completed phases"
-  2. label: "Start fresh", description: "Deletes all .planning/brainstorm-{NAME}-* files and starts over"
-  3. label: "Cancel", description: "Leave existing context as-is, do nothing"
-- multiSelect: false
-
-If "Resume": check if scratch files exist (`.planning/brainstorm-{NAME}-*.md`).
-  - If `.planning/brainstorm-{NAME}-analysis.md` exists: restore EFFECTIVE_DEPTH silently from the `## Complexity Signals` raw_sum in the analysis file (apply the same score→depth mapping). Do NOT present the depth confirmation `AskUserQuestion` again — resume always uses the previously computed depth.
-  - If research files also exist (`.planning/brainstorm-{NAME}-research.md`): skip Phase 3, go straight to the debate loop.
-  - If no research files: skip Phase 1 (analysis already done), re-run Phase 3 (research) with restored EFFECTIVE_DEPTH.
-  - If no scratch files at all: run from Phase 1.
-  - **Partial state handling:** If `.planning/brainstorm-{NAME}-analysis.md` exists but its `## Complexity Signals` section is missing or malformed, default EFFECTIVE_DEPTH to `standard` and log: "Resume: could not parse complexity signals from analysis file — defaulting to standard depth."
-If "Start fresh": delete `.planning/context-{NAME}.md` and all `.planning/brainstorm-{NAME}-*.md` scratch files.
-If "Cancel": delete `.planning/.brainstorm-active`, remove `.planning/build/` only if it was just created by this session (i.e., was empty — check with `find .planning/build -maxdepth 1 -empty`), and stop.
-
-### Design Context Detection (optional grounding)
-
-A prior `/moku:design` run may already have captured the **design** (look, feel, screens) for this work. Before research, glob `.planning/design/*/design-context.md`. If one or more exist whose target relates to NAME/DESCRIPTION (match the slug or the `# {NAME} — Design Context` title against the brainstorm subject), offer to ground the session in it via `AskUserQuestion`:
-- Question: "A design context for `{slug}` exists. Ground this brainstorm in it?"
-- Header: "Design context"
-- Options: "Use it (Recommended)" — description: "Read it so the architecture brainstorm targets that design's screens/behaviour" · "Ignore it" — description: "Brainstorm without it"
-
-If used: **read** the design context and treat it as the design **specification** the architecture must realize — focus the debate on *how to build that design properly on the Moku stack* (plugins, data flow, islands), not on re-deciding the visuals. **Carry the spec-not-source framing forward:** note in the final `context-{NAME}.md` (Summary or Non-Goals) that the design's prototype is demo-only and must be **re-implemented from scratch** with all plugin conventions — never copied — so `/moku:plan` inherits it. Keep this lightweight: one detection, one question, no new files.
-
----
-
-## Ground in spec (before research & debate)
-
-Before spawning researchers or opening the debate loop, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and load the `spec/NN-*.md` files relevant to the DESCRIPTION (architecture, plugin boundaries, events, types, invariants). This is the authoritative frame for the whole session:
-- Spawn `brainstorm-researcher` and `brainstorm-challenger` with an explicit instruction to evaluate every approach against cited spec sections.
-- Any approach that would deviate from `spec/11-INVARIANTS.md` must be surfaced as a challenge, not silently adopted.
-- **Idiomatic app-shape gate.** Also frame the session against `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md` (worked reference: the full-stack `demos/tracker` app). **Multiple `createApp` instances, composing multiple frameworks side-by-side (e.g. `@moku-labs/web` + `@moku-labs/worker`), and folder splits are IDIOMATIC — do not treat them as problems.** The one hard rule the challenger enforces is **I1: a Layer-3 app composes (`createApp`) and must not define a framework** — if the position has an app calling `createCoreConfig`/`createCore` or depending on `@moku-labs/core` directly, **REVISE it** (use `createApp` + the framework's `createPlugin`). I2–I5 are gentle nudges toward the `tracker` shape, not blockers.
-- The final `context-{NAME}.md` must contain a populated **Spec Alignment** section (see `brainstorm-templates.md`) so `/moku:plan` can verify specs against the same cited sections.
-
-## Route to Flow
-
-Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/brainstorm-flow.md` and follow it.
-
-Context variables passed through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTOM_ITERATIONS.
-
----
+Context variables carried through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUSTOM_ITERATIONS.
 
 ## Rules
 
-- **Write protection:** During brainstorm, Write and Edit may ONLY target files in `.planning/`. Never create, modify, or delete source code files (`src/`, `tests/`, project root configs). Brainstorm is for exploration and decision-making — code changes happen during `/moku:build`. This is a **path-based** gate enforced by the `brainstorm-guard.sh` hook (not `disallowed-tools`, which is per-tool and would block the legitimate `.planning/` writes) — see `skills/moku-core/references/tool-scoping.md`.
-- Never write to `.planning/STATE.md` — brainstorm state is separate from plan state
-- All scratch files use the `.planning/brainstorm-{NAME}-*` prefix for clean isolation
-- The final output is always `.planning/context-{NAME}.md` — one file, standardized schema
-- `.planning/learnings.md` persists across brainstorm sessions — never delete it during cleanup
-- Spawn researcher agents in parallel where depth allows — use multiple Agent tool calls in the same response
-- Auto-detect complexity from project context — never ask the user to self-report what the AI can observe
-- **Researcher FAIL handling:** When merging research output (Phase 3), before reading each researcher's output file, verify it exists. If a researcher's output file is missing (FAIL verdict), log: "Researcher {focus} did not produce output — proceeding without it." Merge only the files that are present. Never block on a missing researcher file.
-- Every architectural question MUST include TypeScript code examples showing each approach, a clear recommendation with reasoning, and concerns about each alternative. Be an opinionated colleague, not a passive interviewer
-- Ask 0 questions if the context is clear — more questions is not better, only genuine architectural trade-offs deserve discussion
-- The debate loop converges when the user is satisfied OR max iterations reached — never force iterations
-- Context file must be complete enough that `/moku:plan` can skip its steering and discussion phases entirely
-- **Idiomatic app-shape gate (before finalizing).** Before the `EnterPlanMode` review, confirm the synthesized position passes `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md` — i.e. no **I1** violation (a Layer-3 app must not call `createCoreConfig`/`createCore` or depend on `@moku-labs/core` directly). If one remains, **fix the position** (use `createApp` + the framework's `createPlugin`) and re-run `brainstorm-challenger` before presenting. **Do not block on** multiple `createApp` instances, multiple frameworks, or folder splits — those are idiomatic (see `demos/tracker`).
-- Before writing the final context file, use `EnterPlanMode` to present the synthesized decisions and architectural choices for user review. This gives a visually distinct approval experience for the brainstorm conclusions. After the user approves via plan mode, call `ExitPlanMode` and write the context file.
-- After writing the context file, delete `.planning/.brainstorm-active` and confirm cleanup: log "Removed `.planning/.brainstorm-active` marker." If the file does not exist (already cleaned), skip silently.
-- After cleanup, print a closing next-step suggestion. **First check for other unbuilt brainstorm contexts** so multiple features get planned together instead of colliding over the single plan slot (the failure mode from the multi-feature incident): run `ls .planning/context-*.md 2>/dev/null` and exclude the just-written `.planning/context-{NAME}.md`.
-  - **If other context files exist** (one or more sibling `context-*.md`), AND a plan may already be in progress, prefer combining. Print:
-    > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. I also see other un-planned brainstorm contexts: {list}. To plan them **together as one plan** (recommended when they'll be built together), run:
-    > `/moku:plan create [type] "{combined-name}" --context context-{NAME}.md {--context <each other file>}`
-    > Or plan this feature alone with `/moku:plan create [type] "{NAME}" --context context-{NAME}.md`. **Note:** if a completed-but-unbuilt plan already exists, `/moku:plan` will not overwrite it — it offers Combine / Archive / Replace."
-  - **If no other context files exist**, print:
-    > "Brainstorm complete. Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] "{NAME}" --context context-{NAME}.md` to begin planning."
+- Write only inside `.planning/`. Source changes happen at the build station; the rails write hook enforces this, and it refusing means a station was skipped.
+- Never write `.planning/STATE.md`. Brainstorm state is separate from plan state.
+- Scratch files use the `.planning/brainstorm-{NAME}-*` prefix and are deleted at the end. `.planning/context-{NAME}.md` and `.planning/learnings.md` survive.
+- Spawn researchers in parallel, as several Agent calls in one response. A researcher that returns nothing is logged and skipped, never waited on.
+- Detect complexity from the project. Do not ask the user to self-report what you can observe.
+- Every architectural question carries TypeScript examples per option, a recommendation with reasoning, and named concerns about each alternative. Ask zero questions when the context is clear; more than three is a sign you are asking things you could answer.
+- The debate converges when the user is satisfied or the round limit is reached. Do not force rounds.
+- The context file is complete when plan can skip its own steering and discussion phases entirely.
 
-## Run unattended (optional `/goal`)
+## Closing
 
-`/goal` (Claude Code v2.1.139+) sets a completion condition and a fresh evaluator model keeps the
-session working until it holds — useful for running the debate loop to convergence without
-re-prompting each turn. The plugin cannot set a goal for you (no command/hook can invoke `/goal`);
-**offer this ready-to-paste line** as a closing tip when the user wants an unattended run:
+Present the finished context file for approval (pause first), then run `moku-rails done brainstorm` and say what comes next.
 
-> ```
-> /goal .planning/context-{NAME}.md exists, every architectural decision in it is resolved (no TBD/open-question markers), it has a populated Spec Alignment section citing spec/NN-*.md, and writes stayed within .planning/ — or stop after 12 turns
-> ```
+Before suggesting the next step, check for other unplanned contexts: `ls .planning/context-*.md`, excluding the one just written. Several features planned together produce one merged plan; planned separately they collide over the same spec slot.
 
-Phrase conditions as something the transcript can demonstrate; the turn cap guards against runaway loops. `/goal clear` cancels it.
+- Other contexts exist: "Context saved to `.planning/context-{NAME}.md`. These other contexts are also unplanned: {list}. To plan them as one plan, run `/moku:plan create [type] \"{combined-name}\" --context context-{NAME}.md {--context each other file}`. To plan this one alone, drop the extra flags."
+- Otherwise: "Context saved to `.planning/context-{NAME}.md`. Run `/moku:plan create [type] \"{NAME}\" --context context-{NAME}.md` to plan it."
+
+Inside a conductor-driven change, say the same thing in plain words and let the conductor walk to the plan station.

@@ -6,7 +6,7 @@
 
 **This phase runs BEFORE the Steering Pre-Phase when CONTEXT_FILES is non-empty** (i.e., the user provided one or more `--context` files from `/moku:brainstorm` session(s)).
 
-**Multiple contexts → one plan.** CONTEXT_FILES may list **several** brainstorm contexts (e.g. two features explored in one session). They are **all** merged into a single plan — this is the supported path for planning multiple features together (and the fix for the incident where a second feature's context collided with the first feature's already-completed plan). Read and merge every file; do not pick just one.
+**Multiple contexts → one plan.** CONTEXT_FILES may list **several** brainstorm contexts (e.g. two features explored in one session). They are **all** merged into a single plan — this is the supported path for planning multiple features together (and the fix for the incident where a second feature's context collided with the first feature's already-completed plan). Read and merge every file rather than picking one.
 
 If CONTEXT_FILES is non-empty:
 1. Read **every** file in CONTEXT_FILES (in list order). For each, extract its sections; then **merge** across all files into the combined context variables below.
@@ -17,7 +17,7 @@ If CONTEXT_FILES is non-empty:
    - CONTEXT_DECISIONS: merged `## Decisions Made` tables — **flag conflicts**: if two contexts make contradictory decisions about the same concern, surface them via `AskUserQuestion` (Question: "Contexts {A} and {B} disagree on {concern}. Which decision should the merged plan use?" / options: each decision + "Combine — keep both, scoped differently") and record the resolution in `.planning/decisions.md`.
    - CONTEXT_RISKS: union of each `## Risks Requiring Spec Attention` section
    - CONTEXT_PLUGINS_HINT: **union** of each `### Suggested Plugins (Preliminary)` — when two features touch the **same** plugin, merge them into one plugin entry (note both features' needs) rather than creating duplicate plugins; this is the merge the incident had to do by hand.
-3. **Skip the Steering Pre-Phase entirely.** The brainstorm session(s) have already captured equivalent information. Log: "Brainstorm context detected ({N} file(s): {comma-separated CONTEXT_FILES}). Merging into one plan. Skipping Steering Pre-Phase." When N > 1, also set `## Target:` to a combined label that names both features (e.g. `web (web-parity + client-data)`).
+3. **Skip the Steering Pre-Phase.** The brainstorm session(s) have already captured equivalent information. Log: "Brainstorm context detected ({N} file(s): {comma-separated CONTEXT_FILES}). Merging into one plan. Skipping Steering Pre-Phase." When N > 1, also set `## Target:` to a combined label that names both features (e.g. `web (web-parity + client-data)`).
 4. Synthesize a `steering.md` from the context file so downstream stages find their expected input:
    - `## Boundaries (NOT in scope)` ← from CONTEXT_NON_GOALS
    - `## Primary User` ← from `## Analysis Summary` section (scope assessment)
@@ -250,7 +250,7 @@ Use `AskUserQuestion` to confirm before proceeding:
 
 **Research process:**
 1. Spawn the **moku-researcher** agent with the domain description and any decisions from the discussion phase
-2. The agent investigates npm packages, TypeScript patterns, reference implementations, and pitfalls
+2. The agent investigates npm packages, TypeScript patterns, reference implementations, and pitfalls. It is the only agent with web access
 3. Output is saved to `.planning/build/research.md`
 4. Review the research results and incorporate relevant findings into Stage 1 analysis
 
@@ -269,7 +269,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for deta
 **Key rules across all targets:**
 - Identify plugins with: name, tier, description, dependencies, events, start/stop needs
 - Structure: only `src/config.ts`, `src/index.ts`, and `src/plugins/` — no other folders unless justified
-- Run plan-checker before presenting to the user — fix BLOCKERs, show WARNINGs
+- Run `moku-plan-checker` before presenting to the user — fix BLOCKERs, show WARNINGs
 - Write state on exit, wait for explicit user approval
 
 ---

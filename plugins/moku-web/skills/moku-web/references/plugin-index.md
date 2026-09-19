@@ -1,7 +1,7 @@
 <!--
   Plugin & property index for @moku-labs/web — kept in sync with upstream.
-  Source of truth: the `web` entry's releaseSource in
-  skills/moku-core/references/moku-frameworks.md (npm + repo llms.txt/llms-full.txt
+  Source of truth: the `web` entry's releaseSource in the core skill's
+  references/moku-frameworks.md (moku:moku-core) (npm + repo llms.txt/llms-full.txt
   + package.json exports + src/plugins/*). Regenerate with:  moku-sync web
 -->
 
@@ -405,7 +405,8 @@ is the version-of-truth**; `dist-tags.latest`), then reads the upstream `llms.tx
 (structured catalog, present since 0.4.0) plus `package.json` `exports`/`engines`/`dependencies`
 and `src/plugins/*/{index,events,config,types,api,validate}.ts` + `src/plugins/content/pipeline/*` +
 `src/plugins/spa/lazy-embed.ts`, refreshes every section above and the header `Synced version`, then
-writes the new version back to `knownVersion` in `skills/moku-core/references/moku-frameworks.md`. When
+writes the new version back to `knownVersion` in `references/moku-frameworks.md` of the `moku:moku-core`
+skill. When
 the llms files and `src/` disagree, **`src/` wins** (verified at 1.6.1: llms still mentioned the removed
 `router.set()` and `URLPattern`; at 1.8.0: llms missing `cacheHeaders` / fingerprinted naming;
 re-verified at 1.12.4: llms last synced 1.8.2, missing the `mermaid`/`::embed`/`::gallery` content

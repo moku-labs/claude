@@ -16,7 +16,7 @@ Enforce the established Moku web patterns; keep structure clear, documented, and
 framework-level **specification, rules, and recommendations for any web project** (static site,
 SPA/web app, PWA, embeddable widget, docs portal, internal tool, dashboard, e-commerce, content
 site) live in [`references/project-spec.md`](references/project-spec.md) — start there. A vendored
-**worked example** (one concrete app) is available at `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox/demo/blog/` (`index.html`, `spa.ts` vs `main.ts` entry split, `islands/`, `plugins/feed`) to see island + SSG-vs-SPA structure in practice; see `sandbox-index.md`.
+**worked example** (one concrete app) lives in the core skill: load `moku:moku-core` with the Skill tool, then read `references/sandbox/demo/blog/` (`index.html`, `spa.ts` vs `main.ts` entry split, `islands/`, `plugins/feed`) to see island + SSG-vs-SPA structure in practice; the map is `references/sandbox-index.md`.
 
 **Generating or scaffolding a project?** [`references/project-spec.md`](references/project-spec.md)
 is the framework-level **specification, rules, and recommendations** for building *any* web project
