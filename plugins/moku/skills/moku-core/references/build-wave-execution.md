@@ -2,93 +2,102 @@
 
 ## Step 2: Wave Analysis
 
-Analyze all plugin specifications and group into dependency-aware waves:
+Group the plugin specs into dependency-ordered waves:
 
-```
-1. Read all .planning/specs/0N-*.md files
-2. Separate core plugin specs from regular plugin specs
-3. Core plugins are always Wave 0 — built before all regular plugins, no inter-dependencies
-4. Parse dependency graph from each regular spec's Dependencies section
-5. Group regular plugins into waves:
-   Wave 1: Plugins with NO dependencies (can build in parallel)
-   Wave 2: Plugins depending ONLY on Wave 1 plugins (can build in parallel)
-   Wave 3: Plugins depending on Wave 1-2 plugins (can build in parallel)
-   ... etc.
-6. If specs include Wave assignments from /moku:plan, use those
-7. Otherwise, compute waves from dependency graph
-```
+1. Read all `.planning/specs/0N-*.md`.
+2. Core plugin specs are Wave 0 — built before everything else, with no inter-dependencies.
+3. Parse each regular spec's Dependencies section into a graph.
+4. Wave 1 is the plugins with no dependencies; wave N is the plugins whose dependencies all sit in
+   earlier waves. Plugins in one wave build in parallel.
+5. If `/moku:plan` already assigned waves, use its assignment instead of recomputing.
 
-Use `EnterPlanMode` before presenting the wave plan. This activates the read-only plan approval UI, giving the user a visually distinct review experience for the wave assignment:
+Present the plan as a short list with the dependency reason:
 
 ```
 Wave 0 (core): log [Core], env [Core]
 Wave 1 (parallel): configValidator [Nano]
 Wave 2 (parallel): router [Standard] (-> env via core), content [Standard]
-Wave 3 (sequential): renderer [Complex] (-> router, content)
+Wave 3: renderer [Complex] (-> router, content)
 ```
 
-After presenting the full wave plan with dependency rationale, call `ExitPlanMode` to return to normal mode. The plan mode approval UI lets the user review and approve the wave assignments before any code is written.
+**Stop after presenting it.** Run `moku-rails pause --reason "wave plan needs approval"`, write
+`## Next Action: Run /moku:build resume` to STATE.md, and end the invocation. The next resume starts at
+Step 2.5. Re-analyzing is cheap; re-building is not, so the user gets to reject the plan before any
+code exists.
 
-**STOP here — end this invocation.** Update STATE.md (`## Next Action: Run /moku:build resume`) and exit. The next `/moku:build resume` begins at Step 2.5 (Pre-Flight Check) and Step 3 (Build by Waves). Per-invocation stop is authoritative (see `build.md`); do NOT proceed from wave analysis into pre-flight/execution in the same turn. This keeps build context fresh and lets the user reject the plan before any code is written.
-
-**Framework-level waves (not just plugins).** A wave may contain **non-plugin** work — `package.json` engines/exports, `src/index.ts` barrel/exports, `tsdown.config.ts`, a `./client` export, CI config. These have no `src/plugins/<name>/` dir and are NOT built by a sub-agent: the orchestrator edits the framework files directly, then verifies (tsc/lint/test) and checkpoints. The wave table may carry a row whose Plugins cell is a framework-target label (e.g. `_framework: src/index.ts exports, tsdown ./client_`). Common in `Verb: update` builds where some waves are pure framework wiring.
+**Framework-level waves.** A wave may hold non-plugin work — `package.json` exports, `src/index.ts`,
+`tsdown.config.ts`, CI config. Such a row has no `src/plugins/<name>/` directory and no sub-agent:
+you edit the framework files yourself, then verify (tsc, lint, test) and checkpoint. Its Plugins cell
+carries a framework-target label. This is common in `Verb: update` builds.
 
 ## Step 2.5: Pre-Flight Check
 
-Before spawning any builder sub-agents, run a pre-flight check to catch systemic issues that would cause every agent to fail independently:
+Before spawning any builder, make sure the ground is clean — otherwise every parallel agent fails the
+same way and the failures cost N times as much to read.
 
-1. **Dependency check**: `bun install` — ensure all dependencies are installed
-2. **TypeScript check**: `bunx tsc --noEmit` — ensure the project compiles cleanly (existing code from prior waves must pass before adding new code)
-3. **Lint check**: `bun run lint` — ensure no pre-existing lint violations
+1. `bun install`
+2. `bunx tsc --noEmit`
+3. `bun run lint`
 
-**If pre-flight fails:**
-- Do NOT proceed to wave execution — fixing N identical failures in N parallel agents wastes context
-- Spawn the **moku-error-diagnostician** with the pre-flight error output
-- Apply the diagnostician's fixes
-- Re-run pre-flight until clean, then proceed to Step 3
-- If pre-flight cannot be resolved after 2 rounds, report to user and stop
+On failure, do not start the wave. Ask `moku-error-diagnostician` for a diagnosis, apply the fix,
+re-run pre-flight. If two rounds do not clear it, report and stop.
 
-**If pre-flight passes:** Proceed to Step 3.
-
-**Skip pre-flight for Wave 0 only when no prior source files exist** (`src/` directory is empty or contains only skeleton stubs). If any real implementation files exist in `src/` from prior waves, run pre-flight even for Wave 0 (e.g., when re-running a specific wave with `#wave:N`).
+Skip pre-flight for Wave 0 only when `src/` holds nothing but skeleton stubs. Any real implementation
+on disk means pre-flight runs.
 
 ## Step 3: Build by Waves
 
-**Protected-branch guard (Wave 0 only, before the FIRST checkpoint).** If the skeleton commit didn't already move off the default branch, check now: `branch="$(git rev-parse --abbrev-ref HEAD)"`; `default="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')"; default="${default:-main}"`. If `branch` equals `default`/`main`/`master`, do NOT commit — `AskUserQuestion`: "Wave builds commit a checkpoint per wave, but you're on the protected default branch `{branch}`. Create a feature branch?" → "Create `build/{target-slug}` (Recommended)" / "Use current branch anyway" / "Cancel". On the first, `git switch -c build/{target-slug}`. Skip on later waves (already safe).
+**Protected-branch guard (Wave 0, before the first checkpoint).** If the skeleton commit did not
+already move off the default branch:
+
+```bash
+branch="$(git rev-parse --abbrev-ref HEAD)"
+default="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')"; default="${default:-main}"
+```
+
+If `branch` equals `default`, `main` or `master`, do not commit. `moku-rails pause`, then ask via
+`AskUserQuestion`: create `build/{target-slug}` (recommended), use the current branch, or cancel.
+On the first, `git switch -c build/{target-slug}`. Later waves are already safe.
 
 **Before each wave:**
-1. Create a safety checkpoint: `git add -A && git commit -m "pre-wave-N: checkpoint before building [plugin list]"`. This enables rollback if the wave produces bad code.
-2. Update `.planning/STATE.md`: set each plugin in this wave to status `building` and record `## Git Checkpoint: <sha>`. This enables crash detection — if a future resume finds `building` status, it knows the previous invocation crashed mid-wave.
-3. **Create Task DAG for progress tracking:**
-   - Create a parent task: `TaskCreate("Wave N: [plugin-list]", "Build [count] plugins in parallel", activeForm: "Building Wave N...")`
-   - For each plugin in the wave: `TaskCreate("[name] [tier]", "Build from spec [spec-path]", activeForm: "Building [name]...")`
-   - Set intra-wave dependencies if any plugin in this wave depends on another in the same wave (rare but possible): `TaskUpdate(depTask, addBlockedBy: [prerequisiteTaskId])`
 
-For each wave, build all plugins in the wave. Within a wave, **spawn parallel sub-agents** for independent plugins using the Agent tool.
+1. Checkpoint: `git add -A && git commit -m "pre-wave-N: checkpoint before building [plugin list]"`.
+2. In STATE.md, set every plugin in the wave to `building` and record `## Git Checkpoint: <sha>`.
+   The `building` status is what makes a crash detectable on the next resume.
 
-**Progress updates — tell the user at these checkpoints:**
+Then spawn one builder per plugin, in parallel, up to `maxParallelAgents` (default 5); larger waves
+run in batches of that size. Sub-agents have their own context, so fan-out width costs you only the
+summaries they return.
 
-Normal mode:
-1. Before spawning agents: `"Wave [N]: Building [plugin list] ([count] plugins in parallel)..."`
-2. After each agent completes: `"[plugin] built ([status]). [remaining] plugins remaining in wave."`
-3. After verification: `"Wave [N] verification: [pass/fail count]. [gap closure status if applicable]"`
-4. After integration checks: `"Integration checks [pass/fail]. [details if failed]"`
+**Tell the user where you are:** the plugin list before spawning, each plugin as it returns, the
+verification result, and the integration result. In lean mode collapse that to one line per wave
+(`W2: router,content → PASS. Verified. Integration OK.`) and expand only on failure.
 
-Lean mode (single line per wave, details only on failure):
-- Success: `"W[N]: [plugin-list] → PASS. Verified. Integration OK."`
-- Failure: `"W[N]: [plugin-list] → [pass-count]/[total] PASS, [fail-list] FAIL. [error summary]."`
+### Picking the builder
 
-### Per-Plugin Executor (Sub-Agent)
+`moku-builder` by default. `moku-builder-deep` for a plugin of tier Complex or VeryComplex, and for
+any plugin whose first attempt failed. A second failure on the deep variant comes back to you with
+the full error context instead of a third attempt.
 
-Each **plugin** in a wave is built by the **moku-builder** agent (`agents/builder.md`) — spawn it with `subagent_type: moku-builder`, NOT `general-purpose`. The agent bakes in the TDD protocol, the hard filesystem rules, the scoped-lint contract, and the JSON output contract, so the orchestrator no longer re-derives the prompt per plugin. Pass it: plugin name + tier, the spec, framework config, dependency interfaces, relevant decisions, and a **mode** flag — `greenfield` (net-new: RED-first tests fail on stubs) or `delta` (modifying an EXISTING plugin: read existing → keep all existing tests green → add RED-first tests for the NEW behavior only → implement). Framework-level wave items are NOT spawned as sub-agents (see Wave Analysis). The prompt blocks below are the agent's reference / fallback.
+Spawn with `subagent_type: moku-builder` (or `moku-builder-deep`), never `general-purpose`. The agent
+already carries the TDD protocol, the filesystem rules, the scoped-lint contract and the JSON output
+contract. Pass it: plugin name and tier, the spec, the framework config, the dependency interfaces,
+the relevant decisions, and a **mode** — `greenfield` (net-new, tests fail on stubs first) or `delta`
+(an existing plugin: keep existing tests green, add RED-first tests for the new behavior only).
 
-**Agent prompt — select based on lean mode:**
+For a wave with more than one builder, spawn each with `isolation: "worktree"` and merge each worktree
+back after it verifies. Builders write to disjoint plugin directories, but a repo-wide command or a
+stray `git checkout` from one reaches all of them — that reverted a sibling's plugin to stubs in a
+real build. The worktree is the isolation; the command ban in the prompt is the backup.
 
-Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-lean-mode.md` for lean mode details. When lean mode is active, use the lean prompt. Otherwise use the normal prompt.
+### Builder prompt
 
-#### Normal prompt (default):
+Read `build-lean-mode.md` when lean mode is active and use the lean shape instead.
+
+#### Normal prompt
+
 ```
-You are building a Moku plugin using TDD. Follow the moku-plugin skill strictly.
+You are building a Moku plugin using TDD. Follow the moku-plugin skill.
 Before writing source, open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox-index.md`
 and read the tier-matching exemplar (env/counter/router/analytics/cms) to mirror file layout,
 export naming (`<name>Plugin`), JSDoc, and test style.
@@ -102,46 +111,44 @@ export naming (`<name>Plugin`), JSDoc, and test style.
 ## Dependency Plugin Interfaces
 [For each dependency: contents of src/plugins/dep-name/index.ts]
 
-## Design Decisions (DO NOT CONTRADICT)
-[Relevant entries from .planning/decisions.md matching this plugin name.
-If no entries exist, omit this section.
-These are intentional trade-off decisions — follow them, do not override.]
+## Design Decisions
+[Relevant entries from .planning/decisions.md matching this plugin name. These are intentional
+trade-offs — follow them rather than re-deciding. Omit the section when there are none.]
 
-## Hard Rules — filesystem safety (MANDATORY for parallel builders)
-Sibling builders run concurrently. A repo-wide command from one builder will corrupt the others.
-- **Write ONLY under `src/plugins/[name]/` and its `__tests__/`.** Never touch `src/config.ts`,
-  `src/index.ts`, `src/plugins/index.ts` (the barrel), `package.json`, or any sibling plugin.
-- **NEVER run a repo-wide command:** no `lint:fix`, no `bun run format`, no `biome … .`, no
-  `eslint .` across the repo.
-- **NEVER run a git mutation:** no `checkout`, `restore`, `reset`, `stash`, `clean`, `add`, `commit`
-  (a stray `git checkout` reverted a sibling plugin to stubs in a real build — data loss).
-- **Scoped formatting AND linting:** `bunx biome format --write src/plugins/[name]/` **and `bunx eslint src/plugins/[name]/ --fix`** (the project's real ESLint, scoped to your dir). Biome alone misses unicorn-style rules (`no-null`, `prevent-abbreviations`, `prefer-structured-clone`, `consistent-function-scoping`, `prefer-regexp-test`), and ESLint ignores `.tsx` so Biome covers those — a builder that runs only Biome reports "lint clean" while the orchestrator's repo-wide ESLint then fails. Fix in-scope ESLint findings here; report anything `--fix` cannot resolve as a HINT.
-- Report lint/format/dependency issues as HINTS in your output contract; the orchestrator fixes them
-  repo-wide AFTER the wave. Do not "tidy" outside your plugin.
-> For waves with >1 builder, the orchestrator SHOULD spawn each builder with `isolation: "worktree"`
-> (Agent tool) so a stray command cannot reach siblings, then merge each worktree back after it
-> verifies. The command ban above is the belt to the worktree's suspenders.
+## Filesystem safety (parallel builders)
+Sibling builders run concurrently, so a repo-wide command from you corrupts their work.
+- Write only under `src/plugins/[name]/` and its `__tests__/`. Leave `src/config.ts`,
+  `src/index.ts`, `src/plugins/index.ts`, `package.json` and every sibling plugin alone.
+- Run no repo-wide command: no `lint:fix`, no `bun run format`, no `biome … .`, no `eslint .`.
+- Run no git mutation: no `checkout`, `restore`, `reset`, `stash`, `clean`, `add`, `commit`.
+- Scoped checks only: `bunx biome format --write src/plugins/[name]/` and
+  `bunx eslint src/plugins/[name]/ --fix`. Biome alone misses the unicorn rules (`no-null`,
+  `prevent-abbreviations`, `prefer-structured-clone`, `consistent-function-scoping`,
+  `prefer-regexp-test`) and ESLint ignores `.tsx`, so a builder that runs only Biome reports
+  "lint clean" and the orchestrator's repo-wide ESLint then fails.
+- Report what `--fix` cannot resolve as a hint; the orchestrator fixes repo-wide after the wave.
 
 ## Build Rules
-- Follow complexity tier [tier] file structure exactly
-- No explicit generics on createPlugin or createCorePlugin — all types inferred
-- For core plugins: use createCorePlugin, NOT createPlugin. No depends/events/hooks.
-- Full JSDoc on all exports with @param, @returns, @example
-- Use import type for type-only imports
-- Only include onStart/onStop if spec justifies resource management
-- Write all tests inside the plugin directory: `__tests__/unit/` and `__tests__/integration/`
-- Do NOT create tests in root `tests/` — that directory is for framework-level tests only
-- **Author hook-compliant from line 1** — before writing, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md` and the **Correct-First-Try checklist** in `build-plugin.md`. Don't write freehand then shrink: `index.ts` starts as the ≤30-line wiring template; config is a typed const; `Config`/`Api` are `type` aliases (not `interface`); no inline `as`; no `wireX()`; injectable function types are structural (never a runtime package's namespace types).
+- Follow the tier [tier] file structure.
+- No explicit generics on createPlugin or createCorePlugin — types infer from the spec object.
+- Core plugins use createCorePlugin, with no depends/events/hooks.
+- Full JSDoc on all exports with @param, @returns, @example. `import type` for type-only imports.
+- Include onStart/onStop only when the spec names a real resource to manage.
+- Tests live in `__tests__/unit/` and `__tests__/integration/` inside the plugin directory.
+  The root `tests/` directory is for framework-level tests.
+- Author hook-compliant from line 1: read
+  `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/skeleton-conventions.md` and the
+  Correct-First-Try checklist in `build-plugin.md` before writing. `index.ts` starts as the
+  ≤30-line wiring template; config is a typed const; `Config`/`Api` are `type` aliases; no inline
+  `as`; no `wireX()`; injectable function types are structural.
 
 ## TDD Protocol — RED → GREEN → REFACTOR
-Follow the full TDD protocol from the moku-testing skill:
-Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md`
-
-Summary of the four phases:
-1. **TYPES**: Write types.ts + skeleton index.ts (stubs only, enough for test imports)
-2. **RED**: Write all unit + integration tests FIRST. Run tests — they MUST fail. If any pass on stubs, strengthen them.
-3. **GREEN**: Implement state.ts, api.ts, handlers.ts. Update index.ts. Run tsc. Run tests — they MUST all pass. Fix implementation, not tests.
-4. **REFACTOR**: Clean up index.ts (~30 lines), write README.md placeholder.
+Full protocol: `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md`.
+1. TYPES: types.ts + skeleton index.ts (stubs only, enough for test imports).
+2. RED: write every unit and integration test. Run them — they fail. If one passes on stubs, strengthen it.
+3. GREEN: implement state.ts, api.ts, handlers.ts, finish index.ts. Run tsc and the tests until green.
+   Fix the implementation, not the tests.
+4. REFACTOR: index.ts back to ~30 lines, README.md placeholder.
 
 ## Files to Create
 [List from tier: types.ts, index.ts (skeleton), tests, state.ts, api.ts, handlers.ts, index.ts (final), README.md]
@@ -150,156 +157,112 @@ Summary of the four phases:
 [Contents of the ## Verification section from the spec]
 ```
 
-#### Lean prompt (~56% smaller):
-```
-Build Moku plugin [name] ([tier]). TDD: types→red→green→refactor. No explicit generics. import type. JSDoc. Tests in __tests/.
+#### Delta prompt (`mode: delta`)
 
-## Spec
-[Overview paragraph from spec]
-Config: [## Config section content]
-API: [## API section content]
-Events: [## Events section content, or "None"]
-Depends: [## Dependencies plugin names, or "None"]
-
-## Types Context
-[Only export type Config and export type Events blocks from src/config.ts]
-
-## Dep Interfaces
-[Only export type Api from each dependency's types.ts]
-
-## Decisions
-[Relevant decision-log entries, or omit section entirely]
-```
-
-#### Delta prompt (modifying an EXISTING plugin — `mode: delta`):
 ```
 You are modifying an existing Moku plugin by adding new behavior.
-TDD (incremental): read the existing code + existing tests → keep all existing tests GREEN
-→ write RED-first tests for the NEW behavior only → implement until new tests pass AND old tests still pass.
+Incremental TDD: read the existing code and tests → keep every existing test green → write RED-first
+tests for the new behavior only → implement until the new tests pass and the old ones still do.
 
 ## Existing Source
-[Read current src/plugins/[name]/*.ts files and the existing __tests__/]
+[Current src/plugins/[name]/*.ts and __tests__/]
 
 ## New Behavior Spec
 [The change description / ## Changes section from the spec]
 
-## Hard Rules + Scoped Checks
-[Same filesystem rules and scoped biome+eslint as the normal prompt above]
+## Filesystem safety + scoped checks
+[Same as the normal prompt]
 ```
-Do NOT rewrite the whole suite or re-test existing behavior — incremental TDD on existing code is not a TDD violation. If the public API (api/events/config) changes, set `publicApiChanged: true` so the README-freshness gate fires.
 
-#### Output contract (same for both modes):
+Do not rewrite the suite or re-test existing behavior — incremental TDD on existing code is not a TDD
+violation. If the public API (api/events/config) changes, set `publicApiChanged: true` so the
+README-freshness gate fires.
+
+#### Output contract (both modes)
+
 ```
 ## Output Contract
-When you are done, end your response with a fenced `json` code block:
+End your response with a fenced `json` code block:
 ```json
 {
   "agent": "builder",
   "plugin": "[plugin-name]",
   "verdict": "PASS | FAIL | PARTIAL",
-  "tdd": {
-    "redPhaseTests": 12,
-    "redPhaseFailing": 12,
-    "greenPhaseTests": 12,
-    "greenPhasePassing": 12
-  },
+  "tdd": { "redPhaseTests": 12, "redPhaseFailing": 12, "greenPhaseTests": 12, "greenPhasePassing": 12 },
   "intent": {
-    "types.ts": "Defines Config with basePath/trailingSlash, State with routes Map and currentPath, Api with navigate/current/back methods, Events with router:navigated payload",
-    "state.ts": "Creates initial state: empty routes Map, currentPath from config.basePath. No mutations in factory — all mutations happen in api.ts",
-    "api.ts": "navigate() updates currentPath, pushes old path to history, emits router:navigated. current() returns currentPath. back() pops history.",
-    "index.ts": "Wires createState + createApi + createHandlers. Depends on [dep]. No onStart/onStop — no resources to manage."
+    "types.ts": "Defines Config with basePath/trailingSlash, State with routes Map and currentPath, Api with navigate/current/back, Events with router:navigated payload",
+    "api.ts": "navigate() updates currentPath, pushes the old path to history, emits router:navigated. current() returns currentPath. back() pops history."
   },
-  "filesCreated": ["types.ts", "api.test.ts", "state.test.ts", "api.ts", "state.ts", "index.ts", "..."],
+  "filesCreated": ["types.ts", "api.test.ts", "api.ts", "state.ts", "index.ts"],
   "testsPass": true,
   "lintPass": true,
   "issues": [{"file": "path", "message": "description"}]
 }
 ```
-- `verdict`: PASS (all files created, tests pass, lint clean), FAIL (critical files missing or unresolvable errors), PARTIAL (some files created but hit turn limit or unresolved issues)
-- `tdd`: TDD metrics — `redPhaseTests`/`redPhaseFailing` (how many tests existed and failed after Phase 2), `greenPhaseTests`/`greenPhasePassing` (how many tests existed and passed after Phase 3). If red == failing and green == passing, TDD was followed correctly.
-- `intent`: **"Explain Your Code" — per-file intent summary.** One sentence per source file (not test files) explaining WHAT the code does and WHY it's structured this way. The code reviewer compares these intent statements against the spec — mismatches between stated intent and spec expectations are high-confidence bugs.
-- `issues`: list any problems encountered (test failures, lint errors, type errors). Empty array if none.
+- `verdict`: PASS (files created, tests pass, lint clean), FAIL (critical files missing or errors you
+  could not resolve), PARTIAL (hit the turn limit or left issues open).
+- `tdd`: red == failing and green == passing means the protocol was followed.
+- `intent`: one sentence per source file (not test files) saying what it does and why it is shaped
+  that way. The code reviewer compares these against the spec; a mismatch is a high-confidence bug.
+- `issues`: anything that went wrong, empty array if nothing did.
 ```
 
-### Agent Turn Limits
+### Agent turn limits
 
-Set appropriate turn limits based on plugin complexity tier when spawning builder sub-agents. TDD adds ~30% more turns (writing tests first, running them twice):
+TDD costs roughly 30% more turns than writing the implementation alone.
 
-| Tier | maxTurns | Rationale |
-|------|----------|-----------|
-| Nano | 25 | 1-2 files + tests, minimal logic |
-| Micro | 40 | 2-4 files + tests, simple logic |
-| Standard | 55 | 5-8 files + tests, domain separation |
-| Complex | 70 | 8-12 files + tests, sub-modules |
-| VeryComplex | 80 | 12+ files + tests, multiple sub-domains |
+| Tier | maxTurns |
+|------|----------|
+| Nano | 25 |
+| Micro | 40 |
+| Standard | 55 |
+| Complex | 70 |
+| VeryComplex | 80 |
 
-If the agent approaches its turn limit with incomplete files, it should prioritize completing the **GREEN phase** (making existing tests pass). Priority order: types.ts > index.ts (skeleton) > tests > state.ts > api.ts > handlers.ts > index.ts (final) > README.md. Tests come before implementation because failing tests still provide value as a spec — incomplete implementation with good tests is better than complete implementation with no tests.
+Near the limit with files missing, the builder finishes the GREEN phase first. Priority order:
+types.ts → index.ts (skeleton) → tests → state.ts → api.ts → handlers.ts → index.ts (final) → README.md.
+Tests come before implementation because failing tests still work as an executable spec.
 
-**Parallel execution within waves:**
-- Wave 1 plugins have no dependencies on each other — spawn all agents simultaneously
-- Wave 2 plugins may share Wave 1 dependencies but not each other — spawn all simultaneously
-- For waves with ≤ `maxParallelAgents` plugins: all parallel
-- For waves with more plugins: batch into groups of `maxParallelAgents` (default: 5) parallel agents
+### Per-plugin tracking
 
-**Auto-throttle:** If the current wave is Wave 3+ and `--continue` mode is active, reduce effective parallelism to `min(maxParallelAgents, 3)` to conserve context window. Long continuous builds accumulate context from multiple waves — throttling prevents context exhaustion in later waves.
+Parse each builder's output contract and update the STATE.md plugin table. Refresh the `## Recovery`
+block on every write (last good step, open blockers, the exact next command, timestamp) per
+`memory-schema.md`, so a fresh session rehydrates in one read.
 
-> **1M-context models (current default):** this Wave-3+ throttle was tuned for 200K windows. On a
-> 1M-token model it is largely unnecessary and needlessly slows large builds — orchestrator context
-> from a handful of waves is a small fraction of 1M. Keep full `maxParallelAgents` parallelism until
-> window usage is genuinely high (~70%+), and lean on **server-side compaction** rather than
-> pre-emptive throttling. The throttle still applies as a safety net once usage is high or on
-> 200K-window models. (Sub-agents have isolated context regardless, so fan-out width itself does not
-> consume the orchestrator window — only the summaries they return do.)
+| Builder verdict | STATE.md status |
+|---|---|
+| PASS | `built` |
+| PARTIAL | `agent-incomplete` |
+| FAIL, or no output contract | `agent-failed` |
 
-### Plugin Implementation Order (per sub-agent) — TDD
+**Stub sentinel check.** Before accepting `built`:
 
-Each sub-agent builds its plugin using **Test-Driven Development** in four phases. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md` for the full protocol.
-
-| Phase | Steps | Key Output |
-|-------|-------|------------|
-| **1. TYPES** | Create dir → types.ts → index.ts (skeleton with stubs) | Type foundation, imports resolve |
-| **2. RED** | Unit tests → integration test → run tests (must FAIL) | Executable spec, all tests failing |
-| **3. GREEN** | state.ts → api.ts → handlers.ts → update index.ts → tsc → run tests (must PASS) | Real implementation, all tests passing |
-| **4. REFACTOR** | Review index.ts (~30 lines) → README.md placeholder | Clean structure |
-
-**Critical rules:**
-- Phase 2 tests MUST fail on stubs. If they pass, strengthen the tests.
-- Phase 3 fixes the *implementation*, never the tests — tests encode the spec.
-- No explicit generics on `createPlugin(`. Verify lifecycle necessity (`onStart`/`onStop` only if spec justifies).
-
-### Per-Plugin Tracking
-
-After each wave's sub-agents return, parse the output contract JSON from each agent's response and update both STATE.md and Task progress per-plugin. **Also refresh the `## Recovery` block in STATE.md on every write** (Last good step = "wave N (plugins) verified", Open blockers, Next action = the exact next `/moku:*` command, Updated = timestamp) per `memory-schema.md`, so a fresh session or `/moku:next` rehydrates in one read:
-
-1. **verdict: PASS** (all files created, tests pass, lint clean) → mark plugin as `built` in STATE.md, `TaskUpdate(pluginTask, status: "completed")`
-2. **verdict: PARTIAL** (some files created, hit turn limit, or unresolved issues) → mark plugin as `agent-incomplete` in STATE.md, keep task as `in_progress`
-3. **verdict: FAIL or no output contract found** (crashed, context exhausted, critical failures) → mark plugin as `agent-failed` in STATE.md, keep task as `in_progress`
-
-**Post-wave stub sentinel check:** Before accepting any plugin as `built`, verify that skeleton stub sentinels have been replaced with real implementations:
 ```bash
 grep -r "not implemented" src/plugins/{name}/ --include="*.ts" --exclude-dir="__tests__"
 ```
-If any matches are found in `api.ts`, `handlers.ts`, `state.ts`, or `index.ts`, the plugin is NOT fully implemented — mark as `agent-incomplete` and re-spawn the builder agent. Only `throw new Error("not implemented")` in genuinely unimplemented optional paths is acceptable (and must be documented with a `// TODO:` comment explaining why).
 
-**Post-wave TDD verification:** For each plugin marked `built`, verify that at least one non-todo test assertion exists:
+A hit in `api.ts`, `handlers.ts`, `state.ts` or `index.ts` means the plugin is not implemented — mark
+`agent-incomplete` and re-spawn. A deliberate `throw new Error("not implemented")` on an optional path
+is fine when a `// TODO:` comment says why.
+
+**TDD check.** For each `built` plugin:
+
 ```bash
 grep -c "expect\|assert\|toEqual\|toBe\|toThrow" src/plugins/{name}/__tests__/unit/*.test.ts
 ```
-If the count is zero (all tests are `it.todo()` stubs), the TDD protocol was not followed — mark as `agent-incomplete` with note "No real test assertions — TDD RED phase was skipped."
 
-After all plugins in the wave are tracked, update the parent wave task:
-- All PASS → `TaskUpdate(waveTask, status: "completed")`
-- Mixed results → keep wave task as `in_progress` with updated description noting failures
+Zero means the tests are all `it.todo()` stubs — mark `agent-incomplete`, note "no real assertions,
+RED phase skipped".
 
-For `agent-incomplete` or `agent-failed` plugins:
-- Do NOT route through gap closure (gap closure is for verification failures, not build failures)
-- Re-spawn the builder agent with the same prompt + note about what was already created on disk
-- If re-spawn also fails, mark as `needs-manual` and continue with other plugins in the wave
-- `needs-manual` plugins are excluded from verification and reported to the user at the end
+`agent-incomplete` and `agent-failed` plugins do not go through gap closure — that is for verification
+failures, not build failures. Re-spawn the builder (the deep variant on the second attempt) with a note
+about what already exists on disk. If that also fails, mark `needs-manual`, carry on with the rest of
+the wave, and report those plugins at the end. They are excluded from verification.
 
-### Wave Table Format
+### Wave table format
 
-Canonical wave-table shape. `/moku:build` detects an existing plan and skips its own wave analysis by finding this `| Wave | … |` table in STATE.md, so `/moku:plan` emits it in exactly this shape (see `plan-templates.md` → Wave Table). The Plugins cell may be a **framework-target label** for orchestrator-executed framework-level waves (no sub-agent).
+`/moku:plan` emits this shape and build detects it to skip its own wave analysis, so the `| Wave |`
+column must be fully populated. A Plugins cell may be a framework-target label.
 
 | Wave | Plugins | Status |
 |------|---------|--------|
@@ -307,138 +270,98 @@ Canonical wave-table shape. `/moku:build` detects an existing plan and skips its
 | 1 | router, site, i18n | building |
 | 2 | _framework: src/index.ts exports, tsdown ./client, package.json engines_ | not started |
 
-### Wave Pipelining (Build N+1 While Verifying N)
+## Wave disposition — continue, stop, or retry
 
-When `--continue` mode is active and the project has ≥ 3 waves, overlap building wave N+1 with verifying wave N. This yields ~30-50% throughput improvement on multi-wave builds.
+After verification and any gap closure, decide yourself whether the wave is good enough to build on.
+Nothing is spawned for this; you have the verification output, the code review findings and the gap
+closure history in front of you.
 
-#### Why Pipelining Works
+Weigh six things:
 
-Wave N+1 builder agents need these from wave N:
-- **types.ts** — type definitions for dependency plugin interfaces
-- **index.ts** — the plugin export (for `import { dep } from "../dep"`)
+| Axis | Healthy | Worrying |
+|---|---|---|
+| Verification | every plugin passes | a failure pattern repeats across plugins |
+| Error trajectory | error count falls each gap closure round | flat or oscillating — fixation |
+| Tests | unit and integration present, passing, real assertions | missing tests or shallow assertions |
+| Integration | tsc and lint clean | errors, or warnings piling up |
+| Remaining blockers | none, or cosmetic | architecture, broken exports, broken inference |
+| Regression (wave 1+) | prior plugins still green | this wave broke earlier work |
 
-Both of these files are written during wave N's **build phase** (Step 3) and are available on disk before verification starts. Verification (Step 4a–4c) rarely modifies these files — it fixes implementation bugs in state.ts, api.ts, handlers.ts. So wave N+1 builders can safely read wave N's interfaces while wave N is being verified.
+| Decision | When |
+|---|---|
+| `continue` | Verification passed, remaining issues are cosmetic, error counts reached zero. |
+| `stop-for-review` | Any `needs-manual` plugin, a regression in earlier work, a systemic failure pattern, many unresolved validator conflicts, or you are unsure. Uncertainty resolves here, not toward continue. |
+| `fresh-retry` | Gap closure exhausted its rounds and the error signatures or the proposed fixes repeat — fixation. Go to `build-verification.md` Step 4c2. |
 
-#### When Pipelining Activates
+`stop-for-review` stops even under `--continue`: `moku-rails pause --reason "<judgment>"`, then ask
+via `AskUserQuestion` whether to continue anyway, stop and review, or see the full reasoning. A
+"continue anyway" applies to this wave only; judge the next wave on its own evidence.
 
-All of these must be true:
-1. `--continue` mode is active (pipelining requires uninterrupted execution)
-2. Total waves ≥ 3 (2-wave projects don't save enough to justify the complexity)
-3. Wave N build completed with ALL plugins `built` (no `agent-failed` or `agent-incomplete` — those would leave incomplete interfaces on disk)
-4. Wave N+1 exists (not the last wave)
-5. Current context usage is < 60% (pipelining doubles the active agent count — don't pipeline if context is getting large)
+Skip the judgment for a wave of one Nano or Micro plugin that verified with zero warnings. Record the
+decision and its reason in `.planning/build/agent-log.md`. Dispositions are not persisted in STATE.md —
+a completed wave is never re-judged on resume.
 
-If ANY condition is false, fall back to sequential: finish wave N verification → start wave N+1 build.
+## Wave Pipelining (build N+1 while verifying N)
 
-#### Pipeline Execution Flow
+With `--continue` and three or more waves, overlap building wave N+1 with verifying wave N, for roughly
+30–50% more throughput. Disable with `enablePipelining: false`.
 
-```
-Sequential (default):
-  Build N → Verify N → Integrate N → Build N+1 → Verify N+1 → ...
+**Why it is safe.** Wave N+1 builders need only `types.ts` and `index.ts` from wave N, both written
+during wave N's build phase. Verification fixes implementation bugs in `state.ts`, `api.ts` and
+`handlers.ts`, so the interfaces rarely move.
 
-Pipelined:
-  Build N → [Verify N ─────────────] → Integrate N → ...
-              [Build N+1 ──────────] ↗ Verify N+1 → ...
-                                    Wait point
-```
+**Conditions — all must hold:** `--continue` active; total waves ≥ 3; every wave N plugin is `built`
+(no `agent-failed` or `agent-incomplete`, which would leave broken interfaces on disk); wave N+1 exists.
+Otherwise fall back to sequential.
 
-**Steps:**
+**Flow.** Spawn two groups at once: Group V verifies wave N (`build-verification.md` Step 4a), Group B
+builds wave N+1. Wait for both, then reconcile. Split parallelism between them —
+Group V gets `ceil(maxParallelAgents / 2)`, Group B the rest.
 
-1. **Wave N build completes** — all plugins `built`. Create git checkpoint.
-2. **Start pipeline** — spawn two concurrent groups:
-   - **Group V**: Wave N verification (verifier + code reviewer in parallel, per Step 4a)
-   - **Group B**: Wave N+1 builders (per-plugin sub-agents, per Step 3)
-3. **Wait for both groups** — collect output contracts from all agents
-4. **Pipeline reconciliation** (see below):
-   - Check if wave N gap closure modified any interfaces that wave N+1 depends on
-   - If safe → proceed with wave N+1 verification
-   - If invalidated → re-spawn affected wave N+1 builders
-
-#### Pipeline State Tracking
-
-Update STATE.md during pipelining:
+**Pipeline state.** While pipelining, STATE.md carries:
 
 ```markdown
 ## Pipeline Status
 - Wave [N]: verifying (build complete, verification in progress)
 - Wave [N+1]: building (pipelined start, pending verification)
-- Interface files at pipeline start: [list of wave N types.ts/index.ts hashes]
+- Interface files at pipeline start: [wave N types.ts/index.ts hashes]
 ```
 
-After reconciliation, remove the `## Pipeline Status` section and update plugin statuses normally.
+Plugins built this way get status `pipeline-built`: built during a pipeline, not yet reconciled.
+Remove the section after reconciliation.
 
-#### Pipeline Reconciliation
+**Reconciliation.**
 
-After both Group V and Group B complete:
-
-1. **Check wave N verification result**:
-   - **PASS (no gap closure needed)**: Wave N interfaces are unchanged. Wave N+1 builds are valid. Proceed to wave N integration (Step 4b), then wave N+1 verification.
-   - **Gap closure needed but interfaces unchanged**: Check if gap closure modified any `types.ts` or `index.ts` file in wave N plugins. If NOT modified → wave N+1 builds are valid.
-   - **Gap closure modified interfaces**: Identify which wave N plugins had their `types.ts` or `index.ts` changed. Find wave N+1 plugins that depend on those modified plugins. **Invalidate and re-build** only the affected wave N+1 plugins. Unaffected wave N+1 plugins keep their build results.
-
-2. **Interface change detection**:
+1. Wave N passed with no gap closure, or gap closure touched no `types.ts`/`index.ts`: wave N+1's
+   builds stand.
+2. Gap closure changed interfaces: compare hashes against the ones recorded at pipeline start.
    ```bash
-   # Compare interface file hashes before and after gap closure
-   # Hashes were recorded in ## Pipeline Status at pipeline start
    shasum src/plugins/{wave-N-plugin}/types.ts src/plugins/{wave-N-plugin}/index.ts
    ```
-   If any hash differs from the recorded value → that plugin's interface changed.
+   Re-build only the wave N+1 plugins whose **direct** dependency changed; transitive ones do not
+   import across two levels.
+3. More than half of wave N+1 invalidated: discard all of it and rebuild the wave cleanly — partial
+   rebuilds on mostly-invalid code cost more than a restart.
 
-3. **Invalidation is surgical**: Only re-build wave N+1 plugins whose DIRECT dependencies had interface changes. Transitive dependencies don't matter (wave N+1 plugins import from direct deps only).
+**Interaction with the wave disposition.** `continue` proceeds to integration and then wave N+1
+verification. `stop-for-review` stops the pipeline and preserves wave N+1 as `pipeline-built`.
+`fresh-retry` stops the pipeline and discards wave N+1 — the session is ending for a fresh context,
+and wave N retries first on resume.
 
-4. **If invalidation affects > 50% of wave N+1 plugins**: Discard ALL wave N+1 builds and restart wave N+1 from scratch. Partial rebuilds when most code is invalid waste more context than a clean restart.
+**Do not pipeline** when wave N has a `needs-manual` plugin (manual work usually moves interfaces),
+when wave N is the skeleton, or when wave N+1 is a single VeryComplex plugin (one big agent is harder
+to invalidate than several small ones).
 
-#### Pipeline + Auto-Throttle
+## Resume with fresh-context retry
 
-When pipelining is active, the effective parallelism is split between Group V and Group B:
-- Group V gets `ceil(maxParallelAgents / 2)` slots (verification needs fewer agents)
-- Group B gets `floor(maxParallelAgents / 2)` slots (builders are the bottleneck)
-- Total active agents never exceeds `maxParallelAgents`
+When resume finds plugins with status `retry-pending`:
 
-Example with `maxParallelAgents: 5`:
-- Group V: 3 slots (verifier + code reviewer + 1 spare)
-- Group B: 2 builder agents (remaining wave N+1 plugins queue)
+1. Read `## Fresh Retry Context` from STATE.md (error summary, strategies already tried).
+2. Process only those plugins — the rest of the wave is done.
+3. Ask `moku-error-diagnostician` (or `-deep`) for a diagnosis with a minimal prompt: the error
+   summary, the plugin spec, and an instruction to read the current files on disk. Apply the fix yourself.
+4. Re-run verification (`build-verification.md` Step 4c2).
+5. Green: mark `verified`, remove `## Fresh Retry Context`, continue. Red: mark `needs-manual` and report.
 
-#### Pipeline + Gap Closure Interaction
-
-If wave N enters gap closure (Step 4c):
-- **Wave N+1 builders continue running** — gap closure is a wave N concern
-- After gap closure completes, run reconciliation as described above
-- If gap closure triggers **fresh-context retry** (Step 4c2): pipeline stops. Wave N+1 builds are DISCARDED (the session is stopping anyway). On resume, wave N retries first, then wave N+1 rebuilds normally.
-- If gap closure triggers **wave judge stop-for-review**: pipeline stops. Wave N+1 build results are PRESERVED in STATE.md with status `pipeline-built` (not yet verified). On resume, reconciliation runs first to check if wave N changes invalidated any wave N+1 builds.
-
-#### New Plugin Status: `pipeline-built`
-
-Add a new status value for plugins built during pipelining but not yet verified:
-
-```
-pipeline-built → built (after reconciliation confirms interfaces valid)
-pipeline-built → building (after reconciliation invalidates — re-build needed)
-```
-
-On resume, treat `pipeline-built` as: "built during a previous pipeline, needs reconciliation before verification."
-
-#### When NOT to Pipeline
-
-Even when conditions are met, skip pipelining if:
-- Wave N has any `needs-manual` plugins (manual intervention likely changes interfaces)
-- Wave N is the skeleton build (skeleton verification must complete before any plugin build)
-- Wave N+1 has a single plugin with VeryComplex tier (one large agent is harder to invalidate/restart than several small ones)
-
----
-
-### Resume with Fresh-Context Retry
-
-When `/moku:build resume` detects plugins with status `retry-pending` in STATE.md:
-
-1. Read the `## Fresh Retry Context` section from STATE.md (error summary, attempted fixes)
-2. Do NOT re-run the full wave — only process the `retry-pending` plugins
-3. Spawn the **moku-error-diagnostician** with a fresh, minimal prompt containing only:
-   - The error summary from STATE.md
-   - The plugin spec (`.planning/specs/0N-name.md`)
-   - Instructions to read the current source files on disk
-4. Apply fixes → re-run verification (see `build-verification.md` Step 4c2)
-5. On success: mark as `verified`, remove `## Fresh Retry Context` section, continue to next wave
-6. On failure: mark as `needs-manual`, report to user
-
-This is the **Ralph Wiggum Loop** — fresh context avoids the fixation loops that occur when an agent repeatedly attempts the same failed approach within a long conversation.
+A fresh context avoids the fixation that builds up when the same conversation keeps attempting the
+same failed approach.

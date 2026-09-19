@@ -144,10 +144,10 @@ and the duplicate/facade subcase of **I2**; **I3–I5** are WARNING/guidance —
 ## How the validators report it
 
 I1–I6 are checked at **two times**: at **plan time** by `brainstorm-challenger` and `moku-plan-checker`
-(an **Idiomatic Architecture** section), and at **build/verify time** by **`moku-root-validator`** (the
-read-only root/entrypoint finder driven by **`/moku:verify`**) — which closes
-the long-standing gap where nothing enforced the app shape once code existed (`moku-verifier` even exempts
-Layer-3 apps from root-structure checks). All of them check I1–I6 **against the `demos/tracker` pattern**.
+(an **Idiomatic Architecture** section), and at **build/verify time** by **`moku-structure-validator`**
+(the read-only structure/root/entrypoint checker the `verify` skill fans out to) — which closes
+the long-standing gap where nothing enforced the app shape once code existed (`bin/moku-verify-artifacts`
+only checks artifacts, not root structure). All of them check I1–I6 **against the `demos/tracker` pattern**.
 Key rules for every one of these validators:
 
 - **Never flag** multiple `createApp` instances, multiple frameworks composed side-by-side, or

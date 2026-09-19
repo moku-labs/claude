@@ -3,7 +3,7 @@
 > **Reference exemplars** vendored from `github.com/moku-labs/core/tests/sandbox` to inspire
 > coding style during build. Pinned commit: `09affbbb35065e05c71618ac6ad7479790f0225f` (tag `v1.5.0`)
 > Vendored: `2026-06-21` · files live under `skills/moku-core/references/sandbox/`.
-> Refresh with `/moku:spec-sync` (it re-vendors both `spec/` and `sandbox/`).
+> Refresh with the `spec-sync` skill (moku-maintainer pack) — it re-vendors both `spec/` and `sandbox/`.
 >
 > These are **read-only style references, not compilable code.** Their imports
 > (`from "../config"`, `from "../../../../src"`) reflect the upstream sandbox layout, not your

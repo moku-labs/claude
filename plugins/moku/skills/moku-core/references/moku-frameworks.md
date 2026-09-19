@@ -2,7 +2,7 @@
 
 The single source of truth for every **published Moku-family framework** the toolkit
 knows how to teach (via a skill), index (plugin/property catalog), and keep current
-(`/moku:upgrade` + the `moku-sync` maintenance skill).
+(`/moku:upgrade` + the `moku-sync` maintainer skill).
 
 This file is the integration point between three systems:
 
@@ -13,10 +13,10 @@ This file is the integration point between three systems:
 - **`moku-sync`** (local maintainer skill) — polls each framework's release source,
   detects new versions, and regenerates the skill + plugin index + this registry.
 
-> **Extending to a new moku-family framework:** add one entry to the JSON block below,
-> create `skills/<name>/SKILL.md` + `skills/<name>/references/plugin-index.md` (copy the
-> moku-web index), then run `moku-sync <name>`. No code changes — every consumer of this
-> registry loops over its entries generically.
+> **Extending to a new moku-family framework:** create the pack from `docs/pack-template/`
+> (see [Pack contract](#pack-contract)), add one entry to the JSON block below with its `pack`,
+> `skill` and `pluginIndex` paths, then run `moku-sync <key>`. No code changes — every consumer of
+> this registry loops over its entries generically.
 
 ## Registry (machine-readable)
 
@@ -42,7 +42,8 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "layer": 1,
       "role": "kernel",
       "knownVersion": "1.5.0",
-      "skill": "skills/moku-core",
+      "pack": "moku",
+      "skill": "plugins/moku/skills/moku-core",
       "pluginIndex": null,
       "dependsOn": [],
       "detect": { "packageJsonDep": "@moku-labs/core" },
@@ -63,8 +64,9 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "layer": 2,
       "role": "framework",
       "knownVersion": "2.2.2",
-      "skill": "skills/moku-web",
-      "pluginIndex": "skills/moku-web/references/plugin-index.md",
+      "pack": "moku-web",
+      "skill": "plugins/moku-web/skills/moku-web",
+      "pluginIndex": "plugins/moku-web/skills/moku-web/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
       "detect": { "packageJsonDep": "@moku-labs/web" },
       "releaseSource": {
@@ -85,8 +87,9 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "layer": 2,
       "role": "framework",
       "knownVersion": "0.15.0",
-      "skill": "skills/moku-worker",
-      "pluginIndex": "skills/moku-worker/references/plugin-index.md",
+      "pack": "moku-worker",
+      "skill": "plugins/moku-worker/skills/moku-worker",
+      "pluginIndex": "plugins/moku-worker/skills/moku-worker/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
       "detect": { "packageJsonDep": "@moku-labs/worker" },
       "releaseSource": {
@@ -107,8 +110,9 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "layer": 2,
       "role": "framework",
       "knownVersion": "0.3.1",
-      "skill": "skills/moku-room",
-      "pluginIndex": "skills/moku-room/references/plugin-index.md",
+      "pack": "moku-room",
+      "skill": "plugins/moku-room/skills/moku-room",
+      "pluginIndex": "plugins/moku-room/skills/moku-room/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
       "detect": { "packageJsonDep": "@moku-labs/room" },
       "releaseSource": {
@@ -303,14 +307,49 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 | `key` | Short id used by `moku-sync <key>` and migration ids. |
 | `npm` | Published package name; also the `package.json` dependency `/moku:upgrade` detects. |
 | `repo` / `localClone` | GitHub repo (release + raw-file source) and the optional sibling working copy `moku-sync` can read offline. |
-| `layer` | Moku layer: 1 = kernel (`@moku-labs/core`), 2 = framework, 3 = app (not registered — apps deploy, see `ci-release.md`). |
+| `layer` | Moku layer: 1 = kernel (`@moku-labs/core`), 2 = framework, 3 = app (not registered — apps deploy; see the `moku:moku-release` skill, `references/release-model.md`). |
 | `knownVersion` | Last synced version. Behind upstream ⇒ "new things available". |
+| `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, or `moku` for the core and `@moku-labs/common`. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
 | `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export). |
 | `dependsOn` | Other moku-family packages it requires (ordering hint: upgrade core before web). |
 | `detect.packageJsonDep` | Presence of this dep in a consumer's `package.json` ⇒ the framework applies to that project. |
 | `releaseSource` | `npm` (version-of-truth via `dist-tags.latest`), `github`/`releases` (notes), `packageJson` (deps/exports), `llms` (upstream `llms-full.txt` — `web` since 0.4.0, `core` since 0.1.1; cross-checked against `src/`, which wins on disagreement). |
 | `upgrade.migrationId` | The `/moku:upgrade` migration that bumps this dependency (see `upgrade-migrations.md`). |
-| `upgrade.distTagPolicy` | Stable → `latest`, prerelease (`-` in version, e.g. `0.1.0-alpha.6`) → its prerelease tag (mirrors `ci-release.md`). |
+| `upgrade.distTagPolicy` | Stable → `latest`, prerelease (`-` in version, e.g. `0.1.0-alpha.6`) → its prerelease tag (mirrors `release-model.md` in the `moku:moku-release` skill). |
+
+## Pack contract
+
+Every framework's teaching material ships as its own marketplace plugin — a **pack**. The core plugin
+(`moku`) holds the lifecycle, the conductor and the shared knowledge; a pack holds one framework.
+
+| Framework | npm | Pack |
+|---|---|---|
+| Core (kernel) | `@moku-labs/core` | `moku` |
+| Common (shared infra) | `@moku-labs/common` | `moku` |
+| Web | `@moku-labs/web` | `moku-web` |
+| Worker | `@moku-labs/worker` | `moku-worker` |
+| Room | `@moku-labs/room` | `moku-room` |
+| AI | `@moku-labs/ai` | none yet: use the pack template |
+| System | `@moku-labs/system` | none yet: use the pack template |
+| Game engine (planned) | — | none yet: use the pack template |
+
+Every pack has the same shape:
+
+- `.claude-plugin/plugin.json` with `"dependencies": ["moku"]`. A preview pack also sets
+  `"defaultEnabled": false`.
+- `skills/moku-<fw>/SKILL.md` plus `skills/moku-<fw>/references/` (at minimum `plugin-index.md`).
+- Optional validator agent under `agents/`, named `moku-<fw>-validator` in its frontmatter. The
+  `verify` skill finds it by that name, so the agent `name` is the contract, not the file name.
+- `evals/<case>/` with at least one case (`prompt.md` + `graders/`).
+- A row in the registry above, with `pack`, `skill` and `pluginIndex` pointing at the pack's paths.
+- An entry in the repository's `.claude-plugin/marketplace.json` whose `version` matches the pack's
+  `plugin.json` (`claude plugin tag` validates that they agree).
+
+**Boundary rule.** `${CLAUDE_PLUGIN_ROOT}` resolves per plugin, so a pack cannot reach core files by
+path. A pack that needs core knowledge loads the `moku:moku-core` skill with the Skill tool and reads
+`references/<file>` under the base directory the tool prints.
+
+Start a new pack by copying `docs/pack-template/` and replacing the `FRAMEWORK` placeholder.
 
 ## Integration contract — `/moku:upgrade`
 

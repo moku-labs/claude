@@ -1,293 +1,234 @@
 # App Build — Detailed Steps
 
-## Step 1: Read and Validate the Plan
+## Step 1: Read and validate the plan
 
-Read the specification from the provided path (defaults to `.planning/app-spec.md`). Verify it contains:
-- Framework reference
-- Plugin composition (ordered list)
-- Configuration (global + per-plugin)
-- Custom plugin specs (if any)
-- Entry point structure
+Read the spec (default `.planning/app-spec.md`). It needs a framework reference, the ordered plugin
+composition, global and per-plugin configuration, any custom plugin specs, and the entry point
+structure. If it is incomplete, ask the user to run `/moku:plan app` first.
 
-If the plan is incomplete, ask the user to run `/moku:plan app` first.
+Build to the idiomatic app shape in
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md`: multiple `createApp` instances
+(build / browser / worker), two frameworks side by side for a full-stack app (`@moku-labs/web` +
+`@moku-labs/worker`), folders split by concern, a thin `cloudflare/worker.ts` entry, business logic in
+plugins. The `tracker` app in `github.com/moku-labs/demos` is a public worked example — consult it only
+if a concrete reference helps, and never assume it is checked out locally. Study a reference for what
+idiomatic looks like and re-implement to this project's conventions; never copy a prototype's source.
 
-**Build to the idiomatic app shape** in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md`:
-multiple `createApp` instances (build / browser / worker), two frameworks side-by-side where the app is
-full-stack (`@moku-labs/web` + `@moku-labs/worker`), folder split by concern, a thin `cloudflare/worker.ts`
-entry, and business logic in plugins. A public worked example of this shape is the **`tracker`** app in the
-public repo **`github.com/moku-labs/demos`** — consult it only if a concrete reference helps (it's
-illustrative, never required, and never assume it's checked out locally). **Spec, not source:** study a
-reference for *what idiomatic looks like* and re-implement to the project's conventions — never copy a demo
-prototype's source.
+## Step 2: Framework-capability verification
 
-## Step 2: Framework-Capability Verification (hard gate — verify, never assume)
+Before finalizing any composition or deploy decision, prove every framework capability the plan relies
+on exists in the **installed** package. A wrong assumption here forces a multi-wave rework: a real plan
+assumed a framework's server export shipped a `wrangler.jsonc` generator, and it did not.
 
-Before finalizing **any** composition or deploy decision, confirm every framework capability the plan
-relies on **actually exists in the installed package** — by reading its real `package.json` `exports` +
-its `dist`/types, not from memory or a spec doc. This is a hard gate: a wrong assumption here forces a
-multi-iteration rework downstream.
+For each named capability — an exported `createApp`/`createPlugin`, a specific plugin (`hubPlugin`,
+`deployPlugin`), a generator, a CLI (`server.cli.dev`/`deploy`), a re-export, a `./subpath` export:
 
-**Why this exists:** never assume a framework's runtime/server export ships a deploy-config generator (e.g.
-a `wrangler.jsonc` emitter) or CLI — verify it against the installed package's `exports` + `dist`/types. A
-single unverified capability assumption can force a reversal and a multi-wave rework downstream. **Never
-assume a framework capability from memory or a spec doc.**
+1. Read `node_modules/<pkg>/package.json` and confirm the `exports` map has the subpath you intend to
+   import, with a `types` condition if you will import types from it.
+2. Read the `dist`/types entry that export points at and confirm the named export exists with the shape
+   the plan assumes.
+3. If it is absent, stop and revise the plan to the real shape. Do not hand-roll the missing capability
+   and do not invent a facade app to paper over it (I6). Reach for the framework that genuinely ships
+   it (for example compose `@moku-labs/worker` for `deploy`/`cli`), or raise a framework-extension need.
 
-For each capability the plan names — an exported `createApp`/`createPlugin`, a specific plugin
-(`hubPlugin`, `deployPlugin`, …), a generator (`wrangler.jsonc` emitter, an SSG builder), a CLI
-(`server.cli.dev`/`deploy`), a re-export, or a `./subpath` export — **prove it exists:**
+Record each assumed capability and the file:line that confirms it in the build notes.
 
-1. Read the installed package's `package.json` (`node_modules/<pkg>/package.json`): confirm the `exports`
-   map actually has the subpath you intend to import (`"./server"`, `"./browser"`, …) **and** that it
-   declares a `types` condition if you'll import types from it.
-2. Read the resolved `dist`/types entry the export points at: confirm the named export (plugin, factory,
-   generator, CLI method) is actually present and has the shape the plan assumes (e.g. a `deploy`/`cli`
-   plugin that generates `wrangler.jsonc`; a runtime plugin with a `handle`).
-3. If a capability is **absent**, STOP and revise the plan to the real shape — do **not** hand-roll the
-   missing capability (a hand-rolled `wrangler.jsonc` generator was rejected) and do **not** invent a
-   facade app to paper over it (I6). Reach for the framework that genuinely ships it (e.g. compose
-   `@moku-labs/worker` for `deploy`/`cli`), or raise a framework-extension need.
+## Step 3: Build custom plugins
 
-Record, in the build notes, each assumed capability and the file:line that confirms it. Only then proceed.
+Layer-3 apps author their own plugins for plugin-shaped concerns: a typed `app.<x>.method()` API,
+custom events, lifecycle, shared state, or a dependency on another plugin. Build each in
+`src/plugins/{name}/` per **`build-plugin.md`**, importing `createPlugin` from the framework package,
+never from `@moku-labs/core`. Tiers, JSDoc, unit and integration tests are the same as framework plugins.
 
-## Step 3: Build Custom Plugins
+With several custom plugins, group them into waves the same way a framework build does.
 
-Layer-3 consumer apps author their own plugins for plugin-shaped concerns (a typed `app.<x>.method()` API, custom events, lifecycle, shared state, or a dependency on another plugin). If the plan includes custom plugins, build each one in `src/plugins/{name}/` following the **Plugin Build** process (see `build-plugin.md` reference), importing `createPlugin` from the **framework package** (never `@moku-labs/core`).
+Not every concern is a plugin: pure build-time data access belongs in `lib/`, client-only DOM behavior
+belongs in an island. `consumer-plugins.md` has the plugin-vs-lib-vs-island decision guide and the
+Layer-3 wiring rules (no `src/config.ts`; compose via `createApp({ plugins: [...] })`; the
+`src/plugins/index.ts` barrel is optional at Layer 3).
 
-Each plugin must follow the moku-plugin skill's complexity tiers. Full JSDoc, unit tests, integration tests.
+## Step 4: Create the entry point
 
-For multiple custom plugins, use wave analysis (same as framework build) to identify parallel opportunities.
-
-Not every consumer concern is a plugin — pure build-time data access belongs in `lib/`, and client-only DOM behavior belongs in an island (web). See the `consumer-plugins.md` reference for the plugin-vs-`lib`-vs-island decision guide and the Layer-3 wiring rules (no `src/config.ts`; compose via `createApp({ plugins: [...] })`; the `src/plugins/index.ts` barrel is optional at Layer 3).
-
-## Step 4: Create Entry Point
-
-Write `src/main.ts` (or the specified entry file):
+Write `src/main.ts` (or the entry the spec names):
 
 ```typescript
 import { createApp, createPlugin } from 'framework-name';
-// Import optional/consumer plugins
 import { customPlugin } from './plugins/custom';
 
 const app = createApp({
   plugins: [customPlugin],
-  config: {
-    // Global config overrides from spec
-  },
-  pluginConfigs: {
-    // Per-plugin configs from spec
-  },
-  onReady: (ctx) => {
-    // Setup code from spec
-  },
+  config: { /* global overrides from the spec */ },
+  pluginConfigs: { /* per-plugin config from the spec */ },
+  onReady: (ctx) => { /* setup from the spec */ },
 });
 
 await app.start();
-
-// Application logic from spec
 ```
 
-### Server / worker composition — START from the one-worker (tracker) pattern
+### Server and worker composition
 
-For any worker backend, do **not** invent the composition — build to the **one-worker composition idiom**
-(`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/moku-idioms.md` §I6; worked reference `tracker/src/server.ts`):
+For any worker backend, build to the one-worker idiom (`moku-idioms.md` §I6; worked reference
+`tracker/src/server.ts`) rather than inventing a composition:
 
-- **ONE** `@moku-labs/worker` `createApp`, whose `plugins:[]` composes, together: the **resource plugins**
-  the deploy plugin requires (`storage`/`kv`/`d1`/`queues`/`durableObjects`), **+ the app's runtime
-  plugin** (its own `createPlugin`, or a framework runtime/hub plugin like `@moku-labs/room`'s `hubPlugin`),
-  **+ `deploy` + `cli`**. `server.<runtime>.handle` is the runtime fetch (the thin `cloudflare/worker.ts`
-  delegates to it); `server.cli.{dev,deploy}` generate `wrangler.jsonc` + run wrangler.
-- Configure only the resource plugins you actually use; the rest sit at their empty `{}` default and emit
-  no bindings.
+- **One** `@moku-labs/worker` `createApp` whose `plugins:[]` composes the resource plugins the deploy
+  plugin needs (`storage`/`kv`/`d1`/`queues`/`durableObjects`), the app's runtime plugin (its own
+  `createPlugin`, or a framework runtime plugin such as `@moku-labs/room`'s `hubPlugin`), plus `deploy`
+  and `cli`. `server.<runtime>.handle` is the fetch the thin `cloudflare/worker.ts` delegates to;
+  `server.cli.{dev,deploy}` generates `wrangler.jsonc` and runs wrangler.
+- Configure only the resource plugins you use; the rest sit at `{}` and emit no bindings.
 
-**Forbidden (`moku-idioms.md §I6`):**
-- a **second** app for the same worker (e.g. a runtime `createApp` plus a separate `createApp` whose only
-  job is to generate `wrangler.jsonc`), and
-- a **facade** app/plugin that exists only to emit config.
-
-If the runtime framework you're composing does not itself ship a `wrangler.jsonc` generator / CLI (verified
-in Step 2), that is exactly why `@moku-labs/worker`'s `deploy`+`cli` go INTO the one app — never hand-roll a
-generator and never stand up a config-only facade.
+Two things are forbidden by §I6: a second app for the same worker (a runtime `createApp` plus a
+separate one whose only job is generating `wrangler.jsonc`), and a facade app or plugin that exists only
+to emit config. If the runtime framework does not itself ship a generator or CLI (verified in Step 2),
+that is precisely why `@moku-labs/worker`'s `deploy` and `cli` go into the one app.
 
 ## Step 5: Validate
 
-Run the post-build validation pipeline:
+**Group A (parallel):**
+- `moku-structure-validator` — spec compliance, plugin structure and tier, root and entrypoint idioms
+  I1–I6, `@moku-labs/common` usage
+- `moku-style-validator` — JSDoc and readable-code style
 
-**Parallel Group A:**
-- **moku-spec-validator** agent on all source files
-- **moku-plugin-spec-validator** agent on custom plugins (flags per-plugin `config.ts`, §17)
-- **moku-jsdoc-validator** agent on all source files
-- **moku-readable-code-validator** agent on all source files (readability; WARNING/INFO only — never blocks)
+**Group B (parallel):**
+- `moku-quality-validator` — `tsc`, tests and lint as facts, then test quality
+- `moku-web-validator` (web apps) — `components/`, `islands/`, `styles/`, `index.html`
 
-**Parallel Group B:**
-- **moku-test-validator** agent on custom plugin tests
-- **moku-type-validator** agent (once, whole project)
+Findings from these Sonnet validators go through `moku-skeptic` before they count. Blockers enter gap
+closure; warnings go into the report.
 
-**Parallel Group C — structural conformance (hard gate, see Step 5.5):**
-- **moku-root-validator** agent on the root/entrypoint files (I1–I6: app composition, the one-worker
-  pattern + facade detection, lib-vs-plugin boundary, non-triad `scripts/`, config-in-place)
-- **moku-web-validator** agent (web apps only) on `components/`/`islands/`/`styles/`/`index.html`
-  (flat components, island CSS, vendored fonts, `ctx.params` routing, runtime data placement)
+## Step 5.5: Reference-app structural conformance
 
-If BLOCKER issues found, enter gap closure. WARNINGs included in report.
+"Follow the reference app" is a gate, not advice. Compare the built output axis by axis against the
+nearest reference — `tracker` for full-stack, `blog` for web-only — and fail on a confirmed divergence.
+Group A and B produce these findings; this step is where they block.
 
-## Step 5.5: Reference-App Structural-Conformance Gate (hard gate — FAIL on divergence)
+| Axis | Idiomatic target | Owner |
+|------|------------------|-------|
+| App / worker composition | one `createApp` per runtime; the one-worker pattern; no facade app | structure I2/I6 |
+| `components/` layout | flat `Foo.tsx` + `Foo.css`, no folder per component | web §10 |
+| `islands/` | small, flat or module-split, own zero `.css`, one per screen concern | web §11 |
+| `lib/` | pure shared helpers and the realtime seam only — stateful/lifecycle/event code is a plugin | structure |
+| `scripts/` | build/dev/deploy(+preview) passthroughs only | structure §E |
+| per-plugin layout | no `config.ts`; config inline in `index.ts` | structure §17 |
+| config placement | a directly visible `createApp({...})` literal; `config.ts` holds constants | structure §D |
+| fonts/assets | vendored under `public/fonts/` with local `@font-face`, no CDN `<link>` | web §12 |
+| route/role selection | island `ctx.params`, no hand-parsed `location.pathname` | web §13 |
+| runtime app data | the web data/content mechanism, not `public/` | web §14 |
 
-"Follow the reference app" is **not** advisory here — it is an enforced gate. Compare the built output, axis
-by axis, against the **nearest reference app** — `tracker` for a full-stack app, `blog` for a
-web/content-only app — and FAIL the build on any confirmed divergence (Group C's validators produce these
-findings; this step is where they BLOCK rather than merely inform). The axes and where each is owned:
+Each confirmed departure is a blocker and routes to gap closure, except the two web warnings (island
+sizing/count, `public/` data). This gate catches idiom violations every other validator passes. Full
+protocol and fix recipes: `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md`.
 
-| Axis | Idiomatic target | Owner check |
-|------|------------------|-------------|
-| App / worker composition | one `createApp` per runtime; the one-worker pattern; no facade app | root-validator I2/I6 |
-| `components/` layout | flat `Foo.tsx`+`Foo.css` — no folder-per-component | web-validator §10 |
-| `islands/` | small, flat or module-split; own **zero** `.css`; one per screen concern | web-validator §11 |
-| `lib/` | pure/shared helpers + realtime seam only — stateful/lifecycle/event code is a plugin | root-validator (lib-vs-plugin) |
-| `scripts/` | build/dev/deploy(+preview) triad only — passthroughs | root-validator §E |
-| per-plugin layout | no `config.ts`; config inline in `index.ts` | plugin-spec-validator §17 |
-| config placement | a directly-visible `createApp({...})` literal; `config.ts` = constants | root-validator §D |
-| fonts/assets | vendored under `public/fonts/` + local `@font-face` — no CDN `<link>` | web-validator §12 |
-| route/role selection | island `ctx.params` — no hand-parsed `location.pathname` | web-validator §13 |
-| runtime app data | the web data/content mechanism — not `public/` | web-validator §14 |
+## Step 6: Full-app integration tests
 
-Each confirmed departure is a **BLOCKER** (except the two web-validator WARNING axes — island sizing/count
-and `public/` data) and routes to gap closure. This single gate catches idiom violations that all other
-validators pass. Full protocol + fix recipes: `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md`.
+After validation, write root-level tests that exercise the assembled app the way it will run — real
+task scenarios, not isolated unit checks. Follow `build-final.md` Step 5.8 (scenario planning → writing
+→ execution) but scope the scenarios to this app's journeys: boot via `createApp`, drive the real plugin
+stack through flows a user would perform (load a route → render → navigate → handle an event end to
+end), no mocks. Tests go to `tests/integration/`. Run `bun run test`; failures route to gap closure
+(max 2 rounds).
 
-## Step 6: Full-app integration tests (realistic end-to-end)
+## Step 7: Runtime smoke test — boot the real artifact
 
-After validation passes, generate root-level integration tests that exercise the assembled app the
-way it will actually run — **realistic real-world task scenarios**, not isolated unit checks. Reuse
-the framework integration-test machinery: follow `build-final.md` Step 5.8 (Scenario Planning → Test
-Writing → Test Execution), but scope scenarios to THIS app's user journeys: boot the app via
-`createApp`, drive the real plugin stack through the flows a user/consumer would actually perform
-(e.g. for a web app: load a route → render → navigate → handle an event end-to-end), no mocks.
-Tests go to `tests/integration/`. Run `bun run test`; route failures to gap closure (max 2 rounds).
+Static validation and integration tests run against mocked bindings. They prove the code is internally
+consistent, not that the app boots. An app can pass every test and still fail on first run: an
+unmigrated local DB, a missing env var, bad entry wiring, an unseeded store. Do not report an app as
+ready, or show it to the user, without running the command the README tells them to run.
 
-## Step 7: Runtime smoke test — boot the real artifact (delivery gate)
+Mandatory for anything with a run command (HTTP server, Worker, CLI, web dev server). Skip only for a
+pure library, and say so in the report.
 
-Static validation (Step 5) and integration tests (Step 6) run against **mocked / fake bindings** — they
-prove the code is internally consistent, not that the app actually boots. An app can pass every test and
-still fail on first run: an unmigrated local DB, a missing env var, bad entry wiring, an unseeded store.
-**Never report an app as ready, or show it to the user, without running the exact command the README
-tells them to run.** This is a hard delivery gate, not an optional check.
-
-Mandatory for any app that produces a runnable artifact (HTTP server, Cloudflare Worker, CLI, web dev
-server). Skip only for a pure library with no run command (say so explicitly in the report).
-
-1. **Find the documented run command.** Read `package.json` scripts and the README quickstart. The first
-   command a fresh user runs is the contract — usually `bun run dev` (fallback `start`).
-
-2. **Run it from a clean state.** Everything a fresh clone needs to run (DB schema, migrations, seed data,
-   generated files) must live *inside* the run command — never as a side instruction the user can miss. To
-   prove that, run the smoke test from a clean state (remove local/ephemeral resource state first — e.g. a
-   Cloudflare app's `.wrangler/state`). If the app only works after a manual step, that manual step is a
-   bug: fold it into the run script (or a script it chains) and re-test.
-
-3. **Boot and assert the primary surface responds** (adapt to app type):
-   - **Worker / HTTP server:** start the dev server in the background, wait until it accepts connections,
-     hit its primary route(s), and assert a success status — **not** a 5xx. A 500 on the first real
-     request is a failed gate even if every unit test passed. Stop the server afterward.
-   - **Web SPA (no API):** start the dev server and assert the root document serves `200`.
-   - **CLI:** invoke the built binary with a smoke command (`--help`, `--version`, or a no-op subcommand)
-     and assert exit 0.
-
-4. **Cloudflare Worker apps (D1 / KV / R2 / Queues / DO) — the mocked-test blind spot.** Integration tests
-   use fake bindings, so a missing local **D1 migration** is invisible to them yet fatal at runtime
-   (`D1_ERROR: no such table: …` → 500). For any app with a `d1_databases` binding and a `migrations/` dir,
-   the `dev` script MUST apply migrations to the local DB before `wrangler dev`:
+1. **Find the documented command.** Read `package.json` scripts and the README quickstart. The first
+   command a fresh user runs is the contract — usually `bun run dev`, else `start`.
+2. **Run it from a clean state.** Everything a fresh clone needs (schema, migrations, seed data,
+   generated files) belongs inside the run command, not in a side instruction the user can miss. Remove
+   local ephemeral state first (for a Cloudflare app, `.wrangler/state`). If the app only works after a
+   manual step, that manual step is a bug: fold it into the run script and re-test.
+3. **Boot and assert the primary surface responds.** Worker or HTTP server: start the dev server in the
+   background, wait for connections, hit the primary routes, assert success — a 500 on the first real
+   request fails the gate no matter how green the tests are. Stop the server afterwards. Web SPA: assert
+   the root document serves 200. CLI: invoke the built binary with `--help` or a no-op subcommand and
+   assert exit 0.
+4. **Cloudflare bindings are the mocked-test blind spot.** Integration tests use fake bindings, so a
+   missing local D1 migration is invisible to them and fatal at runtime (`no such table` → 500). For any
+   app with a `d1_databases` binding and a `migrations/` directory, `dev` applies migrations first:
    ```jsonc
    "migrate:local": "wrangler d1 migrations apply <db-name> --local",
    "dev": "bun run build && bun run migrate:local && wrangler dev"
    ```
-   The smoke test (step 3) must hit at least one route that **reads from D1** to prove the schema is
-   present. Apply the same reasoning to other bindings (KV/R2 seed, queue consumers).
+   The smoke test must hit a route that reads from D1 to prove the schema is there. Same reasoning for
+   KV/R2 seeds and queue consumers.
+5. **On failure**, fix the run script, wiring or setup through gap closure, then re-run this gate. Do
+   not proceed until the documented command boots and serves cleanly from a clean state.
 
-5. **On failure:** route to gap closure — fix the run script / wiring / setup — then re-run this gate. Do
-   NOT proceed until the documented run command boots and serves cleanly from a clean state.
+Record the command, the surface checked and the status in the Step 10 report.
 
-Record the result (command run, surface checked, status) in the Step 10 report.
+## Step 7.5: End-to-end gate (web apps)
 
-## Step 7.5: Comprehensive E2E + visual-baseline gate (LAST verification — web apps)
+The smoke test proves the app boots; this proves it works — every screen, feature and control, in a
+real browser on desktop and mobile, with visual baselines, console and server errors captured, and a
+UX and responsiveness review.
 
-The smoke test (Step 7) proves the app **boots**; this proves it **works** — every screen, feature, and
-control, in a real browser on **desktop and mobile**, pinned with visual baselines, with browser-console +
-server errors caught and a modern-UX + responsive review. Full process:
-`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/e2e-testing.md`. **Pin Playwright `^1.61`** there; the
-process also checks each screen against the design context (when one exists) and covers the agentic
-Test-Agents/MCP accelerator and the latest assertion APIs (ARIA snapshots, axe a11y, soft assertions).
+That gate lives in the `moku-web` pack. If the `moku-web:e2e` skill is available, invoke it with the
+Skill tool — it is the `e2e` station, normally driven by the conductor. If the pack is not installed,
+say so plainly and continue: the station is unavailable, not silently skipped.
 
-1. **Scope:** web surface present? (a `@moku-labs/web` client, incl. a worker-backed full-stack app or a
-   `@moku-labs/room` app). If no web surface, skip with a one-line note (nothing to e2e) and continue.
-2. **Offer the gate — confirmed skip only.** `AskUserQuestion`: *"Run the comprehensive E2E + visual-baseline
-   stage now? Every screen/feature is tested + confirmed in a real browser; bugs and visual issues found are
-   fixed."* — options: **"Run it (Recommended)"** · **"Skip — I confirm"** (desc: "ship without comprehensive
-   e2e; recorded as skipped"). The skip is a **deliberate, confirmed** choice — never a silent default.
-3. **On run:** spawn the **`web-e2e-tester`** agent (INVENTORY_SOURCES = the design context §6 inventory if
-   present, the specs + what each wave delivered, and the app source; `MODE=gate`). It builds the full feature
-   **and control catalog**, **gap-analyzes the whole app** (incl. features built in earlier waves),
-   scaffolds/extends the Playwright suite + frozen fixture corpus + per-engine/per-OS visual baselines, **runs
-   it for real** on **desktop and mobile** with **dual-side (browser + server) error capture**, checks **every
-   control's behavior**, runs the **human-QA loop** (`web-qa-explorer` exploratory charters/tours/oracles → durable regression tests, plus `web-ux-reviewer` modern-UX/mobile), and **fixes
-   every functional bug / behavioral defect / runtime error / visual or UX regression it finds** (app source,
-   moku-web conventions) — **looping until clean**, not just green. The build is **not done** until it returns
-   `PASS` — do not proceed to README/report on a red or partially-covered suite.
-4. **On skip:** record it **prominently** in the Step 10 report ("⚠️ comprehensive E2E skipped by user — N
-   screens unverified"), and write the outcome (run/skipped + coverage) to STATE.md so it is visible, not
-   silent. (The standalone `/moku:e2e` command runs the same agent any time, without the skip offer.)
+No web surface (no `@moku-labs/web` client, no full-stack worker-backed app, no `@moku-labs/room` app)
+means there is nothing to test — note it in one line and move on.
 
-**Confirm, don't assume.** Never present the finished app as working on the strength of unit/integration
-tests alone — only a green real-browser run counts (or an explicitly confirmed skip).
+Never present a finished web app as working on the strength of unit and integration tests alone.
 
-## Step 8: README generation / update
+## Step 8: README
 
-Generate or update the project root `README.md` (and any per-custom-plugin READMEs) now that the app
-is built — follow `build-final.md` Step 5.6 (Root README) scoped to an app: what the app is, how to
-run it (`bun run dev`/`build`/`start`), its plugin composition + config, entry point, and deployment
-notes. Use the **`moku-readme` skill** for the house style — pick the **consumer-app** shape
-(`moku-readme` §2 / `references/template.md` app deltas): the Quick start must show the *exact*
-documented run command (the one Step 7's smoke test actually runs), and apps carry no npm badge.
-If a `README.md` already exists (rebuild/update), refresh the changed sections rather than
-overwriting hand-written prose. Run `bun run format`.
+Generate or update the root `README.md` (and any per-custom-plugin READMEs) now that the app exists.
+Follow `build-final.md` Step 5.6 scoped to an app: what it is, how to run it, its plugin composition and
+config, the entry point, deployment notes. House style comes from the **`moku-readme` skill**,
+consumer-app shape (§2 / `references/template.md` app deltas): the quick start shows the exact command
+Step 7's smoke test ran, and apps carry no npm badge. On a rebuild, refresh the changed sections instead
+of overwriting hand-written prose. Then `bun run format`.
 
-## Step 9: CI/CD, deployment & publication (user chooses)
+## Step 9: Deployment
 
-Apps usually ship by **deployment**, not npm publish. Run `build-final.md` Step 5.10 (CI/CD,
-Deployment & Publication Wave): present the shipping options with examples via `AskUserQuestion` and
-let the user pick where/how to deploy (Cloudflare Pages/Workers, Vercel, Netlify, GitHub Pages,
-container) and whether to add PR-validation CI. Recommend a deploy target for app projects. Generate
-only the selected workflows, tell the user which repo secrets to add, and validate the YAML.
+Apps ship by deployment rather than npm publish. Present the options with examples via
+`AskUserQuestion` — Cloudflare Pages or Workers, Vercel, Netlify, GitHub Pages, a container image — plus
+whether to add PR-validation CI, and let the user pick. Recommend a deploy target for app projects.
+Generate only the selected workflows, name the repo secrets the user must add, and check the YAML
+parses. Pre-selected choices may already sit in `.planning/steering.md` `## CI/CD`; confirm them rather
+than assuming. Run `moku-rails pause` before asking.
+
+Package publishing is a different station — the `moku:moku-release` skill.
 
 ## Step 10: Report
 
-Summarize what was built:
-- Custom plugins created
-- Entry point structure
-- Validation results
-- Integration test count + coverage (Step 6)
-- **Runtime smoke test (Step 7): the run command exercised, the surface checked, and its status** — state plainly that the app was booted and served cleanly (or, for a pure library, that the gate was skipped and why)
-- README + CI/CD / deployment generated (Steps 8–9)
-- Any issues found and fixed
+Cover: custom plugins created, entry point structure, validation results, integration test count and
+coverage, the runtime smoke test (the command, the surface, the status — state plainly that the app was
+booted and served, or that the gate was skipped for a pure library), whether the e2e gate ran and what
+it found, README and deployment output, and issues found and fixed. Then update `.planning/STATE.md`.
 
-Update `.planning/STATE.md` with build results.
+## App quality bar
 
-(Numbering note: validation is Step 5; integration tests are Step 6; the runtime smoke-test delivery gate is Step 7; README is Step 8; CI/CD is Step 9; this Report is Step 10.)
+- Full JSDoc on every custom source file; `import type` for type-only imports.
+- Import from the framework package, never `@moku-labs/core`.
+- Tests pass; Biome and ESLint pass.
+- The documented run command boots from a clean state and serves its primary surface (Step 7).
+  Passing tests never clear this bar.
+- Custom plugins meet the same standard as framework plugins.
 
-## App Quality Requirements
+## Design context is a spec, not source
 
-- Full JSDoc on ALL custom source files
-- `import type` for type-only imports
-- NEVER import from `@moku-labs/core` — only from the framework
-- All tests must pass
-- Biome and ESLint must pass
-- The documented run command (`bun run dev` / `start`) boots the app **from a clean state** and serves its primary surface without error (Step 7 runtime smoke test) — passing tests alone never clear this bar
-- Custom plugins follow the same quality standards as framework plugins
+When the app spec or a screen spec references a design context (`.planning/design/*/design-context.md`)
+or carries a "re-implement from the design context" note, the design's prototype is demo-only: its
+HTML/CSS/JS communicates look, feel, behavior and the screen inventory, nothing more.
 
-## Web Application
+Re-implement every screen and component from scratch on the real stack, honouring the moku-web
+conventions (island architecture, `@scope`/`@layer` CSS, `data-*` attributes and never class selectors,
+the token system, one route table, a node-free client bundle — R1–R7) and readable-code style. Pass this
+instruction into every builder's prompt. Do not copy or port the prototype's CSS, JS, DOM, class names
+or bugs, and do not use it as a scaffold. The design context says what to build; the `moku-web` skill
+says how.
 
-If the application is a web app (uses TSX, CSS, or web technologies), additionally enforce the **moku-web** skill patterns:
-- Preact components with `data-*` attributes (no CSS classes in markup)
-- CSS with `@scope` and `@layer`
-- Island architecture for client-side interactivity
-- Two-layer design token system
-- Bundle size targets (JS < 8KB, CSS < 10KB gzipped)
+## Web applications
+
+A web app additionally follows the **`moku-web`** skill: Preact components with `data-*` attributes and
+no CSS classes in markup, CSS with `@scope` and `@layer`, island architecture for interactivity, the
+two-layer token system, and the bundle targets (JS under 8KB, CSS under 10KB gzipped).

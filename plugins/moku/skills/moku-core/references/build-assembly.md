@@ -28,10 +28,10 @@ export type * from "./seo/types";
 ```
 
 Rules:
-- **Plugin Instances** section: one `export { name }` per plugin, alphabetical
-- **Plugin Types** section: `export type * from "./plugin/types"` per plugin, alphabetical
-- **NEVER list individual type names** — use `export type *` to avoid maintenance burden
-- **NEVER export helpers** (builders, factories) from the barrel — they belong in `src/index.ts`
+- Plugin Instances: one `export { name }` per plugin, alphabetical
+- Plugin Types: `export type * from "./plugin/types"` per plugin, alphabetical
+- `export type *` rather than individual type names — listing them is maintenance for nothing
+- Helpers (builders, factories) stay out of the barrel; they belong in `src/index.ts`
 
 ## Step 4b-index: `src/index.ts` Self-Documenting Manifest
 
@@ -92,9 +92,10 @@ export { route } from "./plugins/router";         // builder helper, explicitly 
 ```
 
 Rules:
-- Import plugin instances from `"./plugins"` barrel, never from individual plugin dirs
-- `createCore` MUST include `pluginConfigs` with ALL non-trivial plugin defaults documented
-- Every config property MUST have a JSDoc comment (`/** ... */`) with: description, allowed values as a list, and `@example` for complex or non-obvious values
-- `export * from "./plugins"` covers all instances + types in one line — no separate types section needed
-- `createApp` and `createPlugin` always live in the `// ─── Framework API + Plugin Helpers` section
-- Every helper is explicitly named — no `export *` for helpers
+- Import plugin instances from the `"./plugins"` barrel, not from individual plugin directories
+- `createCore` carries `pluginConfigs` with every non-trivial plugin default — the single visible
+  source of truth for framework defaults
+- Every config property gets JSDoc: a description, the allowed values, and `@example` for complex ones
+- `export * from "./plugins"` covers instances and types in one line; no separate types section
+- `createApp` and `createPlugin` live in the `// ─── Framework API + Plugin Helpers` section
+- Helpers are named explicitly — no `export *` for them

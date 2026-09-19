@@ -1,129 +1,76 @@
-# Build: Agent Conflict Resolution
+# Build: Resolving Disagreements Between Checks
 
-When multiple validators assess the same code, their verdicts may disagree. Instead of silently picking one or failing ambiguously, detect conflicts and resolve them with explicit trade-off analysis.
+Several checks read the same code and can reach opposite verdicts. Resolve the disagreement explicitly
+instead of silently picking one or failing ambiguously.
 
-## When Conflicts Occur
+## Where conflicts come from
 
-Conflicts happen when two validators examining the same plugin or file produce contradictory findings:
+| Type | Example |
+|---|---|
+| Verdict | the artifact check passes a plugin, the code reviewer calls the same file a blocker |
+| Rule | `moku-structure-validator` calls a lifecycle issue a blocker, another check calls it a warning |
+| Approach | two proposed fixes are mutually exclusive — add an explicit type vs. remove it and infer |
+| Severity | the same file and line, blocker from one check and warning from another |
 
-| Conflict Type | Example | Validators |
-|---------------|---------|------------|
-| **Verdict conflict** | verifier says PASS, code-reviewer says BLOCKER | moku-verifier vs moku-code-reviewer |
-| **Rule conflict** | spec-validator flags lifecycle as BLOCKER, plugin-spec-validator says WARNING | moku-spec-validator vs moku-plugin-spec-validator |
-| **Approach conflict** | type-validator wants explicit types, spec-validator wants inferred types | moku-type-validator vs moku-spec-validator |
-| **Severity conflict** | One validator flags as BLOCKER, another flags the same file+line as WARNING or INFO | Any pair |
+## Detecting them
 
-## Conflict Detection
-
-### Step 1: Build the Findings Matrix
-
-After all validators in a group return their output contracts, build a per-file findings matrix:
+Build a per-file findings matrix once the group's output contracts are in:
 
 ```
 file: src/plugins/router/api.ts
-  moku-verifier:        PASS (no findings)
-  moku-code-reviewer:   BLOCKER at line 42 — "missing null check on route param"
-  moku-spec-validator:  WARNING at line 42 — "navigate() signature differs from spec"
+  moku-verify-artifacts:      PASS (exit 0)
+  moku-code-reviewer:         BLOCKER at line 42 — missing null check on route param
+  moku-structure-validator:   WARNING at line 42 — navigate() signature differs from spec
 ```
 
-### Step 2: Detect Conflicts
+Two findings are about the same thing when they share a file and their lines are within ±5. A conflict
+exists when they disagree on the verdict, disagree on severity, or propose fixes that cannot both be applied.
 
-A conflict exists when, for the same file (or file+line range ±5 lines):
+## Classifying and resolving
 
-1. **Verdict disagreement**: One validator says PASS/no-finding, another says BLOCKER
-2. **Severity disagreement**: One says BLOCKER, another says WARNING for the same issue
-3. **Contradictory fixes**: Two validators propose fixes that are mutually exclusive (e.g., "add explicit type annotation" vs "remove type annotation — use inference")
+| Classification | Criteria | Resolution |
+|---|---|---|
+| Information gap | one check had context the other lacked | re-run the less-informed one with the other's findings as `## Prior Findings` |
+| Genuine trade-off | both are right; the issue has competing concerns | present the trade-off to the user |
+| False positive | one is wrong — a rule that does not apply, a stale pattern | dismiss it with the reason |
+| Scope mismatch | they check different aspects that happen to overlap | not a conflict; both findings stand |
 
-Conflicts are detected automatically by comparing output contract findings arrays across validators. Two findings are "about the same thing" if they share the same file AND their line numbers are within ±5 of each other.
+**Information gap.** The deterministic artifact check knows least, the code reviewer more, the
+validators most. Re-run the less-informed check with the other's findings injected. If they still
+disagree, treat it as a genuine trade-off.
 
-### Step 3: Classify the Conflict
+**Genuine trade-off.** `moku-rails pause`, then `AskUserQuestion`:
 
-| Classification | Criteria | Resolution Path |
-|----------------|----------|-----------------|
-| **Information gap** | One validator has context the other lacks | Re-run the less-informed validator with the other's findings as input |
-| **Genuine trade-off** | Both validators are correct — the issue has competing concerns | Present trade-off analysis to the user |
-| **False positive** | One validator is wrong (over-sensitive rule, stale pattern) | Dismiss the incorrect finding with explanation |
-| **Scope mismatch** | Validators checking different aspects that happen to overlap | No conflict — both findings are valid, different fixes needed |
+- Question: `"Conflict on [file]:[line]\n\n[Check A] says: [finding A]\n[Check B] says: [finding B]\n\nTrade-off: [the competing concerns]"`
+- Options: A's approach (with what it means for the code) / B's approach / "Neither — I'll handle this manually"
 
-## Resolution Flow
+Record the outcome in `.planning/decisions.md`:
 
-### For Information Gap Conflicts
-
-The less-informed validator may not have seen the spec, the dependency chain, or the full type context.
-
-1. Identify which validator has less context (usually: verifier < code-reviewer < spec-validator)
-2. Re-run the less-informed validator with the other's findings injected as `## Prior Findings` context
-3. If the re-run resolves the disagreement → adopt the updated finding
-4. If still disagree → escalate to Genuine Trade-Off
-
-### For Genuine Trade-Off Conflicts
-
-When both validators are correct and the issue involves competing concerns (e.g., type safety vs. API ergonomics, strictness vs. flexibility):
-
-Present to the user via `AskUserQuestion`:
-
-- Question: `"Validator conflict on [file]:[line]\n\n[Validator A] says: [finding A]\n[Validator B] says: [finding B]\n\nTrade-off: [explain the competing concerns]"`
-- Header: `"Conflict: [short description]"`
-- Options:
-  1. label: "[Validator A]'s approach", description: "[what this means for the code]"
-  2. label: "[Validator B]'s approach", description: "[what this means for the code]"
-  3. label: "Neither — I'll handle this manually", description: "Defer to manual review"
-- multiSelect: false
-
-**Record the decision** in `.planning/decisions.md` (see Decision Knowledge Graph):
 ```
 ## [date] [file]:[line] — [short description]
-- **Chose**: [Validator X]'s approach
-- **Over**: [Validator Y]'s approach
-- **Because**: [user's rationale or trade-off reasoning]
-- **Context**: [what validators said]
+- **Chose**: [A]'s approach
+- **Over**: [B]'s approach
+- **Because**: [the user's rationale]
+- **Context**: [what each check said]
 ```
 
-### For False Positive Conflicts
+**False positive.** Confirm it is one: does the rule apply to this plugin's tier (Nano plugins have
+relaxed rules)? Is the pattern explicitly allowed by the spec? Does the finding contradict an entry in
+`.planning/decisions.md`? Then dismiss it and record it in `.planning/build/findings.md` with the reason.
 
-When one finding is clearly wrong:
+## Where this runs
 
-1. Identify the false positive by checking:
-   - Does the rule apply to this plugin tier? (Nano plugins have relaxed rules)
-   - Is the finding about a pattern that's explicitly allowed in the spec?
-   - Does the finding contradict a previous decision in `.planning/decisions.md`?
-2. Dismiss the false positive finding
-3. Add to `.planning/build/findings.md` (from build-findings-triage.md) with reason
+- **After a wave** (`build-verification.md` Step 4a3): reconcile the artifact check and the code
+  reviewer before gap closure or triage. Only resolved findings enter triage.
+- **In post-build validation** (`build-final.md` Step 6): reconcile within each validator group before
+  building the cross-group summary, so the architecture validator sees resolved findings rather than
+  contradictory ones.
+- **In the wave disposition** (`build-wave-execution.md`): a high count of unresolved conflicts is one
+  of the signals for `stop-for-review`.
 
-### For Scope Mismatch (Non-Conflicts)
+## Reporting conflicts
 
-Both findings are valid but address different aspects. No conflict resolution needed — process both findings through the normal triage flow.
-
-## Integration Points
-
-### Post-Wave Verification (Step 4a + 4a2)
-
-After both the **moku-verifier** (Step 4a) and **moku-code-reviewer** (Step 4a2) return:
-
-1. Run conflict detection on their combined findings
-2. If conflicts found → resolve before entering gap closure or triage
-3. Only resolved findings enter the triage flow (build-findings-triage.md)
-
-### Validation Pipeline (validation-coordinator)
-
-After each validator group completes:
-
-1. Run conflict detection on all output contracts within the group
-2. Inject conflict resolutions into the Cross-Group Findings Summary
-3. The architecture-validator receives resolved findings, not raw conflicting ones
-
-### Wave Judge (Step 4c3)
-
-The wave judge receives:
-- Resolved findings (not the raw conflicting ones)
-- Conflict resolution log (how many conflicts, how resolved)
-- Unresolved conflicts count (if any were deferred to manual)
-
-A high unresolved conflict count signals `stop-for-review`.
-
-## Conflict Output Contract Extension
-
-When conflicts are detected, add a `conflicts` field to the orchestrator's output:
+Add a `conflicts` field to your output:
 
 ```json
 {
@@ -131,13 +78,13 @@ When conflicts are detected, add a `conflicts` field to the orchestrator's outpu
     {
       "file": "src/plugins/router/api.ts",
       "line": 42,
-      "validatorA": "moku-verifier",
-      "validatorB": "moku-code-reviewer",
+      "checkA": "moku-verify-artifacts",
+      "checkB": "moku-code-reviewer",
       "findingA": "PASS — no issues",
       "findingB": "BLOCKER — missing null check",
       "classification": "information-gap | genuine-trade-off | false-positive | scope-mismatch",
       "resolution": "adopted-B | adopted-A | user-chose-A | user-chose-B | deferred",
-      "reason": "Code reviewer had spec context that verifier lacked"
+      "reason": "The code reviewer had spec context the artifact check does not read"
     }
   ]
 }

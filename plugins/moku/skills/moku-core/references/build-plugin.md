@@ -1,220 +1,158 @@
 # Plugin Build — Detailed Steps
 
-## Correct-First-Try checklist (confirm EACH before reporting "done")
+## Correct-first-try checklist
 
-Author against this list from line 1 — don't write freehand then fix in review. Pairs with
-`skeleton-conventions.md` (hook-compliant authoring) and `house-style.md` (approved patterns).
+Author against this list from line 1 rather than writing freehand and fixing it in review. It pairs
+with `skeleton-conventions.md` (hook-compliant authoring) and `house-style.md` (approved patterns).
 
-1. `index.ts` is WIRING ONLY, ≤30 effective lines (JSDoc header + imports + blanks don't count).
-2. NO explicit generics on `createPlugin`/`createCorePlugin` — types infer from the spec object.
-3. `api: createApi` — pass the factory by DIRECT REFERENCE (house style; NOT `(ctx) => createApi(ctx)`).
-4. Events via individual `register<T>("desc")` per event (house style; `register.map` is optional).
-5. Export name is `<name>Plugin`; the plugin NAME STRING stays bare (`"router"`, not `"routerPlugin"`).
-6. NO `onStart`/`onStop` unless managing a real resource (listener/server/handle). `onStop` gets ONLY
-   `{ global }` — capture refs in a closure during `onStart`. If you DO manage DOM/nav listeners, keep
-   them and add `// @no-resource-check — <why>` so the hook stays quiet.
-7. `import type` for ALL type-only imports. Full multi-line JSDoc (`@param`/`@returns`/`@example`) on
-   every export. `@returns` omitted on throw-only stubs; `jsdoc/tag-lines` = 1 blank after the
-   description, 0 between tags.
-8. NO inline type assertions (`x as T`, `{} as T`, `null as T`) in `createState`/`config` — use typed consts.
-9. Injectable/exported function types are STRUCTURAL (own `interface`/`type`). NEVER a runtime package's
-   namespace type (e.g. `import("bun").SpawnOptions.X`) — it breaks the bundled `.d.ts` even though `tsc` passes.
-10. Error format EXACTLY: `[<framework>] <description>.\n  <actionable suggestion>.` — no arrows (`→`); both lines end with a period.
-11. (web/UI) State & styling via `data-*` attributes, NEVER CSS classes — including in JSDoc `@example` blocks.
-12. If a builder API exposes an override (`.toFile()`, `.toJson()`), the compiler/runtime MUST honor it: `override?.(x) ?? default(x)`.
-13. A `depends` edge must correspond to a real `ctx.require(dep).method()` call, OR be documented inline as presence/ordering-only. No silent dead deps.
-14. Framework-internal `__tests__` MAY import `createCoreConfig` from `@moku-labs/core` (the bootstrap every plugin uses — NOT a 3-layer violation).
-15. `Config`/`Api` are `type` aliases, never `interface`. `createCoreConfig<Config, Events, [typeof p1, …]>` REQUIRES the third tuple arg once any explicit type arg is given.
-16. Verification chain is `bunx tsc --noEmit` AND `bun run lint` AND `bun run test` AND `bun run build` (the build/`.d.ts` step catches bundling bugs tsc misses).
-17. Don't guess paths — `ls`/glob before `Read`; never `Read` a directory; get the EXACT spec path from STATE.md's plugin table (spec numbers are NOT guessable).
+1. `index.ts` is wiring only, ≤30 effective lines (JSDoc header, imports and blank lines do not count).
+2. No explicit generics on `createPlugin`/`createCorePlugin` — types infer from the spec object.
+3. `api: createApi` — pass the factory by direct reference, not `(ctx) => createApi(ctx)`.
+4. Events via one `register<T>("desc")` per event; `register.map` is optional.
+5. The export is `<name>Plugin`; the plugin name string stays bare (`"router"`, not `"routerPlugin"`).
+6. `onStart`/`onStop` only for a real resource (listener, server, handle). `onStop` receives only
+   `{ global }` — capture references in a closure during `onStart`. Keeping DOM or nav listeners is
+   fine; add `// @no-resource-check — <why>` so the hook stays quiet.
+7. `import type` for every type-only import. Full multi-line JSDoc (`@param`/`@returns`/`@example`) on
+   every export. No `@returns` on throw-only stubs; `jsdoc/tag-lines` wants 1 blank line after the
+   description and 0 between tags.
+8. No inline type assertions (`x as T`, `{} as T`, `null as T`) in `createState`/`config` — use typed consts.
+9. Injectable and exported function types are structural (your own `interface`/`type`), never a runtime
+   package's namespace type (`import("bun").SpawnOptions.X`) — that breaks the bundled `.d.ts` even
+   though `tsc` passes.
+10. Error format exactly: `[<framework>] <description>.\n  <actionable suggestion>.` — no arrows, both
+    lines end with a period.
+11. Web and UI: state and styling via `data-*` attributes, never CSS classes, including inside JSDoc
+    `@example` blocks.
+12. A builder API that exposes an override (`.toFile()`, `.toJson()`) must be honoured by the
+    compiler/runtime: `override?.(x) ?? default(x)`.
+13. A `depends` edge corresponds to a real `ctx.require(dep).method()` call, or is documented inline as
+    presence/ordering-only. No silent dead deps.
+14. Framework-internal `__tests__` may import `createCoreConfig` from `@moku-labs/core` — that is the
+    bootstrap every plugin uses, not a 3-layer violation.
+15. `Config` and `Api` are `type` aliases, never `interface`. `createCoreConfig<Config, Events, [typeof p1, …]>`
+    requires the third tuple argument once any explicit type argument is given.
+16. The verification chain is `bunx tsc --noEmit`, `bun run lint`, `bun run test` and `bun run build` —
+    the build step catches bundling bugs `tsc` misses.
+17. Do not guess paths: `ls` or glob before `Read`, never `Read` a directory, and take the exact spec
+    path from the STATE.md plugin table — spec numbers are not guessable.
 
-### Filesystem safety for PARALLEL builders
-- Touch ONLY files in your own plugin dir. Never edit shared barrels, `src/config.ts`, or sibling plugins.
-- NEVER run `lint:fix`, a repo-wide `format`, or ANY git mutation (checkout/restore/reset/stash/clean/add/commit).
-- Scoped formatting only: `bunx biome format --write src/plugins/<name>/`. Report issues as hints; the orchestrator fixes repo-wide after the wave.
+### Filesystem safety for parallel builders
 
-## Step 1: Understand the Plugin
+- Touch only files inside your own plugin directory. Leave shared barrels, `src/config.ts` and sibling
+  plugins alone.
+- Run no `lint:fix`, no repo-wide `format`, and no git mutation (checkout, restore, reset, stash, clean,
+  add, commit). A stray `git checkout` reverted a sibling plugin to stubs in a real build.
+- Scoped formatting only: `bunx biome format --write src/plugins/<name>/`. Report the rest as hints; the
+  orchestrator fixes repo-wide after the wave.
 
-If referencing a spec (file path or `#N`):
-- Read the spec file and find the plugin definition
-- Extract all details: config, state, API, events, dependencies
+## Step 1: Understand the plugin
 
-If referencing multiple specs (`#N-#M` or `#N,#M,#P`):
-- Read all referenced specs
-- Determine build order based on dependencies
-- Use wave analysis for parallel opportunities
+From a spec (file path or `#N`): read it and extract config, state, API, events and dependencies.
+From several specs (`#N-#M`, `#N,#M,#P`): read them all and order them by dependency, using wave
+analysis where they can run in parallel. From a description: ask what the plugin is for, pick a tier,
+and design the spec. From a hierarchy ("auth + session + permissions"): identify every plugin and order
+them by dependency.
 
-If describing a new plugin:
-- Ask clarifying questions about the plugin's purpose
-- Determine the complexity tier
-- Design the plugin spec (config, state, API, events, dependencies)
+## Step 2: Determine the complexity tier
 
-If building a hierarchy (e.g., "auth + session + permissions"):
-- Identify all plugins in the hierarchy
-- Determine implementation order based on dependencies
-- Build each plugin sequentially or in parallel waves
+Using the **moku-plugin** skill, weigh how many spec fields are needed, how much domain logic sits
+behind each, and whether there are sub-domains. Pick Nano, Micro, Standard, Complex or VeryComplex.
 
-## Step 2: Determine Complexity Tier
+**Domain merge check, before creating anything.** Scan the existing plugins for overlap: does the new
+plugin share a domain prefix (`spaHead` + `spaRouter` → one `spa`)? Would its events coordinate with an
+existing plugin's? Would consumers configure the two together? On overlap, add a sub-module to the
+existing plugin instead (promoting it to VeryComplex if needed). Creating 2+ related plugins at once
+with no suitable home means one VeryComplex plugin with sub-modules from the start.
 
-Using the **moku-plugin** skill, assess:
-- How many spec fields are needed?
-- How much domain logic per field?
-- Are there sub-domains?
+Decide lifecycle needs at the same time: `onStart` only for connections, servers, listeners or mounted
+UI; `onStop` only for closing, flushing or unmounting. Neither needed means neither is written.
 
-Select: Nano / Micro / Standard / Complex / VeryComplex
+## Step 3: Create the directory structure
 
-**Domain merge check (CRITICAL):** Before creating a new plugin, scan existing plugins for domain overlap:
-- Does the new plugin share a domain prefix with existing plugins? (e.g. `spaHead` + `spaRouter` -> merge into `spa`)
-- Would the new plugin's events coordinate with an existing plugin's events?
-- Would consumers naturally configure the new plugin alongside an existing one?
+Follow the tier layout from the moku-plugin skill.
 
-If overlap is detected: do NOT create a separate plugin. Instead, add a sub-module to the existing plugin (promoting it to Very Complex if needed). If no suitable plugin exists yet but the user is creating 2+ related plugins, create one Very Complex plugin with sub-modules from the start.
+**Nano/Micro:** `index.ts`, `README.md`, `__tests__/unit/index.test.ts`
 
-Also determine lifecycle needs:
-- Does the plugin need `onStart`? (Only if opening connections, starting servers/listeners, mounting UI)
-- Does the plugin need `onStop`? (Only if closing connections, flushing buffers, unmounting)
-- If neither is needed, omit both entirely — do NOT add empty lifecycle methods
+**Standard:** `index.ts`, `types.ts`, `state.ts`, `api.ts`, `handlers.ts`, `README.md`,
+`__tests__/unit/*.test.ts`, `__tests__/integration/[name].test.ts`
 
-## Step 3: Create Directory Structure
+**Complex:** the Standard set plus one `[subdomain]/` directory with its own `types.ts` and files.
 
-Follow the tier-specific layout from the moku-plugin skill:
+**VeryComplex:** `index.ts` (~40 lines, the wiring harness), `types.ts` (shared config, state, events,
+context type), one directory per module each with `types.ts`, `state.ts`, `api.ts`, plus `README.md` and
+the same test layout.
 
-**Nano/Micro:**
-```
-plugins/[name]/
-  index.ts
-  README.md
-  __tests__/unit/index.test.ts
-```
+## Step 4: Implement the domain files (Standard+)
 
-**Standard:**
-```
-plugins/[name]/
-  index.ts, types.ts, state.ts, api.ts, handlers.ts
-  README.md
-  __tests__/unit/*.test.ts
-  __tests__/integration/[name].test.ts
-```
-
-**Complex:**
-```
-plugins/[name]/
-  index.ts, types.ts, state.ts, api.ts
-  [subdomain]/
-    types.ts, [files].ts
-  README.md
-  __tests__/unit/*.test.ts
-  __tests__/integration/[name].test.ts
-```
-
-**Very Complex (module directories):**
-```
-plugins/[name]/
-  index.ts           # ~40 lines. Wiring harness. THE plugin.
-  types.ts           # Shared config, state, events, context type.
-  [module-a]/
-    types.ts, state.ts, api.ts
-  [module-b]/
-    types.ts, state.ts, api.ts
-  README.md
-  __tests__/unit/*.test.ts
-  __tests__/integration/[name].test.ts
-```
-
-## Step 4: Implement Domain Files (Standard+)
-
-1. **types.ts** — All type definitions:
-   - Config type with full defaults documented
-   - State type
-   - API type (return type of api factory)
-   - Events type (if any) with `PluginCtx` utility from `@moku-labs/core`
-
-2. **state.ts** — `createState` factory:
-   - Receives MinimalContext only (`{ global, config }`)
-   - Returns the state object
-   - Full JSDoc with `@param`, `@returns`, `@example`
-
-3. **api.ts** — API factory:
-   - Receives PluginContext
-   - Returns the public API object
-   - Each method has full JSDoc
-   - Methods return closures over state (never leak raw state)
-
-4. **handlers.ts** — Event handlers (if hooks exist):
-   - Factory functions that receive context and return handlers
-   - Full JSDoc on each handler factory
+1. **types.ts** — Config with documented defaults, State, the API type (the api factory's return type),
+   and Events where they exist, using the `PluginCtx` utility from `@moku-labs/core`.
+2. **state.ts** — the `createState` factory: receives `{ global, config }` only, returns the state
+   object, full JSDoc.
+3. **api.ts** — the API factory: receives the plugin context, returns the public API, JSDoc per method,
+   methods close over state and never leak it.
+4. **handlers.ts** — event handler factories that receive context and return handlers, JSDoc on each.
 
 ## Step 5: Implement index.ts
 
-Write the plugin wiring file (~30 lines):
-- JSDoc header with tier, description, events, `@see README.md`
-- Import all domain files
-- `createPlugin(name, spec)` with all fields wired
-- **CRITICAL:** The `createPlugin(name, spec)` call must NOT have explicit type parameters. All types are inferred from the spec fields. If you find yourself wanting to write `createPlugin<...>`, the types should instead be defined in `types.ts` and used in domain files.
+The wiring file, around 30 lines: a JSDoc header with tier, description, events and `@see README.md`,
+the domain imports, and `createPlugin(name, spec)` with every field wired. The call carries no explicit
+type parameters — everything infers from the spec fields. Wanting to write `createPlugin<...>` means the
+types belong in `types.ts` instead.
 
-## Step 6: Write Tests
+## Step 6: Write tests
 
-**All plugin tests go inside the plugin directory** — in `__tests__/unit/` and `__tests__/integration/` within the plugin folder. Never create plugin tests in the root `tests/` directory.
+Plugin tests live inside the plugin directory, in `__tests__/unit/` and `__tests__/integration/`. The
+root `tests/` directory is for framework-level tests.
 
-**Unit tests** (`__tests__/unit/`) — For each domain file:
-- Test state creation with various configs
-- Test API methods with mocked context
-- Test handler logic independently
-- Use `vi.fn()` for mocking emit, require, has
+**Unit tests**, per domain file: state creation across configs, API methods against a mocked context,
+handler logic on its own. `vi.fn()` for emit, require and has.
 
-**Integration test** (`__tests__/integration/[name].test.ts`) — For the full plugin:
-- Create a minimal framework with the plugin
-- Test lifecycle (init, start, stop)
-- Test API through app object
-- Test event emission and hook handling
+**Integration test** (`__tests__/integration/[name].test.ts`): a minimal framework with the plugin
+registered — lifecycle (init, start, stop), the API through the app object, event emission and hooks.
 
 ## Step 7: Write README.md
 
-**Context matters:**
-- **Standalone plugin build** (`/moku:build plugin auth`): Write a full comprehensive README with purpose, config options, API reference, events, dependencies, and examples.
-- **Framework wave build** (`/moku:build framework`): Write a minimal placeholder only (plugin name + tier + one-line description). Full READMEs are written later in the dedicated README wave (Step 5.5 of framework build) with fresh context.
+A standalone plugin build (`/moku:build plugin auth`) gets a full README: purpose, config options, API
+reference, events, dependencies, examples. Inside a framework wave, write a placeholder only (name,
+tier, one line) — the real READMEs are written in the dedicated wave (`build-final.md` Step 5.5) with
+fresh context.
 
 ## Step 8: Validate
 
-Run the validation pipeline:
+1. Artifact check — `moku-verify-artifacts <plugin> --tier <tier> --run --json` (exit 0 pass, 2 fail):
+   files exist, content is substantive, the plugin is wired with lint and tests passing.
+2. In parallel: `moku-structure-validator` (structure and tier compliance) and `moku-style-validator`
+   (JSDoc and readable-code style).
+3. Then `moku-quality-validator` (types, tests and lint as facts, then test quality).
+4. Confirm no plugin tests sit in `tests/unit/plugins/` or `tests/integration/plugins/`.
 
-**Parallel:**
-- **moku-verifier** agent — 3-level artifact check (exists, substantive, wired)
-- **moku-plugin-spec-validator** agent — structure compliance
-- **moku-jsdoc-validator** agent — documentation quality
-- **moku-readable-code-validator** agent — function-body readability (wall-of-text / stanza style; WARNING/INFO only — never blocks)
+Findings from the Sonnet validators pass through `moku-skeptic` before they count. Blockers enter gap
+closure, at most 2 rounds.
 
-**After parallel completes:**
-- **moku-test-validator** agent — test quality
-- **moku-type-validator** agent — type correctness
+### Step 8.5: Tick the spec checkboxes
 
-- **Test location check** — Verify no plugin tests exist in `tests/unit/plugins/` or `tests/integration/plugins/`. All plugin-specific tests must be inside `src/plugins/[name]/__tests__/`.
+If the spec has a `## Verification` section, evaluate each checkbox against the built plugin, tick what
+passes (`- [ ]` → `- [x]`), note why the rest failed, and route real failures to gap closure.
 
-If BLOCKER issues found, enter gap closure (max 2 rounds).
+## Large plugins
 
-### Step 8.5: Tick Spec Verification Checkboxes
+For Complex and VeryComplex:
 
-If the plugin has a specification file with a `## Verification` section:
+1. Build the root structure first: `index.ts` and `types.ts` with the shared config, state, events and
+   context type.
+2. Build sub-modules one at a time, each with its own `types.ts`, `state.ts`, `api.ts`.
+3. Wire each into the root `index.ts` as you go — namespaced API, composed state.
+4. On resume, detect the existing files and continue from there.
 
-1. Read the spec file (`.planning/specs/0N-name.md`)
-2. Evaluate each checkbox criterion against the built plugin
-3. Tick passing checkboxes: `- [ ]` → `- [x]`
-4. Add failure notes to failing checkboxes
-5. Failed checkboxes that represent real issues → route to gap closure
+For VeryComplex specifically: the root `types.ts` declares the shared config type (nested per
+sub-module), the composed state type, the events type and the context alias
+(`PluginCtx<Config, State, Events>`); each sub-module factory takes that shared context type
+(`createXxxApi(ctx: PluginCtx)`); the root `index.ts` uses `register.map<Events>()` for bulk event
+registration and composes the sub-module state factories.
 
-## Large Plugin Handling
+## Design-context screens
 
-If the plugin is Complex or VeryComplex:
-
-1. Build the root structure first (`index.ts`, `types.ts` with shared config/state/events/context type)
-2. Build sub-modules one at a time (each with own `types.ts`, `state.ts`, `api.ts`)
-3. Wire each sub-module into the root `index.ts` as you go (namespaced API, composed state)
-4. If context is getting large, tell the user:
-   > "I've completed the core structure and [N] sub-modules. To continue, please clear the context and run `/moku:build plugin [name]` again."
-5. When resuming, detect existing files and continue from where stopped
-
-For Very Complex plugins specifically:
-- Root `types.ts` declares: shared config type (nested by sub-module), composed state type, events type, context type alias (`PluginCtx<Config, State, Events>`)
-- Each sub-module factory receives the shared context type: `createXxxApi(ctx: PluginCtx)`
-- Root `index.ts` uses `register.map<Events>()` for bulk event registration
-- Root `createState` composes sub-module state factories
+If a Layer-3 plugin implements a screen or component from a design context, re-implement it from
+scratch per the moku-web and moku conventions. Never copy or port the demo prototype's source or its
+bugs, and pass that instruction into the builder's prompt.

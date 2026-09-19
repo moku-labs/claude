@@ -1,164 +1,147 @@
 # Build: Post-Wave Verification & Gap Closure (Step 4)
 
-After per-plugin tracking is complete, run verification on successfully built plugins.
+## Step 4a0: Independent reconciliation
 
-## Step 4a0: Independent reconciliation (MANDATORY — treat builder reports as hints, not facts)
+Treat builder reports as hints. In a real build two parallel builders both reported "all green" while
+one had silently reverted the other's files to stubs, so check disk, git and the tools yourself before
+trusting a wave:
 
-Builder self-reports can be **stale or wrong** — in a real build, two parallel builders both reported
-"all green" while one had silently reverted the other's files to stubs. Before trusting any wave,
-the orchestrator independently checks disk/git/tooling and reconciles against the claims:
+1. `git status --short` — every plugin reported `built` must show modified or added tracked files.
+   A `built` plugin whose files do not appear has probably been reverted by a sibling: mark
+   `verify-failed` and route to gap closure.
+2. Every path in the builder's `filesCreated` exists on disk. A missing file is `verify-failed`.
+3. Run `bunx tsc --noEmit`, `bun run lint` and `bun run test` yourself. Where a builder's counts
+   disagree with the tools, the tools win.
+4. Builders do not commit. A wave commit in `git log` from a builder is a flag.
 
-1. **`git status --short`** — for every plugin reported `built`, confirm its tracked source files
-   actually show as modified/added. **A plugin reported `built` whose tracked files do NOT appear in
-   `git status` is a RED FLAG** — its work may have been reverted by a sibling. Mark `verify-failed`
-   and route to gap closure; do not accept the builder's claim.
-2. **Files exist** — every path the builder listed in `files[]` must exist on disk; a missing file ⇒ `verify-failed`.
-3. **`bunx tsc --noEmit`** and **`bun run lint`** and **`bun run test`** — run them yourself and
-   reconcile against the builder's reported counts. If the builder claimed passing but the tool
-   disagrees, the tool wins (`verify-failed`).
-4. **No stray commits** — builders must not commit; if `git log` shows a wave commit from a builder, flag it.
+Only plugins that survive reconciliation reach Step 4a. Record the results in
+`.planning/build/reconciliation-{wave}.md` for forensics; `/moku:clean` prunes them.
 
-Only plugins that survive reconciliation proceed to Step 4a. Record results to
-`.planning/build/reconciliation-{wave}.md` (kept for forensics; pruned by `/moku:clean`).
+## Step 4a: Artifact check + code review (parallel)
 
-## Step 4a: Plugin Verification + Code Review (Parallel)
+Only plugins with status `built` are checked. Skip `agent-incomplete`, `agent-failed` and `needs-manual`.
 
-Only verify plugins with status `built`. Skip `agent-incomplete`, `agent-failed`, and `needs-manual` plugins.
+### Lazy skip by hash
 
-### Lazy Validation (Hash-Based Skip)
+Before checking anything, skip plugins that have not changed since a prior successful verification
+(common on resume after a crash mid-verification):
 
-Before spawning validators, check if any `built` plugins are unchanged since a prior successful verification (e.g., on resume after a crash mid-verification):
+1. `find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1`
+2. Compare with the `Hash` column in the STATE.md plugin table.
+3. Match, and the plugin was previously `verified`: restore `verified`, log the skip.
+4. No match or no prior hash: verify normally.
 
-1. Compute current hash for each `built` plugin: `find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1`
-2. Compare against the `Hash` column in STATE.md's plugins table
-3. If hash matches AND the plugin was previously `verified` (now set back to `built` due to crash recovery) → skip verification, restore `verified` status. Log: `"Lazy skip: {name} unchanged since last verification (hash: {short})"`
-4. If hash doesn't match OR no prior hash exists → verify normally
+This saves most of the work on resume builds.
 
-**Public-API hash (for README-freshness, Step 4d3).** Also compute a narrower fingerprint covering ONLY the consumer-facing surface — the `api:`/`Api` type, emitted `events`, and `Config` keys — not internal state/handlers:
+**Public-API hash (for the README gate, Step 4d3).** A second, narrower fingerprint over the
+consumer-facing surface only — the `api:`/`Api` type, emitted `events`, `Config` keys — so an internal
+refactor does not force README churn:
 
 ```bash
-# Standard+: the files that define the public surface
 { for f in api.ts events.ts config.ts types.ts index.ts; do
     test -f "src/plugins/{name}/$f" && cat "src/plugins/{name}/$f"
   done; } | shasum -a 256 | cut -d' ' -f1
-# Nano/Micro (single index.ts): falls back to index.ts content
+# Nano/Micro with a single index.ts falls back to that file's content
 ```
 
-This hash changes only when the public API/events/config change, so an internal refactor does not force README churn. Record it alongside the full hash (Step 4d2) for the README-freshness check.
+Record it beside the full hash (Step 4d2).
 
-This saves 50-70% on resume builds where most plugins haven't changed. Only newly built or modified plugins go through the full verification pipeline.
+### Run both checks at once
 
-**Spawn both agents simultaneously** — the verifier and code reviewer read the same files independently. Running them in parallel saves ~15-20% per wave compared to sequential execution.
+1. Run the artifact check per plugin — it is a script, not an agent:
+   ```bash
+   moku-verify-artifacts <plugin> --tier <tier> --run --json
+   ```
+   Exit 0 is pass, exit 2 is fail. It covers the three levels: files exist, content is substantive
+   rather than stubs, and the plugin is wired with lint and tests passing.
+2. In parallel, spawn `moku-code-reviewer` with the wave's git diff, the specs, the plugin list and
+   the builder intent summaries.
+3. Update each plugin: `built` → `verified` on exit 0, `built` → `verify-failed` on exit 2.
+4. Any `verify-failed` plugin sends the wave into gap closure (Step 4c). Hold the code review findings
+   until gap closure resolves — reviewing code that is about to be rewritten is wasted. Afterwards,
+   re-review only the files gap closure touched.
+5. All verified: go to Step 4a2.
 
-1. **In parallel**, spawn:
-   - **moku-verifier** agent on all `built` plugins in the wave (Level 1: files exist, Level 2: real implementations, Level 3: wired correctly + lint + tests)
-   - **moku-code-reviewer** agent with the wave's git diff, specs, plugin list, and builder intent summaries
-2. Wait for BOTH to complete
-3. Parse verifier results: update status `built` → `verified` (pass) or `built` → `verify-failed` (fail)
-4. If ANY plugin is `verify-failed` → enter Gap Closure (Step 4c). Code review findings are DEFERRED until after gap closure resolves verification failures (reviewing code that will be rewritten is wasted effort). After gap closure succeeds, check if the code-reviewer already ran — if yes, filter its findings to exclude files that were modified during gap closure and re-review only those modified files.
-5. If ALL verified → proceed to Step 4a2 (triage of code review findings)
+## Step 4a2: Code review triage
 
-## Step 4a2: Code Review Triage
+The code reviewer ran in parallel above; its output is ready.
 
-Process the **moku-code-reviewer** findings (already completed in parallel above):
+- `verdict: PASS` → straight to Step 4b.
+- `verdict: ISSUES` or `BLOCKER` → run the triage flow in
+  `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-findings-triage.md`. Only "fix now"
+  findings enter gap closure.
 
-The code reviewer was already spawned in parallel with the verifier (Step 4a). Its output is now ready.
+Before triage, check `.planning/build/findings.md` for deferred findings on files this wave modified
+and re-surface them.
 
-1. **Route findings through Interactive Triage** — read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-findings-triage.md` and follow the triage flow:
-   - `verdict: PASS` → skip triage, proceed to Step 4b
-   - `verdict: ISSUES` or `verdict: BLOCKER` → present findings interactively via the triage flow
-   - Triage decisions determine what enters gap closure ("Fix now"), what is deferred ("Fix later"), and what is dismissed ("Not an issue")
-   - Only "Fix now" findings route to Gap Closure (Step 4c)
-3. Before triage, check `.planning/build/findings.md` for carry-forward findings from previous waves that affect files modified in this wave — re-surface them in the triage.
+Skip code review for a Wave 0 made only of Nano/Micro core plugins — there is little logic to review.
 
-**Skip code review for Wave 0** if it contains only Nano/Micro core plugins (low complexity, minimal logic to review).
+Triage outcomes (fix / defer / dismiss counts) feed the wave disposition in `build-wave-execution.md`.
 
-**Code review findings (including triage decisions) feed into the wave judge** — the judge receives verifier results, code review findings, AND triage outcomes (fix/defer/dismiss counts) for its evaluation.
+## Step 4a3: Conflict resolution
 
-## Step 4a3: Conflict Resolution
+When the artifact check, the code reviewer and the validators disagree about the same file, resolve it
+before gap closure. Protocol: `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-conflict-resolution.md`.
+Skip this when they agree or their findings sit on different files.
 
-After both verifier (Step 4a) and code reviewer (Step 4a2) return, check for conflicts between their findings. Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-conflict-resolution.md` for the full protocol.
-
-1. Build the per-file findings matrix from both output contracts
-2. Detect verdict, severity, or contradictory-fix conflicts (same file, line ±5)
-3. Resolve each conflict: information gap → re-run, genuine trade-off → ask user, false positive → dismiss
-4. Record trade-off decisions in `.planning/decisions.md` (see Decision Knowledge Graph)
-5. Only resolved findings proceed to gap closure or wave judge
-
-**Skip conflict resolution** when both validators agree (both PASS, or findings are on different files with no overlap).
+Findings from Sonnet validators pass through `moku-skeptic` first; one that does not survive does not
+enter triage or gap closure.
 
 ---
 
-## Step 4b: Update Framework Files + Integration Checks
+## Step 4b: Update framework files + integration checks
 
-After the wave's plugins pass verification, update the framework files to include them. See **`build-assembly.md`** for the full barrel structure and index.ts manifest patterns.
+Wire the wave's plugins into the framework. Shapes: **`build-assembly.md`**.
 
-1. **Update `src/config.ts`** — Add the wave's plugin Config and Events types to the framework Config/Events unions. For core plugins (Wave 0): add them to the `createCoreConfig({ plugins: [...] })` call and `pluginConfigs` if config overrides needed.
-2. **Update `src/plugins/index.ts`** — Import the wave's plugins from their directories, add to barrel re-exports. See `build-assembly.md` Step 4b-barrel.
-3. **Update `src/index.ts`** — Import from `./plugins`, add regular plugins to `createCore` default plugins list, add to grouped export sections. See `build-assembly.md` Step 4b-index. Core plugins are already registered in config.ts.
-4. **Update `package.json`** — Add any new dependencies from this wave's plugin specs
+1. `src/config.ts` — add the wave's Config and Events types to the framework unions. Core plugins go
+   into `createCoreConfig({ plugins: [...] })` and `pluginConfigs` when they need overrides.
+2. `src/plugins/index.ts` — add the barrel re-exports.
+3. `src/index.ts` — import from `./plugins`, add regular plugins to the `createCore` plugin list and
+   to the grouped exports. Core plugins are already registered in config.ts.
+4. `package.json` — add any new dependencies the wave's specs introduced.
 
-Then run integration checks in the target workspace:
+Then run the integration checks in the target workspace:
 
-1. **Format** — `bun run format` (Biome auto-formats all files)
-2. **Lint** — `bun run lint` -> if errors, run `bun run lint:fix` then re-check. Manually fix anything lint:fix cannot resolve. Builders now run **scoped `eslint src/plugins/<name>/`** in their own contract (see `build-wave-execution.md` Builder Sub-Agent Protocol), so this repo-wide lint should be a *confirmation* — not the first place unicorn-style findings (`no-null`, `prevent-abbreviations`, …) appear. If repo-wide eslint still surfaces new in-scope findings a builder missed, treat it as a builder-contract gap for that plugin (route the fix, and the builder PASS was overstated).
-3. **TypeScript** — `bunx tsc --noEmit` passes with zero errors. Fix all type errors.
-4. **Build + bundled types (REQUIRED, not optional)** — run `bun run build` (the dist + `.d.ts`
-   emit). **`tsc --noEmit` is NOT sufficient** — it type-checks source but does not catch
-   `.d.ts` *bundling* bugs. A real build passed `tsc --noEmit` but shipped a broken `.d.ts`
-   (an injectable function type referenced a runtime package's *namespace* type
-   `import("bun").SpawnOptions.X`, which `tsdown`/rolldown dropped, so the consumer-facing type
-   resolved to `undefined`). After `bun run build`: confirm it exits 0, then sanity-check the emitted
-   `.d.ts` (run `bunx publint` if available, or grep the dist `.d.ts` for `undefined`/`any` where a
-   real exported type is expected). If a `.d.ts` symbol is missing/`undefined`, fix the source to use
-   a **structural** type (own `interface`/`type`), never a runtime package's namespace type. This
-   build+types step is part of the verification chain on every wave — do not defer it to commit time.
+1. **Format** — `bun run format`.
+2. **Lint** — `bun run lint`; on errors `bun run lint:fix`, then fix by hand what remains. Builders
+   already ran scoped ESLint, so this pass should be a confirmation. New in-scope findings here mean
+   that builder's PASS was overstated — route the fix and note the gap.
+3. **Types** — `bunx tsc --noEmit`, zero errors.
+4. **Build and bundled types** — `bun run build`. `tsc --noEmit` is not enough: it type-checks source
+   and does not catch `.d.ts` bundling bugs. A real build passed `tsc --noEmit` and shipped a broken
+   `.d.ts` because an injectable function type referenced a runtime package's namespace type
+   (`import("bun").SpawnOptions.X`), which the bundler dropped, so the consumer-facing type resolved to
+   `undefined`. After the build exits 0, sanity-check the emitted `.d.ts` — `bunx publint` if
+   available, or grep the dist `.d.ts` for `undefined`/`any` where a real type belongs. Fix such a
+   symbol at the source with a structural type of your own, never a runtime package's namespace type.
+   This step runs every wave, not at commit time.
 
-**Loop until clean**: If any check still fails after fixes, re-run the full sequence. All checks must pass with zero errors and zero warnings before proceeding.
+Re-run the whole sequence after any fix, until all four are clean.
 
-## Step 4b2: Spec Regression Testing
+## Step 4b2: Regression testing
 
-After integration checks pass, re-verify ALL previously verified plugins — not just the current wave. New code (framework file updates, dependency changes, barrel modifications) can break previously passing plugins.
+New framework wiring can break plugins that passed in earlier waves, so re-test them.
 
-### When to Run
+**When.** Skip for Wave 0 (nothing earlier exists). Run from Wave 1 on. Skip a previously verified
+plugin only when its own hash is unchanged, none of its dependencies changed this wave, and no
+framework file (`src/config.ts`, `src/plugins/index.ts`, `src/index.ts`) changed. If a framework file
+changed, re-test everything.
 
-- **Skip for Wave 0**: No prior plugins exist to regress.
-- **Run for Wave 1+**: Every wave after Wave 0 runs regression testing.
-- **Lazy skip (hash-based)**: Use content hashes from STATE.md (Step 4d2). Skip regression tests for a previously verified plugin if ALL of these are true:
-  1. The plugin's own hash hasn't changed
-  2. None of its dependency plugins were modified in the current wave
-  3. Framework files (`src/config.ts`, `src/plugins/index.ts`, `src/index.ts`) were NOT modified in this wave
-- **If ANY framework file changed**: re-test ALL previously verified plugins regardless of hash (framework file changes can break any plugin).
+**How.**
 
-### Regression Test Procedure
-
-1. **Identify regression scope**: Read STATE.md plugins table. Collect all plugins with status `verified` from previous waves (NOT the current wave — those were just verified in Step 4a).
-
-2. **Check framework file changes**: Did this wave modify `src/config.ts`, `src/plugins/index.ts`, or `src/index.ts`?
-   - **Yes** → run regression on ALL previously verified plugins
-   - **No** → run regression only on previously verified plugins whose dependencies include a plugin from the current wave (transitive dependencies count)
-
-3. **Run targeted tests**: For each plugin in regression scope:
+1. Collect plugins with status `verified` from earlier waves.
+2. Run their tests together — one command is far faster than one run per plugin:
    ```bash
-   bun test src/plugins/{name}/
+   bun test src/plugins/router/ src/plugins/auth/ src/plugins/cache/
    ```
-   This runs the plugin's unit + integration tests. No need to re-run the full verifier — tests are the fastest regression signal.
+3. A failure is a regression. Classify it: a type error means this wave broke a type contract, a test
+   failure means it broke behavior, an import error means barrel or wiring.
+4. Route the fix at the cause, not the symptom. A framework file caused it → fix the framework file.
+   A dependency's API change caused it → that is a blocker: "Wave N plugin X changed its API and broke
+   wave M plugin Y. Make X backward-compatible or update Y." Everything goes through gap closure with
+   category `regression` so the diagnostician knows this is not a fresh build failure.
 
-4. **Check results**:
-   - **All pass** → proceed to Step 4c (gap closure) or Step 4c3 (wave judge)
-   - **Any fail** → this is a regression. Classify:
-     - **Type error** (tsc fails on previously passing code) → the current wave broke a type contract
-     - **Test failure** (tests fail that previously passed) → the current wave broke behavior
-     - **Import error** (module not found, missing export) → barrel or wiring issue
-
-5. **Route regressions**:
-   - If regression is caused by a framework file change (config.ts, index.ts, barrel) → fix the framework file, not the regressed plugin
-   - If regression is caused by a dependency plugin's API change → flag as a BLOCKER: "Wave [N] plugin [X] changed its API, breaking Wave [M] plugin [Y]. Fix [X]'s API to be backward-compatible or update [Y]'s usage."
-   - Route all regressions through gap closure (Step 4c) with category `regression` — the error-diagnostician should know this is a regression, not a build failure
-
-### Regression Output
-
-Add a `regression` field to the wave's verification record in STATE.md:
+Record the outcome in STATE.md:
 
 ```markdown
 ## Wave [N] Regression
@@ -167,224 +150,147 @@ Add a `regression` field to the wave's verification record in STATE.md:
 - Details: [plugin]: [test file] — [failure description]
 ```
 
-### Performance Optimization
-
-For large projects (> 10 previously verified plugins), batch the regression tests:
-```bash
-# Run all previously verified plugin tests in one command
-bun test src/plugins/router/ src/plugins/auth/ src/plugins/cache/ ...
-```
-
-This is much faster than spawning per-plugin test runs.
-
 ---
 
-## Step 4c: Gap Closure
+## Step 4c: Gap closure
 
-When verification finds issues (plugins with status `verify-failed`):
+For plugins with status `verify-failed`:
 
-1. Collect all verification failures into a gap list
-2. Spawn the **moku-error-diagnostician** agent with the error output to classify root causes and propose targeted fixes
-3. Apply the diagnostician's proposed fixes (root causes first — cascading errors resolve automatically)
-4. **Re-run the original validator** that found the blocker (not just the verifier). Map the diagnostician's error category to the originating validator:
-   - `type-inference`, `import-type` → **moku-type-validator**
-   - `test-mock`, `test-assertion` → **moku-test-validator**
-   - `anti-pattern`, `config-shape`, `lifecycle`, `event-type` → **moku-spec-validator**
-   - `lint-format` → no agent needed, just re-run `bun run lint`
-   - `missing-export`, `dependency` → **moku-verifier** (Level 3 wiring checks)
-   - `docs-sync` → no code fix — regenerate the plugin's `README.md` via the **readme-generator** agent (or hand-edit the affected `## API`/`## Events`/`## Config` section), then record the new `README-API Hash` (build-final Step 5.5) and re-run **moku-plugin-spec-validator** §6 to confirm it clears.
-5. After the targeted validator passes, re-run the **moku-verifier** agent on affected plugins for final confirmation
-6. **Integration re-check**: Re-run the integration check suite (`bun run format`, `bun run lint`, `bunx tsc --noEmit`) to ensure the fix didn't introduce new integration-level issues. If integration fails, route back through the diagnostician (this counts toward the circuit breaker).
-7. Update status: `verify-failed` → `verified` (pass) or remains `verify-failed` (still failing)
-8. **Stalemate Detection + Alternative Strategy:** Before each gap closure round, record the error state AND the strategy used. After applying fixes, compare:
-   - **Error count increased**: STALEMATE — fixes are making things worse
-   - **Error signatures identical**: For `tsc` errors, two errors are the same signature if they share the same file path, the same error code (e.g., `TS2345`), and a line number within ±3 lines of each other. For test failures, same test name (exact match). For lint errors, same rule + same file. Hash `(file, errorCode, lineRange)` per error for comparison between rounds.
-   - **Diagnostician proposed identical fix** to a previous round: STALEMATE — fixation detected
+1. Collect the failures into one gap list.
+2. Ask `moku-error-diagnostician` (or `-deep` after a failed round) to classify root causes and
+   propose targeted fixes. It returns a diagnosis; you apply the fix.
+3. Apply root causes first — cascading errors usually clear on their own.
+4. Re-run the check that found the blocker, mapped by the diagnostician's category:
 
-   **On stalemate — force Alternative Strategy before fresh-context retry:**
+   | Category | Re-run |
+   |---|---|
+   | `type-inference`, `import-type`, `test-mock`, `test-assertion` | `moku-quality-validator` |
+   | `anti-pattern`, `config-shape`, `lifecycle`, `event-type`, `missing-export`, `dependency` | `moku-structure-validator` |
+   | `jsdoc`, `readable-code` | `moku-style-validator` |
+   | `lint-format` | no agent — re-run `bun run lint` |
+   | `docs-sync` | regenerate the plugin README, record the new `README-API Hash`, re-run `moku-structure-validator` |
 
-   a. **Record what was tried** — append to `.planning/build/strategy-log.md`:
-      ```markdown
-      ## Wave [N], Plugin [name], Round [R]
-      - Strategy: [brief description of the approach — e.g., "added explicit type annotation to api.ts:42"]
-      - Error: [error signature]
-      - Result: STALEMATE — same error persists
-      ```
+5. Then re-run `moku-verify-artifacts` on the affected plugins for final confirmation.
+6. Re-run the integration checks (`bun run format`, `bun run lint`, `bunx tsc --noEmit`) so the fix did
+   not break something else. A failure here routes back through the diagnostician and counts against
+   the circuit breaker.
+7. Update status: `verify-failed` → `verified`, or leave it failing.
 
-   b. **Generate alternative strategies** — the error-diagnostician MUST propose a fundamentally different approach. Provide it with the strategy log so it can see what was already tried. "Fundamentally different" means:
-      - If the previous strategy modified the implementation → try modifying the types instead
-      - If the previous strategy added code → try removing/simplifying code instead
-      - If the previous strategy worked around the issue → try fixing the root cause directly
-      - If the previous strategy changed one file → try changing a different file in the dependency chain
-      - If all local strategies are exhausted → propose restructuring (e.g., split a Standard plugin into two Micro plugins, change the dependency direction, merge with a related plugin)
+**Stalemate detection.** Record the error state and the strategy before each round, then compare:
 
-   c. **Apply the alternative strategy** — this counts as the next gap closure round (not a free extra attempt)
+- Error count rose — the fixes are making it worse.
+- Error signatures identical — for `tsc`, same file, same error code, line within ±3; for tests, same
+  test name; for lint, same rule and file. Hash `(file, errorCode, lineRange)` per error to compare.
+- The diagnostician proposed the same fix as a previous round — fixation.
 
-   d. **If alternative strategy also fails (second stalemate on same error)** → skip to Fresh-Context Retry (Step 4c2) with both strategies recorded in the `## Fresh Retry Context`. Log: `[STUCK-LOOP] Wave N, plugin X: 2 strategies failed for same error after round Y`
+On a stalemate, force a different approach before retrying:
 
-   e. **Strategy diversity check**: Before the diagnostician proposes a fix, compare it against `.planning/build/strategy-log.md`. If the proposed fix has >80% text similarity to a previously attempted fix for the same error, REJECT it immediately and demand an alternative. This prevents the "same fix with slightly different wording" loop.
+1. Append what was tried to `.planning/build/strategy-log.md`:
+   ```markdown
+   ## Wave [N], Plugin [name], Round [R]
+   - Strategy: [e.g. added explicit type annotation to api.ts:42]
+   - Error: [signature]
+   - Result: STALEMATE — same error persists
+   ```
+2. Give the diagnostician the strategy log and require a fundamentally different approach: changed the
+   implementation last time → change the types; added code → remove or simplify code; worked around it
+   → fix the root cause; touched one file → move along the dependency chain. When local options run
+   out, restructure (split a Standard plugin in two, reverse a dependency, merge with a related plugin).
+3. Applying the alternative counts as the next round, not a free attempt.
+4. Before applying any proposed fix, compare it with the strategy log. More than ~80% textual overlap
+   with a previous attempt for the same error means reject it and ask for a real alternative — this is
+   what stops the "same fix, different wording" loop.
+5. A second stalemate on the same error goes to Step 4c2 with both strategies recorded.
 
-9. **Circuit breaker:** Maximum `gapClosureMaxRounds` (default: 2) gap closure rounds per wave. If issues persist after all rounds (and no stalemate detected earlier), enter **Fresh-Context Retry** (Step 4c2).
+**Circuit breaker.** At most `gapClosureMaxRounds` rounds per wave (default 2). Beyond that, Step 4c2.
 
-## Step 4c2: Fresh-Context Retry (Ralph Wiggum Loop)
+## Step 4c2: Fresh-context retry
 
-When gap closure exhausts its rounds and plugins still have `verify-failed` status, the accumulated conversation context may be causing the agent to fixate on a wrong approach. A fresh context with only the error summary often produces better fixes.
+A long conversation makes an agent repeat its own failed approach. A fresh context that sees only the
+error, the spec and the current code usually breaks the loop.
 
-**Procedure:**
-
-1. **Collect the error summary** — For each `verify-failed` plugin, record:
-   - Plugin name and tier
-   - The specific errors (tsc output, test failures, lint errors)
-   - What fixes were attempted and why they didn't work
-   - **Strategy history** from `.planning/build/strategy-log.md` — what approaches were tried and why they failed
-   - The relevant spec section (`## Verification` from `.planning/specs/0N-name.md`)
-
-2. **Save to STATE.md** — Add a `## Fresh Retry Context` section:
+1. For each `verify-failed` plugin, collect: name and tier, the exact errors, what was attempted and
+   why it failed, the strategy history from `.planning/build/strategy-log.md`, and the spec's
+   `## Verification` section.
+2. Save it to STATE.md:
    ```markdown
    ## Fresh Retry Context
    Plugins needing fresh-context retry: [plugin-list]
    Error summary:
-   - [plugin]: [tsc error TS2345 in api.ts:42 — attempted fix X, still fails because Y]
-   Attempted strategies (DO NOT RETRY THESE):
-   - Strategy 1: [description] — Result: [why it failed]
-   - Strategy 2: [description] — Result: [why it failed]
+   - [plugin]: [TS2345 in api.ts:42 — attempted fix X, still fails because Y]
+   Strategies already tried, do not repeat:
+   - Strategy 1: [description] — [why it failed]
    Gap closure rounds exhausted: [N]
-   Constraint: The fresh-context agent MUST try a fundamentally different approach from the listed strategies.
+   The next attempt must take a fundamentally different approach.
    ```
+3. Mark those plugins `retry-pending` and set
+   `## Next Action: Run /moku:build resume (fresh-context retry for [plugin-list])`.
+4. Stop the session, even under `--continue` — a fresh context window is the entire point:
+   > "Gap closure exhausted after [N] rounds for [plugin-list]. The error context is saved. Run
+   > `/moku:build resume` — the next session starts with a clean context, which usually breaks the loop."
+5. On resume, follow "Resume with fresh-context retry" in `build-wave-execution.md`. Green → `verified`
+   and remove the section; red → `needs-manual` and report.
 
-3. **Set status** — Mark affected plugins as `retry-pending` in the plugins table. Set:
-   ```markdown
-   ## Next Action: Run /moku:build resume (fresh-context retry for [plugin-list])
-   ```
+## Step 4d: Tick spec verification checkboxes
 
-4. **Stop the current session** — Tell the user:
-   > "Gap closure exhausted after [N] rounds for [plugin-list]. Saving error context for fresh-context retry. Run `/moku:build resume` — the next session will attempt fixes with a clean context window, which often resolves fixation loops."
+For each verified plugin, read its `.planning/specs/0N-name.md` `## Verification` section and evaluate
+each checkbox against what was built: directory and tier structure on the filesystem, config shape
+against `types.ts`, API signatures against `api.ts`, events by grepping `ctx.emit` and `events:`, lint
+and format from the integration checks, no explicit generics by grepping `createPlugin<`.
 
-   **Fresh-Context Retry always stops the current session regardless of `--continue` mode.** This is a safety boundary — the entire point is to get a fresh context window. `--continue` does not override this stop.
+Tick what passes (`- [ ]` → `- [x]`), annotate what fails (`- [ ] API methods — FAIL: missing navigate()`),
+and route the failures to gap closure.
 
-5. **On resume** — When `/moku:build resume` detects `retry-pending` plugins:
-   - Read the `## Fresh Retry Context` section from STATE.md
-   - Read `.planning/build/strategy-log.md` for full strategy history
-   - Spawn the **moku-error-diagnostician** agent with ONLY:
-     - The error summary (not the full conversation history)
-     - The plugin spec
-     - The current source files on disk
-     - **The strategy history with explicit instruction: "These strategies were already tried and failed. You MUST propose a fundamentally different approach."**
-   - Apply the diagnostician's fixes
-   - Re-run verification (Step 4a)
-   - If verification passes → mark as `verified`, remove `## Fresh Retry Context`
-   - If verification still fails → mark as `needs-manual` and report to user:
-     > "Fresh-context retry also failed for [plugin-list]. Remaining issues: [list]. Please review and fix manually, then run `/moku:build resume`."
-
-**Why this works:** Agents within a long context tend to repeat the same failed approaches. A fresh session sees only the error + spec + current code, avoiding the cognitive fixation that builds up over multiple failed attempts. This is the "Ralph Wiggum Loop" pattern — deterministic verification as the halting condition, with fresh context on each iteration.
-
-## Step 4c3: Wave Judge Evaluation
-
-After gap closure completes (or if verification passed with no gap closure needed), spawn the **moku-wave-judge** agent to evaluate whether to proceed:
-
-1. Provide the judge with:
-   - Wave number and plugin list
-   - Verification results (from moku-verifier)
-   - Code review findings (from moku-code-reviewer, if run in Step 4a2)
-   - Gap closure history (if any — error counts per round, what was attempted, stalemate detection results)
-   - Integration check results (tsc, lint, test output)
-2. Parse the judge's decision:
-   - `continue` → proceed to Step 4d (spec verification ticking)
-   - `stop-for-review` → save state and use `AskUserQuestion`:
-     - **`--continue` mode does NOT override `stop-for-review`.** Wave judge safety stops take precedence over continuous mode. Present the AskUserQuestion even when `--continue` is active.
-     - Question: "Wave judge recommends review. [judge's reasoning]. How to proceed?"
-     - Header: "Review"
-     - Options:
-       1. label: "Continue anyway", description: "Override judge recommendation and proceed to next wave"
-       2. label: "Review and fix (Recommended)", description: "Stop here — run /moku:build resume after reviewing"
-       3. label: "Show details", description: "Display full judge evaluation before deciding"
-     - multiSelect: false
-   - After the user selects "Continue anyway," `--continue` resumes automatic wave progression. The wave judge re-evaluates each subsequent wave independently — if another `stop-for-review` occurs, the user will be asked again. A single "Continue anyway" does not disable the judge for the remainder of the build.
-   - `fresh-retry` → enter Step 4c2 (Fresh-Context Retry) for affected plugins
-3. Log the judge's decision to `.planning/build/agent-log.md` and `.planning/build/diagnostics.log`
-
-**Wave judge decisions are not persisted in STATE.md.** On resume, the wave judge does NOT re-run for previously completed waves — the previous wave is considered complete (its completion state was saved in STATE.md). The judge evaluates only the CURRENT wave being built, never previous waves.
-
-### Pipeline-Aware Decisions
-
-When wave pipelining is active (wave N+1 is already building while wave N is being judged):
-
-- **`continue`**: Proceed to Step 4b (integration) for wave N. After integration, run pipeline reconciliation (see `build-wave-execution.md` Wave Pipelining). If reconciliation succeeds, wave N+1 enters verification immediately.
-- **`stop-for-review`**: Pipeline stops. Wave N+1 build results are **preserved** with status `pipeline-built` in STATE.md. On resume, reconciliation runs first (wave N may have changed during user review), then wave N+1 proceeds.
-- **`fresh-retry`**: Pipeline stops. Wave N+1 build results are **discarded** — the session is ending for fresh context. On resume, wave N retries first, then wave N+1 rebuilds from scratch.
-
-**Skip the judge for trivial waves** — if the wave has only 1 Nano/Micro plugin and verification passed with zero warnings, proceed directly to Step 4d.
-
-## Step 4d: Spec Verification Ticking
-
-After integration checks pass, verify each plugin in the wave against its specification's `## Verification` section:
-
-1. Read `.planning/specs/0N-name.md` for each verified plugin
-2. Find the `## Verification` section with checkbox items
-3. Evaluate each criterion:
-   - "Plugin directory exists with correct tier structure" → check filesystem
-   - "Config shape matches spec" → compare `types.ts` with spec
-   - "API methods exist and match signatures" → compare `api.ts` with spec
-   - "Events declared and emitted" → grep for `ctx.emit` and `events:` in plugin
-   - "Lint/format passes" → already verified in integration checks
-   - "No explicit generics" → grep for `createPlugin<`
-4. Tick passing checkboxes: `- [ ]` → `- [x]`
-5. Add failure notes to failing checkboxes: `- [ ] API methods — FAIL: missing navigate()`
-6. Failed checkboxes → route to Gap Closure (Step 4c)
-
-## Step 4d3: README Freshness vs Public API
-
-After spec ticking, enforce: **a change to a plugin's public API requires its README to be updated.** Run for Standard+ tier plugins (and any lower-tier plugin that already ships a `README.md`).
-
-1. For each verified plugin, compute its **public-API hash** (Step 4a) and compare to the `README-API Hash` stored from the last time its README was generated (Step 4d2 / build-final Step 5.5 / Delta Step 8).
-2. A plugin is **at risk** when the public-API hash differs (consumer-facing api/events/config changed since the README was written) OR a Standard+ plugin has no `README.md`.
-3. For each at-risk plugin, spawn (or, in the post-build pipeline, rely on) the **moku-plugin-spec-validator** agent's README-freshness check (§6): it confirms by comparing the README's `## API` / `## Events` / `## Config` sections against the source surface.
-   - Source has an API method / event / config key the README lacks or misstates → **BLOCKER** (`docs-sync`).
-   - Public-API hash changed but README already matches → not stale; just refresh the `README-API Hash` in Step 4d2.
-4. **On a `docs-sync` BLOCKER:** route to gap closure — the fix is to regenerate the README via the **readme-generator** agent (or hand-edit the affected section), then record the new `README-API Hash`. Do NOT tick the plugin's wave as fully verified while a `docs-sync` BLOCKER is open. This is the same enforcement the Delta Update Checklist (build-final Step 8) applies on the common case — a later build changes a plugin's API and the README must move with it.
-
-Skip plugins whose public-API hash is unchanged (internal-only edits) — they need no README update.
-
-## Step 4d2: Record Content Hashes
-
-After spec verification ticking, compute and record content hashes for each verified plugin. This enables incremental validation — unchanged plugins can be skipped in future validation runs.
+## Step 4d2: Record content hashes
 
 ```bash
-# Full per-plugin hash: hash of all .ts files in the plugin directory
 find src/plugins/{name} -type f -name '*.ts' | sort | xargs shasum | shasum | cut -d' ' -f1
-# Public-API hash: see Step 4a (api/events/config surface only)
+# Public-API hash: see Step 4a
 ```
 
-Store in the STATE.md plugins table: `| Name | Tier | Wave | Status | Hash | API Hash | README-API Hash |`
-- `Hash` — full source hash (lazy-validation skip).
-- `API Hash` — current public-API hash (Step 4a).
-- `README-API Hash` — the public-API hash captured the last time this plugin's `README.md` was (re)generated. Step 4d3 flags the README stale when `API Hash` ≠ `README-API Hash`. Update this column **only** when the README is actually (re)generated this pass; otherwise carry the prior value forward so a still-stale README keeps failing Step 4d3.
+Store them in the STATE.md plugin table: `| Name | Tier | Wave | Status | Hash | API Hash | README-API Hash |`
 
-The validation-coordinator uses these hashes to skip per-plugin validators for unchanged plugins. Cross-plugin validators (architecture-validator) always run on the full framework regardless of hashes.
+- `Hash` — full source hash, for the lazy skip.
+- `API Hash` — the current public-API hash.
+- `README-API Hash` — the public-API hash captured when this plugin's README was last generated.
+  Update it only in a pass that actually regenerated the README; otherwise carry the old value
+  forward, so a stale README keeps failing Step 4d3.
 
-## Step 4e: Archive Completed Wave Details
+## Step 4d3: README freshness vs public API
 
-After spec verification ticking and content hashes, archive the completed wave's verbose details to keep STATE.md bounded:
+A change to a plugin's public API requires its README to move with it. Runs for Standard+ tiers and
+any lower tier that already ships a README.
 
-1. **Append to `.planning/build/STATE-history.md`** — Move the full plugins table rows for this wave's plugins (status, hash, verification notes) into the history file under a `## Wave N` header with a timestamp
-2. **Collapse in STATE.md** — Replace the wave's individual plugin rows with a single summary line:
+1. A plugin is at risk when `API Hash` ≠ `README-API Hash`, or a Standard+ plugin has no README.
+2. `moku-structure-validator` confirms it by comparing the README's `## API` / `## Events` / `## Config`
+   sections against the source. A method, event or config key the README lacks or misstates is a
+   blocker with category `docs-sync`. A changed hash with a README that already matches is not stale —
+   just refresh `README-API Hash`.
+3. A `docs-sync` blocker goes to gap closure: regenerate the README, record the new hash. The wave is
+   not fully verified while one is open.
+
+Plugins whose public-API hash is unchanged need no README work.
+
+## Step 4e: Archive the completed wave
+
+Keep STATE.md small — it is read on every resume.
+
+1. Append the wave's full plugin rows (status, hashes, verification notes) to
+   `.planning/build/STATE-history.md` under a `## Wave N` header with a timestamp.
+2. Replace those rows in STATE.md with one summary line:
    ```
    | Wave N | 4 plugins | verified | 2025-01-15 |
    ```
-3. **Keep in STATE.md** — Only the summary table, current wave details, and `needs-manual` plugins (these need visibility)
+3. Keep in STATE.md only the summary table, the current wave's detail, and any `needs-manual` plugins,
+   which need to stay visible.
 
-This ensures STATE.md stays under ~60 lines regardless of project size. The full history remains accessible in `STATE-history.md` for debugging.
+## Step 4e2: Save progress and stop
 
-## Step 4e2: Save Progress and Stop
+One wave per invocation unless `--continue` is active.
 
-**One wave per invocation (unless `--continue` mode).** After completing the wave (Steps 3 → 4a → 4b → 4d):
-
-1. Update `.planning/STATE.md` with:
-   - Wave completion status and integration check results
-   - Per-plugin status (verified/needs-manual)
-   - Spec verification checkbox results
-   - `## Next Action: Run /moku:build resume to continue with Wave [N+1]`
-2. **If `--continue` mode is active:** proceed to the next wave immediately (skip the stop). If context is getting large, stop and tell the user: `"Pausing continuous build after Wave [N]. Run /moku:build resume --continue to continue."`
-3. **Otherwise, STOP and tell the user:**
-   > "Wave [N] complete ([plugin list]). All integration checks pass. Run `/moku:build resume` to continue with Wave [N+1]."
-4. Do NOT proceed to the next wave in the same invocation (unless `--continue`)
+1. Write to STATE.md: wave completion and integration results, per-plugin status, spec checkbox results,
+   and `## Next Action: Run /moku:build resume to continue with Wave [N+1]`.
+2. Under `--continue`, go straight to the next wave.
+3. Otherwise `moku-rails pause --reason "wave [N] complete"` and tell the user:
+   > "Wave [N] complete ([plugin list]). All integration checks pass. Run `/moku:build resume` to
+   > continue with Wave [N+1]."

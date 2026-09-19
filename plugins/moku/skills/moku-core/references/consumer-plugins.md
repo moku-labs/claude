@@ -4,7 +4,8 @@
   via the framework's re-exported `createPlugin`. This file states the rule, where consumer plugins
   live, how they wire, and WHEN a concern should be a plugin vs. a lib helper vs. an island.
   Pair with: moku-plugin skill (complexity tiers + file layout), build-app.md (the build flow),
-  architecture.md (the 3-layer model), moku-web/references/project-spec.md (web specifics).
+  architecture.md (the 3-layer model), and project-spec.md in the moku-web pack
+  (skill `moku-web:moku-web`, reference `references/project-spec.md`) for web specifics.
 -->
 
 # Consumer-Layer Plugins (Layer 3)
@@ -91,8 +92,9 @@ A web consumer plugin is one of three shapes — compose it into the right compo
 - **Browser-only** (client runtime only) → compose into `src/spa.tsx` only.
 
 Anything reachable from both `app.ts` and `spa.tsx` is in the **browser graph** and MUST stay node-free
-(`project-spec.md` Rule **R3**). See [`project-spec.md`](../../moku-web/references/project-spec.md) for
-the directory tree (`src/plugins/` is an optional entry there) and the composition split.
+(`project-spec.md` Rule **R3**). For the directory tree (`src/plugins/` is an optional entry there) and
+the composition split, load the `moku-web:moku-web` skill with the Skill tool and read
+`references/project-spec.md` under the base directory it prints.
 
 ## Quality (same bar as framework plugins)
 

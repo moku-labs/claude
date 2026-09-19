@@ -1,186 +1,94 @@
-# Build: Lean Execution Mode (Taskmaster)
+# Build: Lean Execution Mode
 
-Lean mode strips verbose context from agent prompts and orchestrator output during builds. This conserves the context window, enabling more waves per session before compaction.
-
-## Context Budget Problem
-
-A typical build session consumes context from:
-
-| Source | Normal Mode | Lean Mode | Savings |
-|--------|------------|-----------|---------|
-| Builder agent prompts (per plugin) | ~800 tokens | ~350 tokens | ~56% |
-| Builder output contracts | ~300 tokens | ~150 tokens | ~50% |
-| Verification agent prompts | ~500 tokens | ~250 tokens | ~50% |
-| Progress updates to user | ~100 tokens/wave | ~30 tokens/wave | ~70% |
-| Gap closure diagnostician prompts | ~600 tokens | ~300 tokens | ~50% |
-| Wave judge prompts | ~400 tokens | ~200 tokens | ~50% |
-
-For a 5-wave project with 12 plugins, lean mode saves ~40-60% of context, translating to 2-3 additional waves before compaction triggers.
+Lean mode shortens agent prompts and orchestrator output during a build. It is a cost lever, not a
+requirement: full prompts produce better work, so reach for lean mode when you want to cut token spend
+on a large build, not by reflex.
 
 ## Activation
 
-Lean mode activates when ANY of these are true:
-1. `leanMode: true` in `.claude/moku.local.md` project config
-2. `--lean` flag passed to `/moku:build`
-3. **Auto-lean**: Context usage exceeds **70%** of the model's window at wave start (heuristic: 6+ waves completed in this session). See the 1M note below.
+Any of these turns it on:
 
-Lean mode is persisted in STATE.md as `## LeanMode: true` so it carries across resumes.
+1. `leanMode: true` in `.claude/moku.local.md`
+2. `--lean` passed to the build skill
+3. `leanMode: "auto"` (the default) — activate it once window usage is genuinely high, which on a
+   large build is many waves deep
 
-> **1M-context models (Opus/Sonnet 4.x, the current default):** lean mode is now primarily a
-> **cost lever, not a necessity.** With a 1M-token window, auto-lean rarely needs to fire — the
-> old "40% / 3 waves" trigger was tuned for 200K windows and caused premature context-stripping.
-> Treat lean mode as **opt-in** (`--lean` or `leanMode: true`) when you want to cut token spend
-> on a large build; otherwise prefer full-context prompts (better quality) and rely on
-> **server-side compaction** for genuinely long sessions. Aggressive lean output also reduces
-> prompt-cache reuse of the stable prompt prefix. Read the `leanMode: "auto"` default as
-> "auto only past ~70% window usage," which on 1M models is many waves deep.
->
-> **Opus 4.8 ships a lean *system prompt* by default** (Claude Code 2.1.154+), so the harness
-> already trims the base prompt on the current default model. This plugin's lean mode trims our
-> *own* agent/orchestrator prompts on top of that — on Opus 4.8 it is largely redundant and should
-> stay off unless you are deliberately cutting cost. Keep it as a meaningful lever only for
-> older/verbose-prompt models (Opus 4.7-and-earlier, where the verbose system prompt is still the
-> default).
+It persists in STATE.md as `## LeanMode: true`, so it carries across resumes.
 
-## What Gets Stripped
+## What gets stripped
 
-### 1. Builder Agent Prompts (Biggest Win)
+### Builder prompts (the biggest item)
 
-**Normal prompt includes:**
-- Full spec file (~200-400 lines)
-- Full config.ts contents
-- Full dependency plugin index.ts contents
-- Full TDD protocol reference
-- Full build rules list
-- Full output contract schema with examples
-- Full verification criteria
+| Section | Full prompt | Lean prompt |
+|---|---|---|
+| Spec | the whole spec file | `## Overview` (tier, description), `## Config` (type shape), `## API` (signatures), `## Events`, `## Dependencies` (names only) |
+| Framework config | all of `src/config.ts` | the `export type Config` and `export type Events` blocks |
+| Dependencies | each dependency's full `index.ts` | `export type Api` from each dependency's `types.ts` |
+| Build rules | the full list | one line: `Tier [tier]. TDD: types→red→green→refactor. No explicit generics. import type. JSDoc. Tests in __tests__/.` |
+| TDD protocol | the reference read | one line naming the four phases; the builder already has the skill |
+| Output contract | schema with examples and field descriptions | schema only |
+| Verification criteria | included | omitted — the artifact check covers them |
 
-**Lean prompt includes:**
-- **Spec extract** — only these sections: `## Overview` (tier + description), `## Config` (type shape), `## API` (method signatures), `## Events` (if any), `## Dependencies` (names only). Skip: Testing Strategy, Communication, Package Dependencies, Code Example, Verification (builder doesn't need these — verifier handles them).
-- **Config.ts extract** — only the `export type Config` and `export type Events` blocks, not the full file
-- **Dependency interfaces** — only `export type Api` from each dependency's types.ts, not the full index.ts
-- **Build rules** — compressed to single line: `"Tier [tier]. TDD: types→red→green→refactor. No explicit generics. import type. JSDoc. Tests in __tests/."`
-- **TDD protocol** — omit the reference read. Builder already has the skill loaded. One-line summary: `"TDD: Phase 1 types+skeleton → Phase 2 write failing tests → Phase 3 implement to pass → Phase 4 refactor."`
-- **Output contract** — schema only (no examples, no field descriptions). Builder knows the format from prior waves.
-- **Verification criteria** — omitted entirely. Builder focuses on building; verifier checks criteria.
+Skipped spec sections: Testing Strategy, Communication, Package Dependencies, Code Example,
+Verification. The builder does not need them; verification does.
 
-**Lean builder prompt template:**
+**Lean builder prompt:**
+
 ```
-Build Moku plugin [name] ([tier]). TDD. No explicit generics. import type. JSDoc. Tests in __tests/.
+Build Moku plugin [name] ([tier]). TDD. No explicit generics. import type. JSDoc. Tests in __tests__/.
 
 ## Spec
 [Overview paragraph]
-Config: [type shape from spec]
-API: [method signatures from spec]
-Events: [event names + payloads, or "None"]
+Config: [type shape]
+API: [method signatures]
+Events: [names + payloads, or "None"]
 Depends: [plugin names, or "None"]
 
 ## Types Context
 [Config + Events type blocks from src/config.ts]
 
 ## Dep Interfaces
-[export type Api from each dependency types.ts]
+[export type Api from each dependency's types.ts]
 
 ## Decisions
-[Relevant decision-log entries, or omit section]
+[Relevant decision-log entries, or omit the section]
 
 ## Output
-End with JSON: {agent, plugin, verdict, tdd:{red/green counts}, intent:{per-file}, filesCreated, testsPass, lintPass, issues}
+End with JSON: {agent, plugin, verdict, tdd, intent, filesCreated, testsPass, lintPass, issues}
 ```
 
-### 2. Verification Agent Prompts
+### Other prompts and output
 
-**Normal:** Full git diff + full specs for all plugins in wave + full builder intent summaries.
+- **Code reviewer** — the diff summary (files changed, not the diff itself; it reads files anyway), the
+  spec's API and Events sections, and the intent summaries. Keep the intent summaries: they are small
+  and they are what catches spec drift.
+- **Error diagnostician** — the first 20 lines of error output (the root cause is usually there), only
+  the spec section the error touches, and the last 2 strategy-log entries.
+- **Progress updates** — one line per wave (`W2: router,content → PASS. Verified. Integration OK.`),
+  details only on failure.
+- **Your own context** — after processing an agent's output contract, keep the JSON and a one-line
+  summary, and drop the prose report. Keep full error detail whenever a verdict is FAIL.
 
-**Lean:**
-- **Verifier**: Plugin directory list only (it reads files itself). One-line instruction: `"Verify [plugin-list]: L1 files exist, L2 real impl, L3 wired+lint+tests."`
-- **Code reviewer**: Diff summary (files changed, not full diff — reviewer reads files itself) + spec API/Events sections only + intent summaries (keep — these are small and high-value).
+## What is never stripped
 
-### 3. Progress Updates
+Output contract JSON, error messages, decision-log entries, builder intent summaries, STATE.md writes
+and git checkpoints. These are either the machine interface between agents or the only things that
+survive a crash.
 
-**Normal:**
-```
-Wave 2: Building router [Standard], content [Standard] (2 plugins in parallel)...
-router built (PASS). 1 plugin remaining in wave.
-content built (PASS). 0 plugins remaining in wave.
-Wave 2 verification: 2/2 pass. No gap closure needed.
-Integration checks pass.
-```
+## Interaction with the rest of the build
 
-**Lean:**
-```
-W2: router,content → PASS. Verified. Integration OK.
-```
+- **Pipelining** — good combination: pipelining widens the fan-out, lean mode makes each agent cheaper.
+- **Triage** — user-facing, never stripped. Findings are still presented one at a time.
+- **Multi-pass review** — the reviewer still runs all four passes; in lean mode it reports pass-level
+  summaries and only blocker-level detail.
+- **TDD** — runs inside the builder's own context. Lean mode trims the prompt, not the execution.
 
-Single line per wave. Details only on failure.
-
-### 4. Gap Closure Diagnostician Prompts
-
-**Normal:** Full error output + full spec + full strategy log.
-
-**Lean:**
-- Error output: first 20 lines only (root cause is usually in the first few errors)
-- Spec: only the section relevant to the error (e.g., if type error in api.ts → only `## API` section)
-- Strategy log: last 2 entries only (most recent strategies are what matter for diversity check)
-
-### 5. Wave Judge Prompts
-
-**Normal:** Full verification results + full code review findings + full gap closure history + full integration output.
-
-**Lean:**
-- Verification: verdict + blocker count only
-- Code review: pass summary (per-pass blocker/finding counts, not individual findings)
-- Gap closure: rounds count + final error count only
-- Integration: pass/fail only
-
-### 6. Orchestrator Internal Context
-
-**Normal:** The orchestrating agent (main conversation) accumulates full output from every sub-agent.
-
-**Lean:** After processing each agent's output contract JSON, discard the prose report. Keep only:
-- The JSON output contract (structured, compact)
-- A one-line summary for the user
-- Error details only if verdict is FAIL
-
-## What Is NEVER Stripped
-
-Even in lean mode, preserve:
-- **Output contract JSON blocks** — these are the machine-readable interface between agents. Always full.
-- **Error messages** — when something fails, full error context is needed for diagnosis
-- **Decision log entries** — small, high-value, prevent regressions
-- **Intent summaries** — small, high-value for code review
-- **STATE.md updates** — cross-session continuity is sacred
-- **Git checkpoints** — safety-critical
-
-## Lean Mode Config
-
-Add to project configuration:
-
-| Setting | Type | Range | Default |
-|---------|------|-------|---------|
-| `leanMode` | boolean / "auto" | true/false/"auto" | "auto" |
-
-- `true`: Always lean
-- `false`: Always verbose
-- `"auto"` (default): Activate lean mode when 3+ waves complete in one session or context > 40%
-
-## Integration with Other Features
-
-- **Wave pipelining + lean mode**: Ideal combination. Pipelining doubles active agents; lean mode halves their context cost. Net effect: pipelining works for more waves before context exhaustion.
-- **Interactive triage + lean mode**: Triage is user-facing — it is NOT stripped. Findings are still presented one-by-one.
-- **Multi-pass review + lean mode**: Review passes are internal to the code-reviewer agent. In lean mode, the reviewer still runs all 4 passes but reports only pass-level summaries to the orchestrator (not individual findings unless they're BLOCKERs).
-- **TDD + lean mode**: TDD protocol runs inside the builder agent's own context. Lean mode strips the *prompt* sent to the agent, not the agent's internal execution. TDD still runs fully.
-
-## Spec Extract Helper
-
-When constructing lean builder prompts, extract spec sections programmatically:
+## Extracting spec sections
 
 ```bash
-# Extract specific sections from a spec file
-# Returns content between ## SectionName and the next ## header
 grep -A 100 "^## Config" .planning/specs/03-router.md | sed '/^## [^C]/,$d'
 grep -A 100 "^## API" .planning/specs/03-router.md | sed '/^## [^A]/,$d'
 grep -A 100 "^## Events" .planning/specs/03-router.md | sed '/^## [^E]/,$d'
 ```
 
-Or use Read tool with line offsets targeting the relevant section.
+Or read the file with an offset targeting the section.

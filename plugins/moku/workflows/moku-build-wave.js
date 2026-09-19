@@ -1,11 +1,11 @@
 export const meta = {
   name: 'moku-build-wave',
-  description: 'Build one Moku wave non-interactively: builders in parallel (disjoint plugin dirs), each verified as it completes (pipeline), then a wave-judge disposition',
-  whenToUse: 'OPT-IN, non-interactive fan-out for a single build wave. The gated /moku:build (per-wave user checkpoint) is still the default; use this when you explicitly want a wave built end-to-end without stopping. Pass {plugins:[{name,tier,spec}]} to define the wave, or omit to auto-detect the next wave from STATE.md.',
+  description: 'Build one Moku wave non-interactively: builders in parallel (disjoint plugin dirs), each verified as it completes (pipeline), then a wave disposition',
+  whenToUse: 'OPT-IN, non-interactive fan-out for a single build wave. The gated moku:build skill (per-wave user checkpoint) is still the default; use this when you explicitly want a wave built end-to-end without stopping. Pass {plugins:[{name,tier,spec}]} to define the wave, or omit to auto-detect the next wave from STATE.md.',
   phases: [
     { title: 'Plan', detail: 'determine the wave plugin set' },
     { title: 'Build+Verify', detail: 'build each plugin, verify as it completes' },
-    { title: 'Judge', detail: 'wave-judge disposition' },
+    { title: 'Disposition', detail: 'continue / stop-for-review / fresh-retry' },
   ],
 }
 
@@ -70,19 +70,22 @@ if (plugins.length === 0) {
 log(`Wave: ${plugins.map((p) => p.name).join(', ')} (${plugins.length} plugins)`)
 
 // --- Build + Verify (pipeline: verify each plugin as soon as it is built) ---
-// Builders touch disjoint dirs (src/plugins/<name>/), BUT a misbehaving builder can still run a
-// repo-wide command (lint:fix, git checkout) that clobbers a sibling's work — this caused real data
+// Builders touch disjoint dirs (src/plugins/<name>/), but a misbehaving builder can still run a
+// repo-wide command (lint:fix, git checkout) that clobbers a sibling's work — that caused real data
 // loss in a prior build. So for any wave with >1 builder, isolate each in its own git worktree
-// (disjoint indices -> a stray git/format command can't reach siblings). The builder prompt ALSO
-// hard-forbids repo-wide commands and git mutations as belt-and-suspenders.
+// (disjoint indices, so a stray git/format command cannot reach siblings). The prompt's command ban
+// is the backup for the worktree.
 const ISOLATE = plugins.length > 1 ? 'worktree' : undefined
+// Complex and VeryComplex plugins go to the deep builder (same instructions, higher effort).
+const DEEP_TIERS = new Set(['Complex', 'VeryComplex'])
 const HARD_RULES =
-  ' HARD RULES (filesystem safety): write ONLY under src/plugins/' +
-  '<this-plugin>/ and its __tests__/ — never edit src/config.ts, src/plugins/index.ts (barrel), ' +
-  'package.json, or sibling plugins. NEVER run a repo-wide command (lint:fix, bun run format, ' +
-  '`biome … .`, `eslint .`) or ANY git mutation (checkout/restore/reset/stash/clean/add/commit). ' +
-  'Scoped formatting only: `bunx biome format --write src/plugins/<this-plugin>/`. Report lint/format ' +
-  'issues as hints; the orchestrator fixes them repo-wide after the wave.'
+  ' Filesystem safety — sibling builders run concurrently, so a repo-wide command from you corrupts ' +
+  'their work. Write only under src/plugins/<this-plugin>/ and its __tests__/; leave src/config.ts, ' +
+  'src/plugins/index.ts (the barrel), package.json and sibling plugins alone. Run no repo-wide command ' +
+  '(lint:fix, bun run format, `biome … .`, `eslint .`) and no git mutation ' +
+  '(checkout/restore/reset/stash/clean/add/commit). Scoped formatting only: ' +
+  '`bunx biome format --write src/plugins/<this-plugin>/`. Report lint and format issues as hints; ' +
+  'the orchestrator fixes them repo-wide after the wave.'
 phase('Build+Verify')
 const results = await pipeline(
   plugins,
@@ -92,22 +95,30 @@ const results = await pipeline(
         `(types → red → green → refactor). Spec: ${p.spec || `.planning/specs for ${p.name}`}. ${STYLE}` +
         HARD_RULES.replaceAll('<this-plugin>', p.name) +
         ` Return the build result.`,
-      { label: `build:${p.name}`, phase: 'Build+Verify', schema: BUILD_RESULT, isolation: ISOLATE },
+      {
+        label: `build:${p.name}`,
+        phase: 'Build+Verify',
+        agentType: DEEP_TIERS.has(p.tier) ? 'moku:moku-builder-deep' : 'moku:moku-builder',
+        schema: BUILD_RESULT,
+        isolation: ISOLATE,
+      },
     ),
+  // The artifact check is a deterministic script, so this step only runs it and reports the result.
   (build, p) =>
     agent(
-      `Verify the just-built plugin "${p.name}": files exist, content is substantive (not stubs), ` +
-        `lint + tests pass, and it complies with the spec. Cite spec/NN-*.md §N in any blocker.`,
-      { label: `verify:${p.name}`, phase: 'Build+Verify', agentType: 'moku:moku-verifier', schema: VERIFY_RESULT },
+      `Run \`moku-verify-artifacts ${p.name} --tier ${p.tier || 'auto'} --run --json\` with Bash and ` +
+        `report what it printed. Exit 0 is PASS, exit 2 is FAIL; any other exit is PARTIAL with the ` +
+        `error as a blocker. Do not fix anything and do not judge the code yourself.`,
+      { label: `verify:${p.name}`, phase: 'Build+Verify', schema: VERIFY_RESULT },
     ).then((verify) => ({ plugin: p.name, build, verify })),
 )
 
 const done = results.filter(Boolean)
 const failed = done.filter((r) => r.build?.status === 'failed' || r.verify?.verdict === 'FAIL')
 
-// --- Judge ---------------------------------------------------------------
-phase('Judge')
-const JUDGE = {
+// --- Disposition ---------------------------------------------------------
+phase('Disposition')
+const DISPOSITION = {
   type: 'object',
   required: ['decision'],
   properties: {
@@ -115,10 +126,13 @@ const JUDGE = {
     reason: { type: 'string' },
   },
 }
+// No judge agent: the disposition criteria live in build-wave-execution.md ("Wave disposition").
 const judgment = await agent(
-  `Evaluate this build wave and decide continue / stop-for-review / fresh-retry. Results: ` +
+  `Decide this wave's disposition: continue / stop-for-review / fresh-retry. Read ` +
+    `${'$'}{CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-wave-execution.md → "Wave ` +
+    `disposition" and apply its table. Uncertainty resolves to stop-for-review. Results: ` +
     `${JSON.stringify(done.map((r) => ({ plugin: r.plugin, build: r.build?.status, verify: r.verify?.verdict })))}`,
-  { label: 'wave-judge', phase: 'Judge', agentType: 'moku:moku-wave-judge', schema: JUDGE },
+  { label: 'wave-disposition', phase: 'Disposition', schema: DISPOSITION },
 )
 
 return {
@@ -126,6 +140,6 @@ return {
   built: done.length,
   failed: failed.map((r) => r.plugin),
   verdict: failed.length === 0 ? 'PASS' : 'FAIL',
-  judge: judgment,
+  disposition: judgment,
   results: done,
 }

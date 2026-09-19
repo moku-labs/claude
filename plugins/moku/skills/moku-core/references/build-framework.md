@@ -1,75 +1,69 @@
 # Framework Build — Detailed Steps
 
-## Pre-requisite: Skeleton Must Be Committed
+The skeleton is already committed when you are reading this: the `build` skill routes to
+`build-skeleton.md` whenever `## Skeleton:` in STATE.md is anything else. Every skeleton source file
+exists.
 
-The build command's Skeleton Detection step (in `commands/build.md`) handles this automatically. If `## Skeleton:` in STATE.md is not `committed`, the build command routes to `build-skeleton.md` first and never reaches this file. If you are reading this file, the skeleton is already committed and all skeleton source files exist.
+This is the map for a framework build. Read the one file for the phase you are in; that keeps context lean.
 
-This is the master reference for `/moku:build framework`. Each step links to a dedicated reference file. Read only the file relevant to your current phase — this keeps context lean.
+## Step 1: Read and validate the plan
 
-## Step 1: Read and Validate the Plan
+Read the specs (default `.planning/specs/`; for a directory, read `01-*.md`, `02-*.md` in order). They
+need the global Config and Events types, the plugin list with implementation order (core plugins listed
+separately), the per-plugin specs with config, state, API and events, and the core plugin specs on the
+simplified template. Incomplete: ask the user to run `/moku:plan framework` first.
 
-Read the specification from the provided path (defaults to `.planning/specs/`). If a directory, read `01-*.md`, `02-*.md`, etc. in order. Verify it contains:
-- Global Config and Events types
-- Plugin list with implementation order (core plugins identified separately)
-- Plugin specifications with configs, states, APIs, events
-- Core plugin specifications (if any) with the simplified template
+### Framework-capability verification
 
-If the plan is incomplete, ask the user to run `/moku:plan framework` first.
+Whenever the plan relies on a capability of another package — `@moku-labs/core`'s re-exported factory
+chain, a peer framework (`@moku-labs/worker`'s `deploy`/`cli`, `@moku-labs/room`'s `hubPlugin`), or any
+`./subpath` export — prove it exists in the installed package before building to it: read that
+package's `package.json` `exports` and its `dist`/types, and confirm the named export, generator, CLI or
+subpath is present with the shape the plan assumes. In particular, do not assume a framework's
+runtime/server export ships a deploy-config generator. Full procedure: `build-app.md` Step 2. If a
+capability is absent, revise the plan rather than hand-rolling it or standing up a facade
+(`moku-idioms.md` §I6).
 
-### Framework-capability verification (hard gate — verify, never assume)
+## Steps 2–3: Wave analysis, pre-flight and execution
 
-Whenever the plan relies on a capability of **another** package — `@moku-labs/core` (the factory chain it
-re-exports), a peer/optional framework (`@moku-labs/worker`'s `deploy`/`cli`, `@moku-labs/room`'s
-`hubPlugin`), or any `./subpath` export — confirm it **actually exists in the installed package** before
-building to it: read that package's real `package.json` `exports` + its `dist`/types and prove the named
-export/generator/CLI/subpath is present and has the assumed shape. **Never assume a framework capability
-from memory or a spec doc** — in particular, never assume a framework's runtime/server export ships a
-deploy-config generator (e.g. a `wrangler.jsonc` emitter); verify it against the installed package's
-`exports` + `dist`/types (see `build-app.md` Step 2 for the full procedure). If a capability is absent,
-revise the plan — do not hand-roll it or stand up a facade (`moku-idioms.md §I6`).
+→ **`build-wave-execution.md`**
 
-## Steps 2–3: Wave Analysis, Pre-Flight & Execution
+Dependency analysis, pre-flight checks, builder selection and prompts, parallel execution, per-plugin
+tracking, pipelining, and the continue / stop-for-review / retry decision.
 
-→ Read **`build-wave-execution.md`**
+## Step 4: Post-wave verification and integration
 
-Covers: wave dependency analysis, pre-flight checks (tsc/lint/deps), builder sub-agent prompts with output contracts, agent turn limits, parallel execution strategy, per-plugin tracking (PASS/PARTIAL/FAIL).
+→ **`build-verification.md`**
 
-## Step 4: Post-Wave Verification & Integration
+Reconciliation against disk and tooling, the artifact check, code review triage, gap closure, regression
+testing, spec ticking, content hashes, the README-freshness gate, save-and-stop.
 
-→ Read **`build-verification.md`**
+Framework file assembly (Step 4b shapes) → **`build-assembly.md`**.
 
-Covers: plugin verification (3-level), gap closure with error-diagnostician (circuit breaker), spec verification ticking, content hash recording, save-progress-and-stop protocol.
+## Steps 5–8: Final verification, documentation, tests and validation
 
-### Framework File Assembly (Step 4b detail)
+→ **`build-final.md`**
 
-→ Read **`build-assembly.md`**
+Final verification (5), plugin README wave (5.5), root and LLM docs (5.6), doc validation (5.7),
+integration tests (5.8), coverage (5.9), the release pointer (5.10), post-build validation (6), report
+(7), cycle archive (7.5), delta updates (8).
 
-Covers: `src/plugins/index.ts` barrel structure, `src/index.ts` self-documenting manifest pattern, integration check sequence (format → lint → tsc → build).
+## Phase → file
 
-## Steps 5–7.5: Final Verification, Documentation, Testing, CI/CD & Validation
-
-→ Read **`build-final.md`**
-
-Covers: final framework verification (Step 5), plugin README wave (5.5), root documentation + LLM docs (5.6), documentation validation (5.7), integration test wave (5.8), coverage verification (5.9), CI/CD generation (5.10), post-build validation pipeline (Step 6), final report (Step 7), cycle archive (Step 7.5), and delta updates for subsequent builds (Step 8).
-
----
-
-## Quick Reference: Build Phase → File
-
-| Phase | Reference File | When to Read |
-|-------|---------------|--------------|
-| Skeleton build | `build-skeleton.md` | Before all other steps |
-| Wave analysis & building | `build-wave-execution.md` | Starting a new wave |
-| Verification & gap closure | `build-verification.md` | After wave agents return |
-| Barrel & index patterns | `build-assembly.md` | Updating framework files |
-| Final verification | `build-final.md` Step 5 | All waves complete |
-| README wave | `build-final.md` Step 5.5 | After final verification |
-| Root docs + LLM docs | `build-final.md` Step 5.6 | After plugin READMEs |
-| Documentation validation | `build-final.md` Step 5.7 | After docs generated |
-| Integration tests | `build-final.md` Step 5.8 | After docs validated |
-| Coverage verification | `build-final.md` Step 5.9 | After integration tests |
-| CI/CD generation | `build-final.md` Step 5.10 | After coverage verified |
-| Post-build validation | `build-final.md` Step 6 | After CI/CD generated |
-| Report + state update | `build-final.md` Step 7 | After validation passes |
-| Cycle archive | `build-final.md` Step 7.5 | After report |
-| Delta updates | `build-final.md` Step 8 | Subsequent builds only |
+| Phase | File |
+|-------|------|
+| Skeleton build | `build-skeleton.md` |
+| Wave analysis, building, wave disposition | `build-wave-execution.md` |
+| Verification, gap closure, regression | `build-verification.md` |
+| Barrel and index patterns | `build-assembly.md` |
+| Final verification | `build-final.md` Step 5 |
+| README wave | `build-final.md` Step 5.5 |
+| Root docs and LLM docs | `build-final.md` Step 5.6 |
+| Documentation validation | `build-final.md` Step 5.7 |
+| Integration tests | `build-final.md` Step 5.8 |
+| Coverage | `build-final.md` Step 5.9 |
+| Release hand-off | `build-final.md` Step 5.10 |
+| Post-build validation | `build-final.md` Step 6 |
+| Report and state update | `build-final.md` Step 7 |
+| Cycle archive | `build-final.md` Step 7.5 |
+| Delta updates | `build-final.md` Step 8 |
