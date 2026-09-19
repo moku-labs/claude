@@ -14,11 +14,11 @@ description: >
 !`test -f .planning/STATE.md && grep -A2 '## Phase:' .planning/STATE.md 2>/dev/null || true`
 !`test -d src/plugins && echo "Existing plugins:" && ls src/plugins/ 2>/dev/null || true`
 
-Enforce strict compliance with Moku plugin structure specification. Follow all plugin structure rules. Require full JSDoc coverage on all source code. Be creative within the defined guidelines.
+Follow the Moku plugin structure specification. Every source file carries full JSDoc coverage. Be creative within these guidelines.
 
 ## The Rule
 
-**A plugin file is a wiring harness, not business logic.** The `index.ts` connects domain code to the system. It is NOT where you write business logic. Domain logic lives in separate files (`api.ts`, `state.ts`, `handlers.ts`).
+**A plugin file is a wiring harness, not business logic.** The `index.ts` connects domain code to the system; business logic lives in separate files (`api.ts`, `state.ts`, `handlers.ts`).
 
 ## Framework plugins vs. consumer plugins (same structure, different home)
 
@@ -28,9 +28,9 @@ Plugins are authored at **two layers**, with identical structure, tiers, and qua
 
 Everything below (tiers, file layout, the wiring-harness rule) applies to **both**. Full Layer-3 guidance + the plugin-vs-`lib`-vs-island decision guide: [`consumer-plugins.md`](../moku-core/references/consumer-plugins.md).
 
-## CRITICAL: No Explicit Generics on createPlugin
+## No explicit generics on createPlugin
 
-Every `createPlugin` call MUST rely on type inference from the spec object. Never pass type parameters explicitly.
+Every `createPlugin` call relies on type inference from the spec object. Type parameters are never passed explicitly.
 
 ```typescript
 // WRONG — Explicit generics bypass inference:
@@ -46,11 +46,11 @@ createPlugin("auth", {
 })
 ```
 
-This applies to ALL tiers (Nano through VeryComplex). If a Standard+ plugin extracts types to `types.ts`, the types are used in domain files (api.ts, state.ts), NOT as generics on createPlugin.
+This applies to all tiers (Nano through VeryComplex). If a Standard+ plugin extracts types to `types.ts`, the types are used in domain files (api.ts, state.ts), not as generics on createPlugin.
 
 ## Complexity Tiers
 
-Choose the simplest tier that fits. Promote when the file outgrows its tier. Never force a complex structure on a simple plugin.
+Choose the simplest tier that fits. Promote when the file outgrows its tier. A simple plugin keeps a simple structure.
 
 | Tier | When | Files |
 |------|------|-------|
@@ -95,7 +95,7 @@ When multiple plugins share a domain (e.g. `spaHead`, `spaProgress`, `spaRouter`
 
 ```
 plugins/spa/
-  index.ts           # ~40 lines. Wiring harness. THE plugin.
+  index.ts           # ~40 lines. Wiring harness. The plugin itself.
   types.ts           # Shared config, state, events, context type.
   head/api.ts
   progress/state.ts, progress/api.ts
@@ -144,10 +144,10 @@ export const routerPlugin = createPlugin('router', {
 
 **Notice:** ~30 lines. Imports everything. Connects to lifecycle hooks and API slots. No domain logic.
 
-## Common Mistakes — DON'T Do These
+## Common mistakes
 
 ```typescript
-// DON'T: Put business logic in index.ts — it's a wiring harness
+// Do not put business logic in index.ts — it is a wiring harness
 export const authPlugin = createPlugin('auth', {
   api: (ctx) => ({
     login: async (user: string, pass: string) => {
@@ -162,11 +162,11 @@ export const authPlugin = createPlugin('auth', {
 import { createAuthApi } from './api';
 export const authPlugin = createPlugin('auth', { api: createAuthApi })
 
-// DON'T: Force Standard tier on a simple plugin
+// Do not force Standard tier on a simple plugin
 // A 15-line config-only plugin doesn't need types.ts, state.ts, api.ts
 // Use Nano/Micro tier — promote only when complexity demands it
 
-// DON'T: Split config into a per-plugin config.ts file (spec/15 §5 — no config.ts)
+// Do not split config into a per-plugin config.ts file (spec/15 §5 — no config.ts)
 // src/plugins/router/config.ts:
 export const DEFAULT_CONFIG = { basePath: "/" };          // WRONG — splits config from its wiring point
 // index.ts: import { DEFAULT_CONFIG } from "./config"; ... config: DEFAULT_CONFIG
@@ -176,14 +176,14 @@ const defaultConfig: Config = { basePath: "/" };          // typed const widens 
 export const routerPlugin = createPlugin("router", { config: defaultConfig, /* ... */ });
 // (or, for Nano/Micro, just `config: { basePath: "/" }` inline — no config.ts either way)
 
-// DON'T: Add onStart/onStop to plugins that don't manage resources
+// Do not add onStart/onStop to plugins that manage no resources
 export const utilPlugin = createPlugin('util', {
   api: (ctx) => ({ format: (s: string) => s.trim() }),
   onStart: async () => {},   // WRONG — no resource to open
   onStop: async () => {},    // WRONG — no resource to close
 })
 
-// DON'T: Create multiple plugins for one domain concern
+// Do not create multiple plugins for one domain concern
 // spa-head, spa-router, spa-progress → merge into one "spa" plugin
 
 // CORRECT (spec/15 §7): export instance uses the <name>Plugin suffix; name string stays bare
@@ -191,18 +191,18 @@ export const routerPlugin = createPlugin("router", { ... })
 export const authPlugin = createPlugin("auth", { ... })
 export const templateEnginePlugin = createPlugin("templateEngine", { ... })
 
-// DON'T: drop the suffix on the export
+// Do not drop the suffix on the export
 export const router = createPlugin("router", { ... })   // WRONG — export should be routerPlugin
 // Islands / non-plugin instances may use a domain suffix instead: lightboxIsland, shareButtonsIsland
 
-// DON'T: destructure or leave factory exports undocumented — JSDoc never reaches consumers
+// Do not destructure or leave factory exports undocumented — JSDoc never reaches consumers
 export const { createApp, createPlugin } = framework            // WRONG — docs die at the module boundary
 export const routerPlugin = createPlugin("router", { ... })     // WRONG if no directly-preceding /** */ block (lint won't catch it)
 // CORRECT: explicit, individually-documented const (a file-level @file comment does NOT count)
 /** Router plugin — Standard tier. Emits `router:navigate`. @see README.md */
 export const routerPlugin = createPlugin("router", { ... })
 
-// DON'T: Parameterize createPlugin and dependencies through a factory
+// Do not parameterize createPlugin and dependencies through a factory
 export function wireFooPlugin(pluginFactory, dep) {
   return pluginFactory("foo", { depends: [dep], ... });
 }
@@ -213,7 +213,7 @@ import { createPlugin } from "../../config";
 import { bar } from "../bar";
 export const foo = createPlugin("foo", { depends: [bar], ... });
 
-// DON'T: Inline type assertions in createState or config
+// Do not inline type assertions in createState or config
 createState: () => ({ processor: null as import("unified").Processor | null })
 config: { routes: {} as Record<string, RouteInput> }
 
@@ -226,9 +226,9 @@ createState: createPipelineState,
 createState: (): { processor: Processor | null } => ({ processor: null }),
 ```
 
-## Lifecycle: start() and stop() Are Optional
+## Lifecycle: start() and stop() are optional
 
-`onStart` and `onStop` are NOT required. Include them ONLY when there is a concrete reason:
+`onStart` and `onStop` are not required. Include them when there is a concrete reason:
 
 | Domain | onStart needed? | onStop needed? | Reason |
 |--------|----------------|----------------|--------|
@@ -239,20 +239,20 @@ createState: (): { processor: Processor | null } => ({ processor: null }),
 | Build tool | No | No | Runs during init, no persistent process |
 | Utility/Config | No | No | Pure functions, no resources |
 
-**Rule:** If your plugin has no connections to open, no listeners to start, and no resources to manage, omit onStart and onStop entirely.
+If the plugin has no connections to open, no listeners to start, and no resources to manage, omit onStart and onStop entirely.
 
 ## Correct-first-try gotchas (real fixes that should never have been needed)
 
 - **Tier ≠ directory shape.** Pick the tier by domain complexity. A flat multi-file layout (one
   concern per file, no subdirectories) is a valid Complex/VeryComplex layout — the ≤30-line `index.ts`
-  rule frequently forces flat. A `generators/`-style subdir does NOT force a tier relabel.
-- **Injectable / exported function types must be STRUCTURAL.** Declare your own `interface`/`type`
-  for options and return values. NEVER type them via a runtime package's *namespace* type (e.g.
+  rule frequently forces flat. A `generators/`-style subdir does not force a tier relabel.
+- **Injectable / exported function types are structural.** Declare your own `interface`/`type`
+  for options and return values. Do not type them via a runtime package's *namespace* type (e.g.
   `import("bun").SpawnOptions.OptionsObject<…>`) — `tsdown`/rolldown `.d.ts` bundling drops it, so the
   shipped type resolves to `undefined` for consumers even though `tsc --noEmit` passes. Verify with
   `bun run build` + the emitted `.d.ts`, not just `tsc`.
 - **Honor override hooks.** If a builder API exposes an override (`.toFile()`, `.toJson()`, …), the
-  compiler/runtime MUST call it: `override?.(x) ?? default(x)`. Don't silently ignore a provided override.
+  compiler/runtime calls it: `override?.(x) ?? default(x)`. A provided override is never ignored.
 - **No dead `depends`.** Every `depends` edge should back a real `ctx.require(dep).method()` call. If an
   edge exists only for init ordering/presence, document why inline; otherwise drop it.
 - **Error messages:** exactly `[<framework>] <description>.\n  <suggestion>.` — no arrows, both lines
@@ -260,19 +260,19 @@ createState: (): { processor: Processor | null } => ({ processor: null }),
 
 ## JSDoc Requirements
 
-Every file must have full JSDoc. Plugin index.ts must have:
+Every file carries full JSDoc. Plugin index.ts carries:
 - Plugin tier comment (Nano/Micro/Standard/Complex/VeryComplex)
 - Description of what the plugin does
 - Events it emits
 - `@see README.md` reference
 
-**The plugin export itself must be documented.** Export the factory as an explicit,
-individually-documented const with a **directly-preceding** JSDoc block — never
-destructured, and never relying on a file-level `@file` comment. ESLint's
+The plugin export itself is documented: export the factory as an explicit,
+individually-documented const with a directly-preceding JSDoc block — not
+destructured, and not relying on a file-level `@file` comment. ESLint's
 `jsdoc/require-jsdoc` ignores a const initialized by a call (`createPlugin(…)`), so a
 plugin-factory export with no block above it ships undocumented while lint stays green;
 its docs also fail to reach editor hover and the emitted `dist/*.d.ts`. The block above
-the `createPlugin` call is what `moku-jsdoc-validator` and consumers actually see.
+the `createPlugin` call is what `moku-style-validator` and consumers actually see.
 
 ## Testing Requirements
 
@@ -280,18 +280,18 @@ the `createPlugin` call is what `moku-jsdoc-validator` and consumers actually se
 - **Integration tests** for the full plugin wiring
 - Unit tests live in `__tests__/unit/` inside the plugin directory
 - Integration tests live in `__tests__/integration/` inside the plugin directory
-- **Plugin tests live with the plugin.** Never put plugin-specific tests in root `tests/unit/plugins/` or `tests/integration/plugins/`. The root `tests/` directory is reserved for framework-level integration tests (cross-plugin scenarios, createApp validation).
+- **Plugin tests live with the plugin.** Plugin-specific tests do not belong in root `tests/unit/plugins/` or `tests/integration/plugins/`. The root `tests/` directory is reserved for framework-level integration tests (cross-plugin scenarios, createApp validation).
 
 ## Single Instance Per Plugin Directory
 
-Each plugin directory exports exactly ONE `createPlugin` (or `createCorePlugin`) instance. If a plugin needs helper functions (builders, factories), those are exported separately — either via the `helpers` spec field or as standalone exports alongside the plugin instance.
+Each plugin directory exports exactly one `createPlugin` (or `createCorePlugin`) instance. If a plugin needs helper functions (builders, factories), those are exported separately — either via the `helpers` spec field or as standalone exports alongside the plugin instance.
 
 ```typescript
-// CORRECT: One plugin instance + helper
+// Right: one plugin instance + helper
 export const routerPlugin = createPlugin("router", { ... });
 export function route(path: string): Route { ... }  // helper, not a plugin
 
-// WRONG: Multiple plugin instances from one directory
+// Wrong: multiple plugin instances from one directory
 export const routerPlugin = createPlugin("router", { ... });
 export const routerDebug = createPlugin("routerDebug", { ... });  // should be a sub-module
 ```
@@ -316,7 +316,9 @@ For plugins with sub-module directories (Very Complex tier), read `references/do
 ## Related Skills
 
 - **moku-core** — Architecture fundamentals, factory chain, lifecycle, event system, type system
-- **moku-web** — Web-specific plugin patterns, island architecture, CSS encapsulation
+- **`moku-web:moku-web`** (pack `moku-web`) — Web-specific plugin patterns, island architecture, CSS encapsulation
+- **`moku-worker:moku-worker`** (pack `moku-worker`) — Cloudflare Workers resource plugins
+- **`moku-room:moku-room`** (pack `moku-room`) — couch-multiplayer plugins
 - **moku-common** — Family conventions for `@moku-labs/common`: log via `ctx.log` (not raw `console.*`),
   read env via `ctx.env` (not raw `process.env`), and render CLI through the branded kit
   (`@moku-labs/common/cli`). Plugin domain code that needs logging/env/CLI output follows MC1–MC3.
@@ -339,7 +341,7 @@ export const spaPlugin = createPlugin('spa', {
   }),
 });
 
-// moku-web: Island mounts on data-island, uses SPA plugin API
+// moku-web:moku-web: island mounts on data-island, uses SPA plugin API
 // islands/NavIsland.ts
 export const Nav = createIsland('nav', {
   onNavEnd({ doc }) { /* update active link from new doc */ },

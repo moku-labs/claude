@@ -16,7 +16,7 @@ function should **tell its story by layout alone** — a reader skims the blank-
 stanzas and the one-line intent comments and knows what it does *before* reading a
 single expression. Hand-crafted, not machine-glued.
 
-This is **behavior-preserving** guidance. Restructuring a function never changes its
+This is behavior-preserving guidance. Restructuring a function never changes its
 public signature, return type, error messages, thrown codes, or runtime behavior.
 
 ## The north star
@@ -64,7 +64,7 @@ over cleverness).
     `data`/`info`/`temp`/`result`/`handler`/`process`. Match the file's existing
     vocabulary (`route`, not a new `path`/`url` for the same thing).
 
-## Exempt — do NOT force stanzas onto these
+## Exempt — stanzas are not forced onto these
 
 - Pure data / object-literal returns, config objects, type definitions.
 - Trivial 1–3 line accessors / delegators.
@@ -77,8 +77,8 @@ over cleverness).
 - Helpers are defined **above** the function that uses them (file convention).
 - Module-private helpers still get **full JSDoc** (description, `@param`, `@returns`,
   `@example`) per the repo's eslint-plugin-jsdoc rules — `import type`, `@param name -
-  desc`, blank line before tags. See [[moku-core]] §JSDoc and the `moku-jsdoc-validator`.
-- Don't add abstraction modules or defensive code that wasn't asked for. Cohesion and
+  desc`, blank line before tags. See the `moku-core` skill §JSDoc and `moku-style-validator`.
+- Do not add abstraction modules or defensive code that was not asked for. Cohesion and
   deletion — not accretion — are the tells of hand-crafted code.
 
 ## The smell, in one glance
@@ -117,11 +117,11 @@ const result: FeedsResult = { rss: feed.rss2(), atom: feed.atom1(), json: feed.j
 await writeFeedFiles(ctx.config.outDir, result);
 ```
 
-## Severity (for `moku-readable-code-validator`)
+## Severity (for `moku-style-validator`)
 
-Readability is a **should-fix**, not a behavior bug. The validator emits **WARNING**
+Readability is a should-fix, not a behavior bug. The validator emits WARNING
 (clear wall-of-text — body is dense, multi-concern, no stanzas/intent comments, or has
-nested ternaries / deep nesting) and **INFO** (borderline) only — **never BLOCKER**, so
+nested ternaries / deep nesting) and INFO (borderline) only, never BLOCKER, so
 it surfaces readability debt without ever failing a build. Each finding cites
 `file:line`, the violated rule number, and a concrete fix (which stanzas to split,
 which predicate/constant/helper to extract).

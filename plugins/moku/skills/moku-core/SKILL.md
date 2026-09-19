@@ -13,7 +13,19 @@ description: >
 !`test -f .planning/STATE.md && head -20 .planning/STATE.md || true`
 !`test -f src/config.ts && echo "Framework config: src/config.ts exists" || true`
 
-Enforce strict compliance with Moku Core specifications when generating, reviewing, or modifying code. Never skip Biome warnings. Never skip quality linter warnings. Require full JSDoc coverage on all source files. Use extended thinking (ultrathink) for complex architecture decisions.
+Follow the Moku Core specification when generating, reviewing, or modifying code. Biome and quality-linter warnings are fixed, not skipped. Every source file carries full JSDoc coverage.
+
+## For packs
+
+A pack (`moku-web`, `moku-worker`, `moku-room`, `moku-design`) is a separate plugin, so
+`${CLAUDE_PLUGIN_ROOT}` there points at the pack, not at the core. A pack that needs core knowledge
+loads this skill with the Skill tool (`moku:moku-core`); the tool prints the skill's base directory,
+and the pack reads `references/<file>` under it — `agent-preamble.md`, `moku-idioms.md`,
+`moku-frameworks.md`, `spec-index.md`, `invariants.md` and the rest. Inside this plugin,
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/<file>` still resolves directly.
+
+Lifecycle work starts at the conductor — the `moku` skill — which opens a change, picks the station
+and invokes the lifecycle skills. This skill is knowledge only; it never drives a station.
 
 ## Architecture: Three Layers, Three Steps
 
@@ -54,11 +66,11 @@ JSDoc does not survive that shape to consumers. Two rules:
 `index.ts`, expand the destructure into individually-documented re-exports:
 
 ```typescript
-// ❌ WRONG — docs resolve only at the destructure site; dist/*.d.ts ships them bare
+// Wrong — docs resolve only at the destructure site; dist/*.d.ts ships them bare
 export const { createPlugin, createCore } = createCoreConfig<Config, Events>(id, { config });
 export const { createApp, createPlugin } = createCore(coreConfig, { plugins });
 
-// ✅ RIGHT — each export carries its own block; hover + emitted .d.ts both get docs
+// Right — each export carries its own block; hover + emitted .d.ts both get docs
 const coreConfig = createCoreConfig<Config, Events>(id, { config });
 /**
  * Define a plugin for this framework. Types infer from the spec object.
@@ -76,7 +88,7 @@ export const createPlugin = coreConfig.createPlugin;
 export const createCore = coreConfig.createCore;
 ```
 
-A destructured binding's JSDoc is resolved by TypeScript ONLY at the destructure site.
+A destructured binding's JSDoc is resolved by TypeScript only at the destructure site.
 It does not cross the module boundary: another file hovering the symbol sees nothing,
 and the bundled `dist/index.d.mts` emits `declare const createApp` with no preceding
 block. Inline JSDoc on the binding (`const { /** doc */ x } = …`) does not fix it
@@ -88,7 +100,7 @@ either. The explicit `export const x = source.x;` is the only form that works.
 public export its own directly-preceding block.
 
 Verify after build: every `declare const X` in `dist/index.d.mts` is preceded by a
-`/** … */` block. `moku-jsdoc-validator` enforces both rules.
+`/** … */` block. `moku-style-validator` enforces both rules.
 
 ## Core Plugins
 
@@ -128,9 +140,9 @@ createPlugin("router", {
 | Self-contained infrastructure | Yes | No |
 
 **Core plugin constraints:**
-- NO `depends`, `events`, `hooks` — self-contained
+- No `depends`, `events`, `hooks` — self-contained
 - Context: `{ config, state }` only — no `global`, `emit`, `require`, `has`
-- Lifecycle: init/start BEFORE regular plugins; stop AFTER regular plugins
+- Lifecycle: init/start before regular plugins; stop after regular plugins
 - Config: 4-level cascade — spec defaults → `createCoreConfig pluginConfigs` → `createCore pluginConfigs` → `createApp pluginConfigs`
 
 ## Kernel Responsibilities (6 things, nothing else)
@@ -142,7 +154,7 @@ createPlugin("router", {
 5. Dispatch events: `emit` (strictly typed, no escape hatch)
 6. Freeze everything when done (`Object.freeze` on app, configs)
 
-## Critical Design Decisions — NEVER Violate
+## Design decisions that hold
 
 - **No topological sort** — `depends` is validation-only. Plugin order is explicit in the array.
 - **Shallow merge only** — `{ ...config, ...consumerConfig }`. No deep merge. Ever.
@@ -153,7 +165,7 @@ createPlugin("router", {
 - **createApp is synchronous** — Returns `App` directly, not a Promise. `onInit` is sync.
 - **Core plugin APIs injected flat** — `ctx.log`, `ctx.env` — no `require()` needed for core plugins.
 - **Core plugin 4-level config cascade** — spec defaults → createCoreConfig → createCore → createApp.
-- **Public exports are explicit, documented consts — never destructured.** Re-export `createApp` / `createPlugin` / `createCore` (and every plugin factory) as `export const x = source.x;` with its own directly-preceding JSDoc block. NEVER `export const { … } = framework` — a destructured binding's JSDoc dies at the module boundary, so consumers and editor hover get nothing and the emitted `dist/*.d.ts` ships them bare. See [Public Export Shape](#public-export-shape-jsdoc-survival).
+- **Public exports are explicit, documented consts, never destructured.** Re-export `createApp` / `createPlugin` / `createCore` (and every plugin factory) as `export const x = source.x;` with its own directly-preceding JSDoc block. `export const { … } = framework` does not work: a destructured binding's JSDoc dies at the module boundary, so consumers and editor hover get nothing and the emitted `dist/*.d.ts` ships them bare. See [Public Export Shape](#public-export-shape-jsdoc-survival).
 
 ## Event Registration Standard
 
@@ -168,12 +180,12 @@ events: (register) => ({
 
 No explicit generics on `createPlugin`. Event types inferred from `register<T>()` calls.
 
-## CRITICAL Anti-Pattern: No Explicit Generics on createPlugin
+## Anti-pattern: no explicit generics on createPlugin
 
-This is the #1 violation to watch for. All types MUST be inferred from the spec object:
+This is the most common violation. All types are inferred from the spec object:
 
 ```typescript
-// ANTI-PATTERN — NEVER ALLOW THIS:
+// Anti-pattern — do not write this:
 createPlugin<"bundler", BundlerConfig, BundlerState, { bundle(): Promise<void> }>("bundler", { ... })
 
 // CORRECT — All types inferred from spec object:
@@ -188,28 +200,28 @@ createPlugin("bundler", {
 
 **Where to check:** Every `createPlugin(` call. If it has angle brackets before the parenthesis, it is wrong.
 
-## Common Mistakes — DON'T Do These
+## Common mistakes
 
 ```typescript
-// DON'T: Deep merge config — Moku uses shallow merge ONLY
+// Do not deep merge config — Moku uses shallow merge only
 config: { theme: { ...defaults.theme, ...overrides.theme } }  // WRONG
 config: { ...defaults, ...overrides }                          // CORRECT
 
-// DON'T: Consumer imports from @moku-labs/core
+// Do not import @moku-labs/core in a consumer
 import { createCoreConfig } from '@moku-labs/core';  // WRONG in consumer
 import { createApp } from 'my-framework';             // CORRECT
 
-// DON'T: Return state directly from API — leaks mutable internals
+// Do not return state directly from an API — it leaks mutable internals
 api: (ctx) => ({
   getState: () => ctx.state,                   // WRONG — exposes mutable object
   getSessions: () => [...ctx.state.sessions],  // CORRECT — return copy/closure
 })
 
-// DON'T: Use emit for request/response — events are notifications
+// Do not use emit for request/response — events are notifications
 ctx.emit('auth:getUser', { id });       // WRONG — events don't return values
 ctx.require(authPlugin).getUser(id);    // CORRECT — use require() for queries
 
-// DON'T: Make a core plugin that needs events or depends
+// Do not make a core plugin that needs events or depends
 createCorePlugin("router", {
   depends: [authPlugin],               // WRONG — core plugins are self-contained
   events: (r) => ({ ... }),            // WRONG — core plugins can't have events
@@ -225,11 +237,11 @@ createCorePlugin("router", {
 | `hooks`, `api`, `onInit`, `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
 | `onStop` | TeardownContext | `global` only |
 
-**Important:** `onStart` and `onStop` are OPTIONAL. They are only needed when:
+`onStart` and `onStop` are optional. They are needed when:
 - **onStart:** Opening server connections, starting listeners, mounting UI, or other runtime initialization that cannot happen during synchronous init
 - **onStop:** Closing connections, flushing buffers, unmounting, or other teardown
 
-Most plugins (CLI tools, build tools, utility plugins, config-only plugins) do NOT need start/stop. Only include them when there is an actual resource to manage.
+Most plugins (CLI tools, build tools, utility plugins, config-only plugins) do not need start/stop. Include them when there is an actual resource to manage.
 
 ## Error Message Format
 
@@ -265,8 +277,8 @@ For detailed specifications, consult:
 - `references/sandbox-index.md` — Coding-style exemplars (real moku code) — open the tier-matching plugin before writing source
 - `references/memory-schema.md` — `.planning/` durable layer + STATE.md Recovery block for fast multi-session resume
 - `references/tool-scoping.md` — Per-stage tool posture: why path-based write gates live in hooks, not `disallowed-tools`
-- `references/skeleton-conventions.md` — Hook-compliant authoring rules (≤30-line index, typed config, structural types, JSDoc) — read BEFORE writing skeleton/plugin source
-- `references/house-style.md` — Approved repo conventions validators must NOT block (api: createApi, framework test bootstrap, per-event register)
+- `references/skeleton-conventions.md` — Hook-compliant authoring rules (≤30-line index, typed config, structural types, JSDoc) — read before writing skeleton/plugin source
+- `references/house-style.md` — Approved repo conventions validators do not block (api: createApi, framework test bootstrap, per-event register)
 - `references/glossary.md` — Domain terms + ESLint abbreviation allowList so agents/spell-check don't "correct" valid names
 
 ## Advanced References (load when needed)
@@ -276,10 +288,10 @@ For projects using `createCorePlugin`, read `references/plugin-settings.md` (4-l
 
 ## Context Strategy (1M-context models)
 
-All current Claude models (Opus/Sonnet 4.x) run a **1M-token context window**. Apply Anthropic's
-context-engineering guidance rather than treating the window as scarce:
+Context windows are 1M tokens. Apply context-engineering guidance rather than treating the window
+as scarce:
 
-- **Index + fetch on demand — do NOT front-load the whole spec.** The vendored spec is ~6,400
+- **Index and fetch on demand; do not front-load the whole spec.** The vendored spec is ~6,400
   lines; read `spec-index.md` (small, ~5KB) and open only the one or two `spec/NN-*.md` files a
   decision needs. More tokens in context is not automatically better — recall degrades as the
   window fills ("context rot").
@@ -296,7 +308,12 @@ context-engineering guidance rather than treating the window as scarce:
 ## Related Skills
 
 - **moku-plugin** — Plugin structure, complexity tiers, file organization, wiring harness pattern
-- **moku-web** — Preact web patterns (Vite-free, Bun-bundled), island architecture, CSS architecture with @scope/@layer
+- **`moku-web:moku-web`** (pack `moku-web`) — Preact web patterns (Vite-free, Bun-bundled), island architecture, CSS architecture with @scope/@layer
+- **`moku-worker:moku-worker`** (pack `moku-worker`) — Cloudflare Workers backend: Durable Objects, Queues, R2, D1, KV
+- **`moku-room:moku-room`** (pack `moku-room`) — couch multiplayer: shared screen + phones, WebRTC state sync
+- **`moku-design:design`** (pack `moku-design`) — the design station and Astra
+
+Pack skills live in other plugins: load them with the Skill tool by their id.
 
 ### Cross-Skill Example: Router Plugin with Web Integration
 
@@ -313,7 +330,7 @@ export const routerPlugin = createPlugin('router', {   // export uses <name>Plug
   api: createRouterApi,                        // wiring harness pattern
 });
 
-// 3. moku-web: Island handles client-side navigation
+// 3. moku-web:moku-web: island handles client-side navigation
 // islands/NavigationIsland.ts — vanilla TS, no framework
 export const Navigation = createIsland('nav', {
   onCreate(el) { el.querySelectorAll('a').forEach(a => a.addEventListener('click', handleNav)); },

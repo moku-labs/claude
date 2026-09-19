@@ -4,7 +4,7 @@ description: >
   Maintainer skill for THIS repo (the moku Claude Code plugin). Syncs a moku-family
   framework's skill + plugin index with its upstream npm/GitHub release: detects whether a
   new version shipped, and if so regenerates the framework's API-form section + plugin
-  index and registers the new version with /moku:upgrade. Extensible to any moku-family
+  index and registers the new version with the upgrade skill (/moku:upgrade). Extensible to any moku-family
   framework via the shared registry. Use when: a new @moku-labs/web (or @moku-labs/core, or
   future moku-family) release ships; the user says "update the moku-web skill / check for
   new moku framework releases / sync moku frameworks / is there anything new in moku-web";
@@ -14,14 +14,14 @@ description: >
 
 # moku-sync — keep moku-family skills current with upstream
 
-This is a **maintainer skill** for the moku plugin repo (it ships with the plugin, like
-its sibling `spec-sync`, but only acts inside this repo). It is the
-counterpart to `/moku:upgrade`: `/moku:upgrade` bumps a *consumer project's* dependency;
-`moku-sync` keeps *this plugin's teaching material* (skills + plugin indexes) in step with
-what those frameworks actually ship.
+This skill ships in the **moku-maintainer** pack and operates on **this repository's working tree**.
+The pack is `defaultEnabled: false`, so enable it and run the skill from the repository root. It is
+the counterpart to `/moku:upgrade`: `/moku:upgrade` bumps a *consumer project's* dependency;
+`moku-sync` keeps *this repository's teaching material* (skills + plugin indexes) in step with
+what those frameworks actually ship. All paths below are relative to the repository root.
 
-**Single source of truth:** [`skills/moku-core/references/moku-frameworks.md`](../moku-core/references/moku-frameworks.md)
-— the moku-family framework registry. This skill loops over its `frameworks[]` entries;
+**Single source of truth:** `plugins/moku/skills/moku-core/references/moku-frameworks.md` — the
+moku-family framework registry. This skill loops over its `frameworks[]` entries;
 nothing here is hard-coded per framework, so a new framework is onboarded by adding a
 registry row (see "Onboarding a new framework" below), not by editing this skill.
 
@@ -34,17 +34,17 @@ registry row (see "Onboarding a new framework" below), not by editing this skill
 
 ## Preconditions
 
-- Run from the moku plugin repo root (a `.claude-plugin/plugin.json` with `"name": "moku"`
-  exists). In any other project, STOP and report — this skill maintains the plugin itself.
+- Run from this repository's root: `.claude-plugin/marketplace.json` exists and lists a plugin named
+  `moku`. In any other project, stop and report — this skill maintains the repository itself.
 - Network access to `github.com` / `raw.githubusercontent.com` / `registry.npmjs.org`
-  (via `gh`, `curl`, or `WebFetch`). If unavailable, STOP and report — never fabricate an
-  API surface or plugin catalog; an invented entry in a skill agents trust is worse than a
+  (via `gh`, `curl`, or `WebFetch`). If unavailable, stop and report. Never fabricate an
+  API surface or plugin catalog: an invented entry in a skill agents trust is worse than a
   stale one.
 
 ## Process
 
 ### 1. Load the registry
-Read `skills/moku-core/references/moku-frameworks.md`, parse the ```json``` block.
+Read `plugins/moku/skills/moku-core/references/moku-frameworks.md`, parse the ```json``` block.
 Select the target entries (all, or the one matching `<key>`).
 
 ### 2. Resolve the upstream latest version (per framework)
@@ -53,7 +53,7 @@ Use the entry's `releaseSource`. Prefer, in order:
 2. `npm view <npm> version` (and `npm view <npm> dist-tags`)
 3. `curl` the `packageJson` raw URL and read `version`.
 
-Record `latest`. If the source is unreachable, STOP for that framework and report.
+Record `latest`. If the source is unreachable, stop for that framework and report.
 
 ### 3. Detect "is there anything new?"
 Compare `latest` against the registry `knownVersion` (semver):
@@ -76,22 +76,25 @@ minimal usage example), and the **plugin catalog** (per plugin: kind core/regula
 emitted events + payloads, context API, config keys).
 
 ### 5. Regenerate the framework's teaching material
-- **Plugin index** (`pluginIndex`, e.g. `skills/moku-web/references/plugin-index.md`):
+- **Plugin index** (the entry's `pluginIndex`, e.g.
+  `plugins/moku-web/skills/moku-web/references/plugin-index.md`;
+  `plugins/moku-worker/skills/moku-worker/references/plugin-index.md`,
+  `plugins/moku-room/skills/moku-room/references/plugin-index.md`):
   fill every `<!-- sync:populate X -->` section (API, plugins, properties, events, usage),
   update the header `Synced version`, and remove the "PENDING FIRST SYNC" status banner.
   Keep the `sync:populate` markers for the next run.
-- **Skill API section** (`skill`/SKILL.md): update the **minimal** API-form section to
+- **Skill API section** (the entry's `skill` + `/SKILL.md`, e.g.
+  `plugins/moku-web/skills/moku-web/SKILL.md`): update the **minimal** API-form section to
   match the new signatures. Keep edits surgical — update the API/usage block and link to
-  the regenerated plugin index; do not rewrite unrelated guidance. Follow the moku-core
-  [Public Export Shape](../moku-core/SKILL.md) convention for any export
-  examples (explicit, individually-documented consts — never destructured).
+  the regenerated plugin index; do not rewrite unrelated guidance. Export examples follow the
+  Public Export Shape convention in `plugins/moku/skills/moku-core/SKILL.md` (explicit,
+  individually-documented consts, not destructured).
 - If new **plugins / events / commands** appeared, call them out in the report.
 
-### 6. Wire /moku:upgrade
+### 6. Wire the upgrade skill (`/moku:upgrade`, `plugins/moku/skills/upgrade/`)
 - Update the registry entry's `knownVersion` to `latest`.
 - Ensure the `upgrade.migrationId` migration exists in
-  [`skills/moku-core/references/upgrade-migrations.md`](../moku-core/references/upgrade-migrations.md)
-  with the `detect → apply → verify → rollback` shape: detect = `package.json` contains
+  `plugins/moku/skills/moku-core/references/upgrade-migrations.md` with the `detect → apply → verify → rollback` shape: detect = `package.json` contains
   `detect.packageJsonDep`; apply = bump that dependency to `latest` (respect
   `distTagPolicy`); verify = project verify gate; rollback = restore the prior range.
   The migration body reads the version **from the registry**, so a routine version bump
@@ -106,16 +109,21 @@ emitted events + payloads, context API, config keys).
   - `up to date` (no change), or
   - `synced <npm> <knownVersion> → <latest>` with: new plugins, new events, new/changed
     commands, API changes, and the files written.
-- Never commit and never `--no-verify`. Leave changes staged for the maintainer to review,
-  bump the plugin version (`plugin.json` + `marketplace.json` + `CHANGELOG.md`), and ship.
+- Do not commit and do not pass `--no-verify`. Leave the changes in the working tree for the
+  maintainer to review, then bump every affected pack: each
+  `plugins/<name>/.claude-plugin/plugin.json` **and** that plugin's entry in
+  `.claude-plugin/marketplace.json` move to the same version — `claude plugin tag` validates that
+  they agree — plus a CHANGELOG entry (history through 0.62 lives in `docs/changelog/0.1-0.62.md`).
 
 ## Onboarding a new moku-family framework
 
-1. Add a `frameworks[]` entry to `skills/moku-core/references/moku-frameworks.md`
-   (`key`, `npm`, `repo`, `layer`, `knownVersion: null`, `skill`, `pluginIndex`,
+1. Create the pack from `docs/pack-template/` — `plugins/moku-<key>/` with
+   `.claude-plugin/plugin.json` (`dependencies: ["moku"]`), `skills/moku-<key>/SKILL.md`,
+   `skills/moku-<key>/references/plugin-index.md` and at least one `evals/` case. The template's
+   README has the five steps, including the `.claude-plugin/marketplace.json` entry.
+2. Add a `frameworks[]` entry to `plugins/moku/skills/moku-core/references/moku-frameworks.md`
+   (`key`, `npm`, `repo`, `layer`, `knownVersion: "0.0.0"`, `pack`, `skill`, `pluginIndex`,
    `dependsOn`, `detect`, `releaseSource`, `upgrade`).
-2. Create `skills/<key>/SKILL.md` and `skills/<key>/references/plugin-index.md` (copy the
-   moku-web index template).
 3. Run `moku-sync <key>` to populate from upstream.
 
 That is the entire extension path — this skill, `/moku:upgrade`, and the registry all

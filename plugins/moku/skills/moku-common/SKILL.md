@@ -17,8 +17,8 @@ description: >
 !`test -f package.json && grep -E '"@moku-labs/common"' package.json 2>/dev/null || true`
 !`test -f package.json && grep -E '"(logPlugin|envPlugin)"' package.json 2>/dev/null || true`
 
-Enforce the family-level conventions for consuming `@moku-labs/common`; keep CLI output
-branded, logging structured, and env access validated. These are **family conventions** (how
+Family-level conventions for consuming `@moku-labs/common`: CLI output stays branded, logging
+structured, and env access validated. These are **family conventions** (how
 moku projects consume the shared package) — separate from the upstream Moku Core invariants
 R1–R8. The authoritative, citable rules with stable IDs live in
 [`references/conventions.md`](references/conventions.md) — start there when validating or
@@ -27,8 +27,8 @@ justifying a finding.
 ## The Rule
 
 **Render CLI output through the branded kit, log through `ctx.log`, read env through `ctx.env`.**
-A Moku project never hand-rolls ANSI escapes / box-drawing / spinners, never reaches for raw
-`console.*` for diagnostics, and never reads `process.env` directly. The shared package supplies
+A Moku project does not hand-roll ANSI escapes, box-drawing or spinners, does not reach for raw
+`console.*` for diagnostics, and does not read `process.env` directly. The shared package supplies
 all three so output looks consistent across the family and logging/env are testable and validated.
 
 ## What `@moku-labs/common` provides
@@ -73,10 +73,10 @@ export const { createPlugin, createCore } = coreConfig;
 > **Note (R1 still applies):** the explicit `createCoreConfig<Config, Events, [...]>` tuple is
 > required only because `Config`/`Events` are given explicitly — once you give ANY explicit type
 > arg the third `CorePlugins` tuple arg becomes mandatory (see `skeleton-conventions.md §2`). This
-> is NOT the banned explicit-generics-on-`createPlugin` pattern; `createPlugin`/`createCorePlugin`
+> is not the banned explicit-generics-on-`createPlugin` pattern; `createPlugin`/`createCorePlugin`
 > calls still infer everything from the spec object.
 
-A consumer app (Layer 3) inherits `ctx.log`/`ctx.env` from its framework — it does NOT register the
+A consumer app (Layer 3) inherits `ctx.log`/`ctx.env` from its framework — it does not register the
 core plugins itself (that is the framework's job). Consumer plugins just call `ctx.log.*` / `ctx.env.*`.
 
 ## Using `ctx.log` and `ctx.env` inside a plugin
@@ -132,22 +132,22 @@ process.stdout.write(box("Deployed to https://my-app.dev"));
 For interactive prompts use the kit's styled `confirm`/`select` (branded palette) rather than a
 third-party prompt library or hand-rolled `readline` formatting.
 
-## Anti-Patterns — DON'T Do These
+## Anti-patterns
 
 ```typescript
-// DON'T: raw console.* for diagnostics/events — use ctx.log (MC2)
+// Do not use raw console.* for diagnostics/events — use ctx.log (MC2)
 console.log("user logged in", userId);            // WRONG
 console.error("send failed", err);                // WRONG
 ctx.log.info("auth:login", { userId });           // CORRECT
 ctx.log.error("mailer:send-failed", { err });     // CORRECT
 
-// DON'T: raw process.env — use ctx.env (MC3)
+// Do not read raw process.env — use ctx.env (MC3)
 const key = process.env.API_KEY;                  // WRONG — unvalidated, untestable
 const port = Number(process.env.PORT ?? 3000);    // WRONG
 const key2 = ctx.env.require("API_KEY");          // CORRECT — throws if missing
 const port2 = ctx.env.get("PORT") ?? 3000;        // CORRECT — validated accessor
 
-// DON'T: hand-rolled ANSI / box-drawing / spinner — use @moku-labs/common/cli (MC1)
+// Do not hand-roll ANSI / box-drawing / spinner — use @moku-labs/common/cli (MC1)
 console.log("\x1b[35mDeploying…\x1b[0m");          // WRONG — raw ANSI
 console.log("┌────────────┐\n│  Done   │\n└────────────┘"); // WRONG — hand-built box
 const frames = ["⠋", "⠙", "⠹"];                    // WRONG — hand-rolled spinner frames
@@ -172,11 +172,11 @@ process.stdout.write(box("Done"));
 - [`references/conventions.md`](references/conventions.md) — the authoritative MC rule set (MC1
   branded CLI, MC2 `ctx.log` not `console.*`, MC3 `ctx.env` not `process.env`) with rationale, a
   correct/incorrect example, and detection guidance per rule. **Citable** by validators and the
-  `moku-common-validator` agent.
+  `moku-structure-validator` agent.
 
 ## Related Skills
 
 - **moku-core** — Architecture fundamentals, factory chain, the `ctx` object, core-plugin composition
 - **moku-plugin** — Plugin structure + tiers; where domain code that calls `ctx.log`/`ctx.env` lives
-- **moku-web** — `@moku-labs/web` already injects `log`/`env` core plugins (`ctx.log.*`/`ctx.env.*`);
+- **`moku-web:moku-web`** (pack `moku-web`) — `@moku-labs/web` already injects `log`/`env` core plugins (`ctx.log.*`/`ctx.env.*`);
   web CLIs (`app.cli.*`) render through the same branded kit

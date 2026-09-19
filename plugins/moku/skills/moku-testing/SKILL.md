@@ -14,13 +14,13 @@ This skill provides testing patterns for Moku plugins. Use it when writing unit 
 
 ## TDD Protocol (Build Waves)
 
-Builder sub-agents follow **Red → Green → Refactor** when constructing plugins during build waves. Tests are derived from the spec and written BEFORE implementation.
+The `moku-builder` agent follows Red → Green → Refactor when constructing plugins during build waves. Tests are derived from the spec and written before the implementation.
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md` for the full TDD protocol: four phases (Types → Red → Green → Refactor), output contract extensions, core plugin adaptations, and edge cases.
 
 ## Context Tiers
 
-Every Moku plugin callback receives a specific context tier. Tests MUST mock the correct tier — using the wrong fields is a BLOCKER.
+Every Moku plugin callback receives a specific context tier. Tests mock the matching tier; using fields from another tier is a blocker.
 
 | Callback | Context Tier | Available Fields |
 |----------|-------------|-----------------|
@@ -41,7 +41,7 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/mock-context.md` for 
 - Domain mocks are typed with the exported `PluginCtx<C, S, E>` (`config`/`state`/`emit` only);
   if a domain file composes its own ctx with `require`, mock it with typed APIs matching the
   actual dependency signatures
-- Never include fields from a different context tier
+- Fields from a different context tier do not belong in the mock
 
 ## Unit Test Pattern
 
@@ -122,6 +122,6 @@ src/plugins/router/
 │       └── router.test.ts
 ```
 
-- Plugin tests live INSIDE the plugin directory (NOT in root `tests/`)
-- Root `tests/` is only for framework-level cross-plugin tests
+- Plugin tests live inside the plugin directory, not in root `tests/`
+- Root `tests/` holds framework-level cross-plugin tests
 - Unit tests in `__tests__/unit/`, integration in `__tests__/integration/`

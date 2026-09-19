@@ -12,8 +12,9 @@ description: >
 > **Synced to `@moku-labs/worker@0.15.0`** (npm `dist-tags.latest`; surface from the published 0.15.0
 > tarball + the `v0.15.0` git tag source). Full surface — every plugin, its API/config/events, the
 > dependency graph, and the runtime-vs-node-only boundary — is in
-> [`references/plugin-index.md`](references/plugin-index.md). Registered in
-> [`moku-frameworks.md`](../moku-core/references/moku-frameworks.md) (`frameworks[worker]`).
+> [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
+> (`frameworks[worker]`): load the `moku:moku-core` skill with the Skill tool and read
+> `references/moku-frameworks.md` under the base directory it prints.
 
 ## Current Project State
 !`test -f package.json && grep -E '"@moku-labs/worker"' package.json 2>/dev/null || true`
@@ -39,24 +40,25 @@ for Cloudflare's runtime primitives — **Durable Objects, Queues, R2, D1, KV** 
 
 ## Idiomatic shape
 
-Build to the app-shape rubric in [`moku-idioms.md`](../moku-core/references/moku-idioms.md): **one project
-composes web + worker side-by-side.** That means **multiple `createApp` instances** — a web build app +
+Build to the app-shape rubric in `moku-idioms.md` — load the `moku:moku-core` skill with the Skill tool
+and read `references/moku-idioms.md` under the base directory it prints. **One project composes web +
+worker side-by-side.** That means **multiple `createApp` instances** — a web build app +
 browser SPA on
 `@moku-labs/web` (`app.ts`/`spa.tsx`) and a worker server app on `@moku-labs/worker` (`server.ts`) — plus
 a **thin** `cloudflare/worker.ts` entry that routes `/api`+`/ws` to the worker `server` and serves the
 built web client from the `ASSETS` binding. **Multiple instances, two frameworks in one project, and
-folder splits are all idiomatic — not anti-patterns.** Cloudflare bindings (DO / Queue / R2 / D1 / KV) are
+folder splits are all idiomatic, not anti-patterns.** Cloudflare bindings (DO / Queue / R2 / D1 / KV) are
 exposed as **plugins** — reach them via `ctx.require(plugin)`, keep business logic in plugins (the entry
 stays thin), and read env/secrets via `ctx.env` (not raw `process.env` or bare bindings) per the
-moku-common conventions (MC2/MC3). The one hard rule: this is a **Layer-3 app** — `createApp` only, never
-`createCoreConfig`/`createCore` or a direct `@moku-labs/core` dependency.
+moku-common conventions (MC2/MC3). The one hard rule: this is a **Layer-3 app** — `createApp` only, not
+`createCoreConfig`/`createCore` and no direct `@moku-labs/core` dependency (idiom I1).
 
 ## Framework API (@moku-labs/worker v0.15.0)
 
 One entry: **`@moku-labs/worker`**. The node-only deploy/CLI plugins (`deployPlugin`/`cliPlugin`) ship from
-the same root export and are tree-shaken out unless you list them — never in the runtime bundle otherwise.
+the same root export and are tree-shaken out unless you list them, so they stay out of the runtime bundle.
 (The `./cli` back-compat subpath was removed in 0.11.0.) `createApp` is **synchronous** (built once per
-isolate, frozen). Bindings are threaded as a **call argument** (`env`), never stored. There is **no stage
+isolate, frozen). Bindings are threaded as a **call argument** (`env`), not stored. There is **no stage
 plugin** (removed in 0.12.0): deployment stage is plain global config — set `config.stage`, read it via
 `ctx.global.stage`.
 

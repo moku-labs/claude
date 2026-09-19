@@ -1,70 +1,167 @@
-# Moku Plugin — Component Inventory
+# Moku marketplace — component inventory
 
-A discoverability map of what installing **moku** brings into a session, so you can see the
-component surface (and its rough context cost) before relying on it. Use `claude plugin details moku`
-for the live component list and `/usage` (per-category) to see actual token spend in a session.
+A discoverability map of what each plugin brings into a session, so the component surface (and its
+rough context cost) is visible before relying on it. Use `claude plugin details <name>` for the live
+component list and `/usage` for actual token spend.
 
-## Skills (10) — progressive disclosure; bodies load on trigger, `references/` load on demand
+One marketplace, six plugins: the core (`moku`), one pack per framework, and a maintainer pack.
+A pack depends on `moku` and never reaches core files by path — it loads the `moku:moku-core` skill
+with the Skill tool and reads `references/<file>` under the base directory the tool prints.
+
+| Plugin | Skills | Agents | Hooks | Bins | Default |
+|---|---:|---:|---:|---:|---|
+| `moku` | 17 | 13 | 16 scripts / 7 events | 2 | enabled |
+| `moku-web` | 2 | 4 | — | — | enabled |
+| `moku-design` | 2 | 1 | — | 1 | enabled |
+| `moku-worker` | 1 | — | — | — | enabled |
+| `moku-room` | 1 | — | — | — | enabled |
+| `moku-maintainer` | 2 | — | — | — | `defaultEnabled: false` |
+
+---
+
+## `moku` — the core
+
+### Lifecycle skills (11)
+
+Invoked as `/moku:<name>`, and by the conductor. Each one enters and leaves a station through
+`bin/moku-rails`.
+
+| Skill | model / effort | What it does |
+|---|---|---|
+| `moku` | fable / medium | The conductor — the single conversational entry. Opens a change, picks the station, invokes the others. |
+| `init` | fable / medium | Project level: scaffolds the project and leaves `.planning/moku.md`, the marker the rails read. |
+| `brainstorm` | fable / high | Present → Challenge → Decide debate loop into a position and a context file. |
+| `plan` | fable / high | Plan stages and specs; supports a delta spec for M changes. |
+| `build` | fable / medium | Gated build waves; an S route reproduces with a failing test, fixes, then verifies in scope. |
+| `verify` | fable / medium | Fans validators out directly, runs the cited-refute skeptic pass, auto-fixes in a bounded loop. |
+| `moku-release` | fable / medium | The release model: three commands from `@moku-labs/common`, two thin CI workflows, no `NPM_TOKEN`. |
+| `status` | fable / low | Phase and wave state from `.planning/STATE.md`. |
+| `check` | fable / low | Standalone checks, incl. `check --usage`. |
+| `clean` | fable / low | Clears generated and scratch state. |
+| `upgrade` | fable / low | Stack migration toward `target-stack.md`, driven by `upgrade-migrations.md`. |
+
+### Knowledge skills (6)
+
+Model-invocable, no `model`/`effort` — they inherit the session.
 
 | Skill | Triggers on | What it brings |
-|-------|-------------|----------------|
-| **moku-core** | moku architecture, factory chain, createCoreConfig, lifecycle, events, plugin structure | The authoritative `spec/` (15 vendored spec files) + `spec-index.md`, the coding-style `sandbox/` (48 exemplars) + `sandbox-index.md`, the build/plan/brainstorm/design reference set (51 reference docs, incl. the design set + `moku-idioms.md` + `e2e-testing.md`, the comprehensive Playwright e2e + visual-baseline gate), `agent-preamble.md`, memory + tool-scoping + hook-pattern docs |
-| **moku-plugin** | plugin structure, complexity tiers, createPlugin layout | Tiered plugin file organization (nano→very-complex), naming, wiring-harness pattern |
-| **moku-web** | moku web, islands, @scope/@layer, data-* attributes | Preact island architecture (Vite-free, Bun-bundled), CSS token system (points at the vendored `sandbox/demo/blog/`) |
-| **moku-worker** | moku worker, @moku-labs/worker, cloudflare durable object/queue/r2/d1/kv | Layer-2 Cloudflare Workers backend framework — synced to `@moku-labs/worker@0.15.0` (9 plugins: bindings/server/kv/d1/queues/storage/durableObjects + node-only deploy/cli; `endpoint.new` request guards, `config.stage` global (stage plugin removed in 0.12.0); full catalog in its `plugin-index.md`) |
-| **moku-room** | moku room, @moku-labs/room, couch multiplayer, webrtc/state sync | Standalone `@moku-labs/core` couch-multiplayer **framework** (you `createApp` from it; sibling to web/worker, NOT built on them) — synced to `@moku-labs/room@0.3.1` (7 plugins: transport/session/intent/sync engines + stage/controller facades + `hubPlugin`; opt-in `./server` tier exports `hubPlugin` — a `@moku-labs/worker` plugin — + the `Hub` DO, composed into your own worker app, not a core; full catalog in its `plugin-index.md`) |
-| **moku-common** | moku common, @moku-labs/common, branded cli, ctx.log, ctx.env, log/env plugin | Family conventions for the shared package: branded CLI kit (`@moku-labs/common/cli`), `logPlugin`/`ctx.log`, `envPlugin`/`ctx.env`; citable rules MC1–MC3 in `references/conventions.md`; paired with the `moku-common-validator` + `validate-common-usage` hook |
-| **moku-testing** | TDD, mock context, moku test patterns | Red→Green→Refactor protocol, mock-ctx + createTestApp scaffolds (points at vendored sandbox tests) |
-| **moku-readable-code** | readable code, wall of text, refactor for readability, story by layout, stanza style | The 10-rule stanza style (blank-line steps + intent comments, guard clauses, named predicates/constants, balanced extraction); paired with the `moku-readable-code-validator` |
-| **spec-sync** *(maintainer)* | "sync moku spec/knowledge", "re-vendor the moku core spec", "new core version" | Re-vendors the upstream Core spec + sandbox from `moku-labs/core`, regenerates `spec-index.md`/`sandbox-index.md`, then chains `moku-sync` to refresh every framework's index. STOPs outside the plugin repo. |
-| **moku-sync** *(maintainer)* | "sync moku frameworks", "check for new moku framework releases", "new @moku-labs/web release" | Per-framework counterpart to spec-sync: polls each registry framework's release source, regenerates its plugin index + skill API form, registers new versions with `/moku:upgrade`. Read-only `--check` mode. STOPs outside the plugin repo. |
+|---|---|---|
+| `moku-core` | moku architecture, factory chain, createCoreConfig, lifecycle, events | The vendored `spec/` + `spec-index.md`, the `sandbox/` exemplars + `sandbox-index.md`, the build/plan/brainstorm reference set, `agent-preamble.md`, `moku-idioms.md`, `moku-frameworks.md` (the framework registry and the pack contract), memory / tool-scoping / hook-pattern docs |
+| `moku-plugin` | plugin structure, complexity tiers, createPlugin layout | Tiered plugin file organization (Nano → VeryComplex), naming, the wiring-harness rule, Layer-3 consumer plugins |
+| `moku-testing` | TDD, mock context, moku test patterns | Red → Green → Refactor protocol, mock-ctx and `createTestApp` scaffolds, type-level tests |
+| `moku-readable-code` | readable code, wall of text, stanza style | The 10-rule stanza style; paired with `moku-style-validator` |
+| `moku-common` | @moku-labs/common, branded cli, ctx.log, ctx.env | MC1–MC3 in `references/conventions.md`; paired with `moku-structure-validator` and the `validate-common-usage` hook |
+| `moku-readme` | root readme, moku-labs readme style | The root-README house style: masthead, badges, central table, mermaid, footer |
 
-> Only `moku-core` is broad; the other nine trigger narrowly. The toolkit also keeps **Reference Projects** in
-> `moku-frameworks.md` — *public* worked examples only (e.g. the full-stack `tracker` in `github.com/moku-labs/demos`),
-> illustrating the `moku-idioms.md` app-shape rubric. References are Level-3 progressive
-> disclosure — they cost ~0 tokens until an agent opens them, which is why the vendored spec/sandbox
-> (~6,400 + ~4,000 lines) are *indexed*, not front-loaded.
+### Agents (13)
 
-## Commands (12)
+Only the orchestrating session spawns agents; no agent lists `Agent` in `tools`.
 
-`brainstorm` · `design` (multi-round, human-in-the-loop design exploration → a reusable design context,
-a *spec, not source*) · `plan` · `build` (the 3-stage gated core) · `e2e` (comprehensive Playwright e2e +
-visual-baseline coverage for a web app — every screen/feature tested, confirmed, and fixed; can also
-build/adjust a requested visual feature, then cover it) · `verify` (root/entrypoint idiom conformance,
-I1–I5 — apps compose not define a framework, one createApp per framework, thin entries, config in place —
-iterates ≤3 cycles auto-fixing) · `next` · `status` · `check` (incl. `check --usage`) · `clean` · `init` ·
-`upgrade` (zero-arg stack migration).
+| Agent | model / effort | Role |
+|---|---|---|
+| `moku-structure-validator` | sonnet / medium | Spec, plugin structure, root/entrypoint app shape (I1–I6), `@moku-labs/common` usage |
+| `moku-style-validator` | sonnet / medium | Readable-code stanza style and JSDoc completeness |
+| `moku-quality-validator` | sonnet / medium | Runs `tsc`, tests and lint through Bash as facts, then judges test quality |
+| `moku-architecture-validator` | fable / high | Cross-plugin dependency graph, event flow, API consistency |
+| `moku-plan-checker` | fable / high | Plan completeness: requirement coverage, dependency graph, event flow |
+| `brainstorm-challenger` | fable / high | Stress-tests brainstorm positions |
+| `moku-builder` | opus / high | Builds one plugin from spec + skeleton: TDD, filesystem isolation, JSON contract |
+| `moku-builder-deep` | opus / xhigh | Same instructions, for Complex/VeryComplex tiers and retries |
+| `moku-error-diagnostician` | opus / high | Classifies build failures, proposes targeted fixes |
+| `moku-error-diagnostician-deep` | opus / xhigh | Same instructions, the retry variant |
+| `moku-code-reviewer` | opus / high | Post-wave diff review |
+| `moku-skeptic` | opus / medium | Upholds a finding unless a cited spec section refutes it |
+| `moku-researcher` | sonnet / medium | npm ecosystem and reference implementations; the only agent with web access |
 
-## Agents (28) — spawned on demand by commands/workflows, isolated context
+A Sonnet agent never closes a gate: its findings go through `moku-skeptic` and the verdict is the
+orchestrating session's.
 
-- **Validation (11):** spec, root (root/entrypoint/app-shape I1–I5 — the build/verify-time idiom check, driven by `/moku:verify`), plugin-spec, type, jsdoc, test, web, readable-code, common, architecture validators + validation-coordinator
-- **Review/judgment (5):** verifier, code-reviewer, wave-judge, error-diagnostician, skeptic
-- **Brainstorm (3):** brainstorm-researcher, challenger, synthesizer
-- **Design (3):** design-generator (parallel concept prototypes), design-synthesizer (writes the design context), design-critic (round critique)
-- **Build/plan support (3):** builder, plan-checker, planning-phase `researcher`
-- **E2E (3):** web-e2e-tester (comprehensive Playwright e2e + visual baselines + dual-side error capture + behavioral correctness; runs the app for real on desktop + mobile, orchestrates the human-QA loop until clean) + web-qa-explorer (human-QA exploratory tester — charters/tours/layered oracles + FEW HICCUPPS; finds what the scripted suite missed and turns confirmed bugs into durable regression tests) + web-ux-reviewer (modern-UX + responsive/mobile experience judge; evidence-grounded, applies clear standards-backed wins, proposes the rest)
-- Mechanical validators run at `effort: low` (haiku); deep reviewers (`code-reviewer`, `wave-judge`,
-  `skeptic`) at `effort: high` — to keep the 20-agent surface cost-aware.
+### Hooks — 16 scripts across 7 events (`hooks/hooks.json`)
 
-## Workflows (2) — opt-in dynamic fan-outs (Claude Code v2.1.154+)
+| Event | Scripts |
+|---|---|
+| `SessionStart` | `detect-moku-project.sh`, `session-rails.mjs` |
+| `PreToolUse` (Write, Edit) | `pre-write.mjs` |
+| `PreToolUse` (Bash) | `verify-before-commit.sh` |
+| `PostToolUse` (Write, Edit) | `format-on-save.sh` (async) |
+| `PostToolUse` (Bash) | `pre-commit-review.sh` |
+| `PreCompact` / `PostCompact` | `precompact-state.sh`, `postcompact-state.sh` |
+| `SubagentStop` | `on-subagent-stop.mjs` |
+| `Stop` | `on-stop.mjs` |
 
-`moku-build-wave` (build one wave non-interactively) · `moku-migrate-sweep` (repo-wide mechanical
-change). Verification is the **`/moku:verify` command** (full validator fan-out + root/entrypoint
-idioms I1–I5 + uphold-biased cited skeptic + auto-fix loop) — the former `moku-verify` workflow was
-merged into it.
+Not wired into `hooks.json`, called by the scripts above or by skills:
+`check-plugin-antipatterns.sh`, `validate-common-usage.sh`, `validate-plugin-index.sh`,
+`validate-plugin-structure.sh`. `moku-statusline.sh` is wired through `settings.json`
+(`subagentStatusLine`). Output style: `output-styles/moku.md`.
 
-## Hooks (12 events / 22 scripts)
+### Bins (2)
 
-PreToolUse guards (brainstorm path-gate, planning-write approve, plugin antipatterns,
-common-usage MC1–MC3, structure + index validation, commit gate incl. `.planning/` no-commit),
-PostToolUse (format-on-save,
-pre-commit-review), Pre/PostCompact state snapshots, SessionStart (structured project context +
-session title), PostToolUseFailure (routes tsc/lint/test failures to the diagnostician),
-Stop/SubagentStop/Notification/PermissionRequest/UserPromptSubmit/SessionEnd. Status line:
-`subagentStatusLine` wired in `settings.json`.
+- `bin/moku-rails` — the lifecycle gate. `enter` / `done` / `pause` / `open`; exit 2 means refused.
+- `bin/moku-verify-artifacts` — deterministic 3-level artifact verification (existence, substance, wiring).
+
+### Evals (7)
+
+`conductor-idea`, `rails-no-init`, `nano-plugin-shape`, `thin-root`, `readable-stanzas`,
+`release-first-publish`, plus `baselines/`. See `plugins/moku/evals/README.md`.
+
+---
+
+## `moku-web` — the `@moku-labs/web` pack
+
+- **Skills (2):** `moku-web` (knowledge: Preact islands, `data-*` attributes, `@scope`/`@layer`,
+  tokens, `references/project-spec.md`), `e2e` (fable / medium — the real-browser e2e station,
+  `references/e2e-testing.md`).
+- **Agents (4):** `moku-web-validator` (sonnet / medium), `moku-web-e2e-tester` (opus / high),
+  `moku-web-qa-explorer` (opus / high), `moku-web-ux-reviewer` (sonnet / medium).
+- **Evals (2):** `web-island-attrs`, `e2e-ux-gate-fallback`.
+
+## `moku-design` — the design station
+
+- **Skills (2):** `design` (fable / high), `moku-astra` (fable / medium).
+- **Agents (1):** `design-generator` (opus / high) — one self-contained concept prototype per instance.
+- **Bins (1):** `bin/moku-astra` — `review|generate|edit|probe`; exit 3 means unavailable.
+- **Evals (2):** `design-api-mode`, `astra-when-not`.
+
+## `moku-worker` — the `@moku-labs/worker` pack
+
+- **Skills (1):** `moku-worker` — the Cloudflare Workers backend framework, synced to `0.15.0`
+  (9 plugins: bindings, server, kv, d1, queues, storage, durableObjects, deploy, cli; `endpoint.new`
+  guards; stage is plain global config since 0.12.0). Full catalog in `references/plugin-index.md`.
+- **Evals (1):** `worker-one-app` — one worker app composing deploy and cli, no facade (idiom I6).
+
+## `moku-room` — the `@moku-labs/room` pack
+
+- **Skills (1):** `moku-room` — couch multiplayer, synced to `0.3.1`. A standalone `@moku-labs/core`
+  framework, sibling to web and worker, not built on them: 7 plugins, three signaling adapters, and
+  an opt-in `./server` tier exporting `hubPlugin` + the `Hub` Durable Object. Full catalog in
+  `references/plugin-index.md`.
+- **Evals (1):** `room-standalone-core` — room is its own core, not a web or worker plugin pack.
+
+## `moku-maintainer` — this repository's own tooling
+
+`defaultEnabled: false`. Both skills run from the repository root and edit this working tree.
+
+- `spec-sync` — re-vendors the Core spec + sandbox into
+  `plugins/moku/skills/moku-core/references/`, regenerates `spec-index.md` / `sandbox-index.md`,
+  then chains `moku-sync`.
+- `moku-sync` — per framework: resolves the upstream release, regenerates the pack's
+  `plugin-index.md` and skill API form, bumps `knownVersion` in the registry.
+
+Version bumps touch both `plugins/<name>/.claude-plugin/plugin.json` and the matching entry in
+`.claude-plugin/marketplace.json`; the two must agree, and `claude plugin tag` validates it.
+
+---
+
+## Adding a pack
+
+Copy `docs/pack-template/` and follow its five steps. The pack contract — same shape for every pack,
+plus the registry row — is in `plugins/moku/skills/moku-core/references/moku-frameworks.md`
+(§ Pack contract). Frameworks without a pack yet: `@moku-labs/ai`, `@moku-labs/system`, and the
+planned game engine.
 
 ## Cost note
 
-The agent fan-outs and the moku-core reference set are the largest contributors. To keep spend
-down: run build waves one-per-session, prefer the read-only/`effort: low` validators for routine
-checks, and use `/usage` to see the per-skill/per-subagent breakdown. See also `/moku:check --usage`.
+References are progressive disclosure: they cost roughly nothing until an agent opens them, which is
+why the vendored spec and sandbox are indexed rather than front-loaded. The agent fan-outs are the
+largest contributor. Enable only the packs for the frameworks in use, and read the per-skill and
+per-subagent breakdown with `/usage` or `/moku:check --usage`.

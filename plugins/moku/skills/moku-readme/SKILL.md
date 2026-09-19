@@ -8,8 +8,8 @@ description: >
   readme", "root readme", "main readme", "write/generate the readme", "moku-labs readme
   style", "readme house style", "readme masthead/badges/tagline", "readme nav line",
   "make the readme look like moku-labs", "readme mermaid diagram", or reviewing a root
-  README for house-style compliance. NOT for per-plugin READMEs (those are minimal —
-  see build-final Step 5.5).
+  README for house-style compliance. Not for per-plugin READMEs, which are minimal —
+  see build-final Step 5.5.
 ---
 
 # Moku README — the main/root README house style
@@ -91,7 +91,7 @@ Pick the ordered menu for the repo's shape. Required sections are marked **(req)
 `Commands` / `Agents` / `Skills` / `Hooks` / `Workflows` tables **(req)** →
 `Output styles` → `Configuration` → `License` **(req)**
 
-**Consumer app** (Layer-3, built by `/moku:build app`):
+**Consumer app** (Layer-3, built by the `build` skill — `/moku:build` — in app mode):
 `What it is` **(req)** → `Quick start` (the *exact* documented run command) **(req)** →
 `Features` → `Configuration` → `Deployment` → `License`
 
@@ -120,7 +120,7 @@ Common rules across all shapes:
 - **Em-dashes** for asides; they set the family's rhythm.
 - **Dry wit is allowed** and the toolkit (`claude`) leans into it (self-aware jokes
   about its own validators). Libraries (`common`, `web`) stay drier but still have punch.
-  Never sacrifice clarity for the joke.
+  Clarity wins over the joke.
 - **No filler marketing.** No "blazing fast", no "powerful", no "simply". Earn every claim.
 
 ---
@@ -165,7 +165,7 @@ Brand hex reference: moku blue `1864ab` · teal `0b7285` · claude orange `d9775
 npm red `cb3837` · TypeScript `3178c6` · node green `339933` / accent green `2da44e`.
 
 Rules: link each badge to a relevant in-page anchor (`#requirements`, `#entry-points`)
-or external URL — never a dead badge. Keep the row to 4–7. Order: version/npm first,
+or external URL — no dead badges. Keep the row to 4–7. Order: version/npm first,
 license last.
 
 ---

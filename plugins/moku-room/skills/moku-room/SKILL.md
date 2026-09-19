@@ -15,8 +15,9 @@ description: >
 > root README). Full surface — the 7 plugins, the client core (`.`) + the opt-in `./server` tier (now a
 > **`hubPlugin` + `Hub` DO** export, **not** a core — compose into your own `@moku-labs/worker` app), the
 > three signaling adapters, config, events, and the dependency graph — is in
-> [`references/plugin-index.md`](references/plugin-index.md). Registered in
-> [`moku-frameworks.md`](../moku-core/references/moku-frameworks.md) (`frameworks[room]`).
+> [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
+> (`frameworks[room]`): load the `moku:moku-core` skill with the Skill tool and read
+> `references/moku-frameworks.md` under the base directory it prints.
 
 ## Current Project State
 !`test -f package.json && grep -E '"@moku-labs/room"' package.json 2>/dev/null || true`
@@ -27,7 +28,8 @@ description: >
 `@moku-labs/worker`, **not built on them** — for **couch-multiplayer**: a shared "screen" (TV/laptop — the
 authoritative host) plus up to 8 phone controllers, over **direct WebRTC DataChannels on the LAN** (via
 `trystero`), with multi-device state sync and **QR-code join** (via `qrcode`). You `createApp` **from Room
-itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, never `@moku-labs/web`/`@moku-labs/core`.
+itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, not from `@moku-labs/web` or
+`@moku-labs/core`.
 
 > **Breaking in 0.3.1 (`#6`):** the `./server` tier is **no longer a core**. `@moku-labs/room/server` now
 > exports **`hubPlugin`** (a `@moku-labs/worker` plugin) + the **`Hub`** Durable Object — you compose
@@ -55,12 +57,13 @@ itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, never `@moku-l
 
 A room app is a **Layer-3 app**: `createApp` from `@moku-labs/room` for the client (and that framework's
 re-exported `createPlugin`); for the opt-in signaling tier, a **single `@moku-labs/worker` `createApp`** that
-composes room's `hubPlugin` (+ `durableObjects`/`deploy`/`cli`) — never `createCoreConfig`/`createCore` or a
-direct `@moku-labs/core` dependency (I1). For app shape, follow the
-[`moku-idioms.md`](../moku-core/references/moku-idioms.md) rubric and the worked reference **`demos/tracker`**:
+composes room's `hubPlugin` (+ `durableObjects`/`deploy`/`cli`) — not `createCoreConfig`/`createCore`, and no
+direct `@moku-labs/core` dependency (I1). For app shape, follow the `moku-idioms.md` rubric —
+load the `moku:moku-core` skill with the Skill tool and read `references/moku-idioms.md` under the base
+directory it prints — and the worked reference **`demos/tracker`**:
 **multiple `createApp` instances across distinct runtimes (a client app + a worker server app), composing
 frameworks side-by-side, and folder splits are idiomatic** — not anti-patterns. The server is **one** worker
-app composing `hubPlugin`, never a second/facade app (`moku-idioms.md §I6`). Build the UI with the moku-web
+app composing `hubPlugin`, not a second or facade app (`moku-idioms.md §I6`). Build the UI with the `moku-web:moku-web` skill's
 patterns underneath. Shared-screen vs phone roles, the WebRTC peer mesh, and synced state are **plugins** —
 reach them via `ctx.require(plugin)`. Keep the Cloudflare entry (`cloudflare/worker.ts`) thin: it delegates
 `fetch` to the composed worker app's `server.hub.handle`.
@@ -84,8 +87,8 @@ app.stage.onIntent("score", (payload, peerId) => app.stage.mutate("scores", draf
   `roster`). **`controllerPlugin`** → `app.controller` (`ControllerApi`: `joinRoom`, `read`, `on`, `intent`,
   `requestWakeLock`, `releaseWakeLock`).
 - 5 `room:*` lifecycle events; **all gameplay rides the `Wire`**, never `emit`. Signaling: `publicRendezvous()`
-  (default) / `inMemory()` (tests) / `serverSignaling(url)` (opt-in, the `./server` tier). **No TURN ever** (D2 —
-  design target is the home LAN).
+  (default) / `inMemory()` (tests) / `serverSignaling(url)` (opt-in, the `./server` tier). **No TURN** (D2 —
+  the design target is the home LAN).
 - **Opt-in `./server` tier (a plugin, not a core — 0.3.1):** `import { hubPlugin, Hub } from
   "@moku-labs/room/server"` and compose `hubPlugin` (a `@moku-labs/worker` plugin) into your **own** single
   `@moku-labs/worker` `createApp` — alongside `durableObjectsPlugin` (the `Hub` DO) + `deployPlugin`/`cliPlugin`
