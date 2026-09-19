@@ -1,24 +1,28 @@
 # Design Context Template
 
-The template for `design-context.md` — the single human-readable output of `/moku:design`. It is the
-**design specification** the rest of the Moku workflow (`brainstorm` → `plan` → `build`) consumes. The
-`design-synthesizer` agent writes it from the final, polished prototype; `/moku:plan` and `/moku:build`
-read it to learn **what** to build (never **how** — see the callout below).
+The template for `design-context.md` — the single human-readable output of the design station. It is the
+design specification the rest of the moku lifecycle (brainstorm → plan → build) consumes. The
+orchestrating session writes it at capture, from the final polished prototype; plan and build read it to
+learn what to build, never how.
 
-This template **is** the quality bar — it is self-contained. Calibrate to the section shapes and the
-inventory tables below; you do not need any external example to produce a complete design context.
+This template is the quality bar and is self-contained. Calibrate to the section shapes and the inventory
+tables below; no external example is needed.
 
-**Two hard rules for the synthesizer:**
+**Two rules at capture:**
 
-1. The document **MUST open with the "spec, not source" callout** reproduced verbatim in §0 below
-   (only `{NAME}` and the conventions line are substituted). This is non-negotiable — it is the
-   single most important thing the document does, and `/moku:plan` and `/moku:build` rely on it being
-   present to forward the "re-implement, never copy" instruction to their agents.
-2. **Every section must be populated** from the actual prototype — no `TBD`, no placeholder prose, no
-   invented features. The inventory (§6) must list **every** screen, panel, popup, menu, modal,
-   transient element, and component the prototype actually contains.
+1. The document opens with the "spec, not source" callout reproduced verbatim in §0 below, substituting
+   only `{NAME}` and the conventions line. The plan and build stations rely on it being present to forward
+   the re-implement-never-copy instruction to their agents, so a context without an intact §0 is not
+   finished.
+2. Every section is populated from the actual prototype — no `TBD`, no placeholder prose, no invented
+   features. The inventory (§6) lists every screen, panel, popup, menu, modal, transient element and
+   component the prototype actually contains.
 
 Saved to `.planning/design/{slug}/design-context.md`.
+
+Sections §1–§9 below are the `ui` mode shape. An `api` or `architecture` run adds its own section instead
+of the visual ones — see "Other modes" at the foot of this file. A run that used several modes keeps §0
+once and appends each mode's section.
 
 ---
 
@@ -170,7 +174,7 @@ data, frozen.}
 
 ---
 
-*{NAME} — captured by `/moku:design`. Open `index.html` to explore; build it for real on the Moku stack.*
+*{NAME} — captured by `/moku-design:design`. Open `index.html` to explore; build it for real on the Moku stack.*
 ````
 
 ---
@@ -206,12 +210,29 @@ same "reference for intent, not code to lift" labelling.
 
 ---
 
-## Synthesizer checklist (verify before writing)
+## Other modes
 
-1. §0 callout present and verbatim (only `{NAME}` + the conventions line substituted).
-2. Every section populated from the **actual** prototype — no `TBD`, no invented features.
-3. §6 inventory is **exhaustive**: every screen/region/overlay/menu/modal/transient/component the
-   prototype contains is listed exactly once, in the right group.
+An `api` run replaces §5–§7 with an **API contract** section: the canonical usage snippets, the
+`Config` / `State` / `api` / events sketch, the comparison table with its named axes and the decision, and
+the rejected alternatives with the reason each was rejected. The §0 callout still applies, with its
+conventions line pointing at the Moku Core spec and plugin structure — the snippets show how the API
+should read, they are not the implementation.
+
+An `architecture` run replaces §5–§7 with an **Architecture** section: the boundary, dependency and event
+Mermaid diagrams of the chosen decomposition, the plugin list with the one concern each owns, the event
+table (name, emitter, listeners, payload in words), the axes table with the decision, and the rejected
+alternatives with their reasons.
+
+Both keep §1, §8 and §9. See `design-mode-api.md` and `design-mode-architecture.md`.
+
+## Capture checklist (verify before finishing)
+
+1. §0 callout present and verbatim (only `{NAME}` and the conventions line substituted).
+2. Every section populated from the actual prototype — no `TBD`, no invented features.
+3. §6 inventory is exhaustive: every screen, region, overlay, menu, modal, transient element and
+   component the prototype contains is listed exactly once, in the right group.
 4. §8 demo content matches the data the prototype actually renders.
-5. §9 names the non-negotiables and explicitly repeats "re-implement, don't port."
-6. The **Files in this folder** table labels every prototype file as demo/reference, not source.
+5. §9 names the non-negotiables and repeats "re-implement, don't port".
+6. The Files in this folder table labels every prototype file as demo or reference, not source.
+7. For an `api` or `architecture` run, its section carries the alternatives, the axes table and the
+   recorded reasons for the rejected options.

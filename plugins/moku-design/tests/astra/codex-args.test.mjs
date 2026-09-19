@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { ASTRA_MODEL, codexArgs } from "../../lib/astra/codex-args.mjs";
+import { stampManifest } from "../../lib/astra/manifest.mjs";
 import { reviewPrompt } from "../../lib/astra/prompts.mjs";
 
 describe("codexArgs", () => {
@@ -32,5 +33,14 @@ describe("reviewPrompt", () => {
     assert.match(prompt, /Do not report personal taste/);
     assert.match(prompt, /bottom-right/);
     assert.match(prompt, /Focus: mobile/);
+  });
+});
+
+describe("stampManifest", () => {
+  it("records model, backend and date so the art can be regenerated", () => {
+    const stamped = stampManifest({ assets: [{ file: "flame.png" }] }, { model: "gpt-6-astra", backend: "codex", date: "2026-09-19" });
+
+    assert.deepEqual(stamped.generated, { model: "gpt-6-astra", backend: "codex", date: "2026-09-19" });
+    assert.equal(stamped.assets.length, 1);
   });
 });

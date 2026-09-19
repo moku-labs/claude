@@ -1,18 +1,18 @@
 # Design Medium — detection & branching
 
-`/moku:design` produces a design context, but **only some projects have something to design**, and the
+`/moku-design:design` produces a design context, but **only some projects have something to design**, and the
 *medium* of that design varies. This reference defines (1) the **scope gate** — whether a project has
 anything to design at all — and (2) how the concept format, prototype files, and inventory **branch by
-medium**. The `design.md` command runs the gate before any work; `design-flow.md` branches on the
+medium**. The design skill runs the gate before any work; `design-flow.md` branches on the
 resolved `MEDIUM` throughout.
 
-Reuse the same project detection that `init`, `plan`, and `check` use — never re-invent it.
+Reuse the same project detection that the init, plan and check skills use — never re-invent it.
 
 ---
 
 ## 1. Project detection (shared with init / plan / check)
 
-Detect the project layer the same way `check.md` does:
+Detect the project layer the same way the check skill does:
 
 - `src/config.ts` with `createCoreConfig` → **Framework (Layer 2)**
 - a `createApp` import from a framework package (e.g. `@moku-labs/web`) → **Consumer App (Layer 3)**
@@ -50,7 +50,7 @@ Apply the gate **before** framing any design:
 Tell the user plainly and offer the productive paths:
 
 > "This looks like a {Framework / Tools} project (Layer {2}), which usually has no visual UI to design.
-> `/moku:design` is for Layer-3 app UIs and, occasionally, CLI/TUI/DX surfaces. If you want to design a
+> `/moku-design:design` is for Layer-3 app UIs and, occasionally, CLI/TUI/DX surfaces. If you want to design a
 > **terminal experience** for this project (a CLI flow, an interactive setup, a branded console), tell
 > me and I'll run in `--medium cli` (or `tui`). Otherwise, for architecture exploration use
 > `/moku:brainstorm`, and to plan the build use `/moku:plan`."

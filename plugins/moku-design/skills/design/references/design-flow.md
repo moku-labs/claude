@@ -1,261 +1,233 @@
-# Design Flow
+# Design flow — `ui` mode
 
-Main flow coordinator for `/moku:design`. Receives context variables from the command: TARGET, SCOPE,
-MEDIUM, SLUG, COUNT (concepts per round, default 6), BRAINSTORM_CONTEXT (a `.planning/context-*.md` or
-`(none)`), and STAGE (the resume point from `state.md`).
+The round-based flow for `ui` mode. It receives TARGET, SCOPE, MEDIUM, SLUG, COUNT (concepts per round,
+default 6), BRAINSTORM_CONTEXT (a `.planning/context-*.md` or none) and STAGE (the resume point from
+`state.md`).
 
-This is a **multi-round, human-in-the-loop** exploration. It stops at every human gate and is resumable
-at each one (`design-stages.md`). Output: `.planning/design/{SLUG}/design-context.md` — a **design
-specification, never source** (see the callout the synthesizer emits).
+Multi-round and human-in-the-loop. It stops at every gate and resumes at each one
+(`design-stages.md`). Output: `.planning/design/{SLUG}/design-context.md`, a specification, never source.
 
-**Formatting (terminal rendering):** as in `brainstorm-flow.md` — `**BOLD CAPS**` for section titles,
-`**Bold Mixed Case**` for sub-sections, `---` rules between major sections, and a progress marker as the
-first line of each phase output:
+Print one progress line at the top of each phase:
 
 ```
-Design: {SLUG} | Phase {A–E}/5: {name} | {SCOPE} · {MEDIUM}
+Design: {SLUG} | Phase {A-E}/5: {name} | {SCOPE} · {MEDIUM}
 ```
 
 ---
 
-## Phase A: Frame
+## Phase A — Frame
 
-**Goal:** establish exactly what is being designed and a shared brief, so the only thing that varies
-between concepts is the *design*.
+Goal: fix everything except the design, so the concepts differ only in art direction.
 
-### A0 — Load the design skill first (raises quality)
-**Before doing anything else in a design run, invoke the official `frontend-design` skill** (the `Skill`
-tool — it is in this command's `allowed-tools`). This loads its aesthetic guidance into context for the
-whole run and is the single biggest lever on concept quality — do not skip it. Keep its principles active
-through framing (A3) and **pass a distinct, skill-derived art direction to every generator** in Phase B.
-Each `design-generator` also declares `frontend-design` in its own `skills`, but the orchestrator loading
-it here is the guaranteed path — and lets you derive the per-concept directions before fan-out. (For
-`cli`/`tui` runs the skill is still useful for layout/typography/density judgement; apply what transfers.)
+### A0 — Load the design skill
 
-### A1 — Resolve target, scope & medium (scope gate)
-The command already parsed TARGET/SCOPE and ran the **scope gate** in `design-medium.md`. Confirm the
-resolved MEDIUM is set; if the project gated out (non-UI, no DX surface intended), you never reach this
-file. Re-state the frame in one line: *"Designing **{TARGET}** ({SCOPE}, {MEDIUM})."*
+Invoke the `frontend-design` skill with the Skill tool before anything else. It carries the aesthetic
+guidance for the whole run and is the biggest single lever on concept quality. Derive one distinct art
+direction per concept from it here, so the directions exist before fan-out. For `cli` and `tui` apply what
+transfers: density, rhythm, typography judgement.
 
-### A2 — Detect & consume prior context
-- **Brainstorm context present** (BRAINSTORM_CONTEXT ≠ `(none)`, or a `.planning/context-{name}.md`
-  whose feature matches TARGET): **read it** and use it to ground the concepts — pull the concept,
-  feature set, non-goals, and any look/feel hints. Record it in `state.md` (`## BrainstormContext:`).
-- **First command after `init`** (no brainstorm context yet): run **standalone**. You will still produce
-  a full design context that `/moku:brainstorm` or `/moku:plan` can pick up later.
+### A1 — Restate the frame
 
-### A3 — Write the shared concept spec
-Write `.planning/design/{SLUG}/concept-spec.md` — the **single brief every concept obeys**, so concepts
-are comparable and only the art direction differs:
+One line: *Designing {TARGET} ({SCOPE}, {MEDIUM}).* The scope gate already ran in the skill.
+
+### A2 — Consume prior context
+
+If BRAINSTORM_CONTEXT exists, read it and pull the concept, the feature set, the non-goals and any look
+hints. Record it in `state.md` under `## BrainstormContext:`. With no prior context the run is standalone.
+
+### A3 — Write the concept spec
+
+Write `.planning/design/{SLUG}/concept-spec.md` — the brief every concept obeys:
 
 ```markdown
 # Concept Spec: {TARGET}
 
 ## Scope
-{app | page | element} — {one line on the boundary: what is in/out of this design}
+{app | page | element} — {what is in and out of this design}
 
-## Feature checklist (every concept demonstrates ALL of these)
-- {feature 1}
-- {feature 2}
-- ...
+## Feature checklist (every concept demonstrates all of these)
+- {feature}
 
 ## Screens / surfaces to include
-{the list of screens/panels/popups/states each concept must show — for an element scope this may be one
-surface plus its states (default/hover/active/empty/error)}
+{every screen, panel, popup and state each concept must show; for an element scope, one surface plus its
+default, hover, active, empty and error states}
 
-## Demo data (identical across all concepts — frozen)
-{the realistic dataset every concept renders: entities, sample names, labels, counts. Make it concrete
-and a little characterful so screens feel real — the tracker-v2 "Cloudflare-stack" issues are the model.}
+## Demo data (identical across all concepts, frozen)
+{the dataset every concept renders: entities, names, labels, counts — concrete and a little characterful
+so the screens feel real}
 
 ## Constraints
-- Self-contained prototype (web: one HTML file, inline CSS/JS, Google-Fonts only; cli/tui: one runnable
-  sketch / ASCII frame set — see design-medium.md)
-- Same features + same demo data in every concept; only the design varies
-- {any hard constraints from the brainstorm context or the user}
+- Self-contained prototype (web: one HTML file, inline CSS and JS, Google Fonts only; cli/tui: one
+  runnable sketch or ASCII frame set — see design-medium.md)
+- Same features and same demo data in every concept; only the design varies
+- {hard constraints from the brainstorm context or the user}
 ```
 
-Use the official **`frontend-design`** skill to raise the aesthetic bar: consult it for the art-direction
-brief, and derive a **distinct direction per concept** (font pairing, palette, personality, signature
-interaction) to hand each generator in A/B. The features and demo data stay identical; the *direction*
-diverges.
-
-**Gate (optional):** if the frame was ambiguous, briefly confirm the concept-spec with the user before
-generating. If it's clear, proceed straight into Phase B. Write `state.md` (`## Stage: round-1-generating`).
+If the frame was ambiguous, `moku-rails pause` and confirm the spec with the user. If it is clear, go
+straight to Phase B. Set `## Stage: round-1-generating`.
 
 ---
 
-## Phase B: Generate concepts (one round)
+## Phase B — Generate one round
 
-**Goal:** produce N **distinct** concepts — same features and demo data, genuinely different designs —
-each a self-contained, runnable, clickable prototype.
+### B1 — Spawn generators in parallel
 
-### B1 — Spawn generators in parallel (one per concept)
-Spawn **COUNT** `design-generator` agents using the `Agent` tool, **all in the same response** (parallel).
-Each generator gets:
-1. The **concept id** (`r{N}c{M}`) and its **output path** (`.planning/design/{SLUG}/concepts/r{N}c{M}.html`
-   — strict isolation: it writes ONLY this file).
-2. The **shared brief** — the full contents (or path) of `concept-spec.md`.
-3. Its **distinct art direction** — the one direction assigned to this concept (from A3 / `frontend-design`).
-   No two generators get the same direction.
-4. The **MEDIUM** and its prototype rules (`design-medium.md`).
-5. The **disposable-demo** framing: this prototype communicates look/feel/behaviour/inventory; it is
-   NOT production code and will be re-implemented from scratch later — speed and fidelity-of-intent over
-   code quality.
+Spawn COUNT `design-generator` agents with the Agent tool, all in one response. Each gets:
 
-> **Distinct directions, same substance.** Instruct each generator to *commit hard* to its art direction
-> — a real point of view, not a safe default. Six concepts that look like the same template with
-> different accent colours is a failed round. Reuse the `frontend-design` skill to push each one.
+1. its concept id (`r{N}c{M}`) and its single output path
+   (`.planning/design/{SLUG}/concepts/r{N}c{M}.html`),
+2. the full concept spec,
+3. its own art direction — no two generators share one,
+4. the MEDIUM and its prototype rules,
+5. the framing: this prototype communicates look, feel, behaviour and inventory, is not production code,
+   and will be re-implemented from scratch later.
 
 ### B2 — Assemble the gallery
-Write `.planning/design/{SLUG}/concepts/gallery-r{N}.html` — an index that links (and where practical
-embeds, via `<iframe>`) every concept in the round, labelled by id and art direction. For cli/tui, the
-"gallery" is a single document collating each sketch's captured output.
 
-### B3 — Serve, screenshot & verify (availability-aware — always serve the user a live preview)
-**Always run a real preview the user can open**, and degrade gracefully by what tooling is present. Detect
-availability and walk this chain (do not silently skip the user-facing preview):
+Write `.planning/design/{SLUG}/concepts/gallery-r{N}.html`, an index that links and where practical
+embeds every concept with its id and art direction. For `cli` and `tui` the gallery is one document
+collating each sketch's captured output.
 
-1. **Serve locally (always).** Start a local server over `.planning/design/{SLUG}/` so every concept and
-   the gallery have a live URL.
-   - **Preferred — internal browser preview:** if the Claude Preview tools (`mcp__Claude_Preview__preview_*`)
-     are available, use `preview_start` (it reads/creates `.claude/launch.json` — add a static-server
-     entry such as `bunx serve -l {port} .planning/design/{SLUG}` or `python3 -m http.server {port} -d
-     .planning/design/{SLUG}`). This renders concepts **inside the internal browser** so the user sees
-     them inline.
-   - **Fallback — plain local server:** if the preview tools are NOT available, start the static server
-     yourself with **Bash in the background** (`bunx serve -l {port} .planning/design/{SLUG}` or
-     `python3 -m http.server {port} -d .planning/design/{SLUG} &`), capture the PID, and **give the user
-     the port/URLs to open in their own browser** (e.g. `http://localhost:{port}/concepts/gallery-r{N}.html`).
-2. **Screenshot each concept — if available.** If `preview_screenshot` (or another screenshot tool) is
-   available, capture each concept into `screenshots/r{N}c{M}.png` and reference them when presenting. If
-   no screenshot tool is available, **skip screenshots** and rely on the live URLs — say so plainly
-   ("Screenshots unavailable in this environment — open the URLs below"). Never block the round on
-   screenshots.
-3. **Verify each renders.** Best-effort: if `preview_inspect`/`preview_eval` are available, check no
-   console errors and that key surfaces are present; otherwise do a **Bash structural check** of each HTML
-   file (well-formed, contains the expected marker text/ids). A concept that errors is re-generated or
-   dropped, with a note. For `cli`/`tui`, **run each sketch in Bash** and capture its output instead of
-   serving/screenshotting.
-4. **Stop the server when the round (or polish step) ends** — `preview_stop` for the MCP server, or kill
-   the background PID for the Bash fallback. Don't leave a server running across invocations.
+### B3 — Serve, screenshot, verify
 
-Update `state.md` concepts table (`built`/`failed`) and `## Stage: round-{N}-presented`.
+Always give the user something live. Use `mcp__Claude_Browser__preview_start` over
+`.planning/design/{SLUG}/` when the browser preview tools are present, screenshot each concept into
+`screenshots/r{N}c{M}.png` with `mcp__Claude_Browser__computer`, and check the DOM and console with
+`read_page` and `read_console_messages`. Without those tools, start a Bash background static server, hand
+the user the URLs, and verify each file with a Bash structural check instead. Stop the server when the
+round ends.
 
-### B4 — (Optional) Critic pass
-For a larger round, or when convergence is slow, spawn `design-critic` on the round to surface gaps,
-missing states, and which directions are strongest/weakest. Fold its read-only findings into the
-presentation so the user chooses well. Skip for small/simple rounds.
+A concept that errors is regenerated or dropped with a note. Update the concepts table in `state.md` and
+set `## Stage: round-{N}-presented`.
 
----
+### B4 — Review the round twice
 
-## Phase C: Converge
+The round is reviewed by this session and by Astra independently, on the same screenshots, before the user
+sees it.
 
-**Goal:** narrow to a single winner.
+**This session's checklist**, three lenses, every round:
 
-### C1 — Present the round (no auto-advance)
-Present round N as visible text **before** any question:
-- The **screenshots** (reference them by path), each with its id + art-direction one-liner.
-- **How to explore** — the live local URL for each concept (and the gallery), so the user can click
-  through.
-- A short, honest read on each direction (and the critic's notes, if run) — strengths and trade-offs.
+- **Coverage.** For each concept, which features, screens and states from `concept-spec.md` are missing or
+  thin. Cross-check the spec line by line against each prototype. Be specific: "r1c2 has no empty state for
+  the board column and no delete confirmation" — not "r1c2 is unpolished".
+- **Distinctiveness.** Are the concepts genuinely different directions, or do some collapse into the same
+  look? Name the duplicates by id.
+- **Inventory gaps.** Any screen, panel, popup, menu, modal, transient element or component the brief
+  implies but no concept shows. These become missing features downstream, so they are first-class findings.
+- **Rank.** An honest strongest-to-weakest ordering with one line of reason each. If every concept looks
+  equally good, look harder.
 
-### C2 — The pick gate (human)
-Use `AskUserQuestion`:
-- Question: *"Round {N}: which direction wins?"*
-- Header: `Round {N}`
-- Options (one per concept, each `description` a self-contained one-liner of its art direction), **plus**:
-  - *"Mix two — synthesise"* (the system also appends a free-text "Other" for custom mixes)
-  - *"New round — fresh directions"*
-- multiSelect: false
+Judge design and coverage only. Code quality and framework conformance do not apply — the build
+re-implements everything.
 
-Resolve:
-- **Winner picked** → record `## Winner:`, mark losers `removed` in the concepts table, **delete the
-  losing concept files** (keep screenshots), **promote** the winner to `.planning/design/{SLUG}/index.html`
-  (move/copy), set `## Stage: winner-polish`. Proceed to Phase D.
-- **Mix / synthesis** → capture which concepts and what to combine; seed the **next round** with that
-  synthesis brief (one concept that fuses the chosen directions, plus any fresh siblings the user wants).
-  Loop to Phase B as round N+1.
-- **New round** → capture what to change ("warmer", "denser", "more playful"), update the per-concept
-  directions, loop to Phase B as round N+1 with fresh directions.
+**Astra's review.** Load the `moku-astra` skill with the Skill tool and follow it: call
+`moku-astra review --images <screenshots> --context <design-context if one exists>`, take the findings
+schema as given, and on exit 3 review alone and name the reviewer in the report.
 
-> The rounds loop (B → C) repeats until there is a winner **or the user stops**. Never force convergence;
-> never cap rounds. Each round is a clean stop-and-resume — one round per invocation is fine.
+**Merge and triage.** Put both lists into one, then triage each finding with the four questions in the
+`moku-astra` skill. Write every rejection and its reason into `.planning/astra/triage.md`. At most two
+passes. Present the merged, triaged findings together with the gallery in Phase C.
 
 ---
 
-## Phase D: Polish & iterate
+## Phase C — Converge
 
-**Goal:** evolve the single winning prototype until the user is happy — with the full feature set, fixes,
-and refinement.
+### C1 — Present the round
+
+Before any question, show: the screenshots by path with id and a one-line art direction each, the live URL
+for every concept and the gallery, an honest read on each direction with its trade-offs, and the merged
+review findings.
+
+### C2 — The pick gate
+
+`moku-rails pause --reason "round {N} pick"`, then `AskUserQuestion`: *"Round {N}: which direction wins?"*
+One option per concept, each description a self-contained one-liner of its direction, plus *"Mix two —
+synthesise"* and *"New round — fresh directions"*.
+
+- **Winner** → record `## Winner:`, mark the losers `removed`, delete the losing concept files (keep the
+  screenshots), promote the winner to `.planning/design/{SLUG}/index.html`, set `## Stage: winner-polish`,
+  go to Phase D.
+- **Mix** → capture which concepts and what to combine, seed the next round with that synthesis, loop to
+  Phase B as round N+1.
+- **New round** → capture what to change, refresh the directions, loop to Phase B as round N+1.
+
+Rounds are never capped and convergence is never forced. One round per invocation is fine.
+
+---
+
+## Phase D — Polish
 
 ### D1 — Iterate the winner
-Work on `.planning/design/{SLUG}/index.html` directly with the user: complete the feature set from
-`concept-spec.md`, fix rough edges, refine the design. Keep it a self-contained prototype.
 
-### D2 — Verify every change in a real preview (mandatory)
-**Never assume a change worked.** After each meaningful change, use the **same availability-aware preview
-chain as B3** — always serve a live URL, screenshot if a screenshot tool is available (else point the user
-at the URL), and prefer the internal browser preview when present:
-- Re-serve and, **if available**, **screenshot** the affected surface(s); if no screenshot tool, show the
-  user the live URL to open.
-- **Check the DOM / behaviour** (`preview_inspect`/`preview_eval` if available, else a Bash structural
-  check; run the sketch for cli/tui) — the element exists, the interaction fires, no console errors, both
-  themes if themed.
-- Show the user the result (screenshot or URL).
+Work on `.planning/design/{SLUG}/index.html` with the user: complete the feature set from the concept
+spec, fix rough edges, refine. It stays a self-contained prototype.
 
-### D3 — The "happy?" gate (human)
-After a coherent batch of changes, `AskUserQuestion`: *"Happy with this, or keep refining?"* — options:
-*"Capture the design context"* (→ Phase E) · *"Keep refining"* (stay; `## Stage: iterating`) · *"Try a
-new round instead"* (→ Phase B, rare). Loop D until the user is satisfied. Update `state.md` each pass.
+### D2 — Check every change in a preview
 
----
+After each meaningful change, re-serve, screenshot the affected surfaces (or hand over the URL when no
+screenshot tool exists), check the DOM and the console, both themes if the design is themed, and show the
+user the result. A change is not done until a screenshot or a live URL shows it.
 
-## Phase E: Capture the design context
+### D3 — Art assets (offered, never automatic)
 
-**Goal:** produce the durable, reusable output and hand it off.
+If the winner needs real art — icons, illustrations, textures — offer one batched
+`moku-astra generate --brief "..." --out assets/...` run and wait for the user to agree. Follow the
+`moku-astra` skill for cost, backends and the manifest. Without it, use SVG or CSS placeholders and record
+a to-draw list in the manifest.
 
-### E1 — Save the final design files
-Finalise the winner in `.planning/design/{SLUG}/`:
-- Ensure `index.html` is the complete, runnable prototype.
-- **Extract** styles and logic into `styles.scss` and `app.js` (web) — or finalise the runnable
-  sketch(es) for cli/tui — so the design is legible. Label all of them as **demo/reference**, not source.
+### D4 — The happy gate
 
-### E2 — Synthesise `design-context.md`
-Spawn the **`design-synthesizer`** agent. It reads the final prototype + `concept-spec.md` and writes
-`.planning/design/{SLUG}/design-context.md` using `design-context-template.md`. It **MUST**:
-- Emit the **§0 "spec, not source" callout verbatim** (only `{NAME}` + the conventions line substituted).
-- Populate **every** section from the actual prototype — no `TBD`, no invented features.
-- Produce an **exhaustive inventory** (every screen/region/overlay/menu/modal/transient/component).
-
-Verify the returned file has §0 present and no empty sections before continuing (the synthesizer's
-output contract reports this; re-spawn once if it failed).
-
-### E3 — Update the registry & state
-Write the `## complete` row into `.planning/design/index.md`; set `state.md` `## Stage: complete`,
-`## Winner:`, and the final `## Recovery`/`## Next Action:`.
-
-### E4 — Hand off (restate the spec-not-source reminder)
-Close by telling the user what was produced **and** restating the principle, verbatim in spirit:
-
-> "Design captured → `.planning/design/{SLUG}/design-context.md`. **This is a specification, not source.**
-> The prototype in this folder is throwaway demo code — when you build, **re-implement it from scratch**
-> on the real stack with all the project's conventions (for web: moku-web islands, `@scope`/`@layer`,
-> `data-*` only, tokens, one route table). Never copy the prototype's CSS/JS/DOM or its bugs.
->
-> Next: feed it to planning — `/moku:plan create app "{TARGET}" --context design/{SLUG}/design-context.md`
-> — or explore architecture first with `/moku:brainstorm`. `/moku:plan` will carry the
-> re-implement-don't-copy instruction into its planning agents automatically."
-
-Pick the `plan` VERB/TYPE from the project (`create app` for a new Layer-3 app; `update app`/`add plugin`
-when extending an existing one).
+After a coherent batch of changes, `moku-rails pause`, then `AskUserQuestion`: *"Happy with this, or keep
+refining?"* — capture the design context, keep refining (`## Stage: iterating`), or try a new round. Loop
+until the user is satisfied.
 
 ---
 
-## Context carried forward / back
+## Phase E — Capture
 
-- **Into generators:** concept id + output path, `concept-spec.md`, the per-concept art direction,
-  MEDIUM + prototype rules, the disposable-demo framing.
-- **Into the synthesizer:** the final prototype path, `concept-spec.md`, SLUG/TARGET/SCOPE/MEDIUM, and
-  the mandate to emit §0 verbatim + an exhaustive inventory.
-- **Out (the durable output):** `.planning/design/{SLUG}/design-context.md` + the registry row — consumed
-  by `brainstorm`/`plan`/`build`, which forward the re-implement-never-copy instruction to their agents.
+This session writes `design-context.md` itself; there is no synthesizer agent.
+
+### E1 — Finalise the design files
+
+Make sure `index.html` is the complete runnable prototype, then extract styles and logic into
+`styles.scss` and `app.js` (web) or finalise the runnable sketches (cli/tui), so the design is legible.
+Label every one of them demo and reference, not source.
+
+### E2 — Write `design-context.md`
+
+Read the actual prototype and the concept spec, then write
+`.planning/design/{SLUG}/design-context.md` from `design-context-template.md`. Three rules:
+
+1. **§0 verbatim.** Reproduce the "spec, not source" callout exactly as the template has it, substituting
+   only `{NAME}` and the conventions line for the medium. It has to be the first section after the title
+   block, because the plan and build stations rely on it to carry the re-implement-never-copy instruction
+   into their agents. A context without an intact §0 is not finished.
+2. **Exhaustive inventory.** §6 lists every distinct surface the prototype actually contains — every full
+   screen, persistent region, overlay or drawer, menu or popup, modal or prompt, inline and transient
+   element, and recurring component — each in exactly one group. Walk the whole prototype before writing;
+   an omission here becomes a missing feature in the build.
+3. **Every section populated** from what the prototype does. No `TBD`, no placeholder prose, no invented
+   features. The Files table labels each prototype file as demo or reference. §9 repeats "re-implement,
+   don't port".
+
+Then run the checklist at the foot of the template and close any gap before moving on.
+
+### E3 — Update the registry and state
+
+Write the `complete` row into `.planning/design/index.md`; set `## Stage: complete`, `## Winner:` and the
+final `## Recovery` and `## Next Action:` in `state.md`.
+
+### E4 — Hand off
+
+Restate the spec-not-source reminder (the wording is in the skill), print the plan-station next step with
+the context path, then `moku-rails done design`.
+
+---
+
+## What is carried where
+
+- **Into generators:** concept id and output path, the concept spec, the per-concept art direction, the
+  medium and its prototype rules, the disposable-demo framing.
+- **Into Astra:** the round's screenshots and, once it exists, `design-context.md` as `--context`.
+- **Out:** `.planning/design/{SLUG}/design-context.md` plus the registry row, consumed by the plan and
+  build stations, which forward the re-implement-never-copy instruction to their agents.
