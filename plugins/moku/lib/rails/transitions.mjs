@@ -5,7 +5,7 @@
  * so the conductor can offer it to the user instead of guessing.
  */
 
-import { PRE_INIT_STATIONS, requiredBefore, routeFor } from "./routes.mjs";
+import { OPTIONAL_STATIONS, PRE_INIT_STATIONS, requiredBefore, routeFor } from "./routes.mjs";
 
 /** @typedef {{ ok: true } | { ok: false, reason: string, missing: string }} Verdict */
 
@@ -16,7 +16,7 @@ export const CLOSE_CHECKLIST = ["tests", "verify", "docs"];
  * Decide whether a change may enter a station.
  *
  * @param {{ initialized: boolean }} project
- * @param {{ size: "S" | "M" | "L", done: string[] }} change
+ * @param {{ size: "S" | "M" | "L", done: string[], skipped?: string[] }} change
  * @param {string} station
  * @returns {Verdict}
  * @example
@@ -42,13 +42,20 @@ export function canEnter(project, change, station) {
     return refuse(missing, `Station "${missing}" must be done before "${station}".`);
   }
 
+  // An optional station is passed by doing it or by skipping it on purpose, never by forgetting it.
+  // Optional stations may swap places among themselves, so only a required station asks for the decision.
+  const undecided = OPTIONAL_STATIONS.has(station) ? undefined : route.slice(0, route.indexOf(station)).find((name) => OPTIONAL_STATIONS.has(name) && !change.done.includes(name) && !(change.skipped ?? []).includes(name));
+  if (undecided) {
+    return refuse(undecided, `Station "${undecided}" is neither done nor skipped. Do it, or ask the person and record their answer with \`moku-rails skip ${undecided} --reason "<their words>"\`.`);
+  }
+
   return { ok: true };
 }
 
 /**
  * Decide whether a change may close.
  *
- * @param {{ size: "S" | "M" | "L", done: string[], checklist: Record<string, boolean> }} change
+ * @param {{ size: "S" | "M" | "L", done: string[], skipped?: string[], checklist: Record<string, boolean> }} change
  * @returns {Verdict}
  * @example
  * canClose({ size: "S", done: ["intake", "build", "verify"], checklist: { tests: true, verify: true, docs: false } });

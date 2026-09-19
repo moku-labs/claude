@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Detect Moku project type and state on session start.
-# Creates/reads .planning/moku.md marker for fast detection by other hooks.
+# Describe the Moku project type and state on session start.
+# Acts only in a directory that is on the rails (.planning/state.json or .planning/moku.md).
+# Every other project gets no output: a package.json that names @moku-labs/* is not an invitation.
+# The marker .planning/moku.md is written by the init station, never by this hook.
 # Emits SessionStart context for Claude — as structured hookSpecificOutput JSON
 # (additionalContext + sessionTitle) when jq is available, else plain stdout (fallback).
+
+[ -f .planning/moku.md ] || [ -f .planning/state.json ] || exit 0
 
 PROJECT_TYPE=""
 PROJECT_NAME=""
@@ -21,15 +25,6 @@ fi
 
 # --- Detect project type if not cached ---
 if [ -z "$PROJECT_TYPE" ]; then
-  # First-run detection — welcome new users with decision tree
-  if [ -f package.json ] && ! [ -f .planning/STATE.md ] && ! [ -d src/plugins ]; then
-    if grep -q '@moku-labs' package.json 2>/dev/null; then
-      add "This looks like a Moku project that has not been set up yet."
-      add "Describe what you want to build in plain words. The moku conductor takes it from there:"
-      add "it creates the project first, then leads through design, plan, build and verify."
-    fi
-  fi
-
   # Check for Moku project markers
   if [ -f src/config.ts ] && grep -q 'createCoreConfig' src/config.ts 2>/dev/null; then
     PROJECT_TYPE="framework"
@@ -57,18 +52,6 @@ if [ -z "$PROJECT_TYPE" ]; then
     elif command -v node &>/dev/null; then
       CORE_VER=$(node -e "const p=require('./package.json');const v=p.dependencies?.['@moku-labs/core']||p.devDependencies?.['@moku-labs/core']||'';console.log(v.replace(/[\^~>=<]/g,''))" 2>/dev/null)
     fi
-  fi
-
-  # Create marker file if we detected a project type and .planning/ exists
-  if [ -n "$PROJECT_TYPE" ] && [ -d .planning ]; then
-    cat > .planning/moku.md << MOKUEOF
-# Moku Project
-
-type: ${PROJECT_TYPE}
-name: ${PROJECT_NAME}
-core_version: ${CORE_VER}
-created: $(date '+%Y-%m-%d')
-MOKUEOF
   fi
 fi
 

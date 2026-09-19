@@ -5,7 +5,7 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 
 /**
  * @typedef {object} Change
@@ -20,9 +20,19 @@ import { dirname, join } from "node:path";
  * @property {boolean} paused true while waiting for the user
  * @property {string} [note]
  * @property {string} [startCommit] HEAD when the change was opened; verify scopes its diff from here
+ * @property {string[]} [skipped] optional stations skipped on purpose, each with a recorded reason in `note`
+ * @property {string[]} [scope] requests added after the change was opened
  */
 
-/** @typedef {{ version: 1, changes: Change[], ideas: string[] }} Ledger */
+/**
+ * @typedef {object} Turn
+ * @property {string} promptAt when the person's last request arrived
+ * @property {boolean} routed true once a rails command placed that request on the route
+ */
+
+/**
+ * @typedef {{ version: 1, changes: Change[], ideas: string[], activatedAt?: string, turn?: Turn }} Ledger
+ */
 
 const LEDGER_FILE = join(".planning", "state.json");
 const MARKER_FILE = join(".planning", "moku.md");
@@ -113,32 +123,77 @@ export function isInitialized(root) {
 }
 
 /**
- * True when the directory has a package.json of its own: an existing project, moku or not.
+ * True when the directory is on the rails: a session was started here, or the project is initialized.
+ * Nothing else counts. A package.json that names `@moku-labs/*` does not put a repository on the rails,
+ * so the hooks stay silent in every project that never asked for them.
  *
  * @param {string} root project root
  * @returns {boolean}
  * @example
- * hasManifest(process.cwd());
+ * isOnRails(process.cwd());
  */
-export function hasManifest(root) {
-  return existsSync(join(root, "package.json"));
+export function isOnRails(root) {
+  return isInitialized(root) || existsSync(join(root, LEDGER_FILE));
 }
 
 /**
- * True when the directory looks like a moku project, initialized or not.
+ * The nearest directory at or above `start` that is on the rails, or undefined when there is none.
+ * Hooks resolve their root from the file being written, so the verdict does not depend on the session's cwd.
+ *
+ * @param {string} start a directory, absolute or relative to the process cwd
+ * @returns {string | undefined}
+ * @example
+ * findRoot("/work/site/src/islands"); // "/work/site"
+ */
+export function findRoot(start) {
+  let current = resolve(start);
+
+  while (true) {
+    if (isOnRails(current)) return current;
+
+    const parent = dirname(current);
+    if (parent === current) return undefined;
+    current = parent;
+  }
+}
+
+/**
+ * Put a directory on the rails. Creates the directory and an empty ledger; an existing ledger is kept.
  *
  * @param {string} root project root
- * @returns {boolean}
+ * @returns {boolean} true when the ledger was created by this call
  * @example
- * isMokuProject(process.cwd());
+ * activate("/work/site");
  */
-export function isMokuProject(root) {
-  if (isInitialized(root)) return true;
+export function activate(root) {
+  if (existsSync(join(root, LEDGER_FILE))) return false;
 
-  const manifest = join(root, "package.json");
-  if (!existsSync(manifest)) return false;
+  saveLedger(root, { ...emptyLedger(), activatedAt: new Date().toISOString() });
+  return true;
+}
 
-  return readFileSync(manifest, "utf8").includes("@moku-labs/");
+/**
+ * Record that a new request arrived and is not routed yet. Called by the prompt hook.
+ *
+ * @param {string} root project root
+ * @example
+ * markPrompt(process.cwd());
+ */
+export function markPrompt(root) {
+  const ledger = loadLedger(root);
+  ledger.turn = { promptAt: new Date().toISOString(), routed: false };
+  saveLedger(root, ledger);
+}
+
+/**
+ * Record that the current request was placed on the route. A ledger with no recorded request stays untouched.
+ *
+ * @param {Ledger} ledger
+ * @example
+ * markRouted(ledger);
+ */
+export function markRouted(ledger) {
+  if (ledger.turn) ledger.turn.routed = true;
 }
 
 /**

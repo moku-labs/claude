@@ -11,6 +11,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readHookInput } from "../lib/hooks/input.mjs";
+import { rootForFile } from "../lib/hooks/root.mjs";
 import { facts } from "../lib/rails/commands.mjs";
 import { guardWrite } from "../lib/rails/guard.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
@@ -23,14 +24,17 @@ const CONTENT_CHECKS = ["check-plugin-antipatterns.sh", "validate-common-usage.s
 
 const { raw, payload } = readHookInput();
 const filePath = payload.tool_input?.file_path;
-const root = payload.cwd ?? process.cwd();
 
 // Nothing to guard without a target file
 if (typeof filePath !== "string") process.exit(0);
 
+// A file that belongs to no project on the rails is none of our business
+const root = rootForFile(payload, filePath);
+if (!root) process.exit(0);
+
 // Rails: a source file may only arrive at the right station
 const mode = railsMode();
-const verdict = mode === "off" ? { allow: true } : guardWrite(relative(root, resolve(root, filePath)), facts(root));
+const verdict = mode === "off" ? { allow: true } : guardWrite(relative(root, resolve(payload.cwd ?? process.cwd(), filePath)), facts(root));
 
 if (!verdict.allow && mode === "warn") console.error(`moku rails (warn): ${verdict.reason}`);
 if (!verdict.allow && mode === "strict") {

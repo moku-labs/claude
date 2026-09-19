@@ -9,38 +9,39 @@ import { WRITING_STATIONS } from "./routes.mjs";
 
 /** @typedef {{ allow: true } | { allow: false, reason: string }} GuardVerdict */
 
-const PLUGIN_PATH = /(?:^|\/)src\/plugins\/([^/]+)\//;
 const SOURCE_PATH = /(?:^|\/)src\//;
+
+/**
+ * @typedef {object} GuardFacts
+ * @property {boolean} onRails the directory has a ledger or the project marker; without it the guard has no opinion
+ * @property {boolean} initialized
+ * @property {boolean} [initializing]
+ * @property {boolean} [routed] false while the person's last request has not been placed on the route
+ * @property {Array<{ status: string, station: string | null }>} changes
+ */
 
 /**
  * Decide whether a write to `filePath` is allowed.
  *
  * @param {string} filePath project-relative path
- * @param {{ isMokuProject: boolean, hasManifest?: boolean, initialized: boolean, initializing?: boolean, changes: Array<{ status: string, station: string | null }> }} facts
+ * @param {GuardFacts} facts
  * @returns {GuardVerdict}
  * @example
- * guardWrite("src/plugins/streak/index.ts", { isMokuProject: false, initialized: false, changes: [] });
+ * guardWrite("src/plugins/streak/index.ts", { onRails: true, initialized: false, changes: [] });
  * // { allow: false, reason: "...initialize the project first..." }
  */
 export function guardWrite(filePath, facts) {
-  const touchesPlugin = PLUGIN_PATH.test(filePath);
-  const touchesSource = SOURCE_PATH.test(filePath);
-
   // A path outside the project root belongs to something else
   if (filePath.startsWith("..")) return { allow: true };
 
   // Anything outside src/ is not architecture: planning files, docs, configs
-  if (!touchesSource) return { allow: true };
+  if (!SOURCE_PATH.test(filePath)) return { allow: true };
+
+  // A directory nobody put on the rails is none of our business, whatever its package.json names
+  if (!facts.onRails) return { allow: true };
 
   // The init station is the one place that writes source before the project counts as initialized
   if (facts.initializing) return { allow: true };
-
-  // A repository with its own package.json and no @moku-labs dependency is none of our business,
-  // even when it has a src/plugins/ folder of its own
-  if (!facts.isMokuProject && facts.hasManifest) return { allow: true };
-
-  // No manifest at all: only a plugin path says "someone is starting a moku project here"
-  if (!facts.isMokuProject && !touchesPlugin) return { allow: true };
 
   // Code before init is the catastrophe this guard exists for
   if (!facts.initialized) {
@@ -51,6 +52,11 @@ export function guardWrite(filePath, facts) {
   const writing = facts.changes.some((change) => change.status === "open" && WRITING_STATIONS.has(change.station ?? ""));
   if (!writing) {
     return deny("No open change is at a writing station (build, verify, e2e). Open a change with `moku-rails open` and enter its build station first, so the work is tracked and closed properly.");
+  }
+
+  // An open change is not a free pass: every new request is placed on the route before code follows it
+  if (facts.routed === false) {
+    return deny("The person's last request has not been routed yet. Load the `moku:moku` skill and place the request: `moku-rails continue` when it finishes work of the current station, `moku-rails scope \"<what is new>\"` when it adds something the plan does not cover, or `moku-rails open` for a separate change.");
   }
 
   return { allow: true };
@@ -72,10 +78,10 @@ const SOURCE_TOKEN = /(?:^|[\s'"=>(])((?:\.{0,2}\/)?(?:[\w.@-]+\/)*src\/[\w./@\[
  * touch, sed -i) and names a source path that `guardWrite` would refuse. Closes the "write through Bash" bypass.
  *
  * @param {string} command
- * @param {Parameters<typeof guardWrite>[1]} facts
+ * @param {GuardFacts} facts
  * @returns {GuardVerdict}
  * @example
- * guardShell("cat > src/plugins/streak/index.ts <<'EOF'", { isMokuProject: false, initialized: false, changes: [] });
+ * guardShell("cat > src/plugins/streak/index.ts <<'EOF'", { onRails: true, initialized: false, changes: [] });
  * // { allow: false, reason: "..." }
  */
 export function guardShell(command, facts) {

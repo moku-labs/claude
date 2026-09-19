@@ -9,6 +9,7 @@
 import * as commands from "../lib/rails/commands.mjs";
 
 const HANDLERS = {
+  session: commands.session,
   status: commands.status,
   open: commands.open,
   enter: commands.enter,
@@ -19,6 +20,8 @@ const HANDLERS = {
   pause: commands.pause,
   park: commands.park,
   resume: commands.resume,
+  continue: commands.proceed,
+  scope: commands.scope,
   idea: commands.idea,
   init: commands.init,
   guard: commands.guard,

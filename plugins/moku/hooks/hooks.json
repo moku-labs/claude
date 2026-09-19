@@ -6,6 +6,11 @@
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/session-rails.mjs", "timeout": 5 }
       ] }
     ],
+    "UserPromptSubmit": [
+      { "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-prompt.mjs", "timeout": 5 }
+      ] }
+    ],
     "PreToolUse": [
       { "matcher": "Write|Edit", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-write.mjs", "timeout": 10 }

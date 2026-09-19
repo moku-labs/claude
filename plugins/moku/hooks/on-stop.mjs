@@ -9,11 +9,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { readHookInput } from "../lib/hooks/input.mjs";
+import { rootForSession } from "../lib/hooks/root.mjs";
 import { loadLedger } from "../lib/rails/ledger.mjs";
 import { WRITING_STATIONS } from "../lib/rails/routes.mjs";
 
 const { payload } = readHookInput();
-const root = payload.cwd ?? process.cwd();
+const root = rootForSession(payload);
+
+// Off the rails: stopping is nobody's business
+if (!root) process.exit(0);
 
 // Already continuing because of this hook: never block twice, that would loop
 if (payload.stop_hook_active === true) process.exit(0);
