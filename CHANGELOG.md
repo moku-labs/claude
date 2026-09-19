@@ -34,7 +34,7 @@ written for older models and a 200K window. Full reasoning: [`docs/revival/DECIS
   supervision. Every agent and lifecycle skill pins `model` and `effort`.
 - **Agents 28 → 18**: four structure validators, two style validators and two quality validators merged
   into three; two researchers into one. No agent spawns agents.
-- **Hooks 22 scripts → 13**: one write gate instead of six hooks per write.
+- **Hooks 22 scripts → 15**: one write gate instead of six hooks per write.
 - Skills and agents rewritten in plain language: reasons instead of capitals, no personas, no
   re-verification pressure, references instead of duplication (`plan` 476 → 133 lines).
 - One output style, `moku`: the user's language, English code, tables, diagrams and concrete examples.

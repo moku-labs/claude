@@ -3,6 +3,7 @@ name: moku
 description: The moku conductor. Use whenever someone talks about building, changing or fixing anything on Moku (@moku-labs/core, web, worker, room or any moku framework or app) in plain words, such as "I have an idea", "let's build", "add a feature", "this is broken", "what's next", "where are we", or whenever work happens inside a moku project. It finds where the project stands, proposes the next step, and drives the moku lifecycle so the user never needs to know a command.
 when_to_use: Any idea, feature, fix, tweak, refactor or "what now" in a moku project or about starting one. Not for unrelated repositories.
 allowed-tools: Read, Glob, Grep, Bash, Skill, Agent, AskUserQuestion, Write, Edit
+model: fable
 effort: medium
 ---
 
@@ -58,7 +59,7 @@ moku-rails open 2026-09-26-streak-midnight --size S --type fix --title "Streak b
 | init (project level) | `moku:init` | Required before any station past design. Leaves `.planning/moku.md`. |
 | intake | none, this conversation | Record what, why and size in `.planning/changes/<id>/intake.md`. |
 | brainstorm | `moku:brainstorm` | For L, or when the person is unsure what they want. |
-| design | `moku-design:design` | Modes: `ui` (screens), `api` (usage-first type sketch), `architecture` (diagrams). Ask which ones apply. |
+| design | `moku-design:design` | Allowed before init. Modes: `ui` (screens), `api` (usage-first type sketch), `architecture` (diagrams). Ask which ones apply. |
 | plan | `moku:plan` | S changes skip it. M changes get a delta spec, not a full replan. |
 | build | `moku:build` | For S: reproduce the bug with a failing test first when practical. |
 | verify | `moku:verify` | Scope it to what the change touched. |

@@ -55,7 +55,7 @@ fi
 # Check 4: (removed) Plugin export NAMING is a spec/15 §7 convention, not a hard rule.
 # The spec and the vendored sandbox BOTH use the `<name>Plugin` suffix (routerPlugin),
 # so the previous hard block here was inverted and rejected correct code. Naming is now
-# a WARNING handled with judgment by moku-plugin-spec-validator (which can tell islands /
+# a WARNING handled with judgment by moku-structure-validator (which can tell islands /
 # core plugins / collisions apart — a regex cannot). No block here.
 
 # Check 5: Wire factory pattern — function wireXxx wrapping createPlugin

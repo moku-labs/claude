@@ -1,7 +1,7 @@
 # Moku Common Conventions (`@moku-labs/common`) — authoritative rules
 
 These are the **family-level conventions** for consuming the shared `@moku-labs/common` package.
-They are repo-owned and citable: validators (`moku-common-validator`), the `validate-common-usage`
+They are repo-owned and citable: validators (`moku-structure-validator`), the `validate-common-usage`
 hook, and human reviewers reference them by the stable IDs below (**MC1–MC3**). They are *separate*
 from the upstream Moku Core invariants R1–R8 (which live in `spec/11-INVARIANTS.md` and govern the
 kernel/plugin contract, not how a project consumes the common package).

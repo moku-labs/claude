@@ -102,7 +102,7 @@ Copy the workflow YAML and the three `release:*` script bodies from the `moku:mo
 `templates/ruleset-main.json` is the branch ruleset for `main`; it is applied during
 `release:setup`, not scaffolded into the repository. Do not write the YAML from memory: the publish
 path is tokenless OIDC Trusted Publishing, and a hand-written variant breaks provenance. The
-reasoning is in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/ci-release.md`; load the
+reasoning is in `${CLAUDE_PLUGIN_ROOT}/skills/moku-release/references/release-model.md`; load the
 `moku:moku-release` skill for the release procedure itself.
 
 ## Step 5 — verify

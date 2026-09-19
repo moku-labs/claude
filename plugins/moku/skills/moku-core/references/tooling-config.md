@@ -88,7 +88,7 @@ The three `release:*` scripts come from `@moku-labs/common`. Take their exact bo
 `moku:moku-release` skill's `templates/` rather than writing them from memory.
 
 > **`repository` is required for npm provenance.** Publishing with provenance (automatic under
-> OIDC Trusted Publishing — see [ci-release.md](ci-release.md)) fails `E422` unless `package.json`
+> OIDC Trusted Publishing — see the `moku:moku-release` skill) fails `E422` unless `package.json`
 > declares a `repository.url` matching the GitHub repo. Replace `<owner>/<repo>` with the real
 > slug (e.g. `moku-labs/worker`); drop `homepage`/`bugs` if unused, but keep `repository`.
 
@@ -408,7 +408,7 @@ Two thin files, scaffolded from the first commit. They call the shared reusable 
 Copy the exact YAML from the `moku:moku-release` skill's `templates/` — invoke that skill with the
 `Skill` tool, which prints its base directory. Do not write the workflow YAML by hand: the publish
 path is tokenless OIDC Trusted Publishing, and a hand-rolled variant breaks provenance. The
-rationale and the first-publish bootstrap live in [ci-release.md](ci-release.md).
+rationale and the first-publish bootstrap live in the `moku:moku-release` skill (`references/release-model.md`).
 
 ## .editorconfig
 
