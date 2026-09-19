@@ -2,5 +2,5 @@
 type: llm
 ---
 
-PASS if the response designs the API usage-first: it shows two or three alternative usage snippets (how consumer code reads when calling the plugin) before or above any type definitions, compares them in a table with named axes such as ergonomics, inference without explicit generics, testability and consistency with the Moku Core spec, and asks the user to pick.
-FAIL if it goes straight to types or to an implementation, offers only one shape, skips the comparison table, or picks for the user without asking.
+PASS if the response describes a usage-first API design: two or three alternative usage snippets (how consumer code reads) come before type definitions, the alternatives are compared in a table with named axes, and the user picks.
+FAIL if it plans to go straight to types or to an implementation, plans only one shape, has no comparison, or makes the choice instead of the user. Stating a recommendation is fine as long as the user picks.

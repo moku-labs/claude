@@ -53,6 +53,16 @@ stays thin), and read env/secrets via `ctx.env` (not raw `process.env` or bare b
 moku-common conventions (MC2/MC3). The one hard rule: this is a **Layer-3 app** — `createApp` only, not
 `createCoreConfig`/`createCore` and no direct `@moku-labs/core` dependency (idiom I1).
 
+**One worker app (idiom I6).** "Multiple instances" means one per framework: one web app, one worker app.
+The worker backend itself is a single `@moku-labs/worker` `createApp` whose one `plugins: []` holds the
+resource plugins (`storage`, `kv`, `d1`, `queues`, `durableObjects`), the app's runtime plugin, and
+`deploy` plus `cli`. `server.<runtime>.handle` serves requests and `server.cli.{dev,deploy}` generate
+`wrangler.jsonc` from that same composition, which is why it can see every binding. A second, smaller
+`createApp` that exists only to hold `deploy` and `cli` is the facade anti-pattern: it has no resource
+plugins, so the config it generates is missing the bindings, and keeping two compositions in sync by
+hand is where it goes wrong. When someone proposes that split, say so and compose `deploy` and `cli`
+into the one runtime app. Reference: `tracker/src/server.ts`.
+
 ## Framework API (@moku-labs/worker v0.15.0)
 
 One entry: **`@moku-labs/worker`**. The node-only deploy/CLI plugins (`deployPlugin`/`cliPlugin`) ship from

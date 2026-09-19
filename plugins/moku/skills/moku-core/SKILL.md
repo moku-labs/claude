@@ -200,6 +200,17 @@ createPlugin("bundler", {
 
 **Where to check:** Every `createPlugin(` call. If it has angle brackets before the parenthesis, it is wrong.
 
+## Entry files stay thin (idioms I3, I4)
+
+`src/main.ts`, `src/index.ts`, `app.ts`, `server.ts`, `config.ts`, `routes.tsx` and a framework's
+`src/index.ts` are composition: imports, one `createApp` or `createCore` call, exports. They are the
+files a person reads first, so they have to tell the project's story at a glance.
+
+Logic with state, a lifecycle or events is a plugin. A stateless helper is a module under `lib/`. When
+someone asks for logic "right in `main.ts` so it is easy to find", put it in a plugin or a `lib/` module,
+wire it from the entry in one line, and say in one sentence why: the entry stays readable, and the logic
+gets a home where it can be tested. Do not comply by inlining it, even with a warning attached.
+
 ## Common mistakes
 
 ```typescript

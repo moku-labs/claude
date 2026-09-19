@@ -4,7 +4,7 @@ allowed_tools: [Read, Glob, Grep, Skill]
 tags: [core, style]
 ---
 
-This function in my moku plugin is a wall of text. Make it readable in the moku house style, keep behavior identical:
+This function in my moku plugin is a wall of text. Make it readable in the moku house style, keep behavior identical. Reply with the rewritten code only, no explanation:
 
 ```ts
 export function resolveRoute(routes: Route[], path: string, method: string) {
