@@ -9,3 +9,4 @@ experiments/
 
 # Eval run output
 plugins/*/evals/results/
+docs/revival/e2e-logs/
