@@ -42,6 +42,24 @@ never from `@moku-labs/core`. Tiers, JSDoc, unit and integration tests are the s
 
 With several custom plugins, group them into waves the same way a framework build does.
 
+### An app with no custom plugins still builds through builders
+
+Many Layer-3 apps have no plugin of their own: pages, components, islands and `lib/` on top of a framework.
+The work is still handed out. The unit of work is one page or one island with the components, styles, `lib/`
+modules and tests the spec lists for it. Shared pieces (tokens, layout, header, footer, route table) are the
+skeleton: build them first, yourself or as one unit, then fan the remaining units out.
+
+- One `moku:moku-builder` per unit, with the unit's section of the spec, its files and the test-first protocol.
+  Units write disjoint files, so they run in parallel up to the parallel-agent limit. Use `moku-builder-deep`
+  for a unit with real state or timing logic, and to retry a unit whose first attempt failed.
+- After the wave, one `moku:moku-code-reviewer` over the wave's diff.
+- The orchestrating session plans, dispatches, reconciles and verifies. It does not write the units itself:
+  a session that builds everything alone skips the test-first protocol and the review, and costs several times
+  more than the builders it replaced.
+
+The same holds for a later pass inside the same change (a delta spec after `moku-rails scope`): new pages,
+islands and features are units for builders, not edits the orchestrator makes in place.
+
 Not every concern is a plugin: pure build-time data access belongs in `lib/`, client-only DOM behavior
 belongs in an island. `consumer-plugins.md` has the plugin-vs-lib-vs-island decision guide and the
 Layer-3 wiring rules (no `src/config.ts`; compose via `createApp({ plugins: [...] })`; the

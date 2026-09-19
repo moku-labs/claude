@@ -14,6 +14,8 @@ they claim, and the change moves one wave at a time so the user keeps control.
 
 Agent types are plugin-qualified when you spawn them: `moku:moku-builder`, `moku:moku-code-reviewer` and so on. A bare name does not launch.
 
+Spawn agents in the foreground (`run_in_background: false`); several Agent calls in one response already run in parallel. A background agent's completion may never reach a non-interactive session, and a session that waits for it hangs inside the station.
+
 ## Rails first
 
 ```bash

@@ -1,9 +1,9 @@
 ---
 name: brainstorm
-description: Explores an idea for a Moku project before planning. Analyses the codebase, researches the domain, runs one challenger pass over the position, and writes the context file that the plan station consumes. Writes nothing outside .planning/.
+description: Explores an idea for a Moku project before planning. Analyses the codebase, researches the domain, runs one challenger pass over the position, and writes the context file that the plan station consumes. On request it puts the reasoning on a discussion page with diagrams and tables that the person comments on and corrects. Use when someone wants to discuss or think through an idea, is unsure what to build, or asks what you think before any plan exists. Writes nothing outside .planning/.
 when_to_use: The brainstorm station of a size-L change, or any moment a user is unsure what to build and wants the idea explored before it is planned. Not for planning, building or unrelated repositories.
 argument-hint: "{free-form description} or [create|modify|feature|migrate] {name} \"description\" [--deep [N]|--quick]"
-allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, Skill
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, Skill, ToolSearch, Artifact, ArtifactComments
 model: fable
 effort: high
 ---
@@ -55,6 +55,10 @@ Depth flags: `--quick` and `--deep [N]` are mutually exclusive, and `--deep N` n
 **Existing context.** If `.planning/context-{NAME}.md` already exists, ask: resume from the saved scratch files, start fresh (delete `.planning/brainstorm-{NAME}-*` and the context file), or cancel. Resume restores the depth from the saved analysis instead of asking again.
 
 **Design context.** A finished `moku-design:design` run leaves `.planning/design/<slug>/design-context.md`. If one relates to this subject, offer to ground the session in it and treat it as the design specification the architecture has to realise: debate how to build it properly on the Moku stack, not what it should look like. Note in the context file that the design's prototype is demo-only and gets re-implemented from scratch, so plan inherits that constraint.
+
+## The discussion page
+
+When the person brings an idea and not a task, offer once to put the reasoning on a page they can comment on and correct: diagrams of how it would work, a table of options, open questions with proposed answers, and a decisions log that becomes the context file. It is their choice; talking it through in chat stays the default. Read `references/discussion-artifact.md` for when to offer it, what goes on the page, how to publish it and how the comment loop runs. The analysis, the research and the challenger pass below feed the page; the page replaces only the question-by-question debate.
 
 ## The flow
 

@@ -33,7 +33,17 @@ committed, including `history.md` and the archive.
 - `.planning/history.md` — the newest-first cycle trace this skill writes.
 - `.planning/archive/` — closed changes and cycle snapshots. History is annotated, never deleted.
 
-Everything else under `.planning/` is ephemeral unless `--keep` names it.
+Everything else under `.planning/` is ephemeral unless `--keep` names it, with one exception: records of
+decisions inside otherwise ephemeral folders. Before removal, move these into
+`.planning/archive/cycles/<date>/`, keeping their relative paths:
+
+- `astra/triage.md` — every Astra finding with its verdict and reason. `DECISIONS.md` §7 requires rejections to stay written down.
+- `design/<slug>/concept-spec.md` and `design/<slug>/design-context.md` — what the design station decided.
+- `design/<slug>/assets/manifest.json` — the prompts and the model behind each generated image.
+- `discussion/*.html` — the discussion pages the person agreed to.
+
+Screenshots, prototypes, scripts, logs and the image originals stay ephemeral. List the moved files in the
+confirmation under ARCHIVE, so the person sees what survives.
 
 ## Step 0 — locate the workspace
 

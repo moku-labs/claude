@@ -31,6 +31,8 @@ moku-rails enter plan
 
 Before every user gate run `moku-rails pause --reason "<why>"`, so stopping is recorded rather than looking like an abandoned station. When the plan is approved, finish with `moku-rails done plan`.
 
+A gate is approved by an answer the person gives after they saw the plan. A "go", a "yes" or an "ok, plan and build" from before the spec existed approves the direction, not the spec: show the gate summary (what gets built, in which units, what is left out) in a few lines, pause, and wait. This holds in a non-interactive session too; there the turn ends at the gate.
+
 ## Ground every decision in the spec
 
 Before any decision about architecture, the core API, the factory chain, config, lifecycle, events, `ctx`, types, invariants or plugin structure, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-index.md` and open the cited `spec/NN-*.md`. Cite section ids (`spec/NN-*.md §N`) in the specs you write, and justify any deviation against a cited section. `.planning/` is local state and is never staged or committed.

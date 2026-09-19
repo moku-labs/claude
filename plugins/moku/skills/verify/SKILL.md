@@ -90,7 +90,9 @@ A request that is really about building, planning or e2e testing belongs to `mok
 
 ## The validator fan-out
 
-Spawn these with the `Agent` tool in one parallel batch. Agent types are namespaced
+Spawn these with the `Agent` tool in parallel batches. The batch size is the parallel-agent limit:
+`MAX_AGENTS=${CLAUDE_PLUGIN_OPTION_MAX_PARALLEL_AGENTS:-3}`, or the project's `maxParallelAgents` when set
+(`plugin-settings.md`). Five validators with a limit of two run as 2, 2 and 1. Agent types are namespaced
 (`moku:<name>`), or they do not launch.
 
 | Agent | Covers |

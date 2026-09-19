@@ -119,7 +119,10 @@ bun add -d @moku-labs/ci
 | `node_modules/@moku-labs/ci/examples/package/publish.yml` | `.github/workflows/publish.yml` (packages) |
 | `node_modules/@moku-labs/ci/examples/app/ci.yml` | `.github/workflows/ci.yml` (apps) |
 
-Copy the files byte for byte (`cp`), do not retype them. The three `release:*` scripts are
+Copy the files byte for byte (`cp`), do not retype them. One edit follows for apps: `examples/app/ci.yml`
+is written for an app with a worker, and names `build_worker_script` and `migrate_script`. Delete each of
+those two lines when `package.json` has no script of that name (a static site has neither), so the first
+push does not fail on a script that does not exist. Change nothing else in the file. The three `release:*` scripts are
 `moku-release setup`, `moku-release doctor` and `moku-release`. The branch ruleset
 (`node_modules/@moku-labs/ci/rulesets/main.json`) is applied later by `release:setup`, not scaffolded
 into the repository. Do not write the YAML from memory: the publish

@@ -1,6 +1,6 @@
 ---
 name: e2e
-description: Proves a Moku web app works in a real browser. Covers every screen and control with Playwright, adds visual baselines, then runs exploratory QA and a UX gate on desktop and mobile screenshots, fixing what it finds. Use for the e2e station of a change with a web surface, not for unit or integration tests.
+description: Proves a Moku web app works in a real browser. Covers every screen and control with Playwright, adds visual baselines, then runs exploratory QA and a UX gate on desktop and mobile screenshots, fixing what it finds. Use for the e2e station of a change with a web surface, and whenever someone asks to check the app in a browser, on a phone or on mobile, to click through it, or to see whether it looks right. Not for unit or integration tests.
 when_to_use: A Layer-3 Moku app with a web surface reaches the e2e station, or the user asks for browser-level coverage of screens, features or controls.
 argument-hint: (empty = cover everything) or {a screen or feature to focus, or a visual feature to build} [--update-baselines]
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, Agent, AskUserQuestion
@@ -86,7 +86,11 @@ triage. The full procedure is `references/e2e-testing.md` → "The UX gate". In 
 
 1. **Capture.** `moku-web-ux-reviewer` drives the app on desktop and mobile and writes one screenshot per
    screen inventory item per viewport into `.planning/e2e/shots/`. It also returns its own heuristic
-   findings (measured geometry, contrast, tap targets, axe violations).
+   findings (measured geometry, contrast, tap targets, axe violations). Run it in the foreground
+   (`run_in_background: false`) and take what it returns. If it comes back without a complete capture or
+   without a report, do not message it and wait: a reply may never arrive, and the session then hangs
+   inside the station. Finish the capture yourself with the script it left in `.planning/e2e/`, note in
+   the triage file that the heuristics report is missing, and go on to the review.
 2. **Astra.** If the `moku-design` pack is installed and `moku-astra` is on PATH:
 
    ```bash
