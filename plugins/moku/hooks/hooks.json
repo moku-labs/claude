@@ -11,6 +11,7 @@
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-write.mjs", "timeout": 10 }
       ] },
       { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-bash.mjs", "timeout": 5 },
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/verify-before-commit.sh", "timeout": 60 }
       ] }
     ],

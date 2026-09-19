@@ -83,7 +83,7 @@ would only bury the ones that matter.
 
 ```json
 {
-  "agent": "code-reviewer",
+  "agent": "moku-code-reviewer",
   "wave": 1,
   "plugins_reviewed": ["router", "auth"],
   "verdict": "ISSUES",

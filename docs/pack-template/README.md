@@ -13,7 +13,7 @@ plugins/moku-FRAMEWORK/
   skills/moku-FRAMEWORK/SKILL.md      # the framework skill
   skills/moku-FRAMEWORK/references/   # plugin-index.md and anything else one level deep
   agents/FRAMEWORK-validator.md       # optional; frontmatter name: moku-FRAMEWORK-validator
-  evals/first-plugin/                 # at least one case: prompt.md + graders/
+  evals/first-plugin/                 # copy to the repository's evals/moku-FRAMEWORK/first-plugin/ (see step on evals)
 ```
 
 ## The 5 steps to add a pack
@@ -47,7 +47,10 @@ An agent under `agents/` whose frontmatter `name` is `moku-<key>-validator` is p
 other packs use `<key>-validator.md`. Give it `model: sonnet` and `effort: medium`, and keep `Agent`
 out of its `tools`.
 
-Ship at least one eval case under `evals/`. A case is a `prompt.md` (frontmatter `max_turns`,
+Ship at least one eval case. Copy `evals/first-plugin/` from this template to the repository's top-level
+`evals/moku-FRAMEWORK/first-plugin/`, not into the pack: a pack depends on the core, and the eval runner only loads
+plugins inside its containment root, so the case names both in its `plugins:` frontmatter and runs from the
+repository root (`claude plugin eval . --allow-tools Bash`). A case is a `prompt.md` (frontmatter `max_turns`,
 `allowed_tools`, `tags`; body is what the user types) plus `graders/*.md`. Include a `tool_used`
 grader that asserts the skill fired:
 

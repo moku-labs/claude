@@ -37,7 +37,7 @@ Read three things from it: is the project initialized, which changes are open, w
 | Size | Sign | Route |
 |---|---|---|
 | S | One plugin, public API unchanged | intake → build → verify → close |
-| M | New plugin, or an existing API changes | intake → plan → build → verify → e2e → release → close |
+| M | New plugin, or an existing API changes | intake → design → plan → build → verify → e2e → release → close |
 | L | Several plugins, a new framework, an architecture shift | intake → brainstorm → design → plan → build → verify → e2e → release → close |
 
 `brainstorm`, `design`, `e2e` and `release` are optional. Skip one with `moku-rails skip <station> --reason "..."`. `plan` (M, L), `build`, `verify` and the closing checklist are never skipped.
@@ -65,8 +65,8 @@ Deep exploration belongs to the brainstorm station, after the project exists. Do
 
 | Station | Skill | Notes |
 |---|---|---|
-| init (project level) | `moku:init` | Required before any station past design. Leaves `.planning/moku.md`. |
-| intake | none, this conversation | Record what, why and size in `.planning/changes/<id>/intake.md`. |
+| init (project level) | `moku:init` | Required before any station past design. It runs `moku-rails init begin` and `init done` itself and leaves `.planning/moku.md`. |
+| intake | none, this conversation | Opening the change is the intake: `moku-rails open` marks it done. Record what, why and size in `.planning/changes/<id>/intake.md`. |
 | brainstorm | `moku:brainstorm` | For L, or when the person is unsure what they want. |
 | design | `moku-design:design` | Allowed before init. Modes: `ui` (screens), `api` (usage-first type sketch), `architecture` (diagrams). Ask which ones apply. |
 | plan | `moku:plan` | S changes skip it. M changes get a delta spec, not a full replan. |

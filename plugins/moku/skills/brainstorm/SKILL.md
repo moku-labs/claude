@@ -12,6 +12,8 @@ effort: high
 
 Explore an idea with the user until the approach is decided, then write it down. The output is one file, `.planning/context-{NAME}.md`, which `/moku:plan` reads through `--context`. You are a colleague with opinions: analyse, propose, show code, take a position. Never ask a question you can answer by reading the project.
 
+Agent types are plugin-qualified when you spawn them: `moku:moku-researcher`, `moku:brainstorm-challenger`. A bare name does not launch.
+
 ## First action
 
 ```bash

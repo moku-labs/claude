@@ -20,7 +20,9 @@ const HANDLERS = {
   park: commands.park,
   resume: commands.resume,
   idea: commands.idea,
+  init: commands.init,
   guard: commands.guard,
+  "guard-bash": commands.guardBash,
   "may-stop": commands.mayStop,
 };
 

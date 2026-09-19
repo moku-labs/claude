@@ -14,7 +14,7 @@ export const MIN_REAL_LINES = 3;
 export const MIN_TEST_LINES = 3;
 
 const NOT_IMPLEMENTED = /throw\s+new\s+Error\(\s*["'`][^"'`]*not\s+implemented/i;
-const EMPTY_ARROW_BODY = /=>\s*\{\s*\}/;
+const EMPTY_ARROW_BODIES = /=>\s*\{\s*\}/g;
 const PLACEHOLDER_RETURN = /^return\s*(null|\{\}|\[\]|undefined)\s*;?$/;
 const ASSERTION = /\b(expect|expectTypeOf|assert)\s*[.(]/;
 const EMPTY_ASSERTION = /expect\(\s*(true|1)\s*\)\.toBe\(\s*(true|1)\s*\)/;
@@ -50,7 +50,9 @@ export function judgeSource(source) {
 
   // The three shapes a placeholder takes
   if (NOT_IMPLEMENTED.test(source)) reasons.push("throws \"not implemented\"");
-  if (EMPTY_ARROW_BODY.test(source)) reasons.push("empty function body");
+  // One empty body among real logic is idiomatic (`destroy: () => {}`); only a short file made of them is a stub
+  const emptyBodies = source.match(EMPTY_ARROW_BODIES)?.length ?? 0;
+  if (emptyBodies > 0 && lines.length < MIN_REAL_LINES * 2) reasons.push("empty function body");
   if (lines.length > 0 && lines.every((line) => PLACEHOLDER_RETURN.test(line))) reasons.push("placeholder return only");
 
   // A body that is only a TODO, or is too short to hold logic

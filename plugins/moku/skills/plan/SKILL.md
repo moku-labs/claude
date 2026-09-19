@@ -12,6 +12,8 @@ effort: high
 
 Turn what the user wants into specifications a builder can implement without asking questions. Plan writes specs and recommends the build; it never creates or edits source files. Builders read only the specs, so anything left implicit here turns into drift there.
 
+Agent types are plugin-qualified when you spawn them: `moku:moku-plan-checker`, `moku:moku-researcher`. A bare name does not launch.
+
 ## First action
 
 ```bash

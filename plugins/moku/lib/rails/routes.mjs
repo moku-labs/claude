@@ -23,7 +23,7 @@ export const WRITING_STATIONS = new Set(["build", "verify", "e2e"]);
 /** @type {Record<ChangeSize, Station[]>} */
 const ROUTES = {
   S: ["intake", "build", "verify", "close"],
-  M: ["intake", "plan", "build", "verify", "e2e", "release", "close"],
+  M: ["intake", "design", "plan", "build", "verify", "e2e", "release", "close"],
   L: ["intake", "brainstorm", "design", "plan", "build", "verify", "e2e", "release", "close"],
 };
 

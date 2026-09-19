@@ -27,10 +27,13 @@ const state = join(root, ".planning", "STATE.md");
 const waveActive = existsSync(state) && /\|\s*(active|building|in-progress)\s*\|/.test(readFileSync(state, "utf8"));
 if (waveActive && !pausedForUser(root)) block("A build wave is still active in .planning/STATE.md. Complete it, or pause the change if you are waiting for the user.");
 
-/** True when every open change is paused, meaning the stop is a deliberate hand-over to the user. */
+/**
+ * True when stopping is a deliberate hand-over: every open change is paused, or nothing is open at all.
+ * A stale "building" row left by a crashed wave must not trap a user who has no open change.
+ */
 function pausedForUser(projectRoot) {
   const open = loadLedger(projectRoot).changes.filter((change) => change.status === "open");
-  return open.length > 0 && open.every((change) => change.paused);
+  return open.every((change) => change.paused);
 }
 
 /** @param {string} reason */

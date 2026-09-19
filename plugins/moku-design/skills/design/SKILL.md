@@ -15,6 +15,8 @@ the user in the loop at every pick — and captures the answer as `design-contex
 specification. The prototypes under `.planning/design/{slug}/` are throwaway demo code and are
 re-implemented from scratch by the builder, never copied.
 
+Agent types are plugin-qualified when you spawn them: `moku-design:design-generator`. A bare name does not launch.
+
 ## Rails
 
 ```bash
@@ -26,7 +28,8 @@ stop to ask the user something — each round pick, each polish gate — run `mo
 When the design is captured, `moku-rails done design`.
 
 If the rails refuse because no change is open, open one first
-(`moku-rails open <date-slug> --size S|M|L --type <type> --title "..."`) and enter again.
+(`moku-rails open <date-slug> --size M|L --type <type> --title "..."`) and enter again. Design is on
+the route of M and L changes; a size-S fix has no design station.
 
 ## Moku Core rules
 

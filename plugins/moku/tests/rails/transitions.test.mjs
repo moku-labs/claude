@@ -49,6 +49,10 @@ describe("canEnter", () => {
     assert.equal(canEnter(ready, { size: "L", done: ["intake"] }, "plan").ok, true);
   });
 
+  it("offers design to a medium change, since a feature can have UI", () => {
+    assert.equal(canEnter(ready, { size: "M", done: ["intake"] }, "design").ok, true);
+  });
+
   it("refuses a station that is not on the route", () => {
     const verdict = canEnter(ready, { size: "S", done: ["intake"] }, "plan");
 

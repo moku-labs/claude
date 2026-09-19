@@ -4,7 +4,7 @@
  * One concern: load, save and edit the ledger. Decisions live in transitions.mjs and guard.mjs.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 /**
@@ -26,6 +26,7 @@ import { dirname, join } from "node:path";
 
 const LEDGER_FILE = join(".planning", "state.json");
 const MARKER_FILE = join(".planning", "moku.md");
+const INIT_FILE = join(".planning", ".init-in-progress");
 
 /**
  * Load the ledger, or an empty one when the project has none yet.
@@ -37,9 +38,49 @@ const MARKER_FILE = join(".planning", "moku.md");
  */
 export function loadLedger(root) {
   const file = join(root, LEDGER_FILE);
-  if (!existsSync(file)) return { version: 1, changes: [], ideas: [] };
+  if (!existsSync(file)) return emptyLedger();
 
-  return JSON.parse(readFileSync(file, "utf8"));
+  // A corrupt ledger must never crash a hook: a crashed hook lets every write through unchecked
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    renameSync(file, `${file}.corrupt`);
+    console.error(`moku rails: ${LEDGER_FILE} was not valid JSON. It was moved to ${LEDGER_FILE}.corrupt and a fresh ledger was started.`);
+    return emptyLedger();
+  }
+}
+
+/** @returns {Ledger} */
+function emptyLedger() {
+  return { version: 1, changes: [], ideas: [] };
+}
+
+/**
+ * True while the init station is scaffolding: source writes are allowed, the project is not yet "initialized".
+ *
+ * @param {string} root project root
+ * @returns {boolean}
+ * @example
+ * isInitializing(process.cwd());
+ */
+export function isInitializing(root) {
+  return existsSync(join(root, INIT_FILE));
+}
+
+/**
+ * Mark the start or the end of the init station.
+ *
+ * @param {string} root project root
+ * @param {boolean} active
+ * @example
+ * setInitializing(process.cwd(), true);
+ */
+export function setInitializing(root, active) {
+  const file = join(root, INIT_FILE);
+  if (!active) return rmSync(file, { force: true });
+
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, "The init station is scaffolding this project. Removed by `moku-rails init done`.\n");
 }
 
 /**
@@ -112,7 +153,7 @@ export function findChange(ledger, id) {
 }
 
 /**
- * Build a new change record.
+ * Build a new change record. Opening a change is its intake, so that station starts out done.
  *
  * @param {{ id: string, title: string, type: string, size: "S" | "M" | "L" }} input
  * @returns {Change}
@@ -124,7 +165,7 @@ export function newChange(input) {
     ...input,
     status: "open",
     station: null,
-    done: [],
+    done: ["intake"],
     checklist: { tests: false, verify: false, docs: false },
     paused: false,
   };

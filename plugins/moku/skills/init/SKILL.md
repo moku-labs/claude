@@ -15,6 +15,21 @@ is what makes the rails usable at all. Its last act is writing `.planning/moku.m
 `moku-rails` reads to answer "is this project initialized?". Writing it last means a half-finished
 init never looks finished.
 
+## Rails first and last
+
+```bash
+moku-rails init begin     # opens the window in which this skill may write src/ before the project counts as initialized
+```
+
+The write gate refuses source files in an uninitialized project. `init begin` is the one exception,
+and it exists only for this skill. After the marker is written (the last step below):
+
+```bash
+moku-rails init done      # refused until .planning/moku.md exists, so a half-finished init never counts
+```
+
+If init is interrupted, `moku-rails status` reports it as a debt and the conductor resumes here.
+
 ## Moku Core specification
 
 Before any decision about architecture, the core API, the factory chain, config, lifecycle, events,
@@ -112,7 +127,7 @@ not continue to Step 6 while anything is red: the marker means "this project is 
 
 ## Step 6 — write the marker, last
 
-Only after the checklist is green, write `.planning/moku.md`. Keep the format exactly as the
+Only after the checklist is green, write `.planning/moku.md`, then run `moku-rails init done`. Keep the format exactly as the
 `detect-moku-project.sh` hook and `moku-rails` read it:
 
 ```markdown

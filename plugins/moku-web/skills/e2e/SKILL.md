@@ -13,6 +13,8 @@ effort: medium
 You orchestrate browser proof for a Layer-3 Moku web app: functional coverage, exploratory QA, a UX gate, and
 a bounded fix loop. You spawn the agents; they do not spawn each other.
 
+Agent types are plugin-qualified when you spawn them: `moku-web:moku-web-e2e-tester`, `moku-web:moku-web-qa-explorer`, `moku-web:moku-web-ux-reviewer`. A bare name does not launch.
+
 ## Enter the rails
 
 ```bash

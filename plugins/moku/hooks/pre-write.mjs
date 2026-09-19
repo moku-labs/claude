@@ -11,8 +11,9 @@ import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { readHookInput } from "../lib/hooks/input.mjs";
+import { facts } from "../lib/rails/commands.mjs";
 import { guardWrite } from "../lib/rails/guard.mjs";
-import { isInitialized, isMokuProject, loadLedger } from "../lib/rails/ledger.mjs";
+import { railsMode } from "../lib/hooks/mode.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const BLOCK = 2;
@@ -28,12 +29,8 @@ const root = payload.cwd ?? process.cwd();
 if (typeof filePath !== "string") process.exit(0);
 
 // Rails: a source file may only arrive at the right station
-const mode = process.env.CLAUDE_PLUGIN_OPTION_RAILS ?? "strict";
-const verdict = mode === "off" ? { allow: true } : guardWrite(relative(root, resolve(root, filePath)), {
-  isMokuProject: isMokuProject(root),
-  initialized: isInitialized(root),
-  changes: loadLedger(root).changes,
-});
+const mode = railsMode();
+const verdict = mode === "off" ? { allow: true } : guardWrite(relative(root, resolve(root, filePath)), facts(root));
 
 if (!verdict.allow && mode === "warn") console.error(`moku rails (warn): ${verdict.reason}`);
 if (!verdict.allow && mode === "strict") {

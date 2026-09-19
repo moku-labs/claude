@@ -8,7 +8,7 @@
  */
 
 import { exitCodeFor, formatJson, formatReport } from "../lib/verify/report.mjs";
-import { TIERS } from "../lib/verify/tiers.mjs";
+import { normalizeTier, TIERS } from "../lib/verify/tiers.mjs";
 import { verifyPlugin } from "../lib/verify/verify.mjs";
 
 const USAGE = `Usage: moku-verify-artifacts <plugin-name> [--root dir] [--tier ${TIERS.join("|")}] [--run] [--json]`;
@@ -17,7 +17,9 @@ const args = parse(process.argv.slice(2));
 const [name] = args.positional;
 
 // No plugin named, or a tier that is not one: usage error
-if (!name || (args.flags.tier !== undefined && !TIERS.includes(String(args.flags.tier)))) {
+// Tiers are accepted the way the docs spell them too: `VeryComplex` is `very-complex`
+const tier = typeof args.flags.tier === "string" ? normalizeTier(args.flags.tier) : null;
+if (!name || (args.flags.tier !== undefined && tier === null)) {
   console.error(USAGE);
   process.exit(1);
 }
@@ -25,7 +27,7 @@ if (!name || (args.flags.tier !== undefined && !TIERS.includes(String(args.flags
 // Verify, then print for a person or for a skill
 let report;
 try {
-  report = verifyPlugin({ root: args.root, name, tier: typeof args.flags.tier === "string" ? args.flags.tier : null, run: args.flags.run === true });
+  report = verifyPlugin({ root: args.root, name, tier, run: args.flags.run === true });
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

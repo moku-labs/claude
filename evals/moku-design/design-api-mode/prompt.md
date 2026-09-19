@@ -1,6 +1,8 @@
 ---
+# A pack depends on the core plugin, so both are loaded for the run.
+plugins: ["../../../plugins/moku-design", "../../../plugins/moku"]
 max_turns: 14
-allowed_tools: [Read, Glob, Grep, Skill]
+allowed_tools: [Read, Glob, Grep, Skill, Bash]
 tags: [design, api]
 ---
 

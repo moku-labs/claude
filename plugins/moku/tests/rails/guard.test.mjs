@@ -41,6 +41,10 @@ describe("guardWrite", () => {
     assert.equal(guardWrite("src/plugins/streak/api.ts", { isMokuProject: true, initialized: true, changes: building }).allow, true);
   });
 
+  it("does not judge files outside the project root", () => {
+    assert.equal(guardWrite("../other/src/plugins/x/index.ts", { isMokuProject: true, initialized: false, changes: [] }).allow, true);
+  });
+
   it("ignores closed changes", () => {
     const verdict = guardWrite("src/main.ts", { isMokuProject: true, initialized: true, changes: [{ status: "closed", station: "build" }] });
 

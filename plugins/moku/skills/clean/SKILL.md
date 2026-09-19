@@ -25,6 +25,8 @@ committed, including `history.md` and the archive.
 
 ## Durable knowledge — always kept
 
+- `.planning/moku.md` — the project marker. Without it the rails treat the project as uninitialized and refuse every source write.
+- `.planning/state.json` — the rails ledger: open and parked changes, the idea backlog. It belongs to `moku-rails`; never edit or delete it here.
 - `.planning/learnings.md` — architecture learnings across sessions.
 - `.planning/decisions.md` — the decision graph: chose X over Y because Z.
 - `.planning/steering.md` — scope, MVP priorities, risk, CI and release choices.
@@ -92,7 +94,8 @@ Compute two lists from the real contents of `.planning/` with `find`; do not ass
 **Remove:** everything else, typically `STATE.md`, `specs/`, `build/skeleton-spec.md`,
 `context-*.md`, `build/` (agent logs, wave logs, findings, coverage), `audit-*.md`,
 `brainstorm-*-position.md`, `brainstorm-*-research.md`, `brainstorm-*-analysis.md`,
-`notifications.log`, `diagnostics.log`, and any leftover marker files.
+`notifications.log`, `diagnostics.log`, and leftover temporary markers such as `.brainstorm-active`.
+`.planning/moku.md` is not a leftover: it stays.
 
 ```
 .planning/ cleanup plan

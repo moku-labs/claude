@@ -340,7 +340,9 @@ Every pack has the same shape:
 - `skills/moku-<fw>/SKILL.md` plus `skills/moku-<fw>/references/` (at minimum `plugin-index.md`).
 - Optional validator agent under `agents/`, named `moku-<fw>-validator` in its frontmatter. The
   `verify` skill finds it by that name, so the agent `name` is the contract, not the file name.
-- `evals/<case>/` with at least one case (`prompt.md` + `graders/`).
+- At least one eval case (`prompt.md` + `graders/`) in the repository's top-level `evals/<pack>/<case>/`, with
+  `plugins: ["../../../plugins/<pack>", "../../../plugins/moku"]` in the case frontmatter. A pack depends on the
+  core, and the eval runner loads only plugins inside its containment root, so pack cases cannot live inside the pack.
 - A row in the registry above, with `pack`, `skill` and `pluginIndex` pointing at the pack's paths.
 - An entry in the repository's `.claude-plugin/marketplace.json` whose `version` matches the pack's
   `plugin.json` (`claude plugin tag` validates that they agree).
@@ -374,7 +376,7 @@ provenance above.)
 Layer-3 **apps** are not framework registry entries (they deploy, not publish — see the `layer` field
 note). But the toolkit keeps a small set of **curated reference example apps** to consult for *idiomatic
 solutions* when planning or building an app — "how does a real, well-built Moku app of this shape do X?".
-The `/moku:plan` and `/moku:build` app flows (and `/moku:design`) should point at the closest reference.
+The `/moku:plan` and `/moku:build` app flows (and ``moku-design:design``) should point at the closest reference.
 
 | Key | What it is | Stack | Location | Status |
 |-----|-----------|-------|----------|--------|

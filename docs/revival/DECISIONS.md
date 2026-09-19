@@ -15,6 +15,7 @@ One repository, one marketplace, a core plugin and one pack per framework.
 | `plugins/moku-design` | `design` skill, `moku-astra` skill, `design-generator`, `bin/moku-astra` |
 | `plugins/moku-worker`, `plugins/moku-room` | one framework skill each |
 | `plugins/moku-maintainer` | `spec-sync`, `moku-sync`; operates on this repository's working tree |
+| `evals/<pack>/` (repository root) | eval cases of the packs; a pack needs the core loaded beside it |
 
 **Boundary rule.** A pack depends on the core. The core never names a pack file. `${CLAUDE_PLUGIN_ROOT}`
 resolves per plugin, so a pack cannot reach core files by path. A pack that needs core knowledge says:
@@ -36,12 +37,19 @@ Every lifecycle skill, as its first action:
 moku-rails enter <station>      # exit 2 = refused: stop, relay the reason and the named next step
 ```
 
-and as its last action `moku-rails done <station>`. Before stopping to ask the user anything
+and as its last action `moku-rails done <station>`. Opening a change is its intake: `open` marks that
+station done, so a directly invoked skill can open a change and enter its own station at once. Before stopping to ask the user anything
 mid-station: `moku-rails pause --reason "<why>"`. Stations: `intake, brainstorm, design, plan, build,
-verify, e2e, release, close`. `init` is project level: it leaves `.planning/moku.md`, the marker the
-rails read. A skill invoked directly by a user with no open change opens one first
+verify, e2e, release, close`. `init` is project level: it runs `moku-rails init begin` (the only window in which source files may be
+written before the project is initialized), leaves `.planning/moku.md`, the marker the rails read, and
+closes the window with `moku-rails init done`. A skill invoked directly by a user with no open change opens one first
 (`moku-rails open <date-slug> --size S|M|L --type <type> --title "..."`), so direct use and
 conductor use travel the same rails.
+
+Two gates enforce the write rule: `pre-write.mjs` for Write and Edit, and `pre-bash.mjs`, which refuses
+shell commands that write into `src/` (redirects, heredocs, `tee`, `cp`, `mv`, `touch`, `sed -i`) when a
+Write to the same path would be refused. A corrupt ledger is set aside and replaced, never allowed to
+crash a hook, because a crashed hook lets every write through. `clean` never removes `moku.md` or `state.json`.
 
 `.planning/state.json` is the machine ledger and belongs to `moku-rails`. `.planning/STATE.md` stays
 the human-readable phase and wave record the skills already maintain. Do not merge them.

@@ -12,6 +12,8 @@ effort: medium
 You turn an approved plan into working code. Builders write plugins in parallel, you verify what
 they claim, and the change moves one wave at a time so the user keeps control.
 
+Agent types are plugin-qualified when you spawn them: `moku:moku-builder`, `moku:moku-code-reviewer` and so on. A bare name does not launch.
+
 ## Rails first
 
 ```bash

@@ -7,8 +7,8 @@
 
 import { relative, resolve } from "node:path";
 
-import { guardWrite } from "./guard.mjs";
-import { findChange, isInitialized, isMokuProject, loadLedger, newChange, saveLedger } from "./ledger.mjs";
+import { guardShell, guardWrite } from "./guard.mjs";
+import { findChange, isInitialized, isInitializing, isMokuProject, loadLedger, newChange, saveLedger, setInitializing } from "./ledger.mjs";
 import { headCommit, reconcile } from "./reconcile.mjs";
 import { OPTIONAL_STATIONS, routeFor } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
@@ -33,6 +33,7 @@ export function status({ root }) {
   const debts = reconcile(root, ledger);
 
   const lines = [initialized ? "Project: initialized." : "Project: NOT initialized. Only intake, brainstorm and design are possible."];
+  if (isInitializing(root)) lines.push("Debt [init]: the init station started and never finished. Finish it with the init skill.");
   if (debts.length === 0) lines.push("Rails: clean. Ready for new work.");
   for (const debt of debts) lines.push(`Debt [${debt.kind}]: ${debt.detail}`);
   if (ledger.ideas.length > 0) lines.push(`Backlog: ${ledger.ideas.length} idea(s) parked for later.`);
@@ -82,6 +83,10 @@ export function enter({ root, positional, flags }) {
   if (!station) return usage("moku-rails enter <station> [--change <id>]");
 
   const ledger = loadLedger(root);
+  if (!ledger.changes.some((entry) => entry.status === "open")) {
+    return { code: REFUSED, lines: ["Refused: no change is open, so there is nothing to move along the rails.", "Next step: open"], data: { ok: false, missing: "open" } };
+  }
+
   const change = findChange(ledger, optional(flags.change));
   const verdict = canEnter({ initialized: isInitialized(root) }, change, station);
   if (!verdict.ok) return { code: REFUSED, lines: [`Refused: ${verdict.reason}`, `Next step: ${verdict.missing}`], data: verdict };
@@ -190,6 +195,10 @@ export function close({ root, flags }) {
  */
 export function pause({ root, flags }) {
   const ledger = loadLedger(root);
+
+  // Nothing open means nothing to pause; stopping is already legitimate
+  if (!ledger.changes.some((entry) => entry.status === "open")) return ok("Nothing is open, so nothing needs pausing.");
+
   const change = findChange(ledger, optional(flags.change));
   change.paused = true;
   saveLedger(root, ledger);
@@ -272,14 +281,59 @@ export function guard({ root, positional }) {
   const [filePath] = positional;
   if (!filePath) return usage("moku-rails guard <file-path>");
 
-  const ledger = loadLedger(root);
-  const verdict = guardWrite(relative(root, resolve(root, filePath)), {
-    isMokuProject: isMokuProject(root),
-    initialized: isInitialized(root),
-    changes: ledger.changes,
-  });
+  const verdict = guardWrite(relative(root, resolve(root, filePath)), facts(root));
 
   return verdict.allow ? ok("allow") : refused(verdict.reason);
+}
+
+/**
+ * The facts both guards decide on.
+ *
+ * @param {string} root
+ * @returns {Parameters<typeof guardWrite>[1]}
+ * @example
+ * facts(process.cwd()).initialized;
+ */
+export function facts(root) {
+  return { isMokuProject: isMokuProject(root), initialized: isInitialized(root), initializing: isInitializing(root), changes: loadLedger(root).changes };
+}
+
+/**
+ * The shell guard, for the PreToolUse hook on Bash.
+ *
+ * @param {Args} args positional: the command line
+ * @returns {Result}
+ * @example
+ * guardBash({ root, positional: ["echo x > src/main.ts"], flags: {} });
+ */
+export function guardBash({ root, positional }) {
+  const verdict = guardShell(positional.join(" "), facts(root));
+
+  return verdict.allow ? ok("allow") : refused(verdict.reason);
+}
+
+/**
+ * Begin or finish the init station. While it runs, source writes are allowed in a project that is not initialized yet.
+ * `done` requires the marker the init skill writes as its last step, so a half-finished init never counts.
+ *
+ * @param {Args} args positional: begin | done
+ * @returns {Result}
+ * @example
+ * init({ root, positional: ["begin"], flags: {} });
+ */
+export function init({ root, positional }) {
+  const [phase] = positional;
+  if (phase !== "begin" && phase !== "done") return usage("moku-rails init <begin|done>");
+
+  if (phase === "begin") {
+    setInitializing(root, true);
+    return ok("Init station started. Source writes are allowed until `moku-rails init done`.");
+  }
+
+  if (!isInitialized(root)) return refused("The project marker .planning/moku.md is missing. Write it as the last step of init, then run `moku-rails init done`.");
+
+  setInitializing(root, false);
+  return ok("Init station done. The project is initialized.");
 }
 
 /**

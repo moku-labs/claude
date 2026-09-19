@@ -151,7 +151,8 @@ Validates the installation, not the project. Count everything dynamically; never
 1. Every agent `.md` in `${CLAUDE_PLUGIN_ROOT}/agents/` parses with valid frontmatter carrying
    `name`, `description`, `model`, `tools`, and no agent lists `Agent` in `tools`.
 2. Every skill directory under `${CLAUDE_PLUGIN_ROOT}/skills/` has a `SKILL.md` with valid YAML
-   frontmatter and both `model` and `effort`.
+   frontmatter. Lifecycle skills (the ones that enter a rails station, plus status, check, clean,
+   upgrade and the conductor) carry both `model` and `effort`; knowledge skills carry neither by design.
 3. `${CLAUDE_PLUGIN_ROOT}/hooks/hooks.json` parses as JSON.
 4. Every script named in `hooks.json` exists and passes `test -x`. Report the exact failing path.
 5. Every `references/` path mentioned in a `SKILL.md` resolves to a file that exists.
@@ -220,8 +221,8 @@ needs updating.
 
 ## Subcommand — usage
 
-Print the component inventory from `${CLAUDE_PLUGIN_ROOT}/.claude-plugin/SKILL-INVENTORY.md` when it
-exists, then on-disk sizes as a proxy for context cost:
+Print the component counts from `claude plugin details moku` (the live inventory and its projected
+token cost), then on-disk sizes as a proxy for context cost:
 
 ```bash
 echo "skills:   $(du -sh ${CLAUDE_PLUGIN_ROOT}/skills 2>/dev/null | cut -f1)"

@@ -30,8 +30,6 @@ function rails(root, ...args) {
 
 function building(root) {
   rails(root, "open", "2026-09-19-demo", "--size", "S", "--type", "fix");
-  rails(root, "enter", "intake");
-  rails(root, "done", "intake");
   rails(root, "enter", "build");
 }
 
@@ -80,7 +78,44 @@ describe("pre-write hook", () => {
   });
 });
 
+describe("pre-bash hook", () => {
+  const bash = (root, command) => ({ cwd: root, tool_name: "Bash", tool_input: { command } });
+
+  it("blocks a heredoc that writes a plugin into an uninitialized directory", () => {
+    const root = project({ initialized: false });
+
+    const result = hook("pre-bash.mjs", bash(root, "mkdir -p src/plugins/streak && cat > src/plugins/streak/index.ts <<'EOF'\nexport {};\nEOF"));
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /not initialized/);
+  });
+
+  it("lets ordinary commands through", () => {
+    assert.equal(hook("pre-bash.mjs", bash(project({ initialized: false }), "git status && ls src")).code, 0);
+  });
+
+  it("treats a mistyped rails option as strict, never as off", () => {
+    const root = project({ initialized: false });
+
+    assert.equal(hook("pre-bash.mjs", bash(root, "touch src/plugins/x/index.ts"), { CLAUDE_PLUGIN_OPTION_RAILS: "of" }).code, 2);
+  });
+});
+
 describe("stop hook", () => {
+  it("does not trap a user behind a stale 'building' row when no change is open", () => {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "STATE.md"), "| 1 | router | building |\n");
+
+    assert.equal(hook("on-stop.mjs", { cwd: root }).out, "");
+  });
+
+  it("stays out of the way when the ledger is corrupt instead of crashing", () => {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "state.json"), "{ broken");
+
+    assert.equal(hook("on-stop.mjs", { cwd: root }).code, 0);
+  });
+
   it("blocks stopping in the middle of a build", () => {
     const root = project({ initialized: true });
     building(root);

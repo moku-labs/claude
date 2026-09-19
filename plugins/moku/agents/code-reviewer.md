@@ -84,7 +84,7 @@ End with this contract — findings and a verdict — as your last message. A ru
 
 ```json
 {
-  "agent": "code-reviewer",
+  "agent": "moku-code-reviewer",
   "wave": 0,
   "plugins_reviewed": ["name1", "name2"],
   "verdict": "PASS | ISSUES | BLOCKER",

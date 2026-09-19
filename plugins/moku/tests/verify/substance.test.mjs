@@ -67,4 +67,20 @@ describe("judgeTest", () => {
     assert.equal(verdict.stub, true);
     assert.match(verdict.reasons.join(" "), /tautological/);
   });
+
+  it("does not call a real plugin a stub because of one idiomatic empty callback", () => {
+    const source = [
+      'export const timerPlugin = createPlugin("timer", {',
+      "  createState: () => ({ ticks: 0, handle: undefined }),",
+      "  api: (ctx) => ({",
+      "    start: () => { ctx.state.handle = setInterval(() => { ctx.state.ticks += 1; }, 1000); },",
+      "    stop: () => clearInterval(ctx.state.handle),",
+      "    ticks: () => ctx.state.ticks,",
+      "  }),",
+      "  onStop: () => {},",
+      "});",
+    ].join("\n");
+
+    assert.equal(judgeSource(source).stub, false);
+  });
 });

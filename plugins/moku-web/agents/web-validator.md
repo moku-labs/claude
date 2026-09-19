@@ -192,7 +192,7 @@ any external stylesheet/asset host in their HTML template.
 **How to check:** Read `src/index.html` (and any template/head builder); grep `.tsx`/`.ts`/`.html` for
 `<link` with an absolute `http(s)://` `href`, and for `fonts.googleapis.com` / `fonts.gstatic.com` / `cdn.`.
 Fix: vendor the woff2 under `public/fonts/` and author `@font-face` in `styles/` (see
-`references/css-architecture.md` font loading).
+`${CLAUDE_PLUGIN_ROOT}/skills/moku-web/references/css-architecture.md` font loading).
 
 ### 13. Route / Role Selection via `ctx.params` — No Hand-Parsed `location.pathname`
 

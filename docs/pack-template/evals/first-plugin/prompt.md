@@ -1,4 +1,6 @@
 ---
+# A pack depends on the core plugin, so both are loaded for the run.
+plugins: ["../../../plugins/moku-FRAMEWORK", "../../../plugins/moku"]
 max_turns: 12
 allowed_tools: [Read, Glob, Grep, Skill]
 tags: [FRAMEWORK]

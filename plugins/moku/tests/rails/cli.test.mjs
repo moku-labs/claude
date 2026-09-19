@@ -37,8 +37,6 @@ describe("moku-rails: the habit tracker walkthrough", () => {
   it("refuses 'straight to code' on a medium change and names plan as the next step", () => {
     const root = project({ initialized: true });
     rails(root, "open", "2026-09-19-habits", "--size", "M", "--type", "project", "--title", "Habit tracker");
-    rails(root, "enter", "intake");
-    rails(root, "done", "intake");
 
     const verdict = rails(root, "enter", "build");
 
@@ -50,7 +48,7 @@ describe("moku-rails: the habit tracker walkthrough", () => {
     const root = project({ initialized: true });
     rails(root, "open", "2026-09-26-streak-midnight", "--size", "S", "--type", "fix", "--title", "Streak breaks at midnight");
 
-    for (const station of ["intake", "build", "verify"]) {
+    for (const station of ["build", "verify"]) {
       assert.equal(rails(root, "enter", station).code, 0, `enter ${station}`);
       assert.equal(rails(root, "done", station).code, 0, `done ${station}`);
     }
@@ -68,8 +66,6 @@ describe("moku-rails: the habit tracker walkthrough", () => {
 
     assert.equal(rails(root, "guard", "src/plugins/streak/api.ts").code, 2);
 
-    rails(root, "enter", "intake");
-    rails(root, "done", "intake");
     rails(root, "enter", "build");
 
     assert.equal(rails(root, "guard", "src/plugins/streak/api.ts").code, 0);
@@ -78,8 +74,6 @@ describe("moku-rails: the habit tracker walkthrough", () => {
   it("blocks stopping mid-build unless the change is paused for the user", () => {
     const root = project({ initialized: true });
     rails(root, "open", "2026-09-26-fix", "--size", "S", "--type", "fix");
-    rails(root, "enter", "intake");
-    rails(root, "done", "intake");
     rails(root, "enter", "build");
 
     assert.equal(rails(root, "may-stop").code, 2);
@@ -92,7 +86,7 @@ describe("moku-rails: the habit tracker walkthrough", () => {
   it("refuses a new change while another is stuck inside a station, until it is parked", () => {
     const root = project({ initialized: true });
     rails(root, "open", "2026-09-20-first", "--size", "S", "--type", "fix");
-    rails(root, "enter", "intake");
+    rails(root, "enter", "build");
 
     assert.equal(rails(root, "open", "2026-09-21-second", "--size", "S", "--type", "fix").code, 2);
 
@@ -119,6 +113,59 @@ describe("moku-rails: the habit tracker walkthrough", () => {
     rails(root, "open", "2026-09-26-fix", "--size", "S", "--type", "fix");
 
     assert.match(rails(root, "status", "--json").text, new RegExp(`"startCommit":"${head}"`));
+  });
+
+  it("lets a directly invoked skill open a change and enter its station at once: opening is the intake", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(rails(root, "enter", "build").code, 2, "no open change is a refusal, not a crash");
+    assert.match(rails(root, "enter", "build").text, /Next step: open/);
+
+    rails(root, "open", "2026-09-26-fix", "--size", "S", "--type", "fix");
+
+    assert.equal(rails(root, "enter", "build").code, 0);
+  });
+
+  it("opens a window for the init station to scaffold src/, and closes it only once the marker exists", () => {
+    const root = project({ initialized: false });
+    writeFileSync(join(root, "package.json"), '{"dependencies":{"@moku-labs/core":"1.5.0"}}');
+
+    assert.equal(rails(root, "guard", "src/config.ts").code, 2);
+
+    rails(root, "init", "begin");
+
+    assert.equal(rails(root, "guard", "src/config.ts").code, 0);
+    assert.equal(rails(root, "init", "done").code, 2, "no marker yet");
+
+    mkdirSync(join(root, ".planning"), { recursive: true });
+    writeFileSync(join(root, ".planning", "moku.md"), "type: framework\n");
+
+    assert.equal(rails(root, "init", "done").code, 0);
+    assert.doesNotMatch(rails(root, "status").text, /Debt \[init\]/);
+  });
+
+  it("survives a corrupt ledger: it is set aside and the rails keep working", () => {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "state.json"), "{ broken");
+
+    const status = rails(root, "status");
+
+    assert.equal(status.code, 0);
+    assert.match(status.text, /not valid JSON/);
+    assert.equal(rails(root, "guard", "src/main.ts").code, 2, "the guard still guards");
+  });
+
+  it("refuses shell writes into src/ that a Write would be refused, and ignores harmless commands", () => {
+    const root = project({ initialized: false });
+
+    assert.equal(rails(root, "guard-bash", "cat > src/plugins/streak/index.ts <<'EOF'").code, 2);
+    assert.equal(rails(root, "guard-bash", "mkdir -p src/plugins/streak && touch src/plugins/streak/index.ts").code, 2);
+    assert.equal(rails(root, "guard-bash", "ls src/plugins && bun test src/plugins/streak").code, 0);
+    assert.equal(rails(root, "guard-bash", "echo done > .planning/notes.md").code, 0);
+  });
+
+  it("pausing with nothing open is a harmless no-op", () => {
+    assert.equal(rails(project({ initialized: true }), "pause", "--reason", "x").code, 0);
   });
 
   it("keeps ideas in the backlog without opening a change", () => {

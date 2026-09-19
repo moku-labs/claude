@@ -16,7 +16,7 @@ const SOURCE_PATH = /(?:^|\/)src\//;
  * Decide whether a write to `filePath` is allowed.
  *
  * @param {string} filePath project-relative path
- * @param {{ isMokuProject: boolean, initialized: boolean, changes: Array<{ status: string, station: string | null }> }} facts
+ * @param {{ isMokuProject: boolean, initialized: boolean, initializing?: boolean, changes: Array<{ status: string, station: string | null }> }} facts
  * @returns {GuardVerdict}
  * @example
  * guardWrite("src/plugins/streak/index.ts", { isMokuProject: false, initialized: false, changes: [] });
@@ -26,8 +26,14 @@ export function guardWrite(filePath, facts) {
   const touchesPlugin = PLUGIN_PATH.test(filePath);
   const touchesSource = SOURCE_PATH.test(filePath);
 
+  // A path outside the project root belongs to something else
+  if (filePath.startsWith("..")) return { allow: true };
+
   // Anything outside src/ is not architecture: planning files, docs, configs
   if (!touchesSource) return { allow: true };
+
+  // The init station is the one place that writes source before the project counts as initialized
+  if (facts.initializing) return { allow: true };
 
   // A plain non-moku repository is none of our business
   if (!facts.isMokuProject && !touchesPlugin) return { allow: true };
@@ -52,4 +58,30 @@ export function guardWrite(filePath, facts) {
  */
 function deny(reason) {
   return { allow: false, reason };
+}
+
+const SHELL_WRITE = /(^|[\s;&|(])(tee|cp|mv|touch|install|ln)\s|>>?|sed\s+(-[a-zA-Z]*i|--in-place)|<<-?\s*['"]?\w/;
+const SOURCE_TOKEN = /(?:^|[\s'"=>(])((?:\.{0,2}\/)?(?:[\w.@-]+\/)*src\/[\w./@\[\]-]*)/g;
+
+/**
+ * Decide whether a shell command may run. It is refused when it writes files (redirect, heredoc, tee, cp, mv,
+ * touch, sed -i) and names a source path that `guardWrite` would refuse. Closes the "write through Bash" bypass.
+ *
+ * @param {string} command
+ * @param {Parameters<typeof guardWrite>[1]} facts
+ * @returns {GuardVerdict}
+ * @example
+ * guardShell("cat > src/plugins/streak/index.ts <<'EOF'", { isMokuProject: false, initialized: false, changes: [] });
+ * // { allow: false, reason: "..." }
+ */
+export function guardShell(command, facts) {
+  if (!SHELL_WRITE.test(command)) return { allow: true };
+
+  // Every source-looking token is checked the way a Write to it would be
+  for (const match of command.matchAll(SOURCE_TOKEN)) {
+    const verdict = guardWrite(match[1].replace(/^\.\//, ""), facts);
+    if (!verdict.allow) return verdict;
+  }
+
+  return { allow: true };
 }
