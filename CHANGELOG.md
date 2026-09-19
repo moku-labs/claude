@@ -2,6 +2,47 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.71.0 (2026-09-19)
+
+The first end-to-end run of 0.70.0 built a real site and showed where the rails leaked: the conductor ran
+once in 18 turns, an open change inside `build` admitted any later work, builders never ran for an app, and
+the hooks judged projects by a text search of `package.json`. Report: [`docs/revival/E2E-REPORT.md`](./docs/revival/E2E-REPORT.md).
+
+### Breaking
+- **The rails are opt-in per directory.** Hooks act only where a moku session was started
+  (`.planning/state.json`) or the project is initialized (`.planning/moku.md`). The `@moku-labs/` text search is
+  gone, and with it every block in repositories that never asked for moku (#14). `moku-rails open` and `enter`
+  refuse outside a session and name the step.
+- **Optional stations need a decision.** `enter plan`, `build` and `close` refuse while an optional station
+  before them is neither done nor skipped with `moku-rails skip <station> --reason`.
+
+### Added
+- **`moku:session`** skill and `moku-rails session start [--root <dir>]`: settle the directory, create it when
+  new, put it on the rails. A session started for a folder below the conversation's cwd is remembered, so the
+  prompt and stop hooks find it.
+- **Prompt hook** (`UserPromptSubmit`): hands the model the project's standing and the routing rule with every
+  request and marks it unrouted. The write gate refuses source until `open`, `enter`, `continue` or `scope` ran.
+  Off the rails it is silent, except for one hint toward `moku:session` when the person names moku.
+- **`moku-rails continue`** and **`moku-rails scope "<what is new>"`**. Scope sends a size M or L change back in
+  front of plan, so new work gets a delta spec before it is built.
+- **The discussion page** (brainstorm): on request, the reasoning goes on a page with diagrams, an options
+  table, open questions with proposed answers and a decisions log. The person comments and corrects it there;
+  the agreed page becomes the context file. Offered once when someone brings an idea and not a task.
+
+### Changed
+- One root rule for every hook: the nearest directory on the rails at or above the file, not the session's cwd.
+- The session hook no longer writes `.planning/moku.md`; only the init station does.
+- Conductor: a new project is size L; stations run through their skills, never by hand; a yes from before the
+  spec existed does not approve it; no commands or station names are handed to the person; a table maps plain
+  phrases to stations.
+- Build: an app with no custom plugins builds through builders, one page or island per unit, with a code review
+  per wave.
+- E2E: triggers on "check it in the browser, on a phone"; never waits on a background reviewer.
+- Clean archives the Astra triage, design decisions, asset manifests and discussion pages before it removes
+  their folders.
+- Init removes `build_worker_script` and `migrate_script` from an app's `ci.yml` when the scripts do not exist.
+- Verify spawns validators in batches of the parallel-agent limit.
+
 ## 0.70.0 (2026-09-19)
 
 The revival. The plugin had been quiet for 83 days while Claude Code shipped 82 releases, Opus 5 and

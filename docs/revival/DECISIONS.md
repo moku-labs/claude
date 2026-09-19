@@ -51,6 +51,16 @@ shell commands that write into `src/` (redirects, heredocs, `tee`, `cp`, `mv`, `
 Write to the same path would be refused. A corrupt ledger is set aside and replaced, never allowed to
 crash a hook, because a crashed hook lets every write through. `clean` never removes `moku.md` or `state.json`.
 
+**Sessions and routing (0.71).** The rails are opt-in per directory. A directory is on the rails when it has
+`.planning/state.json` (written by `moku-rails session start`, which the `moku:session` skill runs) or
+`.planning/moku.md`. Every hook resolves its project with one rule, the nearest such directory at or above the
+file or the cwd, and stays silent when there is none. No hook reads `package.json` to decide whether it applies.
+On the rails, the `UserPromptSubmit` hook marks each request of the person as unrouted and hands the model the
+standing and the routing rule. The write gate refuses source until `open`, `enter`, `continue` or `scope` ran.
+`scope` returns a size M or L change to the front of plan. `plan`, `build` and `close` refuse while an optional
+station before them is neither done nor skipped with a reason. The reason these are code and not skill text:
+the first end-to-end run showed the conductor loaded once in 18 turns (`E2E-REPORT.md`).
+
 `.planning/state.json` is the machine ledger and belongs to `moku-rails`. `.planning/STATE.md` stays
 the human-readable phase and wave record the skills already maintain. Do not merge them.
 

@@ -45,8 +45,15 @@ describe("canEnter", () => {
     assert.equal(canEnter(ready, { size: "S", done: ["intake"] }, "build").ok, true);
   });
 
-  it("lets design be skipped on a large change", () => {
-    assert.equal(canEnter(ready, { size: "L", done: ["intake"] }, "plan").ok, true);
+  it("lets design be skipped on a large change, once the skip is recorded", () => {
+    assert.equal(canEnter(ready, { size: "L", done: ["intake"], skipped: ["brainstorm", "design"] }, "plan").ok, true);
+  });
+
+  it("refuses plan while an optional station was neither done nor skipped, and names it", () => {
+    const verdict = canEnter(ready, { size: "L", done: ["intake", "brainstorm"] }, "plan");
+
+    assert.equal(verdict.ok, false);
+    assert.equal(verdict.missing, "design");
   });
 
   it("offers design to a medium change, since a feature can have UI", () => {

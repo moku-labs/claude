@@ -10,7 +10,7 @@ You describe an idea. It leads you by the hand, and refuses to let you skip the 
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.70.0-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.71.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugins-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
 [![tests](https://img.shields.io/badge/rails-node%3Atest-2b8a3e)](./plugins/moku/tests)
@@ -112,8 +112,16 @@ Every skill is still reachable directly for people who like commands: `/moku:bui
 `moku-rails` is a small tested CLI ([`plugins/moku/lib/rails`](./plugins/moku/lib/rails)). Exit code 2
 means "refused", and the refusal names the missing step, so the conductor can offer it.
 
+The rails act in one kind of directory only: one where a moku session was started. The `moku:session`
+skill settles the directory (this one, or a new folder) and runs `moku-rails session start`, which writes the
+ledger. Every other project is left alone, whatever its `package.json` names: no gate, no hint, no hook output.
+
 | Invariant | Enforced by | What you see |
 |---|---|---|
+| Hooks act only where a session was started | every hook resolves its project from `.planning/state.json` or `.planning/moku.md`, found from the file being written | nothing, in your other projects |
+| Every request is routed before code follows it | prompt hook (`UserPromptSubmit`) marks the request unrouted; the write gate waits for `open`, `enter`, `continue` or `scope` | the conductor answers first, also in the middle of a build |
+| New scope goes back to plan | `moku-rails scope` | "That is new. Let me add it to the plan first" |
+| Optional stations are skipped on your word only | `moku-rails enter plan|build|close` refuses while design, e2e or another optional station is neither done nor skipped | "Shall I draw it first, or skip the design?" |
 | No source files before init | write gate (`PreToolUse`) | "Let me create the project first, it takes a minute" |
 | No plugin code without a plan or an open change | write gate + `moku-rails enter build` | "I'll write down what we're building first" |
 | Stations only in a legal order | `moku-rails enter <station>` at the top of every lifecycle skill | the conductor proposes the missing step |

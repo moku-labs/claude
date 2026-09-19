@@ -17,6 +17,7 @@ function rails(root, ...args) {
 /** A temp project. `initialized` writes the marker the init station leaves behind; `tests` is its test script. */
 function project({ initialized, tests = "node -e \"process.exit(0)\"" }) {
   const root = mkdtempSync(join(tmpdir(), "moku-rails-"));
+  rails(root, "session", "start");
   if (initialized) {
     writeFileSync(join(root, "package.json"), JSON.stringify({ name: "habits", dependencies: { "@moku-labs/core": "1.5.0" }, scripts: { test: tests } }));
     mkdirSync(join(root, ".planning"), { recursive: true });
@@ -193,5 +194,61 @@ describe("moku-rails: the habit tracker walkthrough", () => {
     rails(root, "idea", "compete", "with", "friends");
 
     assert.match(rails(root, "status").text, /1 idea/);
+  });
+});
+
+describe("moku-rails: sessions, scope and recorded skips", () => {
+  it("reports rails off in a directory nobody started a session in", () => {
+    const root = mkdtempSync(join(tmpdir(), "moku-plain-"));
+
+    assert.match(rails(root, "status").text, /Rails: off/);
+  });
+
+  it("refuses to open a change where no session was started, and names the session step", () => {
+    const root = mkdtempSync(join(tmpdir(), "moku-plain-"));
+
+    const verdict = rails(root, "open", "2026-09-19-x", "--size", "S");
+
+    assert.equal(verdict.code, 2);
+    assert.match(verdict.text, /Next step: session/);
+  });
+
+  it("starts a session in a new directory, and repeating it changes nothing", () => {
+    const root = join(mkdtempSync(join(tmpdir(), "moku-new-")), "site");
+
+    assert.match(rails(root, "session", "start").text, /Session started/);
+    assert.match(rails(root, "session", "start").text, /already active/);
+    assert.match(rails(root, "status").text, /NOT initialized/);
+  });
+
+  it("refuses plan on a project change until design is done or skipped with a reason", () => {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-09-19-site", "--size", "M", "--type", "project");
+
+    const refused = rails(root, "enter", "plan");
+    rails(root, "skip", "design", "--reason", "Alex: no UI in this change");
+
+    assert.equal(refused.code, 2);
+    assert.match(refused.text, /neither done nor skipped/);
+    assert.equal(rails(root, "enter", "plan").code, 0);
+  });
+
+  it("sends a medium change back in front of plan when its scope grows", () => {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-09-19-site", "--size", "M", "--type", "project");
+    rails(root, "skip", "design", "--reason", "no UI");
+    rails(root, "enter", "plan");
+    rails(root, "done", "plan");
+    rails(root, "enter", "build");
+
+    const grown = rails(root, "scope", "rebrand to the deck palette");
+
+    assert.match(grown.text, /back in front of the plan station/);
+    assert.equal(rails(root, "guard", "src/main.ts").code, 2);
+    assert.equal(rails(root, "enter", "build").code, 2);
+  });
+
+  it("refuses to continue when nothing is open", () => {
+    assert.equal(rails(project({ initialized: true }), "continue").code, 2);
   });
 });

@@ -15,8 +15,12 @@ function hook(name, payload, env = {}) {
   return { code: run.status, out: run.stdout, err: run.stderr };
 }
 
+/**
+ * A temp project with a started session. `initialized` adds the marker the init station leaves behind.
+ */
 function project({ initialized }) {
   const root = mkdtempSync(join(tmpdir(), "moku-hooks-"));
+  rails(root, "session", "start");
   if (initialized) {
     mkdirSync(join(root, ".planning"), { recursive: true });
     writeFileSync(join(root, ".planning", "moku.md"), "type: framework\nname: demo\n");
@@ -169,5 +173,97 @@ describe("subagent stop hook", () => {
     hook("on-subagent-stop.mjs", { cwd: root, agent_type: "Explore", last_assistant_message: "x" });
 
     assert.equal(existsSync(join(root, ".planning", "build", "agent-log.md")), false);
+  });
+});
+
+describe("off the rails", () => {
+  /**
+   * A repository that names @moku-labs/* in its manifest and never started a moku session (issue 14).
+   */
+  function foreign() {
+    const root = mkdtempSync(join(tmpdir(), "moku-foreign-"));
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "@moku-labs/ci", devDependencies: { "@moku-labs/common": "1.0.0" } }));
+    return root;
+  }
+
+  it("lets every write through in a repository that only names @moku-labs in its manifest", () => {
+    const root = foreign();
+
+    assert.equal(hook("pre-write.mjs", write(root, "src/lib/argv.ts")).code, 0);
+    assert.equal(hook("pre-write.mjs", write(root, "src/plugins/auth/index.ts")).code, 0);
+  });
+
+  it("lets shell writes through and never blocks stopping", () => {
+    const root = foreign();
+
+    assert.equal(hook("pre-bash.mjs", { cwd: root, tool_input: { command: "echo x > src/plugins/auth/index.ts" } }).code, 0);
+    assert.equal(hook("on-stop.mjs", { cwd: root }).out, "");
+  });
+
+  it("says nothing on a prompt that does not name moku, and writes no ledger", () => {
+    const root = foreign();
+
+    assert.equal(hook("on-prompt.mjs", { cwd: root, prompt: "fix the argv parser" }).out, "");
+    assert.equal(existsSync(join(root, ".planning")), false);
+  });
+
+  it("points at the session skill when the person names moku", () => {
+    assert.match(hook("on-prompt.mjs", { cwd: foreign(), prompt: "Хочу сделать сайт для проекта moku" }).out, /moku:session/);
+  });
+});
+
+describe("prompt hook on the rails", () => {
+  it("hands over the standing and the routing rule, and marks the request as not routed", () => {
+    const root = project({ initialized: true });
+
+    const result = hook("on-prompt.mjs", { cwd: root, prompt: "add a streak counter" });
+
+    assert.match(result.out, /Rails: clean/);
+    assert.match(result.out, /moku:moku/);
+    assert.equal(JSON.parse(readFileSync(join(root, ".planning", "state.json"), "utf8")).turn.routed, false);
+  });
+
+  it("closes the free pass: an open change inside build does not admit a new request until it is routed", () => {
+    const root = project({ initialized: true });
+    building(root);
+    hook("on-prompt.mjs", { cwd: root, prompt: "also rebrand everything" });
+
+    const refused = hook("pre-write.mjs", write(root, "src/main.ts"));
+    rails(root, "continue");
+
+    assert.equal(refused.code, 2);
+    assert.match(refused.err, /not been routed/);
+    assert.equal(hook("pre-write.mjs", write(root, "src/main.ts")).code, 0);
+  });
+
+  it("stays silent when the user turned the rails off", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(hook("on-prompt.mjs", { cwd: root, prompt: "anything" }, { CLAUDE_PLUGIN_OPTION_RAILS: "off" }).out, "");
+  });
+});
+
+describe("one root rule for every hook", () => {
+  it("guards a file by the project that owns it, not by the session's cwd", () => {
+    const parent = mkdtempSync(join(tmpdir(), "moku-parent-"));
+    const root = join(parent, "site");
+    rails(root, "session", "start");
+
+    const result = hook("pre-write.mjs", { cwd: parent, tool_name: "Write", tool_input: { file_path: join(root, "src", "app.ts"), content: "export {};\n" } });
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /not initialized/);
+  });
+
+  it("remembers the directory a session started elsewhere, so the prompt hook finds it from the parent", () => {
+    const parent = mkdtempSync(join(tmpdir(), "moku-parent-"));
+    const home = mkdtempSync(join(tmpdir(), "moku-home-"));
+    const env = { MOKU_HOME: home };
+    rails(join(parent, "site"), "session", "start");
+
+    hook("pre-bash.mjs", { cwd: parent, session_id: "s-1", tool_input: { command: `moku-rails session start --root "${join(parent, "site")}"` } }, env);
+
+    assert.match(hook("on-prompt.mjs", { cwd: parent, session_id: "s-1", prompt: "go" }, env).out, /NOT initialized/);
+    assert.equal(hook("on-prompt.mjs", { cwd: parent, session_id: "other", prompt: "go" }, env).out, "");
   });
 });
