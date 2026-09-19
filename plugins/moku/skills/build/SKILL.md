@@ -53,7 +53,7 @@ Values come from the YAML frontmatter of `.claude/moku.local.md`. Ignore invalid
 
 | Setting | Type | Range | Default | Used by |
 |---|---|---|---|---|
-| `maxParallelAgents` | integer | 1–8 | 5 | wave fan-out |
+| `maxParallelAgents` | integer | 1–8 | `${user_config.max_parallel_agents}` (the plugin option, 3 unless changed) | wave fan-out |
 | `gapClosureMaxRounds` | integer | 0–5 | 2 | gap closure |
 | `skipValidation` | boolean | true/false | false | post-build validation |
 | `skipTriage` | boolean | true/false | false | findings triage |

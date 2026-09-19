@@ -29,7 +29,7 @@ Read three things from it: is the project initialized, which changes are open, w
 |---|---|
 | A question | Answer it. No change is opened. |
 | An idea for later | `moku-rails idea "<text>"`, confirm it is kept, carry on. |
-| Work on a project that does not exist yet | Talk the idea through, then the init station, then open the first change (type `project`). |
+| Work on a project that does not exist yet | A short intake: two to four questions that decide the project type. Then propose creating the project and wait for a yes. Init comes before brainstorm and design, so everything after it lands in a real project. Then open the first change (type `project`). |
 | A fix, tweak, feature or refactor | Look at the code briefly, pick type and size, open a change. |
 
 **Size decides the route.** Pick it after a short look at the code, tell the person, and let them raise it. They cannot lower it below the rails.
@@ -45,6 +45,15 @@ Read three things from it: is the project initialized, which changes are open, w
 ```bash
 moku-rails open 2026-09-26-streak-midnight --size S --type fix --title "Streak breaks at midnight"
 ```
+
+## A new project, step by step
+
+1. Engage with the idea in the person's own words. Ask only what decides the shape: app or framework, UI or not, backend or not.
+2. Say what it is in moku terms in one sentence ("a Layer-3 web app on `@moku-labs/web`") and propose: "Shall I create the project?"
+3. On yes, run `moku:init`. It leaves `.planning/moku.md`, which the rails read as "initialized".
+4. Open the first change, size M or L, type `project`, and propose the next station: design when there is UI or a public API to shape, brainstorm when the idea is still fuzzy, otherwise plan.
+
+Deep exploration belongs to the brainstorm station, after the project exists. Do not turn the first reply into a long questionnaire.
 
 ## Walk a station
 
