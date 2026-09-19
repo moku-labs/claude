@@ -14,10 +14,11 @@ function rails(root, ...args) {
   return { code: run.status, text: `${run.stdout}${run.stderr}` };
 }
 
-/** A temp project. `initialized` writes the marker the init station leaves behind. */
-function project({ initialized }) {
+/** A temp project. `initialized` writes the marker the init station leaves behind; `tests` is its test script. */
+function project({ initialized, tests = "node -e \"process.exit(0)\"" }) {
   const root = mkdtempSync(join(tmpdir(), "moku-rails-"));
   if (initialized) {
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "habits", dependencies: { "@moku-labs/core": "1.5.0" }, scripts: { test: tests } }));
     mkdirSync(join(root, ".planning"), { recursive: true });
     writeFileSync(join(root, ".planning", "moku.md"), "type: consumer\nname: habits\n");
   }
@@ -58,6 +59,24 @@ describe("moku-rails: the habit tracker walkthrough", () => {
 
     assert.equal(rails(root, "close").code, 0);
     assert.match(rails(root, "status").text, /Rails: clean/);
+  });
+
+  it("refuses the tests checklist item while the test script is red, so the change cannot close", () => {
+    const root = project({ initialized: true, tests: "node -e \"console.log('1 failed'); process.exit(1)\"" });
+    rails(root, "open", "2026-09-26-red", "--size", "S", "--type", "fix");
+    for (const station of ["build", "verify"]) {
+      rails(root, "enter", station);
+      rails(root, "done", station);
+    }
+
+    const verdict = rails(root, "check", "tests");
+    assert.equal(verdict.code, 2);
+    assert.match(verdict.text, /test script is red/);
+    assert.match(verdict.text, /1 failed/);
+
+    rails(root, "check", "verify");
+    rails(root, "check", "docs");
+    assert.equal(rails(root, "close").code, 2, "a red test script keeps the change open");
   });
 
   it("allows source writes only while the change is at a writing station", () => {

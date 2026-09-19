@@ -23,6 +23,18 @@ describe("guardWrite", () => {
     assert.equal(guardWrite("src/server.ts", { isMokuProject: false, initialized: false, changes: [] }).allow, true);
   });
 
+  it("leaves a foreign repository alone even when it has its own src/plugins folder", () => {
+    const foreign = { isMokuProject: false, hasManifest: true, initialized: false, changes: [] };
+
+    assert.equal(guardWrite("src/plugins/auth/index.ts", foreign).allow, true);
+  });
+
+  it("still blocks an uninitialized moku project that has a manifest", () => {
+    const moku = { isMokuProject: true, hasManifest: true, initialized: false, changes: [] };
+
+    assert.equal(guardWrite("src/plugins/streak/index.ts", moku).allow, false);
+  });
+
   it("always allows planning files, docs and configs", () => {
     const facts = { isMokuProject: true, initialized: false, changes: [] };
 

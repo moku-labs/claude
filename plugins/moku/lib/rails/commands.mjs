@@ -5,10 +5,11 @@
  * Handlers own the ledger edits; decisions are delegated to transitions.mjs and guard.mjs.
  */
 
+import { spawnSync } from "node:child_process";
 import { relative, resolve } from "node:path";
 
 import { guardShell, guardWrite } from "./guard.mjs";
-import { findChange, isInitialized, isInitializing, isMokuProject, loadLedger, newChange, saveLedger, setInitializing } from "./ledger.mjs";
+import { findChange, hasManifest, isInitialized, isInitializing, isMokuProject, loadLedger, newChange, saveLedger, setInitializing } from "./ledger.mjs";
 import { headCommit, reconcile } from "./reconcile.mjs";
 import { OPTIONAL_STATIONS, routeFor } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
@@ -144,7 +145,8 @@ export function skip({ root, positional, flags }) {
 }
 
 /**
- * Confirm one closing-checklist item.
+ * Confirm one closing-checklist item. `tests` runs the project's test script and is refused while it is red;
+ * `verify` and `docs` record the verdict of the verify station and of the orchestrating session.
  *
  * @param {Args} args positional: tests | verify | docs
  * @returns {Result}
@@ -157,6 +159,13 @@ export function check({ root, positional, flags }) {
 
   const ledger = loadLedger(root);
   const change = findChange(ledger, optional(flags.change));
+
+  // "tests" is a fact, not a claim: the project's own test script decides
+  if (item === "tests") {
+    const red = runTests(root);
+    if (red) return refused(red);
+  }
+
   change.checklist[item] = true;
   saveLedger(root, ledger);
 
@@ -295,7 +304,7 @@ export function guard({ root, positional }) {
  * facts(process.cwd()).initialized;
  */
 export function facts(root) {
-  return { isMokuProject: isMokuProject(root), initialized: isInitialized(root), initializing: isInitializing(root), changes: loadLedger(root).changes };
+  return { isMokuProject: isMokuProject(root), hasManifest: hasManifest(root), initialized: isInitialized(root), initializing: isInitializing(root), changes: loadLedger(root).changes };
 }
 
 /**
@@ -350,6 +359,24 @@ export function mayStop({ root }) {
   if (!active) return ok("allow");
 
   return refused(`Change ${active.id} is inside station "${active.station}". Finish the station, or run \`moku-rails pause --reason <why>\` if you are waiting for the user.`);
+}
+
+/** Longest the test script may run before the check gives up. */
+const TEST_TIMEOUT_MS = 15 * 60 * 1000;
+
+/**
+ * Run the project's `test` script. `node --run` needs no package manager, so the rails stay runtime-neutral.
+ *
+ * @param {string} root
+ * @returns {string | undefined} the refusal reason when the tests are red, otherwise undefined
+ */
+function runTests(root) {
+  const run = spawnSync(process.execPath, ["--run", "test"], { cwd: root, encoding: "utf8", timeout: TEST_TIMEOUT_MS });
+  if (run.status === 0) return undefined;
+
+  const tail = `${run.stdout ?? ""}${run.stderr ?? ""}`.trim().split("\n").slice(-15).join("\n");
+
+  return `The test script is red (exit ${run.status ?? "timeout"}), so "tests" stays unconfirmed. Fix the tests, then run the check again.\n${tail}`;
 }
 
 /** @param {string | true | undefined} value */

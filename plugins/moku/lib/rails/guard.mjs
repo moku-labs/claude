@@ -16,7 +16,7 @@ const SOURCE_PATH = /(?:^|\/)src\//;
  * Decide whether a write to `filePath` is allowed.
  *
  * @param {string} filePath project-relative path
- * @param {{ isMokuProject: boolean, initialized: boolean, initializing?: boolean, changes: Array<{ status: string, station: string | null }> }} facts
+ * @param {{ isMokuProject: boolean, hasManifest?: boolean, initialized: boolean, initializing?: boolean, changes: Array<{ status: string, station: string | null }> }} facts
  * @returns {GuardVerdict}
  * @example
  * guardWrite("src/plugins/streak/index.ts", { isMokuProject: false, initialized: false, changes: [] });
@@ -35,7 +35,11 @@ export function guardWrite(filePath, facts) {
   // The init station is the one place that writes source before the project counts as initialized
   if (facts.initializing) return { allow: true };
 
-  // A plain non-moku repository is none of our business
+  // A repository with its own package.json and no @moku-labs dependency is none of our business,
+  // even when it has a src/plugins/ folder of its own
+  if (!facts.isMokuProject && facts.hasManifest) return { allow: true };
+
+  // No manifest at all: only a plugin path says "someone is starting a moku project here"
   if (!facts.isMokuProject && !touchesPlugin) return { allow: true };
 
   // Code before init is the catastrophe this guard exists for

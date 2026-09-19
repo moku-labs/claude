@@ -113,6 +113,18 @@ export function isInitialized(root) {
 }
 
 /**
+ * True when the directory has a package.json of its own: an existing project, moku or not.
+ *
+ * @param {string} root project root
+ * @returns {boolean}
+ * @example
+ * hasManifest(process.cwd());
+ */
+export function hasManifest(root) {
+  return existsSync(join(root, "package.json"));
+}
+
+/**
  * True when the directory looks like a moku project, initialized or not.
  *
  * @param {string} root project root

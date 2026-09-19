@@ -80,7 +80,7 @@ A skill from a pack that is not installed is not a dead end. Say which pack is m
 ## Close every change the same way
 
 ```bash
-moku-rails check tests     # the touched scope is green
+moku-rails check tests     # runs the test script; refused while it is red
 moku-rails check verify    # verify passed for the touched scope
 moku-rails check docs      # spec and README reflect the change
 moku-rails close
