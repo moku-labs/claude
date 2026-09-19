@@ -6,3 +6,6 @@
 .planning/
 # Local scratch area for throwaway experiments — never ships with the plugin
 experiments/
+
+# Eval run output
+plugins/*/evals/results/
