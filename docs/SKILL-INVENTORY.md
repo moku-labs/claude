@@ -34,7 +34,7 @@ Invoked as `/moku:<name>`, and by the conductor. Each one enters and leaves a st
 | `plan` | fable / high | Plan stages and specs; supports a delta spec for M changes. |
 | `build` | fable / medium | Gated build waves; an S route reproduces with a failing test, fixes, then verifies in scope. |
 | `verify` | fable / medium | Fans validators out directly, runs the cited-refute skeptic pass, auto-fixes in a bounded loop. |
-| `moku-release` | fable / medium | The release model: three commands from `@moku-labs/common`, two thin CI workflows, no `NPM_TOKEN`. |
+| `moku-release` | fable / medium | The release model: three commands from `@moku-labs/ci`, two thin CI workflows, no `NPM_TOKEN`. |
 | `status` | fable / low | Phase and wave state from `.planning/STATE.md`. |
 | `check` | fable / low | Standalone checks, incl. `check --usage`. |
 | `clean` | fable / low | Clears generated and scratch state. |

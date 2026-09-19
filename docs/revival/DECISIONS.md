@@ -160,7 +160,7 @@ never reviews code.
 
 ## 8. Release (core)
 
-Three commands from `@moku-labs/common`: `bun run release:setup`, `release:doctor`,
+Three commands from `@moku-labs/ci` (the CLI lives beside the workflows, not in the runtime library): `bun run release:setup`, `release:doctor`,
 `release <patch|minor|major|prerelease>`. Projects carry two thin workflows that call
 `moku-labs/ci/.github/workflows/*@v1`. Human-only steps: `npm login`, `gh auth login`. No `NPM_TOKEN`.
 `init` scaffolds the thin workflows and scripts from the first commit.

@@ -25,7 +25,7 @@ green `release:doctor`.
 | `bun run release:doctor` | any time, and before every release | Read-only. One line per check, and for every red line the exact fix. |
 | `bun run release patch` | every release (`patch`, `minor`, `major`, `prerelease`) | Refuses unless the PR is merged and `HEAD == origin/main`, dispatches the workflow, watches it, verifies the version and dist-tag on npm. |
 
-They come from the `moku-release` bin in `@moku-labs/common`, a dev dependency of every moku project.
+They come from the `moku-release` bin in `@moku-labs/ci`, a dev dependency of every moku project (`bun add -d @moku-labs/ci`). The same package holds the workflows the thin callers point at.
 
 ## What only the human can do
 
