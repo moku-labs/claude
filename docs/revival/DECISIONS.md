@@ -163,7 +163,11 @@ never reviews code.
 Three commands from `@moku-labs/ci` (the CLI lives beside the workflows, not in the runtime library): `bun run release:setup`, `release:doctor`,
 `release <patch|minor|major|prerelease>`. Projects carry two thin workflows that call
 `moku-labs/ci/.github/workflows/*@v1`. Human-only steps: `npm login`, `gh auth login`. No `NPM_TOKEN`.
-`init` scaffolds the thin workflows and scripts from the first commit.
+`init` installs `@moku-labs/ci` and copies the thin workflows from the installed package
+(`node_modules/@moku-labs/ci/examples/`), so CI exists from the first commit. The plugin carries no copy of
+those files: a tool and the files it installs live in one package, and a second copy is what drifts.
+The same reasoning moved the CLI out of `@moku-labs/common`, a runtime plugin catalog where dev tooling
+does not belong.
 
 ## 9. What is deliberately unchanged
 

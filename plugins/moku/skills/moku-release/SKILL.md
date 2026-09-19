@@ -70,9 +70,12 @@ YAML: a project with two tsconfigs chains both inside its own `typecheck`.
 
 | Project | File | Source |
 |---|---|---|
-| package | `.github/workflows/ci.yml` | `templates/package-ci.yml` |
-| package | `.github/workflows/publish.yml` | `templates/package-publish.yml`. The file name is a contract: npm trusts this name. |
-| app | `.github/workflows/ci.yml` | `templates/app-ci.yml`: validate on PRs, deploy to Cloudflare on `main`. |
+| package | `.github/workflows/ci.yml` | `examples/package/ci.yml` |
+| package | `.github/workflows/publish.yml` | `examples/package/publish.yml`. The file name is a contract: npm trusts this name. |
+| app | `.github/workflows/ci.yml` | `examples/app/ci.yml`: validate on PRs, deploy to Cloudflare on `main`. |
+
+Sources are paths inside the installed package, `node_modules/@moku-labs/ci/`. The CLI reads them from
+its own install and this plugin keeps no copy: one home for the files, nothing to drift.
 
 `release:setup` writes the package files itself. The `init` skill copies them at scaffold time, so CI
 exists from the first commit. For an app the person sets the two Cloudflare secrets themselves:
@@ -84,6 +87,21 @@ gh secret set CLOUDFLARE_API_TOKEN
 ```bash
 gh secret set CLOUDFLARE_ACCOUNT_ID
 ```
+
+## Trying a package before it is released
+
+Every pull-request commit of a package is published to pkg.pr.new by the `preview` job of the shared
+CI. Nothing reaches npm and no token is involved; a bot comments the install command on the PR. Use it
+to test a framework change in a consuming app before cutting a version:
+
+```bash
+bun add https://pkg.pr.new/@moku-labs/core@42
+```
+
+`42` is the PR number; a commit sha works too. A preview URL must never reach `main`: the `lint` job
+and `release:doctor` both refuse it, so switch the dependency back to a real version before merging.
+The pkg.pr.new GitHub App has to be installed on the organization once, and the package repository
+has to be public.
 
 ## Walking someone through it
 
@@ -108,5 +126,5 @@ either move inside a contract script, or stay as an additional local job next to
 - Required checks are named `ci / lint`, `ci / types`, `ci / test`, `ci / build`. Renaming the job in
   `ci.yml` without updating the ruleset blocks every PR.
 - An OIDC identity mismatch on publish means npm did not accept the central workflow as publisher.
-  Switch to `templates/package-publish.local-publish.yml` and re-run; details in the reference.
+  Switch to `node_modules/@moku-labs/ci/examples/package/publish.local-publish.yml` and re-run; details in the reference.
 - The first publish has no provenance. Every later one does.

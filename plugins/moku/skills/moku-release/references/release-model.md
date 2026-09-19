@@ -2,7 +2,7 @@
 
 How releases work, why they are built this way, and the traps already paid for. The workflow logic
 itself lives in one place, the `moku-labs/ci` repository. Projects carry two thin caller files (see
-`../templates/`). Read this file when a release misbehaves or when the model itself is in question;
+`node_modules/@moku-labs/ci/examples/` in a project that installed it). Read this file when a release misbehaves or when the model itself is in question;
 for day-to-day releases the three commands in `SKILL.md` are enough.
 
 ## The model in one picture
@@ -35,9 +35,9 @@ npm validates the **calling** workflow's filename (npm docs, "Trusted publishers
 `publish.yml`, so that filename is what `release:setup` registers with `npm trust github`. Renaming
 `publish.yml` breaks publishing.
 
-This was read from the npm documentation on 2026-09-19 and has not yet been proven by a live release
-through `moku-labs/ci`. If a publish is rejected with an OIDC identity mismatch, switch the project
-to `templates/package-publish.local-publish.yml`: the central workflow still does check, release and
+This is proven: `@moku-labs/ci` releases itself through these workflows, tokenless and with
+provenance (first live release `1.1.1`). If a publish is rejected with an OIDC identity mismatch, switch the project
+to `examples/package/publish.local-publish.yml` from the `@moku-labs/ci` package: the central workflow still does check, release and
 package, and a short local `publish` job runs `npm publish` from the project's own file.
 
 ## Rules the central workflows follow
@@ -77,7 +77,7 @@ corrected version and `npm deprecate <pkg>@<bad> "accidental publish, use <good>
 
 ## Branch ruleset
 
-`release:setup` applies `../templates/ruleset-main.json` through `gh api`. It makes `main` PR-only for
+`release:setup` applies `rulesets/main.json` from the `@moku-labs/ci` package through `gh api`. It makes `main` PR-only for
 everyone, admins included, and requires the four checks. Tags are not restricted, which is what lets
 the tag-only release work on a protected branch.
 

@@ -105,17 +105,24 @@ project.
 **Apps** get one thin `.github/workflows/ci.yml` that calls the app-deploy workflow, and the first
 five scripts.
 
-Copy the workflow YAML and the three `release:*` script bodies from the `moku:moku-release` skill's
-`templates/` — same plugin, so the path resolves:
+The workflow files have one home: the `@moku-labs/ci` package, which ships them beside the
+`moku-release` CLI. Install it, then copy from the installed package. This plugin carries no copy of
+its own, because a second copy is exactly what drifts.
+
+```bash
+bun add -d @moku-labs/ci
+```
 
 | Copy from | To |
 |---|---|
-| `${CLAUDE_PLUGIN_ROOT}/skills/moku-release/templates/package-ci.yml` | `.github/workflows/ci.yml` (packages) |
-| `${CLAUDE_PLUGIN_ROOT}/skills/moku-release/templates/package-publish.yml` | `.github/workflows/publish.yml` (packages) |
-| `${CLAUDE_PLUGIN_ROOT}/skills/moku-release/templates/app-ci.yml` | `.github/workflows/ci.yml` (apps) |
+| `node_modules/@moku-labs/ci/examples/package/ci.yml` | `.github/workflows/ci.yml` (packages) |
+| `node_modules/@moku-labs/ci/examples/package/publish.yml` | `.github/workflows/publish.yml` (packages) |
+| `node_modules/@moku-labs/ci/examples/app/ci.yml` | `.github/workflows/ci.yml` (apps) |
 
-`templates/ruleset-main.json` is the branch ruleset for `main`; it is applied during
-`release:setup`, not scaffolded into the repository. Do not write the YAML from memory: the publish
+Copy the files byte for byte (`cp`), do not retype them. The three `release:*` scripts are
+`moku-release setup`, `moku-release doctor` and `moku-release`. The branch ruleset
+(`node_modules/@moku-labs/ci/rulesets/main.json`) is applied later by `release:setup`, not scaffolded
+into the repository. Do not write the YAML from memory: the publish
 path is tokenless OIDC Trusted Publishing, and a hand-written variant breaks provenance. The
 reasoning is in `${CLAUDE_PLUGIN_ROOT}/skills/moku-release/references/release-model.md`; load the
 `moku:moku-release` skill for the release procedure itself.

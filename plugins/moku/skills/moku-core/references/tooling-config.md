@@ -84,8 +84,8 @@ eight; an app carries the first five.
 | `release:doctor` | the person, before the first release | packages |
 | `release` | `publish.yml` and the person | packages |
 
-The three `release:*` scripts come from `@moku-labs/common`. Take their exact bodies from the
-`moku:moku-release` skill's `templates/` rather than writing them from memory.
+The three `release:*` scripts come from the `moku-release` bin of `@moku-labs/ci` (a dev dependency):
+`moku-release setup`, `moku-release doctor`, `moku-release`.
 
 > **`repository` is required for npm provenance.** Publishing with provenance (automatic under
 > OIDC Trusted Publishing — see the `moku:moku-release` skill) fails `E422` unless `package.json`
@@ -405,8 +405,8 @@ Two thin files, scaffolded from the first commit. They call the shared reusable 
 | Package (framework or library) | `ci.yml`, `publish.yml` | `moku-labs/ci/.github/workflows/*@v1` |
 | App | `ci.yml` | the app-deploy workflow in the same repository |
 
-Copy the exact YAML from the `moku:moku-release` skill's `templates/` — invoke that skill with the
-`Skill` tool, which prints its base directory. Do not write the workflow YAML by hand: the publish
+Copy the exact YAML from the installed `@moku-labs/ci` package (`node_modules/@moku-labs/ci/examples/`);
+this plugin carries no copy of it. Do not write the workflow YAML by hand: the publish
 path is tokenless OIDC Trusted Publishing, and a hand-rolled variant breaks provenance. The
 rationale and the first-publish bootstrap live in the `moku:moku-release` skill (`references/release-model.md`).
 
