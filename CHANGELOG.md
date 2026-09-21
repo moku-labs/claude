@@ -28,6 +28,11 @@ first: 506 examples became 240 and every API method is documented in the publish
   `src/**/types.ts`, for method and property signatures; block 6c rejects an example that is one call with bare
   identifiers, on functions and type members, in `ts` and `typescript` fences.
 
+- **The core knowledge follows `@moku-labs/core` 1.7.0** (was 1.6.1). One additive change: the framework
+  `onError` of `createCore` is called as `(error, core)` with the core plugin APIs only, for example
+  `{ log, env }`. `core-api.md`, `communication-context.md` and the registry say so. `/moku:upgrade` moves a
+  framework's direct core dependency to 1.7.0.
+
 ### Fixed
 - **The skeleton templates no longer teach the echo.** `plan-templates.md` stubs carried
   `const api = createApi(ctx);`; the `moku-common-conventions` sample carried `const api = createMailerApi(ctx);`.
