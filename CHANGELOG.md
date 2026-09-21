@@ -2,6 +2,17 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.71.2 (2026-09-21)
+
+Wording left over from #15. No code changes.
+
+### Fixed
+- **Every scoped test command is the project's runner.** `moku-quality-validator`, `build-verification.md`
+  (regression run) and `tdd-protocol.md` said `bun test <dir>`. They now say `bunx vitest run <dir>`, with
+  `bun test` only for a project without `vitest`.
+- `memory-schema.md` no longer says validators may keep `memory: user`. The field switches Write and Edit on,
+  and 0.71.1 removed it from every agent.
+
 ## 0.71.1 (2026-09-21)
 
 A real `/moku:build` of `@moku-labs/game` on 0.71.0 hit nine tool defects (#15). Nothing new, every row is a fix.
