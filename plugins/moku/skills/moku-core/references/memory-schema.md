@@ -56,7 +56,7 @@ the validators are read-only. When a project wants an explicit store, the orches
 `.planning/memory/`:
 
 - `memory/project.md` — durable, human-curated facts about THIS codebase (non-obvious constraints,
-  recurring pitfalls). Mirrors the structured format in `agent-preamble.md` Rule 7
+  recurring pitfalls), one per line in the structured format
   (`- [YYYY-MM-DD] note | confidence:{high|medium|low}` under `## Error Patterns` /
   `## Architecture Decisions` / `## Validation Baselines`).
 - The API **memory tool** (when enabled) and **context-editing** are complementary: the model can
