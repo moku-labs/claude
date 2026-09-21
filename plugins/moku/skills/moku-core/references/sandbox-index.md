@@ -1,7 +1,7 @@
 # Moku Sandbox — Coding-Style Index
 
 > **Reference exemplars** vendored from `github.com/moku-labs/core/tests/sandbox` to inspire
-> coding style during build. Pinned commit: `9dc5a8f251a76e174be1163d2b5c5673ba707bb7` (tag `v1.6.1`)
+> coding style during build. Pinned commit: `d95c279036a27753a1808b3d25a219808631939c` (`main` after `v1.7.0`: spec 15 §6 one-place API contract)
 > Vendored: `2026-09-21` · files live under `skills/moku-core/references/sandbox/`.
 > Refresh with the `spec-sync` skill (moku-maintainer pack) — it re-vendors both `spec/` and `sandbox/`.
 >
@@ -53,9 +53,10 @@ plugin's size to decide the file split.
    `types.ts` (`type XCtx = PluginCtx<Config, State, Events>` alias) · `handlers.ts`
    (event-handler factories curried as `(ctx) => (payload) => {…}`). Factories are **arrow functions**.
 3. **JSDoc:** multi-line everywhere (`@param {Type} name - desc`, `@returns`, `@throws`,
-   `@example` fenced ```typescript blocks). Never single-line `/** … */`. For WHERE the docs and
-   `@example` go, follow `jsdoc-examples.md`, not the sandbox: the sandbox still documents the
-   implementation in `api.ts`, and that never reaches the published types.
+   `@example` fenced ```typescript blocks). Never single-line `/** … */`. WHERE the docs go follows
+   `spec/15 §6` (short form: `jsdoc-examples.md`): `cms/content` has an explicit `ContentApi` type, so
+   the contract and the scenario examples sit on its members and `content/api.ts` carries none;
+   `router` and `analytics` have an inferred API, so their docs sit on the object literal.
 4. **Errors:** two-line format `[<framework-or-plugin>] <what>.\n  <how to fix>.`
 5. **Events:** `events: register => ({ "auth:login": register<{ userId: string }>("desc") })`;
    naming `pluginName:action`. No explicit generics on `createPlugin`.
