@@ -39,7 +39,7 @@ Instance-only. Returns the typed API; a registered plugin with no `api` yields a
 Consumer cannot remove framework defaults. Final list: `[...frameworkDefaults, ...consumerExtras]`.
 
 ### Phase-Appropriate Context
-`createState` → only `{ global, config }`. `onStop` → only `{ global }`. Core plugins → only `{ config, state }` (no global, emit, require, has).
+`createState` → only `{ global, config }`. `onStop` → only `{ global, config, state }` (own config and state since core 1.6; `{ global }` before), never `emit`/`require`/`has`. Core plugins → only `{ config, state }` (no global, emit, require, has).
 
 ### Core Plugin Self-Containment
 Core plugins must NOT have `depends`, `events`, or `hooks` — throws TypeError if present. They are pure infrastructure with no inter-plugin communication.

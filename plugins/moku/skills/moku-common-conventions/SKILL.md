@@ -110,21 +110,21 @@ Any CLI surface (a `cli` plugin command, a `scripts/*.ts` entry, a `bin`) render
 
 ```typescript
 // scripts/deploy.ts — branded CLI output
-import { createBrandConsole, box, spinnerFrameAt } from "@moku-labs/common/cli";
+import { createBrandConsole, spinnerFrameAt } from "@moku-labs/common/cli";
 
 const con = createBrandConsole();
 
 con.heading("Deploy");
 con.info("Building bundle…");
 
-// spinner via the kit's frame helper (no hand-rolled \r animation)
-let frame = 0;
-const timer = setInterval(() => process.stdout.write(`\r${spinnerFrameAt(frame++)} working`), 80);
+// spinner via the kit's frame helper: it takes ELAPSED MILLISECONDS, not a frame counter
+const startedAt = Date.now();
+const timer = setInterval(() => process.stdout.write(`\r${spinnerFrameAt(Date.now() - startedAt)} working`), 80);
 // ...await work...
 clearInterval(timer);
 
-con.check("Bundle ready");
-process.stdout.write(box("Deployed to https://my-app.dev"));
+con.check(true, "Bundle ready");               // check(ok, label, detail?)
+con.box(["Deployed to https://my-app.dev"]);   // box(lines) prints the framed lines
 ```
 
 For interactive prompts use the kit's styled `confirm`/`select` (branded palette) rather than a
@@ -149,10 +149,10 @@ const port2 = ctx.env.get("PORT") ?? 3000;        // CORRECT — validated acces
 console.log("\x1b[35mDeploying…\x1b[0m");          // WRONG — raw ANSI
 console.log("┌────────────┐\n│  Done   │\n└────────────┘"); // WRONG — hand-built box
 const frames = ["⠋", "⠙", "⠹"];                    // WRONG — hand-rolled spinner frames
-// CORRECT: import { createBrandConsole, box, spinnerFrameAt } from "@moku-labs/common/cli"
+// CORRECT: import { createBrandConsole, spinnerFrameAt } from "@moku-labs/common/cli"
 const con = createBrandConsole();
 con.heading("Deploying…");
-process.stdout.write(box("Done"));
+con.box(["Done"]);
 ```
 
 **Allowed exceptions (so validators/hooks don't false-positive):**

@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "1.5.0",
+      "knownVersion": "1.6.1",
       "pack": "moku",
       "skill": "plugins/moku/skills/moku-core",
       "pluginIndex": null,
@@ -197,6 +197,14 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
+> **Provenance of the `core` entry (latest sync 2026-09-21):** `@moku-labs/core@1.6.1` (npm `dist-tags.latest`),
+> spec and sandbox re-vendored from the `v1.6.1` tag (spec commit `9dc5a8f`). **`1.5.0 → 1.6.1` delta, additive:**
+> `1.6.0` (#19, #20) `onStop` receives the plugin's own `config` and `state` next to `global`
+> (`TeardownContext<Config, C, S>`, `C` and `S` default to an empty record, so 1.5 code still compiles); still no
+> `emit`, `require`, `has` or core plugin APIs at teardown. `1.5.1` and `1.6.1` are CI-only. Six spec files and one
+> sandbox test changed, no section was added or removed. ⚠️ The family is not lockstep on core: `common@0.3.2`
+> pins `1.6.0`, while `native@0.2.1`, `system@0.2.0`, `room@0.3.1` still pin `1.5.0`.
+>
 > **Provenance of the `native` and `system` entries (first sync 2026-09-21):** `@moku-labs/native@0.2.1` and
 > `@moku-labs/system@0.2.0` (npm `dist-tags.latest`), catalogs generated from the `v0.2.1` / `v0.2.0` tag
 > **source**, cross-checked against the upstream `llms.txt`/`llms-full.txt`; the source wins on disagreement.

@@ -246,7 +246,7 @@ createCorePlugin("router", {
 | Core plugin `api`, `onInit`, `onStart`, `onStop` | CorePluginContext | `config`, `state` |
 | `createState` | MinimalContext | `global`, `config` |
 | `hooks`, `api`, `onInit`, `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
-| `onStop` | TeardownContext | `global` only |
+| `onStop` | TeardownContext | `global`, own `config`, own `state` (core ≥ 1.6; `global` only before). No `emit`, `require`, `has`, core APIs |
 
 `onStart` and `onStop` are optional. They are needed when:
 - **onStart:** Opening server connections, starting listeners, mounting UI, or other runtime initialization that cannot happen during synchronous init

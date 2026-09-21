@@ -29,7 +29,7 @@ Every Moku plugin callback receives a specific context tier. Tests mock the matc
 | `hooks` factory | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
 | `onInit` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
 | `onStart` | PluginContext | `global`, `config`, `state`, `emit`, `require`, `has`, + core APIs |
-| `onStop` | TeardownContext | `global` |
+| `onStop` | TeardownContext | `global`, own `config`, own `state` (core ≥ 1.6; `global` only before) |
 
 ## Mock Context Factory
 
