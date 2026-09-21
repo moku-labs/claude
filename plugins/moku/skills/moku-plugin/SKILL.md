@@ -260,7 +260,10 @@ If the plugin has no connections to open, no listeners to start, and no resource
 
 ## JSDoc Requirements
 
-Every file carries full JSDoc. Plugin index.ts carries:
+Every file carries JSDoc. Where the API docs and `@example` go is in the moku-core skill,
+`references/jsdoc-examples.md`: the contract and a scenario example on each member of the `Api` type in
+`types.ts`, nothing on the implementation in `api.ts`, no example on a function that takes `ctx`.
+Plugin index.ts carries:
 - Plugin tier comment (Nano/Micro/Standard/Complex/VeryComplex)
 - Description of what the plugin does
 - Events it emits

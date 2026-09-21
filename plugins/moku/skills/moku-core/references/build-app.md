@@ -225,7 +225,7 @@ it found, README and deployment output, and issues found and fixed. Then update 
 
 ## App quality bar
 
-- Full JSDoc on every custom source file; `import type` for type-only imports.
+- JSDoc on every custom source file, `@example` placement per `jsdoc-examples.md`; `import type` for type-only imports.
 - Import from the framework package, never `@moku-labs/core`.
 - Tests pass; Biome and ESLint pass.
 - The documented run command boots from a clean state and serves its primary surface (Step 7).

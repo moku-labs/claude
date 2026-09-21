@@ -98,7 +98,7 @@ the composition split, load the `moku-web:moku-web` skill with the Skill tool an
 
 ## Quality (same bar as framework plugins)
 
-- Full multi-line JSDoc on every export; `import type` for type-only imports.
+- Multi-line JSDoc on every export, `@example` placement per `jsdoc-examples.md`; `import type` for type-only imports.
 - **Never** explicit generics on `createPlugin` — types infer from the spec object.
 - Unit + integration tests, same standards as framework plugins (`__tests__/` inside the plugin dir).
 - Import `createPlugin` from the **framework package**, never `@moku-labs/core`.

@@ -133,7 +133,11 @@ Sibling builders run concurrently, so a repo-wide command from you corrupts thei
 - Follow the tier [tier] file structure.
 - No explicit generics on createPlugin or createCorePlugin — types infer from the spec object.
 - Core plugins use createCorePlugin, with no depends/events/hooks.
-- Full JSDoc on all exports with @param, @returns, @example. `import type` for type-only imports.
+- JSDoc on all exports with @param and @returns. `@example` per
+  `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`: a scenario on every member of
+  the public `Api` type in types.ts, none on the implementation in api.ts, none on a function that
+  takes ctx/state, never an echo of the signature. Every example is true: read the signature and a
+  test first. `import type` for type-only imports.
 - Include onStart/onStop only when the spec names a real resource to manage.
 - Tests live in `__tests__/unit/` and `__tests__/integration/` inside the plugin directory.
   The root `tests/` directory is for framework-level tests.
@@ -197,6 +201,7 @@ End your response with a fenced `json` code block:
   "filesCreated": ["types.ts", "api.test.ts", "api.ts", "state.ts", "index.ts"],
   "testsPass": true,
   "lintPass": true,
+  "noExampleMembers": ["time.pause — only lifecycle calls it"],
   "issues": [{"file": "path", "message": "description"}]
 }
 ```
@@ -205,6 +210,8 @@ End your response with a fenced `json` code block:
 - `tdd`: red == failing and green == passing means the protocol was followed.
 - `intent`: one sentence per source file (not test files) saying what it does and why it is shaped
   that way. The code reviewer compares these against the spec; a mismatch is a high-confidence bug.
+- `noExampleMembers`: every public `Api` member marked `@remarks No example:`, with the reason. Each
+  is a candidate for a private API; report them to the user at the wave checkpoint.
 - `issues`: anything that went wrong, empty array if nothing did.
 ```
 

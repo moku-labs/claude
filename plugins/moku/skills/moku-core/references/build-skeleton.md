@@ -255,10 +255,10 @@ These hold for every skeleton file:
 - JSDoc: a minimal `@file` tag per file — `/** @file [plugin name] — [Tier] skeleton */`. Use `@file`,
   not `@fileoverview` (ESLint `jsdoc/check-tag-names` rejects it). No `@module` in plugin files. The
   common abbreviations (`ctx`, `fn`, `cb`) are whitelisted in the unicorn config.
-- JSDoc on spec-object methods: `jsdoc/require-jsdoc` fires on every `ArrowFunctionExpression` in
-  `src/**/*.ts`, including those nested in `createPlugin` spec objects (`createState`, `api`), so each
-  inline method needs multi-line JSDoc with `@param` and `@example`. For structural callbacks like
-  `events: register => (...)`, use `/* eslint-disable-next-line jsdoc/require-jsdoc */`.
+- JSDoc on spec-object methods: arrows nested in `createPlugin` spec objects (`createState`, `api`,
+  `events: register => (...)`) need no JSDoc — the lint config sets `ArrowFunctionExpression: false`.
+  Method-shorthand members (`createState(_ctx) { … }`) still need a block with `@param`. No `@example`
+  on either: see `jsdoc-examples.md`.
 - `@param` names match the parameter exactly, underscore included (`@param _ctx`). Destructured object
   parameters list each property (`@param _ctx.global`, `@param _ctx.config`).
 - No `@returns` on throw-only stubs — `jsdoc/require-returns-check` rejects it.
