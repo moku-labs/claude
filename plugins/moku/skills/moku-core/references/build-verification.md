@@ -132,8 +132,10 @@ changed, re-test everything.
 1. Collect plugins with status `verified` from earlier waves.
 2. Run their tests together — one command is far faster than one run per plugin:
    ```bash
-   bun test src/plugins/router/ src/plugins/auth/ src/plugins/cache/
+   bunx vitest run src/plugins/router/ src/plugins/auth/ src/plugins/cache/
    ```
+   Use `bun test <dirs>` only when the project has no `vitest` in `package.json`. Bun's own runner fails
+   green Vitest suites: it has no `vi.stubGlobal` and no `expectTypeOf(...).parameter`.
 3. A failure is a regression. Classify it: a type error means this wave broke a type contract, a test
    failure means it broke behavior, an import error means barrel or wiring.
 4. Route the fix at the cause, not the symptom. A framework file caused it → fix the framework file.

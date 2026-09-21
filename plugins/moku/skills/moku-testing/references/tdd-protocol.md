@@ -116,8 +116,12 @@ it("rejects wrong types", () => {
 #### Run Tests — Confirm Failure
 
 ```bash
-bun test src/plugins/[name]/
+bunx vitest run src/plugins/[name]/
 ```
+
+Moku projects test with Vitest. Use `bun test <path>` instead only when the project has no `vitest` in
+`package.json`: Bun's own runner has no `vi.stubGlobal` and no `expectTypeOf(...).parameter`, so it
+fails Vitest suites that are green. The same rule holds for every test command below.
 
 - Tests MUST fail at this point (stubs return wrong values, methods don't exist yet)
 - If any test passes on stubs, the test is too weak — add assertions that verify real behavior
@@ -129,9 +133,9 @@ bun test src/plugins/[name]/
 
 Now write the real implementation to make tests pass. Fix the implementation, NOT the tests — tests encode the spec.
 
-7. **Write `state.ts`** — Full `createState` factory. Run `bun test __tests__/unit/state.test.ts` after writing.
-8. **Write `api.ts`** — Full API factory. Run `bun test __tests__/unit/api.test.ts` after writing.
-9. **Write `handlers.ts`** — Event handlers (if plugin has hooks). Run `bun test __tests__/unit/handlers.test.ts` after writing.
+7. **Write `state.ts`** — Full `createState` factory. Run `bunx vitest run __tests__/unit/state.test.ts` after writing.
+8. **Write `api.ts`** — Full API factory. Run `bunx vitest run __tests__/unit/api.test.ts` after writing.
+9. **Write `handlers.ts`** — Event handlers (if plugin has hooks). Run `bunx vitest run __tests__/unit/handlers.test.ts` after writing.
 10. **Update `index.ts`** — Replace stubs with real imports:
     ```typescript
     import { createPlugin } from "@moku-labs/core";
@@ -146,7 +150,7 @@ Now write the real implementation to make tests pass. Fix the implementation, NO
     });
     ```
 11. **tsc checkpoint** — `bunx tsc --noEmit`. Fix type errors immediately.
-12. **Full test run** — `bun test src/plugins/[name]/`. ALL tests from Phase 2 must pass.
+12. **Full test run** — `bunx vitest run src/plugins/[name]/`. ALL tests from Phase 2 must pass.
 
 **If a test fails after implementation:**
 - Read the test carefully — does it match the spec?

@@ -51,8 +51,9 @@ or inconsistent with the plugin table).
 
 ## Optional `.planning/memory/` (agent memory)
 
-Validator/architecture agents may keep `memory: user`/`local` notes. When a project wants an explicit
-store, use `.planning/memory/`:
+The moku agents carry no `memory:` field: it switches Write and Edit on over an agent's `tools` list, and
+the validators are read-only. When a project wants an explicit store, the orchestrator keeps it in
+`.planning/memory/`:
 
 - `memory/project.md` — durable, human-curated facts about THIS codebase (non-obvious constraints,
   recurring pitfalls). Mirrors the structured format in `agent-preamble.md` Rule 7
