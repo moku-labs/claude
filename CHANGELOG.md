@@ -4,7 +4,13 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 
 ## 0.71.2 (2026-09-21)
 
-Wording left over from #15. No code changes.
+Wording left over from #15, and three frameworks join the registry. No code changes.
+
+### Added
+- **`common`, `native` and `system` in the framework registry** (`moku-frameworks.md`), with their
+  `moku-<key>-version` upgrade migrations. They are registered at `knownVersion: "0.0.0"`: `/moku:upgrade` stays
+  silent for them until the first `moku-sync <key>`. `native` and `system` have no pack yet. `@moku-labs/game`
+  (in development) and `@moku-labs/ai` (not verified) are left out on purpose.
 
 ### Fixed
 - **Every scoped test command is the project's runner.** `moku-quality-validator`, `build-verification.md`
