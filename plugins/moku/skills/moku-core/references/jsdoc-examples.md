@@ -6,8 +6,10 @@ It overrides `spec/15-PLUGIN-STRUCTURE.md §6` and the sandbox exemplars on this
 
 ## Why
 
-- Only the `…Api` TYPE in `types.ts` ships in the published `.d.mts`. JSDoc on the object literal
-  returned by `create…Api` never reaches a consumer: hover on `app.clock.scheduleAt` shows nothing.
+- The published `.d.mts` carries the `…Api` TYPE from `types.ts`. When the `create…Api` factory is
+  annotated with that type, JSDoc on its object literal never reaches a consumer: hover on
+  `app.clock.scheduleAt` shows nothing. (Checked with `tsc` and `tsdown`. Only an API whose type is
+  inferred from the literal keeps the literal's JSDoc.)
 - A required `@example` on a private function becomes a copy of its signature
   (`shut(ctx.state.gate);`, `const api = createClockApi(ctx);`). That is noise.
 - TypeScript does not check comments. An example nobody verified is often wrong.
@@ -19,11 +21,20 @@ It overrides `spec/15-PLUGIN-STRUCTURE.md §6` and the sandbox exemplars on this
 | Members of the public `…Api` types in `types.ts`, and helpers a consumer calls | The contract lives here: description, `@param`, `@returns`, `@throws`, and a SCENARIO `@example`: one comment line that says when a consumer calls it, a call with literal arguments in `app.<plugin>.<method>(…)` form, the result as a trailing comment. 2–6 lines. |
 | Public data types (config, event payloads, results a consumer reads) | one example with a literal value, or the `createApp({ pluginConfigs: … })` line for a config |
 | Implementation of an API method inside the `create…Api` object literal | no JSDoc. Ordinary `//` intent comments inside bodies stay. |
-| Nano and Micro plugins: inline `api`, no `Api` type | the contract goes on the inline member, because it is the only place |
+| Inferred API, no `Api` type: Nano and Micro plugins with an inline `api` | the contract goes on the member of the object literal, because it is the only place, and it does ship |
 | A type the consumer implements (a provider, a source, a handler signature) | one type-level example of a realistic implementation; members keep descriptions, no examples |
 | Private pure function (no ctx, state, modules or other mutable context parameter) | one line with literals and the result: `passesNarrow({ intent: "merge" }, { intent: "sell" }); // false` |
 | Private function that takes ctx / state / modules, every `create…State` and `create…Api` factory, private types (`State`, `…Ctx`, internal records) | description and tags stay, NO `@example` |
-| Public member no consumer can call | no example; `@remarks No example: <reason in one sentence>.` Report it as a candidate for a private API. |
+| Public member whose real caller is another plugin, not the app | a true scenario from that plugin's point of view: `const time = ctx.require(timePlugin); if (reasons.length === 1) time.pause();` |
+| Public member for which no honest example can be written | not a documentation gap, an API finding. Only code inside the same plugin needs it: move it off the API into a plain function. Nobody calls it: delete it. There is no "no example" exemption. |
+
+## API means public
+
+A Moku plugin API has no private or internal tier. If a member is on the `Api`, it is public. If
+anybody uses it anywhere, including another plugin through `ctx.require`, it is public, and that is
+fine. If it must not be public, it is a plain function outside the API. If nobody uses it, it is
+removed. Never suggest visibility tiers, a second hidden API, an `internal:` factory in
+`@moku-labs/core`, or type tricks that hide members from `app`.
 
 ## Hard rules
 
@@ -36,14 +47,15 @@ It overrides `spec/15-PLUGIN-STRUCTURE.md §6` and the sandbox exemplars on this
 3. Do not lose knowledge: a behaviour note that lived on an implementation method ("a negative
    delay counts as zero") moves to the type member or to the factory description.
 4. Do not bloat. No example longer than 6 lines unless it shows an implementation of an interface.
-5. Tag order: description, then `@param`, `@returns`, `@throws`, `@remarks`, `@example`.
+5. Tag order: description, then `@param`, `@returns`, `@throws`, `@example`.
 
 ## The shape
 
 Taken from `@moku-labs/game` (`src/plugins/clock`, `src/plugins/time`).
 
 ```ts
-// types.ts — the contract
+// types.ts — the contract. Two members from two plugins: `clock` called by the app, `time` called
+// by the `lifecycle` plugin.
 export type Api = {
   /**
    * Replaces the single pending due moment. A moment in the past is not delivered synchronously:
@@ -62,8 +74,13 @@ export type Api = {
   /**
    * Pauses the clock: no phase runs and `elapsed` stops advancing. Called by `lifecycle`.
    *
-   * @remarks No example: a game pauses through `app.lifecycle.push(reason)`; only `lifecycle`
-   * calls this.
+   * @example
+   * ```ts
+   * // The lifecycle plugin owns the pause policy: the first pause reason stops the clock.
+   * // A game pauses through app.lifecycle.push(reason), never here.
+   * const time = ctx.require(timePlugin);
+   * if (reasons.length === 1) time.pause(); // app.time.isPaused() is true, no phase runs
+   * ```
    */
   pause(): void;
 };
@@ -97,7 +114,7 @@ export function createClockApi(ctx: ClockCtx): Api {
 | Check | Enforced by |
 |---|---|
 | every `…Api` member in `types.ts` has JSDoc | ESLint block 6b, `jsdoc/require-jsdoc` |
-| every `…Api` member has `@example` or `@remarks` | ESLint block 6b, `jsdoc/require-example` |
+| every `…Api` member has `@example`, no exemption: a red lint forces the decision to write a true example, move the member off the API, or delete it | ESLint block 6b, `jsdoc/require-example` |
 | no example whose whole body is one call with bare identifiers | ESLint block 6c, `jsdoc/match-description` |
 | implementation arrows need no JSDoc | ESLint block 6, `ArrowFunctionExpression: false` |
-| the example is true; docs sit on the type and not on the implementation; no `@example` on ctx functions | `moku-style-validator` checks E2, E4, E5 |
+| the example is true; docs sit on the type and not on the implementation; no `@example` on ctx functions; a member with no honest example leaves the API | `moku-style-validator` checks E2, E4, E5, E6 |
