@@ -183,7 +183,7 @@ data, frozen.}
 
 When `MEDIUM` is `cli` or `tui`, keep §0 (the callout — substitute the conventions line for the
 medium's idioms, e.g. "the branded CLI kit `@moku-labs/common/cli`, `ctx.log`/`ctx.env`, readable-code
-style — see the **moku-common** skill") and §1, §2 (→ *Voice & texture*: prompt style, colour usage,
+style — see the **moku-common-conventions** skill") and §1, §2 (→ *Voice & texture*: prompt style, colour usage,
 box-drawing, spacing, spinner/feedback character), §3, §4 (→ *Command & key grammar*), §8, §9. Replace
 the visual inventory (§5–§7) with a **terminal-surface inventory**:
 

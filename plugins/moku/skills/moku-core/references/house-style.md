@@ -48,5 +48,5 @@ are approved house style — treat them as authoritative, not a per-project inve
    (`@moku-labs/common/cli`), log via `ctx.log` (not raw `console.*`), and read env via `ctx.env`
    (not raw `process.env`). Authoritative, citable rules with rationale + examples + detection +
    the allowed exceptions (brand-kit source, the marked `// @log-sink`, env providers, tests) live
-   in [`../../moku-common/references/conventions.md`](../../moku-common/references/conventions.md)
-   (the `moku-common` skill); `moku-structure-validator` enforces them.
+   in [`../../moku-common-conventions/references/conventions.md`](../../moku-common-conventions/references/conventions.md)
+   (the `moku-common-conventions` skill); `moku-structure-validator` enforces them.

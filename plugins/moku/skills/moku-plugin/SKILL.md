@@ -321,7 +321,8 @@ For plugins with sub-module directories (Very Complex tier), read `references/do
 - **`moku-room:moku-room`** (pack `moku-room`) — couch-multiplayer plugins
 - **`moku-native:moku-native`** (pack `moku-native`) — Tauri packaging plugins
 - **`moku-system:moku-system`** (pack `moku-system`) — system capability plugins (store, notify, clipboard, tray, deep-link)
-- **moku-common** — Family conventions for `@moku-labs/common`: log via `ctx.log` (not raw `console.*`),
+- **`moku-common:moku-common`** (pack `moku-common`) — `@moku-labs/common` itself: `logPlugin`, `envPlugin`, env providers, the `./cli` kit
+- **moku-common-conventions** — Family conventions for `@moku-labs/common`: log via `ctx.log` (not raw `console.*`),
   read env via `ctx.env` (not raw `process.env`), and render CLI through the branded kit
   (`@moku-labs/common/cli`). Plugin domain code that needs logging/env/CLI output follows MC1–MC3.
 

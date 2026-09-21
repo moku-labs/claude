@@ -1,17 +1,15 @@
 ---
-name: moku-common
+name: moku-common-conventions
 description: >
-  Using @moku-labs/common across the Moku family: the branded CLI renderer
-  (@moku-labs/common/cli — palette/BRAND_PINK, box, spinnerFrameAt, makePalette,
-  createBrandConsole, styled confirm/select), logPlugin/ctx.log for structured
-  logging, and envPlugin/ctx.env for validated environment access. Triggers on:
-  "moku common", "@moku-labs/common", "branded cli", "brand console",
-  "createBrandConsole", "ctx.log", "ctx.env", "logPlugin", "envPlugin",
-  "common log/env plugin", "moku CLI output", or wiring shared CLI/log/env
-  infrastructure in a Moku framework OR consumer app.
+  Family conventions for consuming @moku-labs/common in a Moku project, the rules MC1–MC3: render CLI output
+  through the branded kit (@moku-labs/common/cli), log through ctx.log instead of console.*, read env through
+  ctx.env instead of process.env. Rationale, correct and incorrect examples, and the allowed exceptions that
+  validators and hooks honour. The package API itself is in the moku-common pack. Triggers on: "MC1", "MC2",
+  "MC3", "moku common conventions", "raw console in moku", "process.env in moku plugin", "hand-rolled ANSI /
+  spinner / box", "log sink", "@log-sink", or a validator or hook finding that cites MC1–MC3.
 ---
 
-# Moku Common (`@moku-labs/common`)
+# Moku Common Conventions (`@moku-labs/common`, rules MC1–MC3)
 
 ## Current Project State
 !`test -f package.json && grep -E '"@moku-labs/common"' package.json 2>/dev/null || true`
@@ -176,6 +174,8 @@ process.stdout.write(box("Done"));
 
 ## Related Skills
 
+- **`moku-common:moku-common`** (pack `moku-common`) — the package itself: `logPlugin`, `envPlugin`, the env
+  providers per runtime, the `./cli` kit and the `./browser` entry, synced to the released version
 - **moku-core** — Architecture fundamentals, factory chain, the `ctx` object, core-plugin composition
 - **moku-plugin** — Plugin structure + tiers; where domain code that calls `ctx.log`/`ctx.env` lives
 - **`moku-web:moku-web`** (pack `moku-web`) — `@moku-labs/web` already injects `log`/`env` core plugins (`ctx.log.*`/`ctx.env.*`);

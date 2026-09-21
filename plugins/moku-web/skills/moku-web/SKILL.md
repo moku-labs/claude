@@ -321,7 +321,7 @@ For projects using island components (`*Island.ts`), read `references/component-
 
 - **moku-core** — Architecture fundamentals, factory chain, lifecycle, config resolution
 - **moku-plugin** — Plugin structure, complexity tiers, wiring harness pattern for web plugins
-- **moku-common** — Family conventions for `@moku-labs/common`. `@moku-labs/web` already injects
+- **moku-common-conventions** — Family conventions for `@moku-labs/common` (MC1–MC3). `@moku-labs/web` already injects
   `log`/`env` core plugins (`ctx.log.*`/`ctx.env.*`); use those (not raw `console.*`/`process.env`),
   and route any developer-CLI (`app.cli.*`) output through the branded kit (`@moku-labs/common/cli`).
   See MC1–MC3.

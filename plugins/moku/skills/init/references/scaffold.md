@@ -181,7 +181,7 @@ No dependencies by default.
 Plugin, CLI and script source uses `ctx.log` rather than raw `console.*`, `ctx.env` rather than raw
 `process.env`, and renders any CLI surface through `@moku-labs/common/cli` (`createBrandConsole`,
 `box`, `spinnerFrameAt`, styled `confirm`/`select`). The `validate-common-usage` hook and
-`moku-structure-validator` enforce this. Rules MC1–MC3 with examples live in the `moku-common`
+`moku-structure-validator` enforce this. Rules MC1–MC3 with examples live in the `moku-common-conventions`
 skill's `references/conventions.md`.
 
 ## 5. Install

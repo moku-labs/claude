@@ -68,6 +68,7 @@ cache). Suggest, do not install.
 | `@moku-labs/room` | `moku-room` | No room knowledge skill. |
 | `@moku-labs/native` | `moku-native` | No native packaging knowledge skill. |
 | `@moku-labs/system` | `moku-system` | No system API knowledge skill. |
+| `@moku-labs/common` as a direct dependency (a framework, a CLI) | `moku-common` | No package knowledge skill; the MC1–MC3 rules stay in the core. |
 | any UI surface | `moku-design` | The design station is unavailable; the conductor will offer to continue without it. |
 
 Report each as installed, missing-and-wanted, or installed-but-unused. An installed pack that the

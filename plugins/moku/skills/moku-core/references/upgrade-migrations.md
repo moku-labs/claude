@@ -285,8 +285,7 @@ the block below.
 - **Default:** on
 - **Depends on:** moku-core-version (when the project also depends directly on `@moku-labs/core`)
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/common` AND its
-  resolved/declared version `< frameworks[common].knownVersion` in `moku-frameworks.md`. The entry is
-  registered at `0.0.0`, so this migration stays silent until the first `moku-sync common`.
+  resolved/declared version `< frameworks[common].knownVersion` in `moku-frameworks.md` (currently `0.3.2`).
 - **Apply:**
   1. Read `frameworks[common].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/common` dependency to that version (preserve the range operator
@@ -294,7 +293,8 @@ the block below.
   3. Touch only a direct dependency. A project that gets `@moku-labs/common` through a framework (web, worker, room bundle it) has none to bump.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build` for a publishable
-  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); never weaken types.
+  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
+  `skills/moku-common/references/plugin-index.md`, never weaken types.
 - **Risk:** No breaking crossing is recorded yet. `moku-sync common` records them here when it syncs a
   release that has one; review the release notes (`frameworks[common].releaseSource`).
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.

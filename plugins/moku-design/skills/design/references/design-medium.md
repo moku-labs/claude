@@ -88,7 +88,7 @@ What changes is the **artifact** each generator produces and the **inventory** t
 - **Inventory (template medium variant):** commands & subcommands / prompts & steps / output states &
   frames / recurring render components.
 - **Re-implement-as:** the branded CLI kit (`@moku-labs/common/cli` — `createBrandConsole`, `box`,
-  `spinnerFrameAt`, styled `confirm`/`select`), `ctx.log`/`ctx.env`, readable-code style (moku-common
+  `spinnerFrameAt`, styled `confirm`/`select`), `ctx.log`/`ctx.env`, readable-code style (moku-common-conventions
   MC1–MC3).
 
 ### `tui` / interactive "show"
