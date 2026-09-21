@@ -2,6 +2,37 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.74.0 (2026-09-21)
+
+Generated JSDoc examples say something, and lint enforces it. The rules were tried on `@moku-labs/game`
+first: 506 examples became 240 and every API method is documented in the published types.
+
+### Changed
+- **The contract of an API method lives on the member of the `Api` type in `types.ts`.** Only that type ships in
+  the `.d.mts`; docs on the object literal returned by `create…Api` never reached a consumer. The implementation
+  carries no JSDoc. The new `moku-core/references/jsdoc-examples.md` is the single source; it overrides
+  `spec/15 §6` and the sandbox on this topic until `@moku-labs/core` follows.
+- **`@example` is no longer demanded on every export.** A public `Api` member gets a scenario: when a consumer
+  calls it, a call with literal arguments in `app.<plugin>.<method>(…)` form, the result as a comment. A private
+  pure function gets one literal line. A function that takes `ctx` or state, a factory and a private type get
+  none. A public member no consumer can call says `@remarks No example: <reason>` and is reported as a candidate
+  for a private API (`noExampleMembers` in the builder contract).
+- **Every example must be true.** Builders read the real signature and a test before writing one.
+  `moku-style-validator` checks it (E4), next to the echo (E1), docs on the implementation (E2), an undocumented
+  `Api` member (E3), an example where none belongs (E5) and private-API candidates (E6).
+- **The scaffolded `eslint.config.ts` enforces the mechanical part.** Block 6 turns `require-example` and
+  `ArrowFunctionExpression` off; block 6b requires JSDoc and `@example` or `@remarks` on every `…Api` member in
+  `src/**/types.ts`, for method and property signatures; block 6c rejects an example that is one call with bare
+  identifiers, on functions and type members, in `ts` and `typescript` fences.
+
+### Fixed
+- **The skeleton templates no longer teach the echo.** `plan-templates.md` stubs carried
+  `const api = createApi(ctx);`; the `moku-common-conventions` sample carried `const api = createMailerApi(ctx);`.
+
+### Not in this release
+- Existing projects keep their old lint. No `/moku:upgrade` migration, by decision: rewriting the docs of a
+  finished project costs more than it gives. The rules apply to what the plugin builds from now on.
+
 ## 0.73.1 (2026-09-21)
 
 The core knowledge follows `@moku-labs/core` 1.6.1. No code changes.
