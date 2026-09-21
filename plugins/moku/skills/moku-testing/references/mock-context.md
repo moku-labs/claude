@@ -73,15 +73,20 @@ Add `global` to the structural type only when `createState` reads the frozen glo
 
 ## Teardown-context factory (for onStop tests)
 
-`onStop` receives only the frozen global config. Same approach — a local structural type:
+`onStop` receives the frozen global config plus the plugin's own `config` and `state` (since
+`@moku-labs/core` 1.6; before 1.6 only `global`). Same approach — a local structural type:
 
 ```typescript
 type StopCtx = {
   global: Readonly<Record<string, unknown>>;
+  config: RouterCtx["config"];
+  state: RouterState;
 };
 
 const createStopCtx = (overrides?: Partial<StopCtx>): StopCtx => ({
   global: {},
+  config: { basePath: "/", notFoundPath: "/404" },
+  state: { currentPath: "/", history: [], guards: [], initialized: true },
   ...overrides
 });
 ```
@@ -96,4 +101,4 @@ const createStopCtx = (overrides?: Partial<StopCtx>): StopCtx => ({
 5. **Only real exports**: Import `PluginCtx`/`EmitFn` types from `@moku-labs/core`; declare
    everything else as local structural types — never invent core exports
 6. **No wrong-tier fields**: `PluginCtx` mocks have ONLY `config`/`state`/`emit`; createState
-   mocks have NO `emit`/`require`/`has`; onStop mocks have ONLY `global`
+   mocks have NO `emit`/`require`/`has`; onStop mocks have ONLY `global`, `config`, `state` — never `emit`/`require`/`has`

@@ -63,13 +63,14 @@ let i = 0; setInterval(() => process.stdout.write(`\r${frames[i++ % 4]}`), 80);
 
 **Correct:**
 ```typescript
-import { createBrandConsole, box, spinnerFrameAt } from "@moku-labs/common/cli";
+import { createBrandConsole, spinnerFrameAt } from "@moku-labs/common/cli";
 
 const con = createBrandConsole();
+const startedAt = Date.now();
 con.heading("Deploy");
 con.info("Deploying…");
-process.stdout.write(`\r${spinnerFrameAt(frame++)} working`);
-process.stdout.write(box("Done"));
+process.stdout.write(`\r${spinnerFrameAt(Date.now() - startedAt)} working`); // elapsed ms, not a frame counter
+con.box(["Done"]);                                                            // box(lines) prints the frame
 ```
 
 **Detection guidance.**

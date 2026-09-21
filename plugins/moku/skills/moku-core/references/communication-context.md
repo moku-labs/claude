@@ -71,9 +71,12 @@ Core plugin APIs (e.g., `ctx.log`, `ctx.env`) are available on PluginContext whe
 
 ### TeardownContext (onStop)
 ```typescript
-{ global: Readonly<Config> }
+{ global: Readonly<Config>, config: Readonly<C>, state: S }
 ```
-Other plugins may already be stopped. Minimal context prevents unreliable inter-plugin access.
+Other plugins may already be stopped, so there is no `emit`, no `require`, no `has` and no core plugin
+API. What the plugin owns is reachable: its resolved `config` and the same `state` object every other
+method received, so `onStop: ({ state }) => state.server?.close()` needs no module-scope variable.
+**Since `@moku-labs/core` 1.6.** Before 1.6 `onStop` received `{ global }` only.
 
 ## require and has
 
