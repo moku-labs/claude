@@ -10,8 +10,8 @@ first: 506 examples became 240 and every API method is documented in the publish
 ### Changed
 - **The contract of an API method lives on the member of the `Api` type in `types.ts`.** Only that type ships in
   the `.d.mts`; with a factory annotated `: Api`, docs on its object literal never reached a consumer. The
-  implementation carries no JSDoc. An inferred API (Nano, Micro) keeps its docs on the literal. The new `moku-core/references/jsdoc-examples.md` is the single source; it overrides
-  `spec/15 §6` and the sandbox on this topic until `@moku-labs/core` follows.
+  implementation carries no JSDoc. An inferred API (Nano, Micro) keeps its docs on the literal. The new `moku-core/references/jsdoc-examples.md` is the short form of `spec/15 §6`,
+  which carries the same rules since core `d95c279`; spec and sandbox are re-vendored from that commit.
 - **`@example` is no longer demanded on every export.** A public `Api` member gets a scenario: when a consumer
   calls it, a call with literal arguments in `app.<plugin>.<method>(…)` form, the result as a comment. A private
   pure function gets one literal line. A function that takes `ctx` or state, a factory and a private type get
