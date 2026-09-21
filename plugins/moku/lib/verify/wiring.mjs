@@ -6,6 +6,8 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 /** @typedef {{ wired: boolean, where: string | null, reasons: string[] }} Wiring */
 /** @typedef {{ command: string, ok: boolean, detail: string }} CheckRun */
@@ -47,6 +49,22 @@ export function judgeWiring(name, composition) {
 }
 
 /**
+ * The scoped test command of a project. A project that depends on Vitest is tested with Vitest: Bun's own
+ * runner lacks `vi.stubGlobal` and `expectTypeOf(...).parameter`, so it fails suites that are green.
+ *
+ * @param {{ dependencies?: Record<string, string>, devDependencies?: Record<string, string> } | undefined} manifest the project's package.json
+ * @param {string} pluginDir plugin directory, relative to root
+ * @returns {{ command: string, args: string[] }}
+ * @example
+ * testCommand({ devDependencies: { vitest: "^3.2.0" } }, "src/plugins/streak"); // bunx vitest run src/plugins/streak
+ */
+export function testCommand(manifest, pluginDir) {
+  const usesVitest = Boolean(manifest?.devDependencies?.vitest ?? manifest?.dependencies?.vitest);
+
+  return usesVitest ? { command: "bunx", args: ["vitest", "run", pluginDir] } : { command: "bun", args: ["test", pluginDir] };
+}
+
+/**
  * Run the scoped test and lint commands for a plugin directory.
  *
  * Only called for `--run`. A missing runner is reported, never thrown.
@@ -58,7 +76,23 @@ export function judgeWiring(name, composition) {
  * runChecks("/tmp/app", "src/plugins/streak").length; // 2
  */
 export function runChecks(root, pluginDir) {
-  return [execute(root, "bun", ["test", pluginDir]), execute(root, "bunx", ["biome", "check", pluginDir])];
+  const tests = testCommand(readManifest(root), pluginDir);
+
+  return [execute(root, tests.command, tests.args), execute(root, "bunx", ["biome", "check", pluginDir])];
+}
+
+/**
+ * The project's package.json, or undefined when it is missing or unreadable.
+ *
+ * @param {string} root project root
+ * @returns {Record<string, any> | undefined}
+ */
+function readManifest(root) {
+  try {
+    return JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  } catch {
+    return undefined;
+  }
 }
 
 /**

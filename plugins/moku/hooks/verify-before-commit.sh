@@ -26,18 +26,20 @@ fi
 # --- Guard (Moku projects only — gated above): never stage or commit .planning/ ---
 # .planning/ is local-only state and is gitignored. It reaches history only via an explicit
 # `git add .planning…`, a force-add bypassing .gitignore, or an explicit commit pathspec.
-# Match `.planning` ONLY as a real path token: strip any -m/--message value first (so a commit
-# *message* mentioning .planning/ doesn't trigger), then require a leading boundary and a
-# trailing slash/space/EOL (so a filename like `my.planning-notes.md` doesn't trigger).
-GITCMD=$(printf '%s' "$COMMAND" | sed -E "s/(-m|--message)[[:space:]]*(\"[^\"]*\"|'[^']*'|[^[:space:]]+)//g")
-case "$GITCMD" in
-  *"git add"*|*"git stage"*|*"git commit"*)
-    if printf '%s' "$GITCMD" | grep -Eq '(^|[[:space:]/])\.planning([/[:space:]]|$)'; then
-      echo "BLOCKED: .planning/ is local-only state and must never be staged or committed. Remove the .planning path from this git command (it is gitignored on purpose). If .gitignore is missing the entry, add '.planning/' to .gitignore instead of force-adding." >&2
-      exit 2
-    fi
-    ;;
-esac
+# Judge ONLY the `git add` / `git stage` / `git commit` part of the command: split it at ; & | and
+# newlines and keep the parts that start such a git call. A read-only command next to it
+# (`git check-ignore .planning`, `ls .planning`) and the lines of a heredoc commit message are other
+# parts, so they never trigger. Then match `.planning` as a real path token: strip any -m/--message
+# value first (so a commit *message* mentioning .planning/ doesn't trigger), and require a leading
+# boundary and a trailing slash/space/EOL (so a filename like `my.planning-notes.md` doesn't trigger).
+GITCMD=$(printf '%s' "${COMMAND//$'\\\n'/ }" \
+  | tr ';&|' '\n\n\n' \
+  | grep -E '^[[:space:]]*git[[:space:]]+(add|stage|commit)([[:space:]]|$)' \
+  | sed -E "s/(-m|--message)[[:space:]]*(\"[^\"]*\"|'[^']*'|[^[:space:]]+)//g")
+if printf '%s' "$GITCMD" | grep -Eq '(^|[[:space:]/])\.planning([/[:space:]]|$)'; then
+  echo "BLOCKED: .planning/ is local-only state and must never be staged or committed. Remove the .planning path from this git command (it is gitignored on purpose). If .gitignore is missing the entry, add '.planning/' to .gitignore instead of force-adding." >&2
+  exit 2
+fi
 
 # Only trigger on git commit commands
 case "$COMMAND" in

@@ -6,6 +6,7 @@
  */
 
 import { WRITING_STATIONS } from "./routes.mjs";
+import { shellWriteTargets } from "./shell.mjs";
 
 /** @typedef {{ allow: true } | { allow: false, reason: string }} GuardVerdict */
 
@@ -70,26 +71,23 @@ function deny(reason) {
   return { allow: false, reason };
 }
 
-const SHELL_WRITE = /(^|[\s;&|(])(tee|cp|mv|touch|install|ln)\s|>>?|sed\s+(-[a-zA-Z]*i|--in-place)|<<-?\s*['"]?\w/;
-const SOURCE_TOKEN = /(?:^|[\s'"=>(])((?:\.{0,2}\/)?(?:[\w.@-]+\/)*src\/[\w./@\[\]-]*)/g;
-
 /**
- * Decide whether a shell command may run. It is refused when it writes files (redirect, heredoc, tee, cp, mv,
- * touch, sed -i) and names a source path that `guardWrite` would refuse. Closes the "write through Bash" bypass.
+ * Decide whether a shell command may run. It is refused when a file it writes (a redirect target, or an operand
+ * of tee, cp, mv, touch, install, ln, sed -i) is one `guardWrite` would refuse. Closes the "write through Bash"
+ * bypass. Only write targets are judged: source paths in a heredoc body, a pattern or a read are not writes.
  *
  * @param {string} command
  * @param {GuardFacts} facts
+ * @param {(target: string) => string} [locate] turns a target as written in the command into a project-relative path
  * @returns {GuardVerdict}
  * @example
  * guardShell("cat > src/plugins/streak/index.ts <<'EOF'", { onRails: true, initialized: false, changes: [] });
  * // { allow: false, reason: "..." }
  */
-export function guardShell(command, facts) {
-  if (!SHELL_WRITE.test(command)) return { allow: true };
-
-  // Every source-looking token is checked the way a Write to it would be
-  for (const match of command.matchAll(SOURCE_TOKEN)) {
-    const verdict = guardWrite(match[1].replace(/^\.\//, ""), facts);
+export function guardShell(command, facts, locate = (target) => target) {
+  // Every file the command writes is checked the way a Write to it would be
+  for (const target of shellWriteTargets(command)) {
+    const verdict = guardWrite(locate(target).replace(/^\.\//, ""), facts);
     if (!verdict.allow) return verdict;
   }
 
