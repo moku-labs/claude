@@ -1,9 +1,9 @@
 # @moku-labs/common — Plugin & Property Index
 
-**Synced version:** `0.3.2` (npm `dist-tags.latest`; catalog generated from the `v0.3.2` git tag **source** +
+**Synced version:** `0.3.3` (npm `dist-tags.latest`; catalog generated from the `v0.3.3` git tag **source** +
 the root `README.md` and the per-module READMEs `src/plugins/log/README.md`, `src/plugins/env/README.md`,
 `src/cli/README.md`). Upstream ships **no `llms.txt`**, so the source is the only authority. One regular
-dependency, pinned exactly: `@moku-labs/core@1.6.0`. No peer dependencies. Engines node ≥24, bun ≥1.3.14.
+dependency, pinned exactly: `@moku-labs/core@1.7.0`. No peer dependencies. Engines node ≥24, bun ≥1.3.14.
 `sideEffects: false`, ESM + CJS on `.` and `./cli`, ESM only on `./browser`, types included.
 
 ⚠️ The READMEs and JSDoc disagree with the source in four places. The registry's "source wins" policy applies:
@@ -290,7 +290,7 @@ Not exported anywhere: `LogExpectAssertionError`, `consoleSink`, `installDefault
 ## 7. Dependency and data flow
 
 ```
-@moku-labs/core@1.6.0 ── createCorePlugin ──┬─→ logPlugin  ("log")  ─┐
+@moku-labs/core@1.7.0 ── createCorePlugin ──┬─→ logPlugin  ("log")  ─┐
                                             └─→ envPlugin  ("env")  ─┤
                                                                      │  a Layer-2 framework's createCoreConfig
 providers (one per runtime) ─── pluginConfigs.env.providers ─────────┤  plugins: [logPlugin, envPlugin]

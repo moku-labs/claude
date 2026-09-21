@@ -12,7 +12,7 @@ description: >
 
 # Moku System Patterns
 
-> **Synced to `@moku-labs/system@0.2.0`** (npm `dist-tags.latest`; catalog from the `v0.2.0` tag source +
+> **Synced to `@moku-labs/system@0.2.1`** (npm `dist-tags.latest`; catalog from the `v0.2.1` tag source +
 > the root and per-plugin READMEs). Full surface — the 6 plugins (1 core + 5 opt-in capabilities), the six
 > entry points, config, the provider seam, `SystemResult`, events, native permissions and the dependency
 > graph — is in [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework
@@ -46,7 +46,7 @@ It is not a UI framework and not a Tauri wrapper. Packaging the shell is the job
 | Layer | Technology |
 |-------|-----------|
 | Framework | `@moku-labs/system` — its own `@moku-labs/core` framework; root entry `.` + five capability subpaths (`./store`, `./tray`, `./notify`, `./clipboard`, `./deep-link`) |
-| Built on | `@moku-labs/core@1.5.0` + `@moku-labs/common@0.3.0` (**bundled**, exact pins — supply the kernel + `ctx.log` / `ctx.env`) + `idb-keyval@6.3.0` (web store provider) |
+| Built on | `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` (**bundled**, exact pins — supply the kernel + `ctx.log` / `ctx.env`) + `idb-keyval@6.3.0` (web store provider) |
 | Optional peers | `@tauri-apps/plugin-store@^2.4.0` (store), `@tauri-apps/plugin-notification@^2.3.0` (notify), `@tauri-apps/plugin-clipboard-manager@^2.3.0` (clipboard), `@tauri-apps/plugin-deep-link@^2.4.0` (deepLink), `@tauri-apps/api@^2.11.0` (tray). Needed **only** for the native shell build, one per composed capability |
 | Package manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
 | Engines | node ≥24, bun ≥1.3.14 |
@@ -83,7 +83,7 @@ the `moku-idioms.md` rubric — load the `moku:moku-core` skill with the Skill t
 - Do not expect `notify.show()` to prompt. Call `requestPermission()` yourself, from a user gesture.
 - Do not expect stored data to move between providers. The Tauri store file and IndexedDB are separate.
 
-## Framework API (@moku-labs/system v0.2.0)
+## Framework API (@moku-labs/system v0.2.1)
 
 ```ts
 import { createApp } from "@moku-labs/system";

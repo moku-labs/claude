@@ -1,14 +1,38 @@
 # @moku-labs/room — Plugin & Property Index
 
-**Synced version:** `0.3.1` (npm `dist-tags.latest`; catalog generated from the `v0.3.1` git tag **source** +
-the root README. ⚠️ Upstream `llms.txt`/`llms-full.txt` are **stale** — they still describe the pre-`0.3.1`
-**server *core*** model (`createApp` from `./server`, "no peerDependencies") and the 0.1.x *plugin-pack*
-names; per the registry's "source wins" policy the tag source (`src/server.ts`, `src/plugins/hub/`) is
-authoritative). Built on `@moku-labs/core@1.5.0` + `@moku-labs/common@0.2.1` as **bundled** dependencies +
-bundled `trystero@~0.25.2` (signaling) and `qrcode@^1.5.4` (join QR). **`@moku-labs/worker@^0.15.0` is an
-OPTIONAL `peerDependency`** (`peerDependenciesMeta.optional`) — needed **only** by the `./server` tier (its
-`hubPlugin` is a `@moku-labs/worker` plugin); pure-client apps install nothing extra. Engines node ≥24,
-bun ≥1.3.14.
+**Synced version:** `0.8.2` (catalog generated from the `v0.8.2` git tag **source** — `src/index.ts`,
+`src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`. Upstream `llms.txt`/`llms-full.txt` were
+updated upstream (last touched in `#12`, 0.8.0) and are **current for the API surface through 0.8.0** (hub-plugin server tier, six
+events, at-least-once intents, `"auto"` ICE, `/api/ice`); their **only stale fact at `v0.8.2`** is the bundled
+dependency line, which still says core `1.5.0` / common `0.2.1`. Per the registry's "source wins" policy the
+tag source is authoritative). Built on `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` as **bundled**
+dependencies + bundled `trystero@~0.25.2` (signaling) and `qrcode@^1.5.4` (join QR).
+**`@moku-labs/worker@^0.15.0` is an OPTIONAL `peerDependency`** (`peerDependenciesMeta.optional`) — needed
+**only** by the `./server` tier (its `hubPlugin` is a `@moku-labs/worker` plugin); pure-client apps install
+nothing extra. Engines node ≥24, bun ≥1.3.14.
+
+> **New since 0.3.1 (no breaking change, `0.3.2` → `0.8.2`):**
+> - **0.3.2 (`#7`, sync fix)** — a unicast snapshot (`sync.broadcast(peerId)`) is stamped at the CURRENT `sSeq`
+>   and consumes no shared sequence; a replica that detects a delta gap reports it over the wire with the new
+>   `SyncResyncFrame` (`t: "sync-resync"`) and the host **re-baselines that one peer automatically**.
+>   `sync.onResyncRequest` is now an observability hook, not the place to wire the re-baseline.
+> - **0.4.0 (`#8`, intent)** — **at-least-once intent delivery**: the host receipt-acks every `IntentFrame`
+>   with the new `IntentAckFrame` (`t: "intent-ack"`), the controller retransmits the same `cSeq` (bounded,
+>   doubling backoff, stop-and-wait). New 6th event **`room:intent-undeliverable { name, cSeq }`**; new `intent`
+>   config `ackTimeoutMs` (`1000`) + `maxRetransmits` (`3`).
+> - **0.5.0 (`#9`, sync fix)** — not-ready baseline retry: a replica with no authoritative frame yet re-requests
+>   its join baseline. New `sync` config `baselineRetryMs` (`1000`; `0` disables; gated by `resyncOnGap`).
+>   `0.5.1` was docs-only (llms files).
+> - **0.6.0 (`#11`, transport)** — `transport.iceServers` also accepts a lazy async **`IceServersProvider`**;
+>   new `transport.iceTransportPolicy` (`"all"`). `IceServersProvider` + `TransportConfig` types are exported
+>   from the package root. `0.7.0` was a version-only republish (no source change).
+> - **0.8.0 (`#12`, zero-config internet play)** — `transport.iceServers` default is now the sentinel
+>   **`"auto"`**; `serverSignaling(url)` exposes a derived `iceEndpoint`; the hub's `handle` serves
+>   **`GET /api/ice`** (short-lived Cloudflare Realtime TURN credentials); new `hub.ice` config block.
+>   The old "no TURN ever" statement is **no longer true** for the `./server` tier (see the D2 note below).
+> - **0.8.1 / 0.8.2** — CI moved to `@moku-labs/ci`; `0.8.2` bumps the bundled core to `1.6.0` + common to
+>   `0.3.2` and frees plugin resources from the `onStop` state (kernel 1.6 passes `{ global, config, state }`
+>   to `onStop`) — no public API change.
 
 > **BREAKING in 0.3.1 — the `./server` tier is a plugin, not a core (`#6`).** Through 0.2.0, `./server` was
 > its **own server core** you `createApp`'d from. In 0.3.1 it is **no longer a core** (no
@@ -47,12 +71,16 @@ accounts, no lobby servers.
 > (intents, snapshots, deltas, heartbeats, recovery); Moku **`emit` (`room:*`)** carries **only coarse
 > lifecycle**. No gameplay payload ever rides `emit`, and no `room:*` event ever carries gameplay.
 >
-> **D2 accepted hard-failure:** strict P2P, **no TURN ever** — on AP-isolated / symmetric-NAT /
-> iOS-Private-Relay networks (~15–30% in the wild) the connection can hard-fail with no recovery path
-> (surfaces `room:network-warning`). Design target: the **home LAN**. The `./server` tier does **not**
-> change this — it brokers *signaling/discovery only*; gameplay stays strict P2P with no relay.
+> **D2 accepted hard-failure (default tier):** strict P2P; under the default `publicRendezvous` tier Room
+> operates **no TURN** and adds none — on AP-isolated / symmetric-NAT / iOS-Private-Relay networks (~15–30% in
+> the wild) the connection can hard-fail with no recovery path (surfaces `room:network-warning`). Design
+> target: the **home LAN**. **Since 0.8.0 the opt-in `./server` tier closes that gap:** the hub serves
+> `GET /api/ice` (short-lived Cloudflare TURN credentials) and the `iceServers: "auto"` default fetches them,
+> so ICE races local/STUN/relay pairs. The hub DO still brokers *signaling/discovery only* — gameplay stays on
+> P2P DataChannels (a hostile-NAT pair may ride a Cloudflare TURN relay, never the DO). A consumer may also
+> inject its own STUN/TURN via `transport.iceServers` (array or provider, 0.6.0).
 
-## 1. Client core API form (v0.3.1)
+## 1. Client core API form (v0.8.2)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **core defaults** — already wired. An app
 adds exactly one role facade and its own game plugin; there are no `roomPlugins` arrays. Select the
@@ -61,7 +89,7 @@ signaling adapter via `pluginConfigs.transport.signaling`.
 ```ts
 import { createApp, createPlugin, stagePlugin } from "@moku-labs/room";
 
-// Game logic depends on the facade so the five room:* events are visible in one edge.
+// Game logic depends on the facade so the six room:* events are visible in one edge.
 const game = createPlugin("game", {
   depends: [stagePlugin],
   hooks: (ctx) => ({
@@ -86,38 +114,49 @@ app.stage.onIntent("score", (payload, peerId) =>
 // Controller (phone) — the mirror role.
 import { createApp, createPlugin, controllerPlugin } from "@moku-labs/room";
 
-const app = createApp({ plugins: [controllerPlugin /*, pad */] });
+// 0.4.0: a live intent that gets no host receipt within the retransmit budget ends here — show retry UX.
+const pad = createPlugin("pad", {
+  depends: [controllerPlugin],
+  hooks: (ctx) => ({
+    "room:intent-undeliverable": ({ name, cSeq }) => ctx.log.warn(`intent lost: ${name} #${cSeq}`),
+  }),
+});
+
+const app = createApp({ plugins: [controllerPlugin, pad] });
 await app.start();
 await app.controller.joinRoom("K7P2Q9"); // throws on "full" | "not-found" | "unreachable"
 await app.controller.requestWakeLock();  // keep the phone awake (iOS Safari 16.4+)
 const off = app.controller.on("round", (round) => render(round)); // read-only replica
-app.controller.intent("move", { dx: 1, dy: 0 });                  // typed input over the Wire (never emit)
+app.controller.intent("move", { dx: 1, dy: 0 });                  // typed input over the Wire (never emit);
+                                                                  // at-least-once since 0.4.0 (acked + retransmitted)
 ```
 
 `createApp` is bound from the framework's single core; `createPlugin("name", spec)` authors a custom plugin
 bound to Room's `Config`/`Events` (generics infer from the spec — never written explicitly; document each
 export with a directly-preceding JSDoc block, never destructure — see moku-core "Public Export Shape").
 `createApp` accepts `plugins`, `pluginConfigs`, `config`, and `onReady`/`onError`/`onStart`/`onStop`
-lifecycle callbacks.
+lifecycle callbacks. Since 0.8.2 the bundled kernel is `@moku-labs/core@1.6.0`: a custom plugin's `onStop`
+receives `{ global, config, state }`, so free timers/handles from `state` there (Room's own engines do —
+the old `ctx.global`-keyed teardown registry is gone).
 
 ## 2. Plugins (7) — 4 client engines + 2 role facades + 1 server plugin
 
 | # | Plugin | Tier | Wiring | Depends on | Role / key API | Events |
 |---|--------|------|--------|-----------|----------------|--------|
-| 1 | `transportPlugin` | Complex | client default | — | WebRTC DataChannels: signaling handshake, chunking/backpressure, mandatory heartbeat, capped ICE recovery; owns the typed `Wire`. API: `connect`, `wire`, `disconnect`, `peers`, `close`. | `room:network-warning` |
+| 1 | `transportPlugin` | Complex | client default | — | WebRTC DataChannels: signaling handshake, chunking/backpressure, mandatory heartbeat, capped ICE recovery; owns the typed `Wire`. ICE servers resolve lazily at `connect()` (array / `IceServersProvider` / `"auto"`, 0.6.0–0.8.0). API: `connect`, `wire`, `disconnect`, `peers`, `close`. | `room:network-warning` |
 | 2 | `sessionPlugin` | Complex | client default | transport | Room code + QR + roster; star topology (`hostId()`); client-side host-reload recovery. API: `createRoom`, `qr`, `joinRoom`, `leave`, `rejoin`, `roster`, `self`, `hostToken`, `recoveryPhase`. | `room:peer-joined`, `room:peer-left`, `room:host-reconnecting` |
-| 3 | `intentPlugin` | Standard | client default | transport, session | Controller→host typed inputs (`IntentFrame`, per-controller `cSeq` idempotent de-dup). API: `register`, `onIntent`, `intent`. | — |
-| 4 | `syncPlugin` | Complex | client default | transport, session | Host→controller authoritative state: full snapshot + throttled op-list deltas. API: `registerSlice`, `mutate`, `broadcast`, `read`, `subscribe`, `applyFrame`. | `room:sync-ready` |
-| 5 | `stagePlugin` | Standard (facade) | app-added (host) | all four engines | **Host-role facade** → `app.stage` (`StageApi`). Re-declares all five `room:*` events. | (re-declares all 5) |
-| 6 | `controllerPlugin` | Standard (facade) | app-added (controller) | all four engines | **Controller-role facade** → `app.controller` (`ControllerApi`). Re-declares all five `room:*` events. | (re-declares all 5) |
-| 7 | `hubPlugin` | Standard | **`./server` tier** — a **`@moku-labs/worker` plugin** (`createPlugin` from `@moku-labs/worker`); compose into your own worker `createApp` | — | The `@moku-labs/room/server` signaling tier: a WS-Hibernation **DO-per-room** over the native Cloudflare `env` (DO + KV) — handshake broker + in-band discovery + host-reload reclaim. **No gameplay relay** (D2). API: `app.hub.handle(request, env, ctx): Promise<Response>`. | — |
+| 3 | `intentPlugin` | Standard | client default | transport, session | Controller→host typed inputs (`IntentFrame`, per-controller `cSeq` idempotent de-dup). **At-least-once since 0.4.0:** the host receipt-acks every frame (`IntentAckFrame`), the controller retransmits the same `cSeq` stop-and-wait (bounded, doubling backoff). API: `register`, `onIntent`, `intent`. | `room:intent-undeliverable` |
+| 4 | `syncPlugin` | Complex | client default | transport, session | Host→controller authoritative state: full snapshot + throttled op-list deltas. Gap heal over the wire (`SyncResyncFrame`, 0.3.2) + not-ready baseline retry (0.5.0) — the host re-baselines the one reporting peer automatically. API: `registerSlice`, `mutate`, `broadcast`, `onResyncRequest`, `read`, `subscribe`, `applyFrame`. | `room:sync-ready` |
+| 5 | `stagePlugin` | Standard (facade) | app-added (host) | all four engines | **Host-role facade** → `app.stage` (`StageApi`). Re-declares all six `room:*` events. | (re-declares all 6) |
+| 6 | `controllerPlugin` | Standard (facade) | app-added (controller) | all four engines | **Controller-role facade** → `app.controller` (`ControllerApi`). Re-declares all six `room:*` events. | (re-declares all 6) |
+| 7 | `hubPlugin` | Standard | **`./server` tier** — a **`@moku-labs/worker` plugin** (`createPlugin` from `@moku-labs/worker`); compose into your own worker `createApp` | — | The `@moku-labs/room/server` signaling tier: a WS-Hibernation **DO-per-room** over the native Cloudflare `env` (DO + KV) — handshake broker + in-band discovery + host-reload reclaim. **No gameplay relay** (D2). Since 0.8.0 `handle` also answers **`GET /api/ice`** (TURN-credential mint, fail-open). API: `app.hub.handle(request, env, ctx): Promise<Response>`. | — |
 
-Facades **re-declare** all five `room:*` events for *compile-time visibility only* — a downstream game
+Facades **re-declare** all six `room:*` events for *compile-time visibility only* — a downstream game
 plugin (`depends: [stagePlugin]` / `[controllerPlugin]`) then sees the complete typed hook surface in one
 edge. They install **no forwarding hooks** (Moku's event bus is global; the engines' `emit("room:*")`
 already reaches every hook regardless of `depends`), delegate API, and own no state.
 
-### Facade API surfaces (verified at `v0.2.0`; client surface unchanged through `v0.3.1` — 0.3.x touched only the `./server` tier)
+### Facade API surfaces (re-verified at `v0.8.2` — `StageApi` / `ControllerApi` signatures are unchanged since `v0.2.0`)
 
 ```ts
 type StageApi = {
@@ -149,7 +188,10 @@ All three are interchangeable behind one `Signaling` type — swapping needs **z
   `inMemory({ server: true })` simulates the server protocol without a live Worker.
 - **`serverSignaling(url)`** — **opt-in**, worker-backed. One persistent WebSocket to your own `./server`
   tier; enables **in-band discovery** + **host-reload reclaim**. Lazy-loaded — bundles that never call it
-  pay nothing. Public deployments SHOULD widen the room code (`session.codeLength: 8`, D24).
+  pay nothing. Public deployments SHOULD widen the room code (`session.codeLength: 8`, D24). Since 0.8.0 the
+  returned `Signaling` also carries `iceEndpoint` (`ws(s)://host` → `http(s)://host/api/ice`); with
+  `transport.iceServers` left at `"auto"` the transport fetches TURN credentials from it (2 s bound,
+  fail-open onto public STUN). The other two adapters omit `iceEndpoint`.
 
 ## 4. Server tier (`@moku-labs/room/server`) — a plugin export, NOT a core (0.3.1)
 
@@ -189,9 +231,24 @@ export default {
 `RATE_LIMIT` (a KV namespace for the per-IP join limit — `kvPlugin`), `ASSETS` (your built web client). What
 the server tier buys over `publicRendezvous()`: **in-band discovery** (peer arrival/leave pushed from the DO),
 **host-reload reclaim** (the DO mints a `reclaimToken` on join; `session` persists + replays it so the **warm
-room survives** a host reload), and **room-teardown UX** (an idle room's DO Alarm emits `{kind:"evict"}` →
-`room:network-warning { reason: "room-evicted" }`). It does **not** add a gameplay hop — the DO has no relay
-path (D2 still holds).
+room survives** a host reload), **room-teardown UX** (an idle room's DO Alarm emits `{kind:"evict"}` →
+`room:network-warning { reason: "room-evicted" }`), and — since 0.8.0 — **zero-config internet play** (below).
+It does **not** add a gameplay hop — the DO has no relay path (D2 still holds).
+
+**Internet play — `GET /api/ice` (0.8.0).** `hub.handle` routes three ways: `Upgrade: websocket` → the per-room
+DO (`400` without a room code, `429` over the join rate limit); `GET {hub.ice.path}` (default `/api/ice`) → the
+TURN-credential mint; everything else → `env.ASSETS`. The mint reads two worker **secrets** off `env`
+(`TURN_KEY_ID` / `TURN_KEY_API_TOKEN` by default) and returns `200 { iceServers }` — short-lived Cloudflare
+Realtime TURN credentials (4 h TTL, `Cache-Control: no-store`, per-IP limited through the same `RATE_LIMIT`
+KV). **Without the secrets it answers a quiet empty `200 {}`** (expected in local dev) and the browser stays
+on public STUN. Real failures are `405` (not GET), `429` (over the mint budget), `502` (upstream mint failed)
+— the client treats all of them as "fall back to STUN". The app writes **no ICE code**: `serverSignaling(url)`
++ the `"auto"` default do the fetch. Upstream's hub README says the secrets are provisioned by
+`@moku-labs/worker`'s `turnPlugin` (`pluginConfigs.turn = { relay: { name: "myapp-turn" } }`, worker ≥ 0.16),
+or by hand with `wrangler secret put TURN_KEY_ID` / `TURN_KEY_API_TOKEN`. The `moku-worker` pack
+teaches `turnPlugin` (worker `0.20.2`). ⚠️ Room's optional peer range is still `@moku-labs/worker@^0.15.0`, which
+for a `0.x` version means `>=0.15.0 <0.16.0` and so excludes every worker with `turnPlugin` — expect a
+peer-range warning when both are installed, until upstream widens the range.
 
 ## 5. Events (`room:*` — coarse lifecycle only)
 
@@ -201,6 +258,7 @@ path (D2 still holds).
 | `room:peer-left` | `{ peerId }` | session | A controller left / was declared dead by the heartbeat; removed from roster. |
 | `room:host-reconnecting` | `{}` | session | Host tab reloaded; client-side recovery in flight — show "reconnecting" UX. |
 | `room:sync-ready` | `{}` | sync | First authoritative frame (snapshot, or gap-free delta) applied; the synced replica is readable. |
+| `room:intent-undeliverable` | `{ name: string; cSeq: number }` | intent | **0.4.0.** A LIVE controller intent exhausted its retransmit budget with no host receipt — the wire is dead for this controller's intent stream; every intent queued behind it drops with its own event. Not fired for intents captured by the reconnect buffer during a known host absence. Surface retry UX. |
 | `room:network-warning` | `{ reason: "ice-failed" \| "rendezvous-unreachable" \| "channel-closed" \| "room-evicted" }` | transport | A connectivity hard-failure surfaced for failure UX (D2). `room-evicted` is **`./server` tier only** — the `serverSignaling` DO's idle Alarm tore the room down. |
 
 > **Reload-path timing.** `room:host-reconnecting` is emitted during `session` init, before downstream
@@ -213,19 +271,31 @@ Every field has a safe default (the verified "couch" profile); override via
 `createApp({ pluginConfigs: { <plugin>: { … } } })`. The facades (`stage`/`controller`) own **no config** —
 every knob lives on the engine that owns the concern (wake-lock is the opt-in `requestWakeLock()` API).
 
-- **`transport`:** `signaling` (`publicRendezvous()`), `iceServers` (one public STUN; `[]` = LAN-only;
-  **no TURN ever**), `heartbeatIntervalMs` (`2000`, mandatory), `heartbeatTimeoutMs` (`6000`),
-  `openTimeoutMs` (`3000`), `maxMessageBytes` (`14336`).
+- **`transport`:** `signaling` (`publicRendezvous()`), `iceServers` (**`"auto"`** since 0.8.0 — with
+  `serverSignaling` it lazily fetches the hub's `/api/ice`, with any other adapter it is one public STUN
+  `stun.l.google.com:19302`; also accepts a plain `RTCIceServer[]` — `[]` = LAN-only — or, since 0.6.0, an
+  `IceServersProvider` `() => Promise<readonly RTCIceServer[] | undefined>` invoked at `connect()` in parallel
+  with the signaling join, failing open onto STUN on `undefined`/throw/timeout (waits at most `openTimeoutMs`);
+  any explicit value replaces `"auto"` wholesale), `iceTransportPolicy` (`"all"`, 0.6.0; `"relay"` forces
+  TURN-only pairs; the `"all"` default also honors the `?ice=relay` page-URL diagnostic toggle),
+  `heartbeatIntervalMs` (`2000`, mandatory), `heartbeatTimeoutMs` (`6000`), `openTimeoutMs` (`3000`),
+  `maxMessageBytes` (`14336`).
 - **`session`:** `joinUrlBase` (`""` → `location.origin`), `generateQr` (`true`), `maxControllers` (`8`),
   `snapshotDebounceMs` (`500`), `reconnectTimeoutMs` (`10000`), `intentBufferMax` (`256`),
   `intentBufferMaxAgeMs` (`8000`), `storageKeyPrefix` (`"moku.room"`), `codeLength?` (`6` =
   `ROOM_CODE_LENGTH`; **set `8` for `serverSignaling`** — ~57 bits, resists room-code enumeration, D24).
-- **`intent`:** `bufferCap` (`256`), `bufferMaxAgeMs` (`10000`).
+- **`intent`:** `bufferCap` (`256`; also caps the live send queue), `bufferMaxAgeMs` (`10000`),
+  `ackTimeoutMs` (`1000`, 0.4.0 — wait before the first retransmit, doubles per attempt; must be `>= 1`),
+  `maxRetransmits` (`3`, 0.4.0 — `0` = track + signal, never re-send; ~15 s total silence budget at defaults).
 - **`sync`:** `broadcastHz` (`30`, clamped `[5,60]`; verified band 20–30 Hz), `skipEmptyDeltas` (`true`),
-  `maxOpsPerDelta` (`512`), `resyncOnGap` (`true`).
+  `maxOpsPerDelta` (`512`), `resyncOnGap` (`true`; since 0.3.2 the gap is reported over the wire and the host
+  re-baselines that peer automatically), `baselineRetryMs` (`1000`, 0.5.0 — a not-yet-ready replica re-requests
+  its join baseline at this cadence; `0` disables; off when `resyncOnGap` is `false`).
 - **`hub`** (`./server` tier — set on the `hub` plugin in your worker app's `pluginConfigs`): `doBinding` (`"ROOM_HUB"`), `doClassName` (`"Hub"`), `assetsBinding`
-  (`"ASSETS"`), `rateLimit` (`{ joins: 30, windowSec: 60, kvBinding: "RATE_LIMIT" }`), `joinWindowMs`
-  (`10000`), `roomTtlMs` (`1800000`).
+  (`"ASSETS"`), `rateLimit` (`{ joins: 30, windowSec: 60, kvBinding: "RATE_LIMIT" }`), `ice` (0.8.0 —
+  `{ path: "/api/ice", keyIdBinding: "TURN_KEY_ID", apiTokenBinding: "TURN_KEY_API_TOKEN", rateLimit: { max: 30, windowSec: 60 } }`;
+  the mint budget is counted in the same `rateLimit.kvBinding` KV), `joinWindowMs` (`10000`), `roomTtlMs`
+  (`1800000`).
 - **`stage` / `controller`:** **no config**.
 
 ## 7. Dependency graph
@@ -243,9 +313,11 @@ client core (@moku-labs/room):
 
 Engines are client-core defaults (init order = the wired default order; `intent` and `sync` are parallel
 siblings); an app adds exactly one facade + its game plugin. The wire/signaling protocol (`Signaling`,
-`Wire`, every `Frame`, `Snapshot`, `Op`, `RosterEntry`, `MAX_CONTROLLERS`, `ROOM_CODE_LENGTH`, …) lives in
-[`src/plugins/transport/protocol.ts`] and is re-exported from the package root; the `RoomEvents` contract in
-`src/config.ts`.
+`Wire`, every `Frame` — including `IntentAckFrame` (0.4.0) and `SyncResyncFrame` (0.3.2) — `Snapshot`, `Op`,
+`RosterEntry`, `MAX_CONTROLLERS`, `ROOM_CODE_LENGTH`, …) lives in [`src/plugins/transport/protocol.ts`] and is
+re-exported from the package root; the `RoomEvents` contract in `src/config.ts`. The root also exports the
+plugin-owned types `IceServersProvider`, `TransportConfig` (0.6.0), `RoomDescriptor`, `JoinResult`,
+`QrMatrix`, `StageApi`, `ControllerApi`.
 
 ## 8. Idiomatic placement (`moku-idioms.md`)
 

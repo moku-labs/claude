@@ -40,7 +40,7 @@ the root-config inventory, the data-layer strategies, routing patterns, the hard
 | Tests | Vitest (unit/integration, coverage on `lib/`+`i18n/`) + Playwright (e2e + visual, frozen fixture corpus) |
 | Deploy | Cloudflare Pages (`deploy` plugin + `wrangler`); GitHub Actions CI gates deploy |
 
-## Framework API (@moku-labs/web v2.2.2)
+## Framework API (@moku-labs/web v2.3.3)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
@@ -48,7 +48,7 @@ for the client bundle (ESM-only, node-free by construction, `browserEnv()` pre-w
 **synchronous**, while `start()` / `build.run()` / `cli.*` / `deploy.run()` are async. **Defaults are
 isomorphic** (`site, i18n, router, head, spa` + `log`/`env` core); everything else — the isomorphic
 `content` SHELL (+ node `fileSystemContent` provider), the node-only `build, deploy, cli`, the
-optional isomorphic `data` — is composed explicitly via `plugins: [...]`. For the client import from
+optional isomorphic `data`, the optional `collection` (v2.3.0) — is composed explicitly via `plugins: [...]`. For the client import from
 `./browser` — don't rely on tree-shaking `.`.
 
 ```tsx
@@ -97,6 +97,16 @@ await app.start();
 // return false to stop reconnecting on a terminal close, e.g. code 4401); navigate(path, { scroll? }) / hardNavigate(url)
 // are module-level (v2.2.0), bound to the booted app (no-op pre-boot). hardNavigate crosses a layout/auth
 // boundary the SPA can't swap. Per-route: route(...).transition("morph") / .scroll("preserve").
+
+// Static-data collections (v2.3.0). Node build app: add collectionPlugin (exported from "@moku-labs/web"
+// ONLY, not from ./browser), then after the build:
+//   await app.build.run();
+//   await app.collection.write([{ collection: "bank", shard: "en/animals", data: animals }], { outDir: "dist" });
+//   → dist/bank/en/animals.json   (write() defaults to "./dist"; it does not read build.outDir)
+// Client: read one shard on demand with the standalone helper. It throws on a non-OK response.
+// `Animal` is the app's own type; the framework does not validate the JSON.
+import { loadCollectionShard } from "@moku-labs/web/browser";
+const animals = await loadCollectionShard<Animal[]>("/", "bank", "en/animals");  // GET /bank/en/animals.json
 ```
 
 **Breaking since 0.5.6 (v1.0.0):** route handlers are **ctx-based** — `.load((ctx) => D)` gets
@@ -129,16 +139,17 @@ component). See `references/plugin-index.md` §2.1.
 
 Ships 5 isomorphic default plugins — `site, i18n, router, head, spa` — plus the explicit-compose
 `content` (isomorphic shell), node-only `build, deploy, cli` (the developer CLI:
-`app.cli.build/serve/preview/deploy`, no `bin`), the optional isomorphic `data` provider, and 2 core
+`app.cli.build/serve/preview/deploy`, no `bin`), the optional isomorphic `data` provider, the optional
+`collection` static-data provider (v2.3.0: `app.collection.write/at/urlFor/fileFor`), and 2 core
 plugins (`log`, `env`) whose APIs are injected flat on every `ctx` (`ctx.log.*`, `ctx.env.*`). Author
 custom plugins with `createPlugin("name", spec)` (types infer from the spec; document the export
 with a directly-preceding JSDoc block — never destructure exports, see moku-core "Public Export
 Shape"). SEO `<head>` helpers (`meta/og/twitter/jsonLd/canonical/hreflang/feedLink/
 buildArticleHead`), the `route()`/`defineRoutes()` builders, `createUrls(routes, defaultLocale?)`,
 `createIsland` + the built-in `lazyEmbed` island, the `::embed`/`::gallery` default components
-`EmbedFacadeButton`/`GalleryTrack`, and (v2.1.0–v2.2.0) `createChannel<T>` (client realtime
-WebSocket) + the module-level `navigate`/`hardNavigate` programmatic navigators are top-level
-exports.
+`EmbedFacadeButton`/`GalleryTrack`, (v2.1.0–v2.2.0) `createChannel<T>` (client realtime
+WebSocket) + the module-level `navigate`/`hardNavigate` programmatic navigators, and (v2.3.0) the
+collection read helpers `collectionUrl`/`loadCollectionShard<T>` are top-level exports.
 
 **Full catalog — plugins, events, config, the `ctx`/`app` property index, usage:**
 [`references/plugin-index.md`](references/plugin-index.md). Consult it first when wiring an
@@ -296,7 +307,9 @@ These are the common idiom departures `moku-web-validator` flags (§10–§14); 
 - **Route/role via `ctx.params`.** Let the matched route mount the island, which reads `ctx.params` in
   `onMount`; never hand-parse `location.pathname` in `spa.tsx`. (§13.)
 - **Runtime app data via the data/content layer.** Build-authored route `data` sidecars / `dataPlugin` /
-  a content provider — not files dropped in `public/` and `fetch`ed by hand. (§14.)
+  a content provider / (v2.3.0) `collectionPlugin` shards for on-demand data that is not tied to a page
+  (`app.collection.write` at build, `loadCollectionShard` on the client) — not files dropped in `public/`
+  and `fetch`ed by hand. (§14.)
 
 ## Bundle Targets
 - JS: < 8KB gzipped

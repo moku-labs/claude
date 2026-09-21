@@ -63,7 +63,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "2.2.2",
+      "knownVersion": "2.3.3",
       "pack": "moku-web",
       "skill": "plugins/moku-web/skills/moku-web",
       "pluginIndex": "plugins/moku-web/skills/moku-web/references/plugin-index.md",
@@ -86,7 +86,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.15.0",
+      "knownVersion": "0.20.2",
       "pack": "moku-worker",
       "skill": "plugins/moku-worker/skills/moku-worker",
       "pluginIndex": "plugins/moku-worker/skills/moku-worker/references/plugin-index.md",
@@ -109,7 +109,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../room",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.3.1",
+      "knownVersion": "0.8.2",
       "pack": "moku-room",
       "skill": "plugins/moku-room/skills/moku-room",
       "pluginIndex": "plugins/moku-room/skills/moku-room/references/plugin-index.md",
@@ -132,7 +132,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../common",
       "layer": 2,
       "role": "shared-infra",
-      "knownVersion": "0.3.2",
+      "knownVersion": "0.3.3",
       "pack": "moku-common",
       "skill": "plugins/moku-common/skills/moku-common",
       "pluginIndex": "plugins/moku-common/skills/moku-common/references/plugin-index.md",
@@ -154,7 +154,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../native",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.2.1",
+      "knownVersion": "0.2.2",
       "pack": "moku-native",
       "skill": "plugins/moku-native/skills/moku-native",
       "pluginIndex": "plugins/moku-native/skills/moku-native/references/plugin-index.md",
@@ -177,7 +177,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../system",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.2.0",
+      "knownVersion": "0.2.1",
       "pack": "moku-system",
       "skill": "plugins/moku-system/skills/moku-system",
       "pluginIndex": "plugins/moku-system/skills/moku-system/references/plugin-index.md",
@@ -210,7 +210,15 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > sandbox test changed, no section was added or removed. ⚠️ The family is not lockstep on core: `common@0.3.2`
 > pins `1.6.0`, while `native@0.2.1`, `system@0.2.0`, `room@0.3.1` still pin `1.5.0`. Observed on npm at the 1.7.0
 > sync: `common@0.3.3` pins `1.7.0`; `web@2.3.3`, `worker@0.20.2`, `room@0.8.2`, `native@0.2.2`, `system@0.2.1`
-> pin `1.6.0`. The registry rows of those packs are behind npm and wait for their own `moku-sync` pass.
+> pin `1.6.0`. All six rows were re-synced to those versions the same day.
+>
+> **Provenance of the `native`, `system` and `common` entries (latest sync 2026-09-21):** `native@0.2.2`,
+> `system@0.2.1`, `common@0.3.3` (npm `dist-tags.latest`). `native 0.2.1 → 0.2.2` and `common 0.3.2 → 0.3.3` are
+> dependency bumps only, no source change: native pins `core@1.6.0` + `common@0.3.2`, common pins `core@1.7.0`.
+> `system 0.2.0 → 0.2.1` pins `core@1.6.0` + `common@0.3.2` and has one internal refactor, no public API change:
+> the teardown entry of a capability lives in its own plugin state (`state.teardown`) and `onStop` reads it, so
+> the module-scope registry keyed by `ctx.global` is gone and `startResolution(kind, ctx, load)` lost its
+> `capability` argument. Upstream `llms.txt`/`llms-full.txt` of native and system still say `0.1.0`.
 >
 > **Provenance of the `native` and `system` entries (first sync 2026-09-21):** `@moku-labs/native@0.2.1` and
 > `@moku-labs/system@0.2.0` (npm `dist-tags.latest`), catalogs generated from the `v0.2.1` / `v0.2.0` tag
@@ -224,7 +232,22 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > core skill `moku:moku-common-conventions`; the pack teaches the package.
 > Not registered on purpose: `@moku-labs/game` (in development, `0.0.0`) and `@moku-labs/ai` (not verified).
 
-> **Provenance of the `worker` entry (latest sync):** **re-synced 2026-06-26** to `@moku-labs/worker@0.15.0`
+> **Provenance of the `worker` entry (latest sync 2026-09-21):** re-synced to `@moku-labs/worker@0.20.2`
+> (npm `dist-tags.latest`; surface from the `v0.20.2` tag **source**; upstream `llms.txt`/`llms-full.txt` are
+> still stale at this tag, last touched 2026-06-21, they describe 0.1.0 with a `stage` plugin, so the source wins).
+> **`0.15.0 → 0.20.2` delta, additive, the plugin set grows 9 → 10:** `0.15.1` (#50) the `deploy.dev` watcher
+> drops stale watch-echo batches; `0.16.0` (#51) new **`turn` plugin** (`turnPlugin`, Nano, `deployManifest()`
+> only, no runtime surface): Cloudflare Realtime TURN keys as a declared resource, `"turn"` added to the `kind`
+> of `provision:resource`/`provision:skip` and to `ResourceManifest`, and a required `DeployReport.turn`
+> (`skipped|exists|provisioned|degraded`); `0.17.0` (#52) TURN rides plan → provision → post-deploy secret bind,
+> failures are degraded-class, needs `Account · Calls` `Edit`; `0.18.0` (#53) name-anchored existence;
+> `0.19.0` (#55) `turn.<key>.verifyPath` (default `"/api/ice"`, live mint check); `0.20.0` (#56) `.env.local`
+> key-pair escape hatch; `0.20.1`/`0.20.2` CI and dependency bumps only. Pins `@moku-labs/core@1.6.0` and
+> `@moku-labs/common@0.3.2` exactly; `wrangler` optional peer (`>=3`); engines node ≥24 / bun ≥1.3.14; exports
+> only `.`. `0.17.0` and `0.18.0` are marked breaking upstream; no signature exported from the package root
+> changed, only a hand-built `DeployReport` mock needs the new `turn` field.
+>
+> **Provenance of the `worker` entry (0.15.0 history):** **re-synced 2026-06-26** to `@moku-labs/worker@0.15.0`
 > (npm `dist-tags.latest`; surface from the `v0.15.0` tag source). **`0.11.0 → 0.15.0` delta — breaking +
 > additive, the plugin set shrinks 10 → 9:**
 > - **`0.12.0` (BREAKING, #43) `refactor(core)!`:** removed the **`stage` plugin** (deployment stage is now
@@ -277,7 +300,23 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > now fires for projects behind 0.9.2; consumers crossing the 0.7.0 keyed-map config boundary need the
 > config migration noted in `upgrade-migrations.md`.
 >
-> **Provenance of the `room` entry:** **re-synced 2026-06-27** to `@moku-labs/room@0.3.1` (npm
+> **Provenance of the `room` entry (latest sync 2026-09-21):** re-synced to `@moku-labs/room@0.8.2` from the
+> `v0.8.2` tag **source** (`src/index.ts`, `src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`);
+> delta `0.3.1 → 0.8.2`, **no breaking change**, still 7 plugins. **0.3.2** wire-level sync gap heal
+> (`SyncResyncFrame`, host re-baselines the reporting peer; `onResyncRequest` is now observability only).
+> **0.4.0** at-least-once intents (`IntentAckFrame`, bounded retransmit) + 6th event
+> `room:intent-undeliverable { name, cSeq }` + `intent.ackTimeoutMs`/`maxRetransmits`. **0.5.0**
+> `sync.baselineRetryMs`. **0.6.0** `transport.iceServers` takes a lazy `IceServersProvider` +
+> `transport.iceTransportPolicy`. **0.8.0** zero-config internet play: `iceServers` default `"auto"`,
+> `serverSignaling` exposes `iceEndpoint`, `hub.handle` serves `GET /api/ice` (Cloudflare TURN credentials,
+> `hub.ice` config) — "no TURN ever" now holds only for the default `publicRendezvous` tier. `0.5.1`/`0.7.0`/`0.8.1`
+> carry no source change. **0.8.2** bundles `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` (`onStop` frees
+> resources from `state`); `./server` still ships no `types`. ⚠️ `@moku-labs/worker@^0.15.0` stays the optional
+> peer range, which excludes worker ≥ 0.16 and so every worker with `turnPlugin`, the plugin the hub README names
+> for the TURN secrets. Upstream `llms.txt`/`llms-full.txt` are current for the API through 0.8.0; only their
+> bundled-deps line is stale (still core `1.5.0` / common `0.2.1`), so the tag source stays authoritative.
+>
+> **Provenance of the `room` entry (0.3.1 history):** **re-synced 2026-06-27** to `@moku-labs/room@0.3.1` (npm
 > `dist-tags.latest`; public repo `github.com/moku-labs/room`). **BREAKING (`#6` `feat(room)!`): the `./server`
 > tier is no longer a core.** Through 0.2.0, `./server` was its own server *core* you `createApp`'d from; in
 > `0.3.1` `@moku-labs/room/server` **exports `hubPlugin` (a `@moku-labs/worker` plugin) + the `Hub` Durable
@@ -317,7 +356,21 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > `@moku-labs/worker@0.9.2` (each bumped in lockstep); `dependsOn` ordering (core before web/worker)
 > still holds.
 >
-> **Provenance of the `web` entry (latest sync):** **re-synced 2026-06-26** to `@moku-labs/web@2.2.2` (npm
+> **Provenance of the `web` entry (latest sync 2026-09-21):** re-synced to `@moku-labs/web@2.3.3` (npm
+> `dist-tags.latest`), surface read from the `v2.3.3` tag source. **`2.2.2 → 2.3.3` delta, additive, no breaking
+> change, no new events:**
+> - **`2.3.0` (#93):** new explicit-compose `collectionPlugin` (static-data collection provider, no `depends`):
+>   `app.collection.write/at/urlFor/fileFor`, one config key `baseUrl` (default `"/"`), files at
+>   `<outDir>/<collection>/<shard>.json`; new exports `collectionUrl` + `loadCollectionShard<T>` and the
+>   `Collection` type namespace (`.` + `./browser`); `collectionPlugin` itself is exported from `.` only.
+> - **`2.3.1` (#94):** the build `public` phase copies incrementally (skips fresh files on dev rebuilds); no
+>   config or API change. **`2.3.2` (#96):** CI moved to `moku-labs/ci`, no `src/` change.
+> - **`2.3.3` (#97, #98):** deps only, `@moku-labs/core` `1.5.0 → 1.6.0` and `@moku-labs/common` `0.2.1 → 0.3.2`
+>   (both exact); engines node ≥24 / bun ≥1.3.14 and peers unchanged.
+> ⚠️ `llms.txt`/`llms-full.txt` are untouched in this delta and do not mention `collection`; the upstream
+> collection README imports `collectionPlugin` from `./browser`, which `src/browser.ts` does not export. Source wins.
+>
+> **Provenance of the `web` entry (2.2.2 history):** **re-synced 2026-06-26** to `@moku-labs/web@2.2.2` (npm
 > `latest`, published 2026-06-26). **`2.0.1 → 2.2.2` delta — additive SPA/realtime features, no breaking
 > change:**
 > - **`2.1.0`:** `createChannel<T>(opts)` — a client realtime WebSocket primitive (top-level export, `.` +
