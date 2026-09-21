@@ -17,9 +17,10 @@ deterministic control flow — instead of turn by turn.
 
 ### `moku-build-wave.js` → `/moku-build-wave` (framework projects)
 
-Builds one wave without stopping. Builders run in parallel; for a wave with more than one plugin each
-builder gets its own git worktree, so a stray repo-wide command or `git checkout` from one cannot
-reach a sibling — that happened in a real build. Single-plugin waves run without isolation. Complex and
+Builds one wave without stopping. Builders run in parallel in the one working tree: a git worktree has
+no `node_modules` and no `.planning/`, so it gives a builder neither tooling nor spec. Builders write to
+disjoint plugin folders, and the prompt bans repo-wide commands and git mutations — a stray
+`git checkout` from one builder reverted a sibling in a real build. Complex and
 VeryComplex plugins go to `moku-builder-deep`; everything else to `moku-builder`.
 
 Each plugin is checked as it finishes (pipeline, not barrier) by running

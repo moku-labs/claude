@@ -104,6 +104,19 @@ describe("guardShell", () => {
     refused("echo x | tee src/a.ts");
   });
 
+  it("refuses a writer that gets its files from a pipe or from find, when those name source paths", () => {
+    refused("grep -l x src/*.ts | xargs sed -i 's/a/b/'");
+    refused("ls src/plugins/x/*.ts | xargs -n 1 touch");
+    refused("find src/plugins -name '*.ts' -exec sed -i 's/a/b/' {} +");
+  });
+
+  it("lets xargs and find -exec through when they only read, or write outside src/", () => {
+    allowed("grep -rl TODO .planning | xargs sed -i '' 's#src/old#src/new#'");
+    allowed("grep -l x src/*.ts | xargs wc -l");
+    allowed("find src -name '*.ts' -exec grep -l x {} +");
+    allowed("grep -l x src/*.ts; echo done | xargs touch");
+  });
+
   it("judges the file a command writes, so copying a source file out is no write to it", () => {
     allowed("cp src/main.ts /tmp/main.backup.ts");
   });

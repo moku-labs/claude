@@ -14,23 +14,27 @@ A real `/moku:build` of `@moku-labs/game` on 0.71.0 hit nine tool defects (#15).
   word after it; `tee`, `touch`, `mv`, `cp`, `install`, `ln` and `sed -i` write the files they name. `2>/dev/null`,
   `2>&1`, heredoc bodies and quoted patterns name nothing, so `grep -rn x src/ 2>/dev/null` and a heredoc into
   `.planning/*.md` pass at any station. Targets are placed against the project root, `cd` included, so commands
-  aimed at another repository pass.
+  aimed at another repository pass. A writer behind `xargs` or `find -exec` is judged by the words that can name
+  its files, so `grep -l x src/*.ts | xargs sed -i …` is still refused outside a writing station.
 - **The commit hook judges only the `git add` / `git stage` / `git commit` part of a command.** A read-only
   command next to it (`git check-ignore .planning`, `ls .planning`) and a heredoc commit message that mentions
   `.planning/` no longer block.
 - **A paused change reads as paused.** `moku-rails status` and the prompt hook print
   `Paused: <id> … inside station "plan": <reason>` instead of `Debt [stuck-station]`. The reason is kept in the
   ledger until work continues.
-- **`moku-plan-checker` is read-only again.** `memory: user` switched Write and Edit on over its tools list and
-  let it cite memory files; the field is gone.
+- **Read-only agents are read-only again.** `memory: user` switched Write and Edit on over the `tools` list of
+  `moku-plan-checker`, `moku-architecture-validator`, `moku-error-diagnostician`, its deep variant and
+  `moku-researcher`, and let the plan checker cite memory files. The field is gone from all five.
 - **`moku-builder-deep` has `maxTurns: 80`**, the number the wave reference promises. Builders lint each file as
-  it turns green and return the contract before turns run out.
+  it turns green and return the contract before turns run out. They test with `bunx vitest run <dir>` in a
+  Vitest project, like the verify script.
 - **Plugin `index.ts` limit is 40 effective lines** (`spec/15 §2.5`, Very Complex), and
   `pluginIndexMaxLines` in `.claude/moku.local.md` overrides it.
 
 ### Docs
-- `build-wave-execution.md` no longer asks for `isolation: "worktree"`: a worktree has no `node_modules` and no
-  `.planning/`. Builders share one tree, kept apart by disjoint folders and the command ban.
+- `build-wave-execution.md` and the `moku-build-wave` workflow no longer use `isolation: "worktree"`: a worktree
+  has no `node_modules` and no `.planning/`. Builders share one tree, kept apart by disjoint folders and the
+  command ban.
 - `plan-stages.md` and the plan skill describe the size-L route after `moku-rails scope`: a delta spec for the
   new scope, one gate, back to build.
 
