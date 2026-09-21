@@ -4,7 +4,6 @@ description: Validates cross-plugin architecture — dependency graph, event flo
 model: fable
 effort: high
 color: magenta
-memory: user
 maxTurns: 30
 skills:
   - moku-core
@@ -39,11 +38,7 @@ Before writing the report, materialize these intermediate results explicitly (wr
 
 Analyse for violations only after the intermediates are written out; that order is what keeps a finding from being skipped.
 
-You have persistent memory across sessions. Use it to:
-- Remember project-specific patterns (naming conventions, common dependency shapes, API style)
-- Track recurring violations across runs (e.g., "plugin X consistently has ctx.require() in hot paths")
-- Detect regressions (a previously-clean plugin now has issues)
-- Build a project architecture profile that improves validation accuracy over time
+You keep no memory between runs: your tools are read-only, so judge from the files you read in this run and cite only those.
 
 ## What You Check
 
