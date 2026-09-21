@@ -18,6 +18,7 @@ Wording left over from #15, and three frameworks join the registry. No code chan
   `bun test` only for a project without `vitest`.
 - `memory-schema.md` no longer says validators may keep `memory: user`. The field switches Write and Edit on,
   and 0.71.1 removed it from every agent.
+- `agent-preamble.md` drops the project-memory rule: no agent has persistent memory, so it never applied.
 
 ## 0.71.1 (2026-09-21)
 
