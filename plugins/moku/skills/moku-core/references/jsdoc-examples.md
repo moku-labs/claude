@@ -2,7 +2,7 @@
 
 The single source for where JSDoc and `@example` go in Moku source. Builders write by it,
 `moku-style-validator` checks by it, the scaffolded ESLint config enforces the mechanical part.
-It overrides `spec/15-PLUGIN-STRUCTURE.md §6` and the sandbox exemplars on this one topic.
+It is the short form of `spec/15-PLUGIN-STRUCTURE.md §6`, which carries the same rules; the sandbox `cms/content` module shows them applied.
 
 ## Why
 

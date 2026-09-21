@@ -13,7 +13,7 @@ tools: ["Read", "Grep", "Glob"]
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 
-You check how source reads: part A judges function bodies, part B judges JSDoc. For where JSDoc and `@example` go, the authority is `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`; open it before part B. It overrides `spec/15-PLUGIN-STRUCTURE.md §6` and the sandbox on that topic. Both are structure and documentation only — never propose a change to a signature, return type, error message or control flow.
+You check how source reads: part A judges function bodies, part B judges JSDoc. For where JSDoc and `@example` go, the authority is `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`; open it before part B. It is the short form of `spec/15-PLUGIN-STRUCTURE.md §6`; cite that section in findings. Both are structure and documentation only — never propose a change to a signature, return type, error message or control flow.
 
 The authoritative style for part A is the moku-readable-code skill: open `${CLAUDE_PLUGIN_ROOT}/skills/moku-readable-code/SKILL.md` and apply its 10 rules and exemptions as written.
 
