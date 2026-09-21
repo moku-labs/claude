@@ -246,9 +246,10 @@ export default [
   },
 
   // 6b. The public contract carries the docs and a scenario example. Only `types.ts` ships in the
-  // `.d.mts`, so a consumer reads the members of the `…Api` types, never the implementation. A
-  // member no consumer can call says so with `@remarks No example: <reason>`. Both member forms are
-  // covered: `navigate(path: string): R` and `navigate: (path: string) => R`.
+  // `.d.mts`, so a consumer reads the members of the `…Api` types, never the implementation. API
+  // means public, so there is no exemption: a member with no honest example moves off the API into a
+  // plain function, or is deleted. Both member forms are covered: `navigate(path: string): R` and
+  // `navigate: (path: string) => R`.
   {
     files: ["src/**/types.ts"],
     rules: {
@@ -267,7 +268,6 @@ export default [
       "jsdoc/require-example": [
         "error",
         {
-          exemptedBy: ["remarks"],
           contexts: [
             "TSTypeAliasDeclaration[id.name=/Api$/] > TSTypeLiteral > :matches(TSMethodSignature, TSPropertySignature)",
             "TSInterfaceDeclaration[id.name=/Api$/] > TSInterfaceBody > :matches(TSMethodSignature, TSPropertySignature)"
