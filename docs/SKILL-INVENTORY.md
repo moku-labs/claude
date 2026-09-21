@@ -4,7 +4,7 @@ A discoverability map of what each plugin brings into a session, so the componen
 rough context cost) is visible before relying on it. Use `claude plugin details <name>` for the live
 component list and `/usage` for actual token spend.
 
-One marketplace, six plugins: the core (`moku`), one pack per framework, and a maintainer pack.
+One marketplace, eight plugins: the core (`moku`), one pack per framework, and a maintainer pack.
 A pack depends on `moku` and never reaches core files by path — it loads the `moku:moku-core` skill
 with the Skill tool and reads `references/<file>` under the base directory the tool prints.
 
@@ -15,6 +15,8 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 | `moku-design` | 2 | 1 | — | 1 | enabled |
 | `moku-worker` | 1 | — | — | — | enabled |
 | `moku-room` | 1 | — | — | — | enabled |
+| `moku-native` | 1 | — | — | — | enabled |
+| `moku-system` | 1 | — | — | — | enabled |
 | `moku-maintainer` | 2 | — | — | — | `defaultEnabled: false` |
 
 ---
@@ -136,6 +138,24 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
   an opt-in `./server` tier exporting `hubPlugin` + the `Hub` Durable Object. Full catalog in
   `references/plugin-index.md`.
 - **Evals (1):** `room-standalone-core` — room is its own core, not a web or worker plugin pack.
+
+## `moku-native` — the `@moku-labs/native` pack
+
+- **Skills (1):** `moku-native` — the Node-only native packager, synced to `0.2.1`. A standalone
+  `@moku-labs/core` framework that drives Tauri 2: 5 default plugins (project, tauri, build, doctor, cli),
+  a second `createApp` beside the web app, permission codegen from `config.system`, five targets, typed
+  CLI verbs with no argv parser. Full catalog in `references/plugin-index.md`.
+- **Evals (1):** `native-second-app` — a separate native app beside the web app, no hand-written
+  `src-tauri`, no direct `tauri` calls.
+
+## `moku-system` — the `@moku-labs/system` pack
+
+- **Skills (1):** `moku-system` — one system API for the browser and a Tauri shell, synced to `0.2.0`.
+  A standalone `@moku-labs/core` framework: the `runtime` core plugin plus 5 opt-in capabilities (store,
+  notify, clipboard, tray, deepLink), each on its own subpath, every method returning a `SystemResult`.
+  Full catalog in `references/plugin-index.md`.
+- **Evals (1):** `system-result-not-runtime` — capabilities from their subpaths, outcomes narrowed from
+  the result, no runtime branching and no hand-written fallbacks.
 
 ## `moku-maintainer` — this repository's own tooling
 
