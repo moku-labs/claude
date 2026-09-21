@@ -70,12 +70,11 @@ if (plugins.length === 0) {
 log(`Wave: ${plugins.map((p) => p.name).join(', ')} (${plugins.length} plugins)`)
 
 // --- Build + Verify (pipeline: verify each plugin as soon as it is built) ---
-// Builders touch disjoint dirs (src/plugins/<name>/), but a misbehaving builder can still run a
-// repo-wide command (lint:fix, git checkout) that clobbers a sibling's work — that caused real data
-// loss in a prior build. So for any wave with >1 builder, isolate each in its own git worktree
-// (disjoint indices, so a stray git/format command cannot reach siblings). The prompt's command ban
-// is the backup for the worktree.
-const ISOLATE = plugins.length > 1 ? 'worktree' : undefined
+// Builders touch disjoint dirs (src/plugins/<name>/) in the one working tree. A git worktree per builder
+// does not work: it has no node_modules and no .planning/ (both gitignored), so the builder would get
+// no tooling and no spec. A misbehaving builder can still run a repo-wide command (lint:fix,
+// git checkout) that clobbers a sibling's work — that caused real data loss in a prior build — so the
+// prompt's command ban below is the isolation.
 // Complex and VeryComplex plugins go to the deep builder (same instructions, higher effort).
 const DEEP_TIERS = new Set(['Complex', 'VeryComplex'])
 const HARD_RULES =
@@ -100,7 +99,6 @@ const results = await pipeline(
         phase: 'Build+Verify',
         agentType: DEEP_TIERS.has(p.tier) ? 'moku:moku-builder-deep' : 'moku:moku-builder',
         schema: BUILD_RESULT,
-        isolation: ISOLATE,
       },
     ),
   // The artifact check is a deterministic script, so this step only runs it and reports the result.

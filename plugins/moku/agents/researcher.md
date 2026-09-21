@@ -5,7 +5,6 @@ model: sonnet
 effort: medium
 color: green
 maxTurns: 40
-memory: user
 skills:
   - moku-core
 tools: ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
