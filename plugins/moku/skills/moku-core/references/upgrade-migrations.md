@@ -306,8 +306,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/native` AND its
-  resolved/declared version `< frameworks[native].knownVersion` in `moku-frameworks.md`. The entry is
-  registered at `0.0.0`, so this migration stays silent until the first `moku-sync native`.
+  resolved/declared version `< frameworks[native].knownVersion` in `moku-frameworks.md` (currently `0.2.1`).
 - **Apply:**
   1. Read `frameworks[native].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/native` dependency to that version (preserve the range operator
@@ -315,7 +314,8 @@ the block below.
   3. Do NOT add a direct `@moku-labs/core` dependency — `@moku-labs/native` depends on core and `@moku-labs/common` itself.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build` for a publishable
-  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); never weaken types.
+  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
+  `skills/moku-native/references/plugin-index.md`, never weaken types.
 - **Risk:** No breaking crossing is recorded yet. `moku-sync native` records them here when it syncs a
   release that has one; review the release notes (`frameworks[native].releaseSource`).
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.
@@ -327,8 +327,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/system` AND its
-  resolved/declared version `< frameworks[system].knownVersion` in `moku-frameworks.md`. The entry is
-  registered at `0.0.0`, so this migration stays silent until the first `moku-sync system`.
+  resolved/declared version `< frameworks[system].knownVersion` in `moku-frameworks.md` (currently `0.2.0`).
 - **Apply:**
   1. Read `frameworks[system].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/system` dependency to that version (preserve the range operator
@@ -336,7 +335,8 @@ the block below.
   3. Do NOT add a direct `@moku-labs/core` dependency — `@moku-labs/system` depends on core and `@moku-labs/common` itself. Its `@tauri-apps/*` peers stay as the project declares them.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build` for a publishable
-  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); never weaken types.
+  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
+  `skills/moku-system/references/plugin-index.md`, never weaken types.
 - **Risk:** No breaking crossing is recorded yet. `moku-sync system` records them here when it syncs a
   release that has one; review the release notes (`frameworks[system].releaseSource`).
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.

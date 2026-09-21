@@ -1,9 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
-  "name": "moku-web",
-  "displayName": "Moku Web",
+  "name": "moku-system",
+  "displayName": "Moku System",
   "version": "0.72.0",
-  "description": "@moku-labs/web pack: Preact islands, scoped CSS and tokens, the web validator, and real-browser e2e with exploratory QA and UX review.",
+  "description": "@moku-labs/system pack: one system API (store, notify, clipboard, tray, deep-link) that runs in the browser and in a Tauri shell behind a provider seam.",
   "author": {
     "name": "Oleksandr Kucherenko",
     "email": "moku-labs@users.noreply.github.com"
@@ -12,11 +12,8 @@
   "license": "MIT",
   "keywords": [
     "moku",
-    "web",
-    "preact",
-    "islands",
-    "e2e",
-    "playwright"
+    "tauri",
+    "system"
   ],
   "dependencies": [
     "moku"
