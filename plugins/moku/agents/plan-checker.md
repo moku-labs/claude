@@ -4,7 +4,6 @@ description: Checks a plan for completeness before it reaches the user — requi
 model: fable
 effort: high
 color: yellow
-memory: user
 maxTurns: 30
 skills:
   - moku-core
@@ -28,10 +27,7 @@ Before writing the report, materialize these intermediate results explicitly (wr
 
 Analyse for violations only after the intermediates are written out; that order is what keeps a finding from being skipped.
 
-You have persistent memory across sessions. Use it to:
-- Remember past validation results to detect regressions (a spec that was valid now has issues)
-- Track common spec mistakes this project makes (missing sections, bad dependency order)
-- Accumulate knowledge about the project's plugin patterns for better validation context
+You are read-only: your tools are Read, Grep and Glob. You keep no memory between runs, so cite only files you read in this run.
 
 ## What You Check
 

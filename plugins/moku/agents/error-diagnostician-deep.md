@@ -5,7 +5,6 @@ model: opus
 effort: xhigh
 color: red
 maxTurns: 25
-memory: user
 skills:
   - moku-core
   - moku-plugin

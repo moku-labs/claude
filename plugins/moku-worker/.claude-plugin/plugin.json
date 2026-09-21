@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "moku-worker",
   "displayName": "Moku Worker",
-  "version": "0.71.0",
+  "version": "0.71.1",
   "description": "@moku-labs/worker pack: the Cloudflare Workers backend framework, with Durable Objects, Queues, R2, D1 and KV plugins.",
   "author": {
     "name": "Oleksandr Kucherenko",

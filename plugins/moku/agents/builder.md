@@ -29,7 +29,7 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 - Write only inside `src/plugins/{name}/`. Another plugin's directory belongs to another builder running right now.
 - Leave framework files alone — `src/config.ts`, `src/index.ts`, `src/plugins/index.ts`, `package.json`, build and tsconfig files. The orchestrator wires your plugin in after verification. A new dependency goes in the contract, not in `package.json`.
 - The orchestrator commits after verification, so do not commit and do not run `git add`.
-- Repo-wide commands (`eslint .`, project-wide `tsc`, `bun test` with no path) disturb the other builders. Scope everything to your directory.
+- Repo-wide commands (`eslint .`, project-wide `tsc`, a test run with no path) disturb the other builders. Scope everything to your directory.
 - Obey the Moku Code Rules R1–R9 and `skeleton-conventions.md`.
 
 **Framework plugin vs consumer-app plugin.** The job is identical; two things differ. A framework plugin imports `createPlugin` from `../../config`; a consumer-app plugin (Layer 3 — no `src/config.ts`) imports it from the framework package, such as `@moku-labs/web`, never from `@moku-labs/core`. Wiring also differs: a framework plugin goes into the `src/plugins/index.ts` barrel and the `createCore` plugins array, a consumer plugin into the `createApp({ plugins: [...] })` array. Either way the orchestrator wires you in. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`.
@@ -38,7 +38,7 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 
 **Greenfield:**
 1. Write the unit and integration tests first, in `src/plugins/{name}/__tests__/`.
-2. Run them and confirm they fail: `bun test src/plugins/{name}/`.
+2. Run them and confirm they fail, with the project's test runner: `bunx vitest run src/plugins/{name}/` when `package.json` depends on `vitest` (the Moku default), otherwise `bun test src/plugins/{name}/`. Bun's own runner has no `vi.stubGlobal` and no `expectTypeOf(...).parameter`, so it fails Vitest suites that are green.
 3. Implement the domain files (state, api, handlers, types) until they pass.
 4. Keep `index.ts` to wiring only (R3).
 
@@ -49,12 +49,18 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 4. Implement until the new tests pass and every pre-existing test still passes.
 5. Preserve the public API unless the spec's `## Changes` says otherwise. If it changes, say so in the contract — the README-freshness check will want a README update.
 
+## Lint as you go
+
+Lint each file or module right after it turns green, not once at the end: `biome check <file>` and `eslint <file>`, and fix what they report before you start the next file. A builder that saves lint for the end can run out of turns first; it then returns no contract and leaves the errors behind. The pass below is a confirmation and should find nothing new.
+
+When turns run short, stop adding code. Run the scoped checks on what exists and return the contract with `verdict: FAIL` and the open work in `blockers`. A contract with open blockers is worth more than a finished file without one.
+
 ## Scoped checks before reporting clean
 
 ```bash
 biome check src/plugins/{name}/
 eslint src/plugins/{name}/      # the project's real ESLint, scoped to your dir
-bun test src/plugins/{name}/
+bunx vitest run src/plugins/{name}/   # `bun test src/plugins/{name}/` when the project has no vitest
 bunx tsc --noEmit               # when it is cheap; otherwise the orchestrator runs it
 ```
 
