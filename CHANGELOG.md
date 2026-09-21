@@ -2,6 +2,23 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.73.1 (2026-09-21)
+
+The core knowledge follows `@moku-labs/core` 1.6.1. No code changes.
+
+### Changed
+- **Spec and sandbox re-vendored from `v1.6.1`** (was `v1.5.0`). Six spec files and one sandbox test changed,
+  no section was added or removed. The registry entry `core` carries `knownVersion: "1.6.1"`.
+- **`onStop` gets the plugin's own `config` and `state`** next to `global` since core 1.6
+  (`TeardownContext<Config, C, S>`); still no `emit`, `require`, `has` or core plugin APIs. The context tables in
+  `moku-core` and `moku-testing`, `communication-context.md`, `invariants.md`, the teardown mock factory and the
+  structure validator say so, each with the pre-1.6 shape.
+
+### Fixed
+- **The brand-kit examples in `moku-common-conventions` compile.** They called `box("…")`,
+  `spinnerFrameAt(frame++)` and `con.check("…")`. The kit has `con.box(lines)`, `spinnerFrameAt(elapsedMs)` and
+  `con.check(ok, label, detail?)`.
+
 ## 0.73.0 (2026-09-21)
 
 `@moku-labs/common` gets its pack. No code changes.
