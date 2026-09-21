@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "1.6.1",
+      "knownVersion": "1.7.0",
       "pack": "moku",
       "skill": "plugins/moku/skills/moku-core",
       "pluginIndex": null,
@@ -197,13 +197,20 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Provenance of the `core` entry (latest sync 2026-09-21):** `@moku-labs/core@1.6.1` (npm `dist-tags.latest`),
-> spec and sandbox re-vendored from the `v1.6.1` tag (spec commit `9dc5a8f`). **`1.5.0 → 1.6.1` delta, additive:**
+> **Provenance of the `core` entry (latest sync 2026-09-21):** `@moku-labs/core@1.7.0` (npm `dist-tags.latest`).
+> Spec and sandbox are vendored from `main` at `d95c279`, which is `v1.7.0` plus the docs-only JSDoc rules of
+> spec 15 §6 (#24, #25). **`1.6.1 → 1.7.0` delta, additive:** `1.7.0` (#21, #22, #23) the framework `onError` of
+> `createCore` receives the core plugin APIs as a second argument, `(error, core)`, for example `{ log, env }`, or
+> `{}` when the framework registers no core plugins. `core` has no `emit`, so the handler cannot recurse. A
+> one-argument handler from 1.6 still compiles. The consumer `onError` of `createApp` is unchanged. Three spec
+> files changed (`02`, `07`, `13`), no section was added or removed. **`1.5.0 → 1.6.1` delta, additive:**
 > `1.6.0` (#19, #20) `onStop` receives the plugin's own `config` and `state` next to `global`
 > (`TeardownContext<Config, C, S>`, `C` and `S` default to an empty record, so 1.5 code still compiles); still no
 > `emit`, `require`, `has` or core plugin APIs at teardown. `1.5.1` and `1.6.1` are CI-only. Six spec files and one
 > sandbox test changed, no section was added or removed. ⚠️ The family is not lockstep on core: `common@0.3.2`
-> pins `1.6.0`, while `native@0.2.1`, `system@0.2.0`, `room@0.3.1` still pin `1.5.0`.
+> pins `1.6.0`, while `native@0.2.1`, `system@0.2.0`, `room@0.3.1` still pin `1.5.0`. Observed on npm at the 1.7.0
+> sync: `common@0.3.3` pins `1.7.0`; `web@2.3.3`, `worker@0.20.2`, `room@0.8.2`, `native@0.2.2`, `system@0.2.1`
+> pin `1.6.0`. The registry rows of those packs are behind npm and wait for their own `moku-sync` pass.
 >
 > **Provenance of the `native` and `system` entries (first sync 2026-09-21):** `@moku-labs/native@0.2.1` and
 > `@moku-labs/system@0.2.0` (npm `dist-tags.latest`), catalogs generated from the `v0.2.1` / `v0.2.0` tag
