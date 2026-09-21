@@ -5,14 +5,29 @@ planning work, and the three stages of a full plan. Read the section you need, n
 
 ---
 
-## Delta Spec (size M, existing project)
+## Delta Spec (size M, or new scope on an approved size-L plan)
 
 A size-M change touches a system that already has specs. Replanning it from scratch discards work
 the user approved and invites builders to rewrite plugins that were fine. Write the difference
 instead. One user gate, not three.
 
-**Entry conditions.** `.planning/specs/` holds at least one spec, and the change is size M (or the
-user passed `--delta`). Otherwise take the full route — there is nothing to delta against.
+**Entry conditions.** `.planning/specs/` holds at least one spec, and one of these is true:
+
+- the change is size M;
+- the change is size L, its full plan was already approved, and `moku-rails scope "<what is new>"`
+  sent it back in front of plan (see below);
+- the user passed `--delta`.
+
+Otherwise take the full route — there is nothing to delta against.
+
+**Size L after `moku-rails scope`.** A size-L change that grows while it is being built comes back to
+the plan station with its approved plan intact. `moku-rails status --json` shows it: the change has a
+`scope` list, and `.planning/specs/` plus `.planning/build/skeleton-spec.md` exist. Do not run the
+three stages again. Write a delta spec for the entries of `scope` only, pass the one gate below, run
+`moku-rails done plan`, and go back to `moku-rails enter build`. Builders take the touched plugins in
+`delta` mode; plugins the delta does not name keep their built state. Take the full route again only
+when the person asks for it at the gate ("Switch to a full plan"), or when the new scope replaces the
+architecture instead of adding to it.
 
 ### 1. Locate the blast radius
 

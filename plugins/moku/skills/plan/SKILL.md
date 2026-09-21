@@ -63,6 +63,7 @@ Read the size from `moku-rails status --json` (the ledger owns it). The user may
 |---|---|---|
 | Size M change to a project that already has specs | Delta spec | 1 |
 | New project, or size L | Full plan, three stages | 3, or 1 with `--quick` |
+| Size L sent back by `moku-rails scope` after its full plan was approved | Delta spec for the new scope, then back to build | 1 |
 | `add` a single plugin | Delta spec, plugin flavour | 1 |
 
 `--delta` and `--full` override the choice explicitly. A size-M change with no `.planning/specs/` yet has nothing to delta against, so it takes the full route.

@@ -98,10 +98,87 @@ describe("pre-bash hook", () => {
     assert.equal(hook("pre-bash.mjs", bash(project({ initialized: false }), "git status && ls src")).code, 0);
   });
 
+  it("lets the plan station write a planning document that names source paths", () => {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-09-21-flow", "--size", "M", "--type", "feature");
+    rails(root, "skip", "design", "--reason", "no screens");
+    rails(root, "enter", "plan");
+
+    assert.equal(hook("pre-bash.mjs", bash(root, "cat >> .planning/specs/03-flow.md <<'EOF'\nsrc/plugins/flow/index.ts\nEOF")).code, 0);
+    assert.equal(hook("pre-bash.mjs", bash(root, "grep -rn createPlugin src/ 2>/dev/null")).code, 0);
+    assert.equal(hook("pre-bash.mjs", bash(root, "echo x > src/a.ts")).code, 2);
+  });
+
+  it("leaves commands aimed at another repository alone", () => {
+    const root = project({ initialized: true });
+    const other = mkdtempSync(join(tmpdir(), "moku-other-"));
+
+    assert.equal(hook("pre-bash.mjs", bash(root, `cd ${other} && echo x > src/a.ts`)).code, 0);
+    assert.equal(hook("pre-bash.mjs", bash(root, `touch ${join(other, "src", "a.ts")}`)).code, 0);
+  });
+
   it("treats a mistyped rails option as strict, never as off", () => {
     const root = project({ initialized: false });
 
     assert.equal(hook("pre-bash.mjs", bash(root, "touch src/plugins/x/index.ts"), { CLAUDE_PLUGIN_OPTION_RAILS: "of" }).code, 2);
+  });
+});
+
+describe("commit hook", () => {
+  /** Run the shell hook inside a project whose planning state exists. */
+  function commitHook(command) {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+
+    const run = spawnSync("bash", [join(PLUGIN, "hooks", "verify-before-commit.sh")], { input: JSON.stringify({ tool_input: { command } }), cwd: root, encoding: "utf8" });
+    return run.status;
+  }
+
+  it("refuses staging or committing .planning", () => {
+    assert.equal(commitHook("git add .planning/STATE.md"), 2);
+    assert.equal(commitHook("git status && git add -f .planning"), 2);
+    assert.equal(commitHook('git commit -m "state" .planning/state.json'), 2);
+  });
+
+  it("lets read-only git commands name .planning, also next to a git add of something else", () => {
+    assert.equal(commitHook("git status --short .planning"), 0);
+    assert.equal(commitHook("git add src/a.ts && git check-ignore .planning"), 0);
+    assert.equal(commitHook("git add -A; git status; ls .planning"), 0);
+  });
+
+  it("lets a commit message on several lines mention .planning", () => {
+    assert.equal(commitHook("git commit -m \"$(cat <<'EOF'\nguard: judge the write target\n\nShell edits of .planning/ specs pass.\nEOF\n)\""), 0);
+  });
+});
+
+describe("plugin index hook", () => {
+  /** Write an index.ts with this many wiring lines and return the hook's verdict. */
+  function indexHook(lines, settings) {
+    const root = project({ initialized: true });
+    building(root);
+    if (settings) {
+      mkdirSync(join(root, ".claude"), { recursive: true });
+      writeFileSync(join(root, ".claude", "moku.local.md"), settings);
+    }
+    const content = `/** Very Complex tier. */\nimport { a } from "./a";\n${"wire(a);\n".repeat(lines)}`;
+
+    return hook("pre-write.mjs", write(root, "src/plugins/flow/index.ts", content));
+  }
+
+  it("accepts a Very Complex wiring harness of 40 effective lines", () => {
+    assert.equal(indexHook(40).code, 0);
+  });
+
+  it("refuses 41 lines and prints the limit", () => {
+    const result = indexHook(41);
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /≤40 wiring lines.*got 41/);
+  });
+
+  it("reads another limit from .claude/moku.local.md", () => {
+    assert.equal(indexHook(31, "---\npluginIndexMaxLines: 30\n---\n").code, 2);
+    assert.equal(indexHook(45, "---\npluginIndexMaxLines: 50\n---\n").code, 0);
   });
 });
 
