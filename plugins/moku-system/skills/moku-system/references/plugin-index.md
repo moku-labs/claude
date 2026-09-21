@@ -1,7 +1,7 @@
 # @moku-labs/system — Plugin & Property Index
 
-**Synced version:** `0.2.0` (npm `dist-tags.latest`; catalog generated from the `v0.2.0` git tag **source** +
-the root and per-plugin READMEs). Built on `@moku-labs/core@1.5.0` + `@moku-labs/common@0.3.0` +
+**Synced version:** `0.2.1` (npm `dist-tags.latest`; catalog generated from the `v0.2.1` git tag **source** +
+the root and per-plugin READMEs). Built on `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` +
 `idb-keyval@6.3.0` as **bundled**, exactly pinned dependencies. Five **OPTIONAL** `peerDependencies`
 (`peerDependenciesMeta.optional`): `@tauri-apps/api@^2.11.0`, `@tauri-apps/plugin-store@^2.4.0`,
 `@tauri-apps/plugin-notification@^2.3.0`, `@tauri-apps/plugin-clipboard-manager@^2.3.0`,
@@ -12,7 +12,7 @@ the root and per-plugin READMEs). Built on `@moku-labs/core@1.5.0` + `@moku-labs
 
 | # | Stale text | Source of truth |
 |---|-----------|-----------------|
-| 1 | `llms.txt` and `llms-full.txt` say `Package: @moku-labs/system 0.1.0` | `package.json` → `0.2.0` |
+| 1 | `llms.txt` and `llms-full.txt` say `Package: @moku-labs/system 0.1.0` | `package.json` → `0.2.1` |
 | 2 | `llms.txt` §1: kind is `"tauri"` when `__TAURI_INTERNALS__` is present | `src/plugins/runtime/detect.ts`: `globalThis.isTauri === true` **or** `"__TAURI_INTERNALS__" in globalThis` |
 | 3 | `llms-full.txt`: `TrayConfig.icon?: string` | `src/plugins/tray/types.ts`: `icon?: string \| Uint8Array \| number[]` |
 | 4 | `llms-full.txt` §4.5: `DeepLinkState` has `launchUrl` / `launchReplayDone`; the replay window "closes immediately" after the first delivery | `src/plugins/deep-link/types.ts` + `api.ts`: `handedOver: Map<string, HandoverPath>`, `launchPhaseOpen`, `launchPhaseEndsAt`; a symmetric handover with a 5000 ms launch phase |
@@ -39,7 +39,7 @@ registers **no default capability**. Every capability is opt-in.
 code into every bundle, so instances live on subpaths only. `runtimePlugin` and the `Runtime` type
 namespace are **not** public. `src/plugins/index.ts` is a source-tree barrel, not a package entry.
 
-## 2. `createApp` form (v0.2.0)
+## 2. `createApp` form (v0.2.1)
 
 ```ts
 import { createApp, createPlugin } from "@moku-labs/system";
@@ -104,7 +104,7 @@ plugin whose `ctx` carries `ctx.runtime`, `ctx.log`, `ctx.env`. Generics infer f
 
 | Helper | Role |
 |--------|------|
-| `startResolution(capability, kind, ctx, load)` | Called from `onStart`. Stores an unawaited promise in `ctx.state.provider`. Every `load()` rejection folds into `err(kind, "unavailable", message)`. Never throws |
+| `startResolution(kind, ctx, load)` | Called from `onStart`. Stores an unawaited promise in `ctx.state.provider` and the teardown entry in `ctx.state.teardown` (since 0.2.1; before it: `startResolution(capability, kind, ctx, load)` and a module-scope registry keyed by `ctx.global`). Every `load()` rejection folds into `err(kind, "unavailable", message)`. Never throws |
 | `requirePeer(nativeName, peer, load)` | A missing optional peer fails with `"<peer> is not installed. Add it to the app, or list "<nativeName>" in @moku-labs/native config.system."` |
 | `awaitProvider(state, kind)` | Awaited by every API method. A `null` slot → `err(kind, "unavailable", "app not started — call app.start() first")` |
 | `stopResolution(capability, ctx, timeoutMs = 5000)` | Called from `onStop`. Waits (bounded) for an in-flight resolution, then awaits `dispose()`. On timeout logs `runtime:stop-resolution-timeout` at `warn` and moves on. A provider that arrives late disposes itself |

@@ -1,15 +1,15 @@
 # @moku-labs/native — Plugin & Property Index
 
-**Synced version:** `0.2.1` (npm `dist-tags.latest`; catalog generated from the `v0.2.1` git tag **source**,
+**Synced version:** `0.2.2` (npm `dist-tags.latest`; catalog generated from the `v0.2.2` git tag **source**,
 cross-checked against the root README and `llms.txt` / `llms-full.txt`). Dependencies, all regular (no peer
-dependencies): `@moku-labs/core@1.5.0` and `@moku-labs/common@0.3.0` as **exact pins**, plus
+dependencies): `@moku-labs/core@1.6.0` and `@moku-labs/common@0.3.2` as **exact pins**, plus
 `@tauri-apps/cli@^2`. One `bun add @moku-labs/native` is the whole install. Engines node ≥24, bun ≥1.3.14.
 
-⚠️ Places where the upstream docs are **stale versus the `v0.2.1` source** (the source wins):
+⚠️ Places where the upstream docs are **stale versus the `v0.2.2` source** (the source wins):
 
 | Doc | Says | Source says |
 |-----|------|-------------|
-| `llms-full.txt:11` | `Version: 0.1.0` | `package.json` → `0.2.1` |
+| `llms-full.txt:11` | `Version: 0.1.0` | `package.json` → `0.2.2` |
 | `llms-full.txt:917`, `llms.txt:81` | `Pick<TauriApi, "version">`; "gate on `completeness()` first" | `Pick<TauriApi, "getVersion">` (`src/plugins/doctor/checks/types.ts`); `project.getCompleteness({ target })` |
 | Root `README.md` plugin table | `completeness`, `version`, `runner` | `getCompleteness`, `getVersion`, `getRunner` (`src/plugins/{project,tauri}/types.ts`) |
 | `llms.txt` quick reference, `project` list | omits two methods | `Api` also has `getBundleLayout` and `resolveDerivedPath` |
@@ -47,7 +47,7 @@ under the base directory it prints.
 | Helpers, constants, runtime class | `hostTargets`, `TARGETS`, `PHASE_ORDER`, `TauriError` |
 | Types | `AppleExportMethod`, `AppleSigning`, `BuildFlavor`, `CapabilityConfigMap`, `Config`, `Events`, `MobileTarget`, `NativeCompleteEvent`, `NativePhase`, `NativePhaseEvent`, `SigningConfig`, `Target`, `TauriRunner` |
 
-## 2. App form (v0.2.1)
+## 2. App form (v0.2.2)
 
 The five plugins plus core `logPlugin` / `envPlugin` are **defaults** — already wired. `createApp` accepts
 `config`, `pluginConfigs`, `plugins` (extra consumer plugins, appended) and `onReady` / `onError` /

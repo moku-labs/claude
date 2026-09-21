@@ -11,10 +11,10 @@ description: >
 
 # Moku Room Patterns
 
-> **Synced to `@moku-labs/room@0.3.1`** (npm `dist-tags.latest`; catalog from the `v0.3.1` tag source + the
-> root README). Full surface — the 7 plugins, the client core (`.`) + the opt-in `./server` tier (now a
-> **`hubPlugin` + `Hub` DO** export, **not** a core — compose into your own `@moku-labs/worker` app), the
-> three signaling adapters, config, events, and the dependency graph — is in
+> **Synced to `@moku-labs/room@0.8.2`** (catalog from the `v0.8.2` tag source; bundles `@moku-labs/core@1.6.0`
+> + `@moku-labs/common@0.3.2`). Full surface — the 7 plugins, the client core (`.`) + the opt-in `./server`
+> tier (a **`hubPlugin` + `Hub` DO** export, **not** a core — compose into your own `@moku-labs/worker` app), the
+> three signaling adapters, config, the six events, and the dependency graph — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
 > (`frameworks[room]`): load the `moku:moku-core` skill with the Skill tool and read
 > `references/moku-frameworks.md` under the base directory it prints.
@@ -31,6 +31,11 @@ authoritative host) plus up to 8 phone controllers, over **direct WebRTC DataCha
 itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, not from `@moku-labs/web` or
 `@moku-labs/core`.
 
+> **New in 0.3.2 → 0.8.2 (no breaking change):** at-least-once intent delivery + the 6th event
+> `room:intent-undeliverable { name, cSeq }` (0.4.0); automatic sync gap heal + join-baseline retry
+> (0.3.2 / 0.5.0); `transport.iceServers` accepts a lazy provider and defaults to `"auto"`, and the hub serves
+> `GET /api/ice` TURN credentials — zero-config internet play on the `./server` tier (0.6.0 / 0.8.0).
+>
 > **Breaking in 0.3.1 (`#6`):** the `./server` tier is **no longer a core**. `@moku-labs/room/server` now
 > exports **`hubPlugin`** (a `@moku-labs/worker` plugin) + the **`Hub`** Durable Object — you compose
 > `hubPlugin` into your **own single `@moku-labs/worker` `createApp`** (+ `durableObjects`/`deploy`/`cli`),
@@ -49,7 +54,7 @@ itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, not from `@mok
 |-------|-----------|
 | Framework | `@moku-labs/room` — its own `@moku-labs/core` framework (you `createApp` from it); client core `.` + opt-in `./server` tier (a `hubPlugin` + `Hub` DO export — compose into your own `@moku-labs/worker` app, **not** a core) |
 | Built on | `@moku-labs/core` + `@moku-labs/common` (**bundled** deps — supply the kernel + `ctx.log`/`ctx.env`). **`@moku-labs/worker@^0.15.0` is an OPTIONAL peer** — only the `./server` tier needs it |
-| Networking | WebRTC peer mesh (`trystero`, bundled), QR join (`qrcode`, bundled); opt-in Cloudflare Worker signaling tier (`./server` → `hubPlugin`) |
+| Networking | WebRTC peer mesh (`trystero`, bundled), QR join (`qrcode`, bundled); opt-in Cloudflare Worker signaling tier (`./server` → `hubPlugin`), which since 0.8.0 also mints TURN credentials at `GET /api/ice` |
 | Package manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
 | Engines | node ≥24, bun ≥1.3.14 |
 
@@ -68,7 +73,7 @@ patterns underneath. Shared-screen vs phone roles, the WebRTC peer mesh, and syn
 reach them via `ctx.require(plugin)`. Keep the Cloudflare entry (`cloudflare/worker.ts`) thin: it delegates
 `fetch` to the composed worker app's `server.hub.handle`.
 
-## Framework API (@moku-labs/room v0.3.1)
+## Framework API (@moku-labs/room v0.8.2)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **client-core defaults** — already wired. An
 app adds exactly one role facade (`stagePlugin` host / `controllerPlugin` phone) + its game plugin; there are
@@ -86,15 +91,27 @@ app.stage.onIntent("score", (payload, peerId) => app.stage.mutate("scores", draf
 - **`stagePlugin`** → `app.stage` (`StageApi`: `createRoom`, `qr`, `mutate`, `broadcast`, `onIntent`,
   `roster`). **`controllerPlugin`** → `app.controller` (`ControllerApi`: `joinRoom`, `read`, `on`, `intent`,
   `requestWakeLock`, `releaseWakeLock`).
-- 5 `room:*` lifecycle events; **all gameplay rides the `Wire`**, never `emit`. Signaling: `publicRendezvous()`
-  (default) / `inMemory()` (tests) / `serverSignaling(url)` (opt-in, the `./server` tier). **No TURN** (D2 —
-  the design target is the home LAN).
+- 6 `room:*` lifecycle events; **all gameplay rides the `Wire`**, never `emit`. Signaling: `publicRendezvous()`
+  (default) / `inMemory()` (tests) / `serverSignaling(url)` (opt-in, the `./server` tier). **No TURN on the
+  default tier** (D2 — the design target is the home LAN); the `./server` tier adds it with zero app code
+  (next bullets).
+- **Intents are at-least-once (0.4.0).** `app.controller.intent(name, payload)` is receipt-acked by the host and
+  retransmitted (same `cSeq`, stop-and-wait, `intent.ackTimeoutMs` `1000` / `intent.maxRetransmits` `3`). When
+  the budget runs out the controller app gets `room:intent-undeliverable { name, cSeq }` — hook it for retry
+  UX. Do not build your own ack/retry layer on top of intents.
+- **ICE (0.6.0 / 0.8.0).** `pluginConfigs.transport.iceServers` is `"auto"` by default: with
+  `serverSignaling(url)` it lazily fetches `GET /api/ice` from the hub (fail-open onto public STUN), with any
+  other adapter it is one public STUN. It also takes a plain array (`[]` = LAN-only) or a lazy
+  `IceServersProvider` (`() => Promise<readonly RTCIceServer[] | undefined>`). `transport.iceTransportPolicy`
+  (`"all"`) can force `"relay"`; `?ice=relay` on the page URL is the diagnostic toggle.
 - **Opt-in `./server` tier (a plugin, not a core — 0.3.1):** `import { hubPlugin, Hub } from
   "@moku-labs/room/server"` and compose `hubPlugin` (a `@moku-labs/worker` plugin) into your **own** single
   `@moku-labs/worker` `createApp` — alongside `durableObjectsPlugin` (the `Hub` DO) + `deployPlugin`/`cliPlugin`
   (the one-worker idiom, `moku-idioms.md §I6`). `server.hub.handle` is the runtime fetch a thin
   `cloudflare/worker.ts` delegates to; re-export `Hub` so wrangler binds `ROOM_HUB`. `@moku-labs/worker` is an
-  optional peer. Signaling only — no gameplay relay (D2 holds).
+  optional peer. Signaling only — no gameplay relay (D2 holds). Since 0.8.0 `handle` also answers
+  `GET /api/ice` with short-lived Cloudflare TURN credentials when the worker has the `TURN_KEY_ID` /
+  `TURN_KEY_API_TOKEN` secrets (a quiet empty `200 {}` without them) — config block `hub.ice`.
 
-Full catalog (7 plugins, both cores, every API/config/event, signaling seam, dependency graph):
+Full catalog (7 plugins, the client core + the `./server` tier, every API/config/event, signaling seam, dependency graph):
 **[`references/plugin-index.md`](references/plugin-index.md)**.

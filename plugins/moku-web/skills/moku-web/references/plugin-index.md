@@ -7,9 +7,10 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `2.2.2` · **Layer:** 2 (framework) ·
-**Depends on:** `@moku-labs/core@1.5.0` (exact pin — consumers must NOT add a direct core dep; now
-lockstep with core's own registry version 1.5.0) + `@moku-labs/common@0.2.1` (**since 1.12.4** — the
+**Framework:** `@moku-labs/web` · **Synced version:** `2.3.3` · **Layer:** 2 (framework) ·
+**Depends on:** `@moku-labs/core@1.6.0` (exact pin — consumers must NOT add a direct core dep; bumped
+`1.5.0 → 1.6.0` in v2.3.3) + `@moku-labs/common@0.3.2` (exact pin, bumped `0.2.1 → 0.3.2` in v2.3.3;
+**since 1.12.4** — the
 `log`/`env` core plugins are authored in `@moku-labs/common` and re-exported by `web`; public API
 byte-identical, so consumers use `ctx.log`/`ctx.env` and import the env providers from
 `@moku-labs/web` exactly as before) · **Peer deps (since 1.7.0):** `preact@^10.29.2` +
@@ -19,6 +20,22 @@ points:** `.` (ESM + CJS, full surface, Node SSG) and **`./browser`** (ESM-only,
 construction) · **No `bin`** — the developer CLI ships as the node-only **`cliPlugin`**
 (`app.cli.build/serve/preview/deploy`, driven by thin per-command scripts).
 
+> **What's new in 2.3.x (vs 2.2.2) — additive, no breaking change:**
+> - **New `collectionPlugin` — static-data collection provider (v2.3.0).** The collection-keyed sibling of
+>   the page-path-keyed `data` plugin: the Node build persists build-authored JSON shards with
+>   `app.collection.write([{ collection, shard, data }])` → `<outDir>/<collection>/<shard>.json`; the client
+>   fetches one shard on demand. Explicit-compose, no `depends`, no events, one config key (`baseUrl`,
+>   default `"/"`). New top-level exports: `collectionPlugin` (**`.` only**), the standalone helpers
+>   `collectionUrl` + `loadCollectionShard<T>` (`.` and `./browser`), and the `Collection` type namespace
+>   (`.` and `./browser`). See §2.2.
+> - **Incremental `public` copy (v2.3.1).** The build `public` phase copies a file only when its destination
+>   is missing or stale (size differs or source mtime is newer). A full build cleans `outDir` first, so the
+>   output is identical to a verbatim copy; a dev rebuild (`skipClean`) rewrites only what changed. No config
+>   key, no API change.
+> - **v2.3.2 / v2.3.3 — no `src/` change.** CI moved to `moku-labs/ci` (2.3.2); `@moku-labs/core`
+>   `1.5.0 → 1.6.0` and `@moku-labs/common` `0.2.1 → 0.3.2` (2.3.3). The re-exported `log`/`env` names are
+>   unchanged (`workerSafeProcessEnv`, new in common 0.3.0, is NOT re-exported by `web`).
+>
 > **What's new in 1.x (vs 0.5.6):**
 > - **Content directives — build-time, zero-JS-by-default (v1.9.0–v1.12.0).** Three opt-in
 >   `fileSystemContent` features, each rendered to STATIC markup at build and each requiring
@@ -42,8 +59,8 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 >   screen reader gets feedback during the JSON load (1.12.2).
 > - **New top-level exports:** runtime `EmbedFacadeButton`, `GalleryTrack`, `lazyEmbed`; types
 >   `EmbedFacade`/`EmbedFacadeProps`/`EmbedOptions`, `GalleryComponent`/`GalleryOptions`/`GalleryProps`/`GallerySlide`.
->   `@moku-labs/core` is pinned `1.5.0` (bumped `0.1.4 → 1.5.0` in v2.0.1, a dep-only family bump;
->   now lockstep with core). `PhaseName` unchanged; events unchanged.
+>   `@moku-labs/core` was bumped `0.1.4 → 1.5.0` in v2.0.1 (a dep-only family bump; now `1.6.0`, see
+>   2.3.x above). `PhaseName` unchanged; events unchanged.
 > - **BREAKING — ctx-based route handlers (v1.0.0).** `.load((ctx) => D)` takes a single
 >   `LoadContext` `{ params, locale, require, has }` (was `(params, locale)`); `.generate((ctx) =>
 >   params[])` takes a `GenerateContext` `{ locale, require, has }` (was `(locale)`). Loaders pull
@@ -77,7 +94,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 >   content-identical alias whose canonical points to bare. No config flag.
 > - **Router matcher is native RegExp (v1.4.1)** — `URLPattern` dropped, so client matching works in
 >   Safari < 18.4 / older Firefox. (`engines.node >=24` still applies.)
-> - **`@moku-labs/core` is now `1.5.0`** (exact pin; was `0.1.4` at 2.0.0, `0.1.3` through 1.12.2, `0.1.1` at 1.6.x).
+> - **`@moku-labs/core` is now `1.6.0`** (exact pin since v2.3.3; was `1.5.0` at 2.0.1–2.3.2, `0.1.4` at 2.0.0, `0.1.3` through 1.12.2, `0.1.1` at 1.6.x).
 >   Browser-bundle CI budget is 60 kB gzip (currently ~50 kB).
 > - **v1.7.0 (fix wave, 22 PRs).** `preact` + `preact-render-to-string` moved to
 >   **peerDependencies** (the app must install them); bundle **code splitting ON** (dynamic
@@ -101,16 +118,19 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 > ⚠️ The upstream `llms.txt`/`llms-full.txt` were last re-synced at 1.8.2 (for the v1.8.0 cache
 > feature) and still describe `content` as the plain markdown pipeline — they do NOT mention the
 > v1.9.0–v1.12.0 content directives (`mermaid`/`::embed`/`::gallery`) or `cacheHeaders`/fingerprinted
-> bundle naming. This index is generated from `src/` — **the source is authoritative**.
+> bundle naming, and (re-verified at 2.3.3) they do NOT mention the `collection` plugin either. The
+> upstream `src/plugins/collection/README.md` imports `collectionPlugin` from `@moku-labs/web/browser`,
+> but `src/browser.ts` at `v2.3.3` does NOT export it (only `collectionUrl` + `loadCollectionShard` +
+> the `Collection` types). This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v2.2.2)
+## 1. Framework API form (v2.3.3)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed
 node-free, `browserEnv()` pre-wired). `createApp` is **synchronous** (per Moku core spec); `start()` /
 `build.run()` / `cli.*` / `deploy.run()` are async. **Defaults are isomorphic** (`site, i18n, router,
 head, spa` + the `log`/`env` core); everything else (`content` shell + provider, `build`, `deploy`,
-`data`, `cli`) is composed explicitly via `plugins: [...]`. For the client, import from `./browser` —
+`data`, `collection`, `cli`) is composed explicitly via `plugins: [...]`. For the client, import from `./browser` —
 do NOT rely on tree-shaking `.`.
 
 ```tsx
@@ -171,8 +191,12 @@ Top-level exports (`src/index.ts`):
 - **Factories:** `createApp`, `createPlugin` (types infer from the spec — never pass explicit generics).
 - **Plugin instances:** `sitePlugin, i18nPlugin, routerPlugin, headPlugin, spaPlugin` (isomorphic
   defaults) · `contentPlugin` (isomorphic shell, compose explicitly) · `buildPlugin, deployPlugin,
-  cliPlugin` (node-only) · `dataPlugin` (optional/isomorphic) · `logPlugin, envPlugin` (core).
+  cliPlugin` (node-only) · `dataPlugin` (optional/isomorphic) · `collectionPlugin` (optional, v2.3.0;
+  exported from `.` ONLY) · `logPlugin, envPlugin` (core).
 - **Routing DSL:** `defineRoutes`, `route` (builder methods below), `createUrls(routes, defaultLocale?)`.
+- **Collection helpers (v2.3.0, `.` + `./browser`, node-free):** `collectionUrl(baseUrl, collection,
+  shard): string` · `loadCollectionShard<T>(baseUrl, collection, shard): Promise<T>` (uses `fetch`;
+  THROWS on a non-OK response) — see §2.2.
 - **Islands:** `createIsland(name, hooks)` · `lazyEmbed` (built-in `::embed` activation island — see §2.1).
 - **Content directive components** (`.`-only, build-time SSR'd to static markup; swap via content
   `embed.facade` / `gallery.component`): `EmbedFacadeButton` (default `::embed` facade — a labelled
@@ -181,7 +205,7 @@ Top-level exports (`src/index.ts`):
 - **Head/SEO helpers:** `meta, og, twitter, jsonLd, canonical, hreflang, feedLink, buildArticleHead`.
 - **Providers:** env — `dotenv()`, `processEnv()`, `cloudflareBindings()` (Node), `browserEnv()`
   (browser) · content — `fileSystemContent({ contentDir, … })` (Node).
-- **Type namespaces:** `Build, Cli, Content, Data, Deploy, Env, Head, Log, Router, Spa`
+- **Type namespaces:** `Build, Cli, Collection, Content, Data, Deploy, Env, Head, Log, Router, Spa`
   (`import { type Router } from "@moku-labs/web"` → `Router.RouteDefinition`, `Router.LoadContext`,
   etc.). `site` / `i18n` keep types inline — there are NO `Site`/`I18n` namespaces.
 - **Content directive types** (top-level type exports; also reachable as `Content.*`):
@@ -192,8 +216,11 @@ Top-level exports (`src/index.ts`):
 construction. Same `createApp`/`createPlugin` over the same isomorphic defaults, PLUS `dataPlugin`,
 `contentPlugin` (the browser-safe SHELL, so route modules can reference it for `ctx.require` in
 build-only loaders), `defineRoutes`, `route`, `createUrls`, `createIsland`, **`lazyEmbed`** (the
-`::embed` island runs client-side), `browserEnv`, the SEO head primitives, and the type namespaces
-`Content, Data, Env, Head, Log, Router, Spa`. It **excludes** everything node-only:
+`::embed` island runs client-side), `createChannel`, `navigate`/`hardNavigate`, the collection read
+helpers **`collectionUrl`** + **`loadCollectionShard`** (v2.3.0), `browserEnv`, the SEO head primitives,
+and the type namespaces `Collection, Content, Data, Env, Head, Log, Router, Spa`. It **excludes**
+everything node-only and **`collectionPlugin`** (kept out on purpose "to keep the browser closure lean";
+the client reads shards through the two standalone helpers):
 `buildPlugin`/`deployPlugin`/`cliPlugin`, `fileSystemContent`, the node providers
 `dotenv`/`processEnv`/`cloudflareBindings`, the `Build`/`Cli`/`Deploy` type namespaces, **and the
 `.`-only build-time content-directive components `EmbedFacadeButton`/`GalleryTrack`** (their named
@@ -242,7 +269,8 @@ URLs for it, and `/{defaultLocale}/…` is built as a content-identical alias (c
 `kind`: **core** = `createCorePlugin`, API injected flat on every `ctx` (no events/depends);
 **regular** = `createPlugin`. **Defaults** (isomorphic, auto-composed): site, i18n, router, head, spa.
 **Composed explicitly** (`plugins: [...]`): content (isomorphic shell + node provider), data
-(optional, isomorphic), build / deploy / cli (node-only). Core (log, env) load first.
+(optional, isomorphic), collection (optional, v2.3.0 — see §2.2), build / deploy / cli (node-only).
+Core (log, env) load first.
 
 | plugin (export) | kind · composition | purpose | depends | emits | key API | config keys |
 |---|---|---|---|---|---|---|
@@ -256,6 +284,7 @@ URLs for it, and `/{defaultLocale}/…` is built as a content-identical alias (c
 | `deployPlugin` | regular · node-only | Deploy `outDir` to Cloudflare Pages (wrangler); scaffolds `wrangler.jsonc` (+ optional GH Actions workflow) | site | `deploy:complete` | `run(opts?) getLastDeployment() init(opts?)` | `target` (`"cloudflare-pages"`), `outDir`, `productionBranch?` (`"main"`), `scrubAllowlist`, `compatibilityDate?, ci?` |
 | `cliPlugin` | regular · node-only | Developer CLI: `build`/`serve`/`preview`/`deploy` with boxed Panel TUI + live progress; driven from thin per-command scripts (no argv parser / no `bin`) | build, deploy | — (listens: `build:phase`, `build:complete`, `deploy:complete`) | `build(opts?) serve(opts?) preview(opts?) deploy(opts?)` (`deploy({ guided: true })` = interactive wizard; non-TTY/CI never prompts) | `outDir` (`"dist"`), `port` (`4173`), `watchDirs` (`["content","src"]`), `debounceMs` (`150`), `notFoundFile` (`"404.html"`), `liveReload` (`true`) |
 | `dataPlugin` | regular · optional (isomorphic) | Agnostic data provider: persist per-page JSON (Node `write`) + fetch it for DATA nav (browser `at`) | — (no hard depends) | — | `write(entries,opts?) at(path) urlFor(path) fileFor(path)` | `outputDir?` (`"_data"`), `baseUrl?` (`"/_data/"`) |
+| `collectionPlugin` | regular · optional (v2.3.0; exported from `.` only) | Static-data collection provider — the collection-keyed sibling of `data`: persist build-authored JSON shards (Node `write`) + fetch one shard on demand (`at`, `fetch`-based, cached per `(collection, shard)`); domain-agnostic, no validation step; `onInit` validates `baseUrl`; no `onStart`/`onStop` — see §2.2 | — (no hard depends; `build` ordering is a call-site contract) | — | `write(entries,opts?) at(collection,shard) urlFor(collection,shard) fileFor(collection,shard)` | `baseUrl?` (`"/"` — must be a string ending with `/`, else `onInit` throws) |
 | `logPlugin` | **core** | In-memory trace + `expect()` assertion DSL; console sink by mode (production = info+) | — | — | `info debug warn error trace() expect() addSink(s) reset()` | `mode` (`test`\|`dev`\|`production`\|`silent`; framework default `production`) |
 | `envPlugin` | **core** | Schema-validated, frozen env access | — | — | `get(k) require(k) has(k) getPublic() getPublicMap()` | `schema, providers, publicPrefix` (`"PUBLIC_"`). Providers default to `[]` — the consumer wires them per target (`[processEnv(), dotenv()]` on Node); ONLY `./browser` pre-wires `browserEnv()` |
 
@@ -305,6 +334,36 @@ co-located embed bundles / gallery folders are copied by the existing `content-i
   `GalleryProps = { slides: readonly GallerySlide[], caption: string, attributes }` ·
   `GallerySlide = { src, alt }` (alt = `"<caption> · N"`, or just `"N"` when no caption).
 
+## 2.2 Static-data collections (`collectionPlugin`, v2.3.0)
+
+One contract: `(collection, shard) → one persisted JSON file`. The plugin knows nothing about what the
+data is. It is NOT a default and has no `depends`; the build does NOT call it — **the app calls
+`app.collection.write(...)` itself**, after `app.build.run()` (upstream wording: "during/after the
+build's pages phase").
+
+- **Path convention (one pure function for both sides, so file and URL cannot drift):**
+  `fileFor(collection, shard)` → `<collection>/<shard>.json` (relative to `outDir`) ·
+  `urlFor(collection, shard)` → `baseUrl + <collection>/<shard>.json`. Outer slashes are trimmed; the
+  shard's inner slashes become nested directories: `("bank", "en/animals")` → file
+  `bank/en/animals.json`, URL `/bank/en/animals.json`. The URL keeps percent-encoding; the file name is
+  decoded (`("bank", "a%20%26%20b")` → `bank/a & b.json`).
+- **Node write:** `write(entries: readonly CollectionShard[], options?: { outDir?: string }):
+  Promise<CollectionWriteSummary>` — `CollectionShard = { collection, shard, data }`, one
+  `JSON.stringify(data)` file per entry, write concurrency 8, `options.outDir` defaults to `"./dist"`
+  (it does NOT read `build.outDir` — pass `outDir` when the build uses another one). Returns
+  `{ fileCount, bytes, files }` (`files` relative to `outDir`). The `node:fs` writer sits behind a lazy
+  `import()`.
+- **Read:** `at(collection, shard): Promise<unknown | null>` — `fetch`es `urlFor(...)`, caches the result
+  per key, returns `null` when the fetch or JSON parse fails. No validation step: the consumer narrows
+  the `unknown`.
+- **Standalone read (no plugin composed):** `loadCollectionShard<T>(baseUrl, collection, shard):
+  Promise<T>` and `collectionUrl(baseUrl, collection, shard): string`, both exported from
+  `@moku-labs/web/browser` (and `.`). `loadCollectionShard` has no cache and **throws** on a non-OK
+  response (`at()` is the soft, `null`-returning wrapper). This is the read path for a `./browser`
+  client, because **`collectionPlugin` is not exported from `./browser`**.
+- **Types** (`Collection` namespace, `.` + `./browser`): `CollectionConfig`, `CollectionShard`,
+  `CollectionWriteSummary`, `CollectionProvider`, `CollectionState`.
+
 ## 3. Property index (what lands on `ctx` / `app`)
 
 **Core APIs are injected flat on every plugin's `ctx`** (no `require` needed): `ctx.log.*`, `ctx.env.*`.
@@ -326,6 +385,7 @@ registration (by name). Route `.load`/`.generate` contexts carry the same `requi
 | `app.deploy.*` | deploy | `run(opts?: {branch?,build?}): Promise<DeployResult> · getLastDeployment(): Readonly<DeployResult>\|null · init(opts?: {ci?,check?}): Promise<InitResult>` |
 | `app.cli.*` | cli | `build(opts?: {assertNotFound?}): Promise<BuildSummary> · serve(opts?: {port?, open?, og?, sitemap?, feeds?}): Promise<void> · preview(opts?: {port?}): Promise<void> · deploy(opts?: {branch?, yes?, guided?}): Promise<DeployOutcome>` |
 | `app.data.*` | data | `write(entries: {path,data}[], opts?: {outDir?}): Promise<{fileCount,bytes,files}> · at(path): Promise<unknown\|null> · urlFor(path): string · fileFor(path): string` |
+| `app.collection.*` | collection (v2.3.0) | `write(entries: readonly {collection,shard,data}[], opts?: {outDir?}): Promise<{fileCount,bytes,files}> · at(collection,shard): Promise<unknown\|null> · urlFor(collection,shard): string · fileFor(collection,shard): string` |
 
 `island note:` islands are authored with `createIsland(name, hooks)` (lifecycle `onCreate / onMount /
 onNavStart / onNavEnd / onUnMount / onDestroy`; **every hook receives a `IslandContext` `{ el, data }`**,
@@ -353,7 +413,10 @@ facades — see §2.1); register it like any other in `pluginConfigs.spa.islands
 `build` phase names (`PhaseName`, execution order): `bundle, content, images, pages, content-images,
 feeds, sitemap, og-images, public, not-found, locale-redirects, cache-headers, root-index`
 (`cache-headers` since v1.8.0; gated by `cacheHeaders`, default on).
-The `data` plugin is notification-free (a transport, driven synchronously by `build`). The `cli`
+The `public` phase copies **incrementally** since v2.3.1 (skips a file whose destination has the same
+size and an mtime at least as new); the phase name and the full-build output are unchanged.
+The `data` plugin is notification-free (a transport, driven synchronously by `build`). The
+`collection` plugin (v2.3.0) emits nothing either, and `build` never calls it — the app does. The `cli`
 plugin emits nothing — it CONSUMES `build:phase`/`build:complete`/`deploy:complete` via `hooks` to
 render live progress (the in-repo example of the hooks mechanism).
 
@@ -384,6 +447,13 @@ BUILD (router.mode !== "ssg")              ON DISK                       CLIENT 
 **SSG build (static only):** `import { createApp, contentPlugin, fileSystemContent, buildPlugin } from "@moku-labs/web"` → `createApp({ config: { mode: "ssg" }, plugins: [contentPlugin, buildPlugin], pluginConfigs: { site, i18n, content: { providers: [fileSystemContent({ contentDir })] }, router: { routes }, head, build } })` then `await app.build.run()`.
 **Hybrid (SSG + DATA nav):** add `dataPlugin` for the build (`.` entry); build writes `dist/_data/**` sidecars. The **client entry** is `import { createApp, dataPlugin } from "@moku-labs/web/browser"` → `createApp({ plugins: [dataPlugin], config: { mode: "hybrid" }, pluginConfigs: { site, i18n, router: { routes }, spa: { islands } } }).start()` (env auto-wired, node-free).
 **Dev loop / scripts:** compose `cliPlugin` (+ build/deploy) and write thin per-command scripts — `scripts/build.ts` is just `import { app } from "../src/app"; await app.cli.build();`; likewise `app.cli.serve()` (watch + debounced incremental rebuild + live reload), `app.cli.preview()`, `app.cli.deploy()`.
+**Static-data collections (v2.3.0):** Node side — add `collectionPlugin` (from `"@moku-labs/web"`) to the build app's
+`plugins` (`[contentPlugin, buildPlugin, collectionPlugin]`), then `await app.build.run()` and
+`await app.collection.write([{ collection: "bank", shard: "en/animals", data: animals }], { outDir: "dist" })`
+→ `dist/bank/en/animals.json`. Client side (`./browser`) —
+`import { loadCollectionShard } from "@moku-labs/web/browser"` →
+`const animals = await loadCollectionShard<Animal[]>("/", "bank", "en/animals")` (fetches
+`/bank/en/animals.json`; throws on a non-OK response, so wrap it in `try`/`catch`). `Animal` is the app's own type.
 **Content directives (`mermaid` · `::embed` · `::gallery`):** enable on the node provider —
 `fileSystemContent({ contentDir: "./content", trustedContent: true, mermaid: true, embed: true, gallery: true })`
 (all three REQUIRE `trustedContent: true`; `mermaid` also needs the optional `mermaid-isomorphic` peer).
@@ -404,10 +474,12 @@ supply your own `[data-island="gallery"]` island for swipe/lightbox. Swap the re
 is the version-of-truth**; `dist-tags.latest`), then reads the upstream `llms.txt`/`llms-full.txt`
 (structured catalog, present since 0.4.0) plus `package.json` `exports`/`engines`/`dependencies`
 and `src/plugins/*/{index,events,config,types,api,validate}.ts` + `src/plugins/content/pipeline/*` +
-`src/plugins/spa/lazy-embed.ts`, refreshes every section above and the header `Synced version`, then
+`src/plugins/spa/lazy-embed.ts` + `src/plugins/collection/{convention,read,writer}.ts`, refreshes every section above and the header `Synced version`, then
 writes the new version back to `knownVersion` in `references/moku-frameworks.md` of the `moku:moku-core`
 skill. When
 the llms files and `src/` disagree, **`src/` wins** (verified at 1.6.1: llms still mentioned the removed
 `router.set()` and `URLPattern`; at 1.8.0: llms missing `cacheHeaders` / fingerprinted naming;
 re-verified at 1.12.4: llms last synced 1.8.2, missing the `mermaid`/`::embed`/`::gallery` content
-directives — all read from `src/` here).
+directives — all read from `src/` here; at 2.3.3: llms untouched since, missing the `collection` plugin,
+and the collection README imports `collectionPlugin` from `./browser`, which `src/browser.ts` does not
+export).

@@ -13,7 +13,7 @@ description: >
 
 # Moku Native Patterns
 
-> **Synced to `@moku-labs/native@0.2.1`** (npm `dist-tags.latest`; catalog from the `v0.2.1` tag source).
+> **Synced to `@moku-labs/native@0.2.2`** (npm `dist-tags.latest`; catalog from the `v0.2.2` tag source).
 > Full surface — the 5 plugins, every API method, the global config, the 3 events, the build pipeline,
 > the capability registry and the dependency graph — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -40,7 +40,7 @@ codegens the packaging surface from them.
 | Layer | Technology |
 |-------|-----------|
 | Framework | `@moku-labs/native` — its own `@moku-labs/core` framework (you `createApp` from it). One entry point (`.`), ESM + CJS |
-| Built on | `@moku-labs/core@1.5.0` + `@moku-labs/common@0.3.0` (exact pins, regular dependencies — supply the kernel + `ctx.log` / `ctx.env` + the branded CLI kit) |
+| Built on | `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` (exact pins, regular dependencies — supply the kernel + `ctx.log` / `ctx.env` + the branded CLI kit) |
 | Native shell | `@tauri-apps/cli@^2` (regular dependency, installed transitively). No peer dependencies |
 | Runtime | **Node-only.** Scripts run under Bun, but `@tauri-apps/cli` cannot run under Bun: a real `node` binary on `PATH` is a hard prerequisite (`doctor` checks it) |
 | Toolchains | Rust + per-target SDKs (Xcode, `xcodegen`, CocoaPods, Android SDK/NDK/JDK) only for the targets you build |
@@ -78,7 +78,7 @@ What NOT to do:
 - Mobile is opt-in. The default `targets` is the host's one desktop target. Name `ios` / `android`
   explicitly.
 
-## Framework API (@moku-labs/native v0.2.1)
+## Framework API (@moku-labs/native v0.2.2)
 
 All five plugins are **framework defaults** — already wired. An app passes `config` and nothing else in the
 common case. `createApp` also accepts `plugins`, `pluginConfigs` and `onReady` / `onError` / `onStart` /

@@ -9,8 +9,8 @@ description: >
 
 # Moku Worker Patterns
 
-> **Synced to `@moku-labs/worker@0.15.0`** (npm `dist-tags.latest`; surface from the published 0.15.0
-> tarball + the `v0.15.0` git tag source). Full surface — every plugin, its API/config/events, the
+> **Synced to `@moku-labs/worker@0.20.2`** (npm `dist-tags.latest`; surface from the `v0.20.2` git tag
+> source). Full surface — every plugin, its API/config/events, the
 > dependency graph, and the runtime-vs-node-only boundary — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
 > (`frameworks[worker]`): load the `moku:moku-core` skill with the Skill tool and read
@@ -63,7 +63,7 @@ plugins, so the config it generates is missing the bindings, and keeping two com
 hand is where it goes wrong. When someone proposes that split, say so and compose `deploy` and `cli`
 into the one runtime app. Reference: `tracker/src/server.ts`.
 
-## Framework API (@moku-labs/worker v0.15.0)
+## Framework API (@moku-labs/worker v0.20.2)
 
 One entry: **`@moku-labs/worker`**. The node-only deploy/CLI plugins (`deployPlugin`/`cliPlugin`) ship from
 the same root export and are tree-shaken out unless you list them, so they stay out of the runtime bundle.
@@ -100,6 +100,36 @@ via `WorkerPluginCtx<Config, State, Events?>`. **Deploy** (from the package root
 true, stage })` (the `--delete` flag) routes to `deploy.destroy()` to tear a stage's infrastructure back
 down (since 0.13.0).
 
+**TURN keys (`turnPlugin`, since 0.16.0).** A WebRTC app (for example one that composes
+`@moku-labs/room/server`'s hub) declares its Cloudflare Realtime TURN key like any other resource. The
+plugin is deploy metadata only (`deployManifest()`), with no runtime API: `deploy` creates the key, then
+binds its id + API token as two **worker secrets** right after `wrangler deploy`, and the worker reads them
+off `env`. List `turnPlugin` next to `deployPlugin` in the one worker app (`deploy` finds it with
+`ctx.has("turn")`, it is not in `deploy`'s `depends`):
+
+```ts
+import { cliPlugin, createApp, deployPlugin, turnPlugin } from "@moku-labs/worker";
+
+export const server = createApp({
+  config: { name: "myapp", compatibilityDate: "2026-06-17" },
+  plugins: [turnPlugin, deployPlugin, cliPlugin],
+  pluginConfigs: {
+    // defaults: keyIdBinding "TURN_KEY_ID", apiTokenBinding "TURN_KEY_API_TOKEN", verifyPath "/api/ice"
+    turn: { relay: { name: "myapp-turn" } }
+  }
+});
+// server.turn.deployManifest()
+// → [{ kind: "turn", name: "myapp-turn", keyIdBinding: "TURN_KEY_ID",
+//      apiTokenBinding: "TURN_KEY_API_TOKEN", verifyPath: "/api/ice" }]
+```
+
+A TURN failure never fails the deploy: the report carries `turn: "degraded"` (next to `"skipped"`,
+`"exists"`, `"provisioned"`), a warning with one instruction line is printed, and the app falls back to
+STUN. Creating the key needs the `Account · Calls` `Edit` permission on `CLOUDFLARE_API_TOKEN`; when
+Cloudflare rejects the token on the Calls API, put the key pair in `.env.local` under the two binding names
+and `deploy` adopts it (since 0.20.0). For a hand-provisioned key, declare no `turn` instance and
+`wrangler secret put` both names.
+
 **Guards (`endpoint.new`, since 0.14.0).** `endpoint.new(guard)` derives a NEW factory (callable exactly
 like `endpoint`) that runs `guard` before every handler it builds; chain `.new` to stack guards. A guard
 returning a `Response` **short-circuits** (401 etc.); returning `void` continues. Since 0.15.0 a guard may
@@ -116,5 +146,5 @@ const authed = endpoint.new(async (ctx) => {
 authed("/me").get((ctx) => Response.json({ id: ctx.actor.id }));     // typed, no null-check
 ```
 
-Full catalog (all 9 plugins, every API/config/event, the keyed-map config, the dependency graph, the
+Full catalog (all 10 plugins, every API/config/event, the keyed-map config, the dependency graph, the
 runtime-vs-node-only boundary): **[`references/plugin-index.md`](references/plugin-index.md)**.
