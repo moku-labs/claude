@@ -28,7 +28,12 @@ case "$FILE_PATH" in
   *) exit 0 ;;
 esac
 
-# Rule 1: ≤30 lines, wiring-only (Write only — Edit's new_string is a partial replacement)
+# Rule 1: wiring-only, at most MAX_LINES effective lines (Write only — Edit's new_string is a partial
+# replacement). The default is the largest tier's budget (spec/15 §2.5: a Very Complex wiring harness is
+# ~40 lines); the hook cannot see the tier, the structure validator judges the smaller tiers.
+# A project sets its own limit with `pluginIndexMaxLines:` in .claude/moku.local.md.
+MAX_LINES=$(grep -E '^pluginIndexMaxLines:' .claude/moku.local.md 2>/dev/null | awk '{print $2}' | grep -E '^[0-9]+$' | head -1)
+MAX_LINES=${MAX_LINES:-40}
 if [ "$IS_WRITE" = "yes" ]; then
   # Count EFFECTIVE wiring lines only — exclude blank lines, comment-only lines (// and JSDoc * /** */),
   # and import lines. The JSDoc header + imports are not "wiring" and previously inflated the count,
@@ -38,8 +43,8 @@ if [ "$IS_WRITE" = "yes" ]; then
     | grep -vE '^[[:space:]]*(//|/\*|\*)' \
     | grep -vE '^[[:space:]]*import[[:space:]]' \
     | wc -l | tr -d ' ')
-  if [ "$EFFECTIVE" -gt 30 ]; then
-    echo "BLOCKED: plugins/*/index.ts must be ≤30 wiring lines (the JSDoc header, blank lines, and imports do NOT count), got $EFFECTIVE. Move logic into module files (state.ts/api.ts/handlers.ts). See skeleton-conventions.md for the literal wiring template." >&2
+  if [ "$EFFECTIVE" -gt "$MAX_LINES" ]; then
+    echo "BLOCKED: plugins/*/index.ts must be ≤$MAX_LINES wiring lines (the JSDoc header, blank lines, and imports do NOT count), got $EFFECTIVE. Move logic into module files (state.ts/api.ts/handlers.ts). See skeleton-conventions.md for the literal wiring template." >&2
     exit 2
   fi
 fi

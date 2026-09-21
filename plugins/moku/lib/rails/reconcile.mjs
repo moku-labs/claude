@@ -6,7 +6,7 @@
 
 import { execFileSync } from "node:child_process";
 
-/** @typedef {{ kind: "open-change" | "stuck-station" | "dirty-tree" | "parked", detail: string }} Debt */
+/** @typedef {{ kind: "open-change" | "stuck-station" | "paused" | "dirty-tree" | "parked", detail: string }} Debt */
 
 /**
  * List what is unfinished in the project.
@@ -24,6 +24,13 @@ export function reconcile(root, ledger) {
   // Open changes are debts until they close or are parked on purpose
   for (const change of ledger.changes.filter((entry) => entry.status === "open")) {
     const where = change.station ? `inside station "${change.station}"` : `after ${change.done.at(-1) ?? "nothing"}`;
+
+    // A change paused for the person waits on purpose; it is not an abandoned station
+    if (change.paused) {
+      debts.push({ kind: "paused", detail: `${change.id} (${change.size}, ${change.type}) waits for the person ${where}: ${change.pauseReason ?? "no reason recorded"}.` });
+      continue;
+    }
+
     debts.push({ kind: change.station ? "stuck-station" : "open-change", detail: `${change.id} (${change.size}, ${change.type}) is open, ${where}.` });
   }
 

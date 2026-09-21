@@ -42,7 +42,7 @@ export function status({ root }) {
   const lines = [initialized ? "Project: initialized." : "Project: NOT initialized. Only intake, brainstorm and design are possible."];
   if (isInitializing(root)) lines.push("Debt [init]: the init station started and never finished. Finish it with the init skill.");
   if (debts.length === 0) lines.push("Rails: clean. Ready for new work.");
-  for (const debt of debts) lines.push(`Debt [${debt.kind}]: ${debt.detail}`);
+  for (const debt of debts) lines.push(debt.kind === "paused" ? `Paused: ${debt.detail}` : `Debt [${debt.kind}]: ${debt.detail}`);
   if (ledger.ideas.length > 0) lines.push(`Backlog: ${ledger.ideas.length} idea(s) parked for later.`);
 
   return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas } };
@@ -104,6 +104,7 @@ export function enter({ root, positional, flags }) {
 
   change.station = station;
   change.paused = false;
+  change.pauseReason = undefined;
   markRouted(ledger);
   saveLedger(root, ledger);
 
@@ -222,6 +223,7 @@ export function pause({ root, flags }) {
 
   const change = findChange(ledger, optional(flags.change));
   change.paused = true;
+  change.pauseReason = typeof flags.reason === "string" ? flags.reason : undefined;
   saveLedger(root, ledger);
 
   return ok(`Paused ${change.id}${flags.reason ? `: ${flags.reason}` : ""}.`);
@@ -372,6 +374,7 @@ export function proceed({ root, flags }) {
 
   const change = findChange(ledger, optional(flags.change));
   change.paused = false;
+  change.pauseReason = undefined;
   markRouted(ledger);
   saveLedger(root, ledger);
 

@@ -18,6 +18,7 @@ import { dirname, join, resolve } from "node:path";
  * @property {string[]} done stations finished
  * @property {Record<string, boolean>} checklist
  * @property {boolean} paused true while waiting for the user
+ * @property {string} [pauseReason] why it waits; kept only while `paused` is true
  * @property {string} [note]
  * @property {string} [startCommit] HEAD when the change was opened; verify scopes its diff from here
  * @property {string[]} [skipped] optional stations skipped on purpose, each with a recorded reason in `note`
