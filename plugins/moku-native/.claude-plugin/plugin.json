@@ -1,9 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
-  "name": "moku-web",
-  "displayName": "Moku Web",
+  "name": "moku-native",
+  "displayName": "Moku Native",
   "version": "0.72.0",
-  "description": "@moku-labs/web pack: Preact islands, scoped CSS and tokens, the web validator, and real-browser e2e with exploratory QA and UX review.",
+  "description": "@moku-labs/native pack: packages a Moku app as a Tauri 2 desktop or mobile app, with the permission surface generated from the composed system plugins.",
   "author": {
     "name": "Oleksandr Kucherenko",
     "email": "moku-labs@users.noreply.github.com"
@@ -12,11 +12,8 @@
   "license": "MIT",
   "keywords": [
     "moku",
-    "web",
-    "preact",
-    "islands",
-    "e2e",
-    "playwright"
+    "tauri",
+    "native"
   ],
   "dependencies": [
     "moku"

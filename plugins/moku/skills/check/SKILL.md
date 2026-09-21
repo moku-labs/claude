@@ -66,6 +66,8 @@ cache). Suggest, do not install.
 | `@moku-labs/web` | `moku-web` | The web validator and the e2e station are unavailable. |
 | `@moku-labs/worker` | `moku-worker` | No worker knowledge skill. |
 | `@moku-labs/room` | `moku-room` | No room knowledge skill. |
+| `@moku-labs/native` | `moku-native` | No native packaging knowledge skill. |
+| `@moku-labs/system` | `moku-system` | No system API knowledge skill. |
 | any UI surface | `moku-design` | The design station is unavailable; the conductor will offer to continue without it. |
 
 Report each as installed, missing-and-wanted, or installed-but-unused. An installed pack that the

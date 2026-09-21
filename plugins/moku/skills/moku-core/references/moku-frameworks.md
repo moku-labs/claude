@@ -154,10 +154,10 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../native",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.0.0",
-      "pack": "none yet: use the pack template",
-      "skill": null,
-      "pluginIndex": null,
+      "knownVersion": "0.2.1",
+      "pack": "moku-native",
+      "skill": "plugins/moku-native/skills/moku-native",
+      "pluginIndex": "plugins/moku-native/skills/moku-native/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core", "@moku-labs/common"],
       "detect": { "packageJsonDep": "@moku-labs/native" },
       "releaseSource": {
@@ -177,10 +177,10 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../system",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.0.0",
-      "pack": "none yet: use the pack template",
-      "skill": null,
-      "pluginIndex": null,
+      "knownVersion": "0.2.0",
+      "pack": "moku-system",
+      "skill": "plugins/moku-system/skills/moku-system",
+      "pluginIndex": "plugins/moku-system/skills/moku-system/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core", "@moku-labs/common"],
       "detect": { "packageJsonDep": "@moku-labs/system" },
       "releaseSource": {
@@ -197,12 +197,16 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **`common`, `native`, `system` (registered 2026-09-21, not synced yet):** the three entries carry
-> `knownVersion: "0.0.0"`, the value for a newly registered framework, so `/moku:upgrade` never fires for
-> them and the first `moku-sync <key>` treats everything as new. Upstream at registration:
-> `@moku-labs/common@0.3.1` (no `llms.txt`; the `moku:moku-common` skill in the core pack teaches it),
-> `@moku-labs/native@0.2.1` and `@moku-labs/system@0.2.0` (both ship `llms.txt`/`llms-full.txt`, both depend on
-> core and common). `native` and `system` have no pack yet, so `skill` is `null` and `pack` says so.
+> **Provenance of the `native` and `system` entries (first sync 2026-09-21):** `@moku-labs/native@0.2.1` and
+> `@moku-labs/system@0.2.0` (npm `dist-tags.latest`), catalogs generated from the `v0.2.1` / `v0.2.0` tag
+> **source**, cross-checked against the upstream `llms.txt`/`llms-full.txt`; the source wins on disagreement.
+> Both pin `@moku-labs/core@1.5.0` and `@moku-labs/common@0.3.0` exactly. `system` declares its five
+> `@tauri-apps/*` packages as **optional peers**. Packs: `moku-native`, `moku-system`.
+>
+> **`common` (registered 2026-09-21, not synced yet):** `knownVersion: "0.0.0"`, the value for a newly
+> registered framework, so `/moku:upgrade` never fires for it and the first `moku-sync common` treats
+> everything as new. Upstream at registration: `@moku-labs/common@0.3.1`, no `llms.txt`; the
+> `moku:moku-common` skill in the core pack teaches it.
 > Not registered on purpose: `@moku-labs/game` (in development, `0.0.0`) and `@moku-labs/ai` (not verified).
 
 > **Provenance of the `worker` entry (latest sync):** **re-synced 2026-06-26** to `@moku-labs/worker@0.15.0`
@@ -386,7 +390,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 | `role` | `kernel`, `framework`, or `shared-infra` for `@moku-labs/common`: plugins every framework composes, not a framework an app is created from. |
 | `layer` | Moku layer: 1 = kernel (`@moku-labs/core`), 2 = framework, 3 = app (not registered — apps deploy; see the `moku:moku-release` skill, `references/release-model.md`). |
 | `knownVersion` | Last synced version. Behind upstream ⇒ "new things available". |
-| `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, or `moku` for the core and `@moku-labs/common`. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
+| `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, or `moku` for the core and `@moku-labs/common`. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
 | `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export; both `null` while a framework has no pack). |
 | `dependsOn` | Other moku-family packages it requires (ordering hint: upgrade core before web). |
 | `detect.packageJsonDep` | Presence of this dep in a consumer's `package.json` ⇒ the framework applies to that project. |
@@ -407,8 +411,8 @@ Every framework's teaching material ships as its own marketplace plugin — a **
 | Worker | `@moku-labs/worker` | `moku-worker` |
 | Room | `@moku-labs/room` | `moku-room` |
 | AI | `@moku-labs/ai` | none yet: use the pack template |
-| System | `@moku-labs/system` | none yet: use the pack template |
-| Native | `@moku-labs/native` | none yet: use the pack template |
+| System | `@moku-labs/system` | `moku-system` |
+| Native | `@moku-labs/native` | `moku-native` |
 | Game engine (planned) | — | none yet: use the pack template |
 
 Every pack has the same shape:

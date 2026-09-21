@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "moku-room",
   "displayName": "Moku Room",
-  "version": "0.71.2",
+  "version": "0.72.0",
   "description": "@moku-labs/room pack: couch multiplayer with a shared screen and phones, WebRTC state sync and QR join.",
   "author": {
     "name": "Oleksandr Kucherenko",
