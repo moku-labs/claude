@@ -9,19 +9,22 @@ first: 506 examples became 240 and every API method is documented in the publish
 
 ### Changed
 - **The contract of an API method lives on the member of the `Api` type in `types.ts`.** Only that type ships in
-  the `.d.mts`; docs on the object literal returned by `create…Api` never reached a consumer. The implementation
-  carries no JSDoc. The new `moku-core/references/jsdoc-examples.md` is the single source; it overrides
+  the `.d.mts`; with a factory annotated `: Api`, docs on its object literal never reached a consumer. The
+  implementation carries no JSDoc. An inferred API (Nano, Micro) keeps its docs on the literal. The new `moku-core/references/jsdoc-examples.md` is the single source; it overrides
   `spec/15 §6` and the sandbox on this topic until `@moku-labs/core` follows.
 - **`@example` is no longer demanded on every export.** A public `Api` member gets a scenario: when a consumer
   calls it, a call with literal arguments in `app.<plugin>.<method>(…)` form, the result as a comment. A private
   pure function gets one literal line. A function that takes `ctx` or state, a factory and a private type get
-  none. A public member no consumer can call says `@remarks No example: <reason>` and is reported as a candidate
-  for a private API (`noExampleMembers` in the builder contract).
+  none.
+- **API means public.** A plugin API has no private or internal tier. A member called by another plugin gets its
+  example from that plugin's side (`const time = ctx.require(timePlugin); … time.pause();`). A member for which
+  no honest example can be written is an API finding: it moves off the API into a plain function, or it is
+  deleted. There is no `@remarks No example` exemption.
 - **Every example must be true.** Builders read the real signature and a test before writing one.
   `moku-style-validator` checks it (E4), next to the echo (E1), docs on the implementation (E2), an undocumented
-  `Api` member (E3), an example where none belongs (E5) and private-API candidates (E6).
+  `Api` member (E3), an example where none belongs (E5) and a member that does not belong on the API (E6).
 - **The scaffolded `eslint.config.ts` enforces the mechanical part.** Block 6 turns `require-example` and
-  `ArrowFunctionExpression` off; block 6b requires JSDoc and `@example` or `@remarks` on every `…Api` member in
+  `ArrowFunctionExpression` off; block 6b requires JSDoc and `@example`, with no exemption, on every `…Api` member in
   `src/**/types.ts`, for method and property signatures; block 6c rejects an example that is one call with bare
   identifiers, on functions and type members, in `ts` and `typescript` fences.
 
