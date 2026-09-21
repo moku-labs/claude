@@ -10,7 +10,7 @@ You describe an idea. It leads you by the hand, and refuses to let you skip the 
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.71.1-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.71.2-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugins-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
 [![tests](https://img.shields.io/badge/rails-node%3Atest-2b8a3e)](./plugins/moku/tests)

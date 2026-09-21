@@ -22,7 +22,7 @@ You produce two kinds of result. The tool runs are facts: report exactly what th
 bunx tsc --noEmit
 ```
 
-Then the project's own scripts, read from `package.json` rather than guessed: the test script (`bun run test`, or `bun test <dir>` when the orchestrator scoped you to a directory) and the lint script (`bun run lint`). Scope every command to the directory you were given; a repo-wide run when a plugin was requested wastes the turn.
+Then the project's own scripts, read from `package.json` rather than guessed: the test script (`bun run test`; when the orchestrator scoped you to a directory, the project's runner on that directory: `bunx vitest run <dir>` when `package.json` depends on `vitest`, otherwise `bun test <dir>`) and the lint script (`bun run lint`). Scope every command to the directory you were given; a repo-wide run when a plugin was requested wastes the turn.
 
 Report per command: the exact command, exit status, and each failure with file and line. Every `tsc` error is a BLOCKER. A failing test or lint run is a BLOCKER. A missing script is a WARNING, not an invention — do not substitute a command the project does not define. The `tsc --noEmit` output format (`TS####`, `file:line`) is unchanged in TypeScript 6.
 

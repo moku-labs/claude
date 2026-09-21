@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "moku-maintainer",
   "displayName": "Moku Maintainer",
-  "version": "0.71.1",
+  "version": "0.71.2",
   "description": "Maintainer tools for the moku plugin repository itself: re-vendor the Moku Core spec and sync framework knowledge from upstream releases. Not needed to build with Moku.",
   "author": {
     "name": "Oleksandr Kucherenko",
