@@ -4,7 +4,7 @@ description: Builds one Moku plugin with the same instructions as moku-builder a
 model: opus
 effort: xhigh
 color: yellow
-maxTurns: 60
+maxTurns: 80
 skills:
   - moku-core
   - moku-plugin

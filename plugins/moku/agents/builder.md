@@ -49,6 +49,12 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 4. Implement until the new tests pass and every pre-existing test still passes.
 5. Preserve the public API unless the spec's `## Changes` says otherwise. If it changes, say so in the contract — the README-freshness check will want a README update.
 
+## Lint as you go
+
+Lint each file or module right after it turns green, not once at the end: `biome check <file>` and `eslint <file>`, and fix what they report before you start the next file. A builder that saves lint for the end can run out of turns first; it then returns no contract and leaves the errors behind. The pass below is a confirmation and should find nothing new.
+
+When turns run short, stop adding code. Run the scoped checks on what exists and return the contract with `verdict: FAIL` and the open work in `blockers`. A contract with open blockers is worth more than a finished file without one.
+
 ## Scoped checks before reporting clean
 
 ```bash
