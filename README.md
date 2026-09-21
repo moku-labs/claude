@@ -10,7 +10,7 @@ You describe an idea. It leads you by the hand, and refuses to let you skip the 
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.72.0-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.73.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugins-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
 [![tests](https://img.shields.io/badge/rails-node%3Atest-2b8a3e)](./plugins/moku/tests)
@@ -101,6 +101,7 @@ Brainstorm, design, e2e and release are optional. Plan, build, verify and the cl
 | [`moku-room`](./plugins/moku-room) | `@moku-labs/room`: couch multiplayer |
 | [`moku-native`](./plugins/moku-native) | `@moku-labs/native`: packages a Moku app as a Tauri 2 desktop or mobile app |
 | [`moku-system`](./plugins/moku-system) | `@moku-labs/system`: store, notify, clipboard, tray and deep-link in the browser and in a Tauri shell |
+| [`moku-common`](./plugins/moku-common) | `@moku-labs/common`: `logPlugin`, `envPlugin`, env providers per runtime and the branded CLI kit |
 | [`moku-maintainer`](./plugins/moku-maintainer) | Re-vendors the spec and syncs framework knowledge. For this repository only, disabled by default |
 
 A new framework gets a pack from [`docs/pack-template`](./docs/pack-template) without touching the

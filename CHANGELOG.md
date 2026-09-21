@@ -2,6 +2,24 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.73.0 (2026-09-21)
+
+`@moku-labs/common` gets its pack. No code changes.
+
+### Added
+- **`moku-common`**, the `@moku-labs/common` pack, synced to `0.3.2`: `logPlugin` and `envPlugin` as the core
+  plugins a framework registers in `createCoreConfig`, the env providers per runtime (`processEnv`, `dotenv`,
+  `cloudflareBindings`, `browserEnv`, `workerSafeProcessEnv`), the branded `./cli` kit and the `./browser` entry.
+  One eval case, `common-framework-registers`.
+
+### Changed
+- **The core skill `moku-common` is now `moku-common-conventions`.** It keeps the family rules MC1–MC3 with their
+  examples and exceptions, which the `validate-common-usage` hook and `moku-structure-validator` enforce. The
+  package API moved to the pack, so the two skills no longer share a name. Every reference in the core, the
+  web, worker and design packs follows the rename.
+- The registry entry `common` points at the pack and carries `knownVersion: "0.3.2"`, so `/moku:upgrade` now
+  offers `moku-common-version` to a project that depends on the package directly.
+
 ## 0.72.0 (2026-09-21)
 
 Two frameworks get their packs. No code changes.
