@@ -2,6 +2,27 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.72.0 (2026-09-21)
+
+Two frameworks get their packs. No code changes.
+
+### Added
+- **`moku-native`**, the `@moku-labs/native` pack, synced to `0.2.1`: packaging a Moku app as a Tauri 2 desktop
+  or mobile app. The skill teaches the second `createApp` beside the web app, the shared `config.system` list,
+  the typed `cli` verbs and what stays generated. The index covers the 5 plugins, the build pipeline, the
+  capability registry and the 13 doctor checks.
+- **`moku-system`**, the `@moku-labs/system` pack, synced to `0.2.0`: store, notify, clipboard, tray and
+  deep-link behind a Tauri/web provider seam. The skill teaches the per-capability subpaths, `SystemResult`
+  narrowing, explicit notification permission and the optional `@tauri-apps/*` peers.
+- One eval case per pack: `native-second-app`, `system-result-not-runtime`.
+- Both catalogs come from the release tag source. Where upstream `llms.txt` disagrees with the source, the
+  index says so and the source wins.
+
+### Changed
+- The registry entries `native` and `system` point at their packs and carry the synced versions, so
+  `/moku:upgrade` now offers `moku-native-version` and `moku-system-version`. `/moku:check` suggests the two
+  packs when a project depends on the frameworks.
+
 ## 0.71.2 (2026-09-21)
 
 Wording left over from #15, and three frameworks join the registry. No code changes.
