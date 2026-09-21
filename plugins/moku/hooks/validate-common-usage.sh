@@ -2,7 +2,7 @@
 # PreToolUse hook: detect raw console.* / process.env / hand-rolled CLI chrome in Write/Edit content,
 # enforcing the @moku-labs/common family conventions (MC1–MC3). Blocks the tool use with a clear
 # error message so Claude can self-correct. Conservative by design — prefers NOT firing over a false
-# positive (see skills/moku-common/references/conventions.md).
+# positive (see skills/moku-common-conventions/references/conventions.md).
 
 
 INPUT=$(cat)

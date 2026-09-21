@@ -132,10 +132,10 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../common",
       "layer": 2,
       "role": "shared-infra",
-      "knownVersion": "0.0.0",
-      "pack": "moku",
-      "skill": "plugins/moku/skills/moku-common",
-      "pluginIndex": null,
+      "knownVersion": "0.3.2",
+      "pack": "moku-common",
+      "skill": "plugins/moku-common/skills/moku-common",
+      "pluginIndex": "plugins/moku-common/skills/moku-common/references/plugin-index.md",
       "dependsOn": ["@moku-labs/core"],
       "detect": { "packageJsonDep": "@moku-labs/common" },
       "releaseSource": {
@@ -203,10 +203,10 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > Both pin `@moku-labs/core@1.5.0` and `@moku-labs/common@0.3.0` exactly. `system` declares its five
 > `@tauri-apps/*` packages as **optional peers**. Packs: `moku-native`, `moku-system`.
 >
-> **`common` (registered 2026-09-21, not synced yet):** `knownVersion: "0.0.0"`, the value for a newly
-> registered framework, so `/moku:upgrade` never fires for it and the first `moku-sync common` treats
-> everything as new. Upstream at registration: `@moku-labs/common@0.3.1`, no `llms.txt`; the
-> `moku:moku-common` skill in the core pack teaches it.
+> **Provenance of the `common` entry (first sync 2026-09-21):** `@moku-labs/common@0.3.2` (npm
+> `dist-tags.latest`), catalog generated from the `v0.3.2` tag source and READMEs; upstream ships no
+> `llms.txt`. Pins `@moku-labs/core@1.6.0` exactly. Pack: `moku-common`. The family rules MC1–MC3 stay in the
+> core skill `moku:moku-common-conventions`; the pack teaches the package.
 > Not registered on purpose: `@moku-labs/game` (in development, `0.0.0`) and `@moku-labs/ai` (not verified).
 
 > **Provenance of the `worker` entry (latest sync):** **re-synced 2026-06-26** to `@moku-labs/worker@0.15.0`
@@ -390,7 +390,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 | `role` | `kernel`, `framework`, or `shared-infra` for `@moku-labs/common`: plugins every framework composes, not a framework an app is created from. |
 | `layer` | Moku layer: 1 = kernel (`@moku-labs/core`), 2 = framework, 3 = app (not registered — apps deploy; see the `moku:moku-release` skill, `references/release-model.md`). |
 | `knownVersion` | Last synced version. Behind upstream ⇒ "new things available". |
-| `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, or `moku` for the core and `@moku-labs/common`. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
+| `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, `moku-common`, or `moku` for the core. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
 | `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export; both `null` while a framework has no pack). |
 | `dependsOn` | Other moku-family packages it requires (ordering hint: upgrade core before web). |
 | `detect.packageJsonDep` | Presence of this dep in a consumer's `package.json` ⇒ the framework applies to that project. |
@@ -406,7 +406,7 @@ Every framework's teaching material ships as its own marketplace plugin — a **
 | Framework | npm | Pack |
 |---|---|---|
 | Core (kernel) | `@moku-labs/core` | `moku` |
-| Common (shared infra) | `@moku-labs/common` | `moku` |
+| Common (shared infra) | `@moku-labs/common` | `moku-common` (the MC1–MC3 rules stay in the core) |
 | Web | `@moku-labs/web` | `moku-web` |
 | Worker | `@moku-labs/worker` | `moku-worker` |
 | Room | `@moku-labs/room` | `moku-room` |

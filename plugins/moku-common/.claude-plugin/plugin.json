@@ -1,9 +1,9 @@
 {
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
-  "name": "moku-web",
-  "displayName": "Moku Web",
+  "name": "moku-common",
+  "displayName": "Moku Common",
   "version": "0.73.0",
-  "description": "@moku-labs/web pack: Preact islands, scoped CSS and tokens, the web validator, and real-browser e2e with exploratory QA and UX review.",
+  "description": "@moku-labs/common pack: the shared logPlugin and envPlugin, env providers for Node, Cloudflare Workers and the browser, and the branded CLI kit.",
   "author": {
     "name": "Oleksandr Kucherenko",
     "email": "moku-labs@users.noreply.github.com"
@@ -12,11 +12,9 @@
   "license": "MIT",
   "keywords": [
     "moku",
-    "web",
-    "preact",
-    "islands",
-    "e2e",
-    "playwright"
+    "common",
+    "logging",
+    "env"
   ],
   "dependencies": [
     "moku"

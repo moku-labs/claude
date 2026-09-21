@@ -23,7 +23,7 @@ settings. Claude Code exposes each value to hooks as `CLAUDE_PLUGIN_OPTION_<NAME
 | `astra` | boolean | `true` | Ask Astra through the Codex CLI for a second opinion on user experience and for image assets. When off, or when `moku-astra` exits 3, Fable reviews alone with the same findings schema. |
 | `art_backend` | `codex` · `api` | `codex` | `codex` draws through the ChatGPT plan. `api` calls the OpenAI Images API, bills per image and needs `OPENAI_API_KEY`. The plugin never switches to `api` by itself. |
 
-The other packs (`moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, `moku-maintainer`) declare no options.
+The other packs (`moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, `moku-common`, `moku-maintainer`) declare no options.
 
 ## 2. Project level — `.claude/moku.local.md`
 

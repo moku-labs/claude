@@ -50,7 +50,7 @@ built web client from the `ASSETS` binding. **Multiple instances, two frameworks
 folder splits are all idiomatic, not anti-patterns.** Cloudflare bindings (DO / Queue / R2 / D1 / KV) are
 exposed as **plugins** — reach them via `ctx.require(plugin)`, keep business logic in plugins (the entry
 stays thin), and read env/secrets via `ctx.env` (not raw `process.env` or bare bindings) per the
-moku-common conventions (MC2/MC3). The one hard rule: this is a **Layer-3 app** — `createApp` only, not
+`moku-common-conventions` rules (MC2/MC3). The one hard rule: this is a **Layer-3 app** — `createApp` only, not
 `createCoreConfig`/`createCore` and no direct `@moku-labs/core` dependency (idiom I1).
 
 **One worker app (idiom I6).** "Multiple instances" means one per framework: one web app, one worker app.

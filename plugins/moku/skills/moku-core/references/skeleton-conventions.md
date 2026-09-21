@@ -102,8 +102,8 @@ justification comment so the antipattern hook stays quiet, e.g.:
 
 Skeleton/plugin/CLI/script source must consume the shared `@moku-labs/common` package — these are
 enforced by the `validate-common-usage` hook and `moku-structure-validator`, so emit compliant code on
-the first try. Full rules + examples + allowed exceptions: the **moku-common** skill
-(`../../moku-common/references/conventions.md`).
+the first try. Full rules + examples + allowed exceptions: the **moku-common-conventions** skill
+(`../../moku-common-conventions/references/conventions.md`).
 
 - **MC1 — branded CLI.** Render any CLI surface (a `cli` plugin, `scripts/*.ts`, a `bin`) through
   `@moku-labs/common/cli` (`createBrandConsole`, `box`, `spinnerFrameAt`, styled `confirm`/`select`).

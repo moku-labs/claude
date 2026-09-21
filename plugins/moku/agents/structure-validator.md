@@ -8,7 +8,7 @@ maxTurns: 40
 skills:
   - moku-core
   - moku-plugin
-  - moku-common
+  - moku-common-conventions
 tools: ["Read", "Grep", "Glob", "Skill"]
 ---
 
@@ -87,7 +87,7 @@ When unsure whether a shape is idiomatic, compare it to the `demos/tracker` refe
 
 ## D. Scope for the common-usage checks
 
-Check project source that consumes `@moku-labs/common`: `src/plugins/**/*.ts` (excluding `__tests__`), `*/cli*` (a `cli` plugin or `cli.ts`), `scripts/**/*.ts`. Read the "Shared exceptions" section of `${CLAUDE_PLUGIN_ROOT}/skills/moku-common/references/conventions.md` first; it owns MC1–MC3 with rationale, detection and exceptions.
+Check project source that consumes `@moku-labs/common`: `src/plugins/**/*.ts` (excluding `__tests__`), `*/cli*` (a `cli` plugin or `cli.ts`), `scripts/**/*.ts`. Read the "Shared exceptions" section of `${CLAUDE_PLUGIN_ROOT}/skills/moku-common-conventions/references/conventions.md` first; it owns MC1–MC3 with rationale, detection and exceptions.
 
 Never flag: test files (`*.test.ts`, `*.spec.ts`, `*.test.tsx`, `*.spec.tsx`, anything under `**/__tests__/**`, `*.mock.ts`, `*.fixture.ts`, `vitest.setup.ts`, `*.config.ts`); the brand-kit source `*/common/src/cli/*` (it is the ANSI/box/spinner implementation); a `console.*` call on or under a `// @log-sink` comment; env providers (`*/env/*`, a `*EnvProvider` export, `env-provider.ts`). Do not validate the `@moku-labs/common` package's own source — these rules govern consumers.
 

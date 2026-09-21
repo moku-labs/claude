@@ -551,8 +551,8 @@ Useful directly:
 - `/moku:upgrade` — move the toolchain to the current target stack.
 
 Knowledge skills load themselves when the topic comes up: **moku-core** (architecture, factory
-chain, lifecycle, events), **moku-plugin** (plugin structure and tiers), **moku-common** (`ctx.log`,
-`ctx.env`, the branded CLI), **moku-testing**, **moku-readable-code**, plus the framework pack for
+chain, lifecycle, events), **moku-plugin** (plugin structure and tiers), **moku-common-conventions** (`ctx.log`,
+`ctx.env`, the branded CLI rules MC1–MC3), **moku-testing**, **moku-readable-code**, plus the framework pack for
 whatever this project uses.
 
 ## Specification
