@@ -3,7 +3,8 @@
  *
  * One concern: read a command the way a shell would, far enough to name its write targets. A redirect
  * writes the word after it; `tee`, `touch`, `mv`, `cp`, `install`, `ln` and `sed -i` write the files they
- * name. Text that is only data (a heredoc body, a quoted pattern, a `2>&1`) names nothing.
+ * name, also behind `xargs` and `find -exec`. Text that is only data (a heredoc body, a quoted pattern,
+ * a `2>&1`) names nothing.
  */
 
 import { posix } from "node:path";
@@ -18,7 +19,7 @@ import { posix } from "node:path";
  * @property {boolean} backtick true for a frame opened by a backtick
  */
 
-/** @typedef {{ words: string[], redirects: string[] }} Segment */
+/** @typedef {{ words: string[], redirects: string[], piped: boolean }} Segment `piped`: its output feeds the next segment */
 
 const HEREDOC = /(?<!<)<<(?!<)(-?)\s*(['"]?)(\w+)\2/g;
 const IN_PLACE = /^(-[a-zA-Z]*i|--in-place)/;
@@ -30,6 +31,12 @@ const WRITES_ALL = new Set(["tee", "touch", "mv"]);
 
 /** Commands that write their last operand. */
 const WRITES_LAST = new Set(["cp", "install", "ln"]);
+
+/** `xargs` options followed by a value of their own. */
+const XARGS_VALUE = new Set(["-I", "-n", "-P", "-d", "-L", "-s", "-E", "-a"]);
+
+/** `find` actions that run a command on what was found. */
+const FIND_EXEC = new Set(["-exec", "-execdir", "-ok", "-okdir"]);
 
 /**
  * The files a shell command writes, as written in the command. A relative target after `cd <dir>` is
@@ -44,14 +51,20 @@ const WRITES_LAST = new Set(["cp", "install", "ln"]);
 export function shellWriteTargets(command) {
   /** @type {string[]} */
   const targets = [];
+  /** @type {string[]} */
+  let piped = [];
   let directory = "";
 
   for (const segment of readSegments(withoutHeredocBodies(command))) {
     const words = commandWords(segment.words);
-    for (const target of [...segment.redirects, ...writtenOperands(words)]) targets.push(place(directory, target));
+    const written = [...segment.redirects, ...writtenOperands(words), ...handedOver(words, piped)];
+    for (const target of written) targets.push(place(directory, target));
 
     // Later targets are relative to the directory the command moved to
     if (words[0] === "cd" && words[1] && words[1] !== "-") directory = place(directory, words[1]);
+
+    // What this segment prints may become the file list of an `xargs` behind the pipe
+    piped = segment.piped ? [...piped, ...words.slice(1)] : [];
   }
 
   return targets;
@@ -100,9 +113,9 @@ function readSegments(text) {
     if (frame.word !== null) frame.expect = null;
     frame.word = null;
   };
-  const endSegment = () => {
+  const endSegment = (piped = false) => {
     endWord();
-    if (frame.words.length > 0 || frame.redirects.length > 0) segments.push({ words: frame.words, redirects: frame.redirects });
+    if (frame.words.length > 0 || frame.redirects.length > 0) segments.push({ words: frame.words, redirects: frame.redirects, piped });
     frame.words = [];
     frame.redirects = [];
   };
@@ -168,7 +181,8 @@ function readSegments(text) {
       frame.expect = "target";
       while (text[index + 1] === ">") index += 1;
     } else if (char === "&" || char === "|") {
-      endSegment();
+      // A single `|`, or `|&`, hands the output to the next segment; `||`, `&&` and `&` do not
+      endSegment(char === "|" && next !== "|");
       if (next === "&" || next === "|") index += 1;
     } else if (char === ">" || char === "<") {
       // A number glued to the operator is a file descriptor, not a word
@@ -229,9 +243,47 @@ function writtenOperands([name, ...rest]) {
 
   if (WRITES_ALL.has(name)) return operands;
   if (WRITES_LAST.has(name)) return operands.slice(-1);
-  if (name === "sed" && rest.some((word) => IN_PLACE.test(word))) return sedFiles(rest);
+  if (writes([name, ...rest])) return sedFiles(rest);
 
   return [];
+}
+
+/**
+ * The files a writer gets from somewhere else: `xargs <writer>` takes them from the pipe, and
+ * `find <paths> -exec <writer>` from the paths it searches. They cannot be known, so every word that
+ * could name them is judged. A wrapped command that does not write hands nothing over.
+ *
+ * @param {string[]} words command name first
+ * @param {string[]} piped words of the segments whose output feeds this one
+ * @returns {string[]}
+ */
+function handedOver([name, ...rest], piped) {
+  if (name === "xargs") {
+    const start = rest.findIndex((word, index) => !word.startsWith("-") && !XARGS_VALUE.has(rest[index - 1]));
+    const wrapped = start === -1 ? [] : commandWords(rest.slice(start));
+
+    return writes(wrapped) ? [...piped, ...writtenOperands(wrapped)] : [];
+  }
+
+  if (name === "find") {
+    const action = rest.findIndex((word) => FIND_EXEC.has(word));
+    const wrapped = action === -1 ? [] : commandWords(rest.slice(action + 1));
+    const searched = rest.slice(0, rest.findIndex((word) => word.startsWith("-")));
+
+    return writes(wrapped) ? [...searched, ...writtenOperands(wrapped)] : [];
+  }
+
+  return [];
+}
+
+/**
+ * Does this command write the files it is given.
+ *
+ * @param {string[]} words command name first
+ * @returns {boolean}
+ */
+function writes([name, ...rest]) {
+  return WRITES_ALL.has(name) || WRITES_LAST.has(name) || (name === "sed" && rest.some((word) => IN_PLACE.test(word)));
 }
 
 /**
