@@ -33,6 +33,19 @@ first: 506 examples became 240 and every API method is documented in the publish
   `{ log, env }`. `core-api.md`, `communication-context.md` and the registry say so. `/moku:upgrade` moves a
   framework's direct core dependency to 1.7.0.
 
+- **The packs follow npm.** Every surface was read from the tag source.
+
+  | Pack | From | To | What is new |
+  |---|---|---|---|
+  | `moku-web` | 2.2.2 | 2.3.3 | `collectionPlugin`: static-data shards, `app.collection.write` at build, `loadCollectionShard` on the client; the build `public` phase copies incrementally |
+  | `moku-worker` | 0.15.0 | 0.20.2 | `turnPlugin`: Cloudflare Realtime TURN keys as a declared resource; `DeployReport.turn`; `turn.<key>.verifyPath` |
+  | `moku-room` | 0.3.1 | 0.8.2 | at-least-once intents and the event `room:intent-undeliverable`; sync gap heal; `iceServers: "auto"`; the hub serves `GET /api/ice` |
+  | `moku-common` | 0.3.2 | 0.3.3 | pins core 1.7.0 |
+  | `moku-native` | 0.2.1 | 0.2.2 | pins core 1.6.0 and common 0.3.2 |
+  | `moku-system` | 0.2.0 | 0.2.1 | pins core 1.6.0 and common 0.3.2; `startResolution(kind, ctx, load)` |
+
+  `/moku:upgrade` moves projects to these versions. No breaking change for consumers in any of the six ranges.
+
 ### Fixed
 - **The skeleton templates no longer teach the echo.** `plan-templates.md` stubs carried
   `const api = createApi(ctx);`; the `moku-common-conventions` sample carried `const api = createMailerApi(ctx);`.
