@@ -75,9 +75,12 @@ over cleverness).
 ## Moku conventions (keep consistent)
 
 - Helpers are defined **above** the function that uses them (file convention).
-- Module-private helpers still get **full JSDoc** (description, `@param`, `@returns`,
-  `@example`) per the repo's eslint-plugin-jsdoc rules — `import type`, `@param name -
-  desc`, blank line before tags. See the `moku-core` skill §JSDoc and `moku-style-validator`.
+- Module-private helpers still get JSDoc (description, `@param`, `@returns`) per the repo's
+  eslint-plugin-jsdoc rules — `import type`, `@param name - desc`, blank line before tags.
+  `@example` only on a pure helper, as one line with literals and the result
+  (`passesNarrow({ intent: "merge" }, { intent: "sell" }); // false`); none on a helper that takes
+  `ctx`/state, and never an echo of the signature. See the `moku-core` skill
+  `references/jsdoc-examples.md` and `moku-style-validator`.
 - Do not add abstraction modules or defensive code that was not asked for. Cohesion and
   deletion — not accretion — are the tells of hand-crafted code.
 

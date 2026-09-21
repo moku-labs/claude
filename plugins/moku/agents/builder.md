@@ -30,7 +30,8 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 - Leave framework files alone — `src/config.ts`, `src/index.ts`, `src/plugins/index.ts`, `package.json`, build and tsconfig files. The orchestrator wires your plugin in after verification. A new dependency goes in the contract, not in `package.json`.
 - The orchestrator commits after verification, so do not commit and do not run `git add`.
 - Repo-wide commands (`eslint .`, project-wide `tsc`, a test run with no path) disturb the other builders. Scope everything to your directory.
-- Obey the Moku Code Rules R1–R9 and `skeleton-conventions.md`.
+- Obey the Moku Code Rules R1–R9, `skeleton-conventions.md` and `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`.
+- API method docs go on the members of the `Api` type in `types.ts`, with a scenario `@example`; the implementation in `api.ts` carries none. Before writing an `@example`, read the real signature and a test that asserts the result. Never echo the signature (`const api = createApi(ctx);`).
 
 **Framework plugin vs consumer-app plugin.** The job is identical; two things differ. A framework plugin imports `createPlugin` from `../../config`; a consumer-app plugin (Layer 3 — no `src/config.ts`) imports it from the framework package, such as `@moku-labs/web`, never from `@moku-labs/core`. Wiring also differs: a framework plugin goes into the `src/plugins/index.ts` barrel and the `createCore` plugins array, a consumer plugin into the `createApp({ plugins: [...] })` array. Either way the orchestrator wires you in. See `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`.
 
@@ -81,6 +82,7 @@ Prose summary first, then the fenced block as your last message. A run that ends
   "lint": {"biome": "clean | N findings", "eslint": "clean | N findings"},
   "newDependencies": ["pkg@version", "..."],
   "publicApiChanged": true,
+  "noExampleMembers": ["time.pause — only lifecycle calls it"],
   "blockers": [{"file": "path", "line": N, "message": "...", "fix": "..."}]
 }
 ```
@@ -89,3 +91,4 @@ Prose summary first, then the fenced block as your last message. A run that ends
 - `preexistingGreen` — delta only.
 - `publicApiChanged` — true when the `api:`, events or `Config` surface changed.
 - `newDependencies` — packages for the orchestrator to add.
+- `noExampleMembers` — every public `Api` member you marked `@remarks No example:`, with the reason. Each is a candidate for a private API; the orchestrator reports them to the user.

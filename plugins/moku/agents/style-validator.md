@@ -13,7 +13,7 @@ tools: ["Read", "Grep", "Glob"]
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 
-You check how source reads: part A judges function bodies, part B judges JSDoc. Both are structure and documentation only — never propose a change to a signature, return type, error message or control flow.
+You check how source reads: part A judges function bodies, part B judges JSDoc. For where JSDoc and `@example` go, the authority is `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`; open it before part B. It overrides `spec/15-PLUGIN-STRUCTURE.md §6` and the sandbox on that topic. Both are structure and documentation only — never propose a change to a signature, return type, error message or control flow.
 
 The authoritative style for part A is the moku-readable-code skill: open `${CLAUDE_PLUGIN_ROOT}/skills/moku-readable-code/SKILL.md` and apply its 10 rules and exemptions as written.
 
@@ -38,7 +38,7 @@ A function is a wall of text when its body is non-trivial (roughly 8+ body lines
 
 ### 1. Presence
 
-Every source file (`src/**/*.ts`) carries JSDoc on exported functions (arrow, declaration, expression), classes, type aliases, interfaces, methods, public class members, and `const`/`let` bindings — including factory-result consts and destructured exports (see §2). Test files (`tests/**/*.ts`, `**/__tests__/**`) and config files (`*.config.ts`) are exempt.
+Every source file (`src/**/*.ts`) carries JSDoc on exported functions (arrow, declaration, expression), classes, type aliases, interfaces, methods, public class members, and `const`/`let` bindings — including factory-result consts and destructured exports (see §2). Test files (`tests/**/*.ts`, `**/__tests__/**`) and config files (`*.config.ts`) are exempt. One more exemption: the members of the object literal returned by a `create…Api` factory carry no JSDoc when an `Api` type exists — their contract lives on the type member (see §5, E2).
 
 ### 2. Export-shape gaps (the silent false-passes)
 
@@ -70,15 +70,26 @@ Fix for A and B: an explicit, individually documented `export const x = source.x
 
 ### 3. Required tags
 
-Functions: `@param` for every parameter with a description, `@returns` with a description (for void, describe the side effect), `@example` with working code. Types and interfaces: what the type represents, when it is used and why it exists. Plugin `index.ts`: tier annotation (Nano/Micro/Standard/Complex/VeryComplex), what the plugin does, the events it emits, `@see README.md`.
+Functions: `@param` for every parameter with a description, `@returns` with a description (for void, describe the side effect). `@example` is required in one place only: every member of a public `…Api` type, unless the member carries `@remarks No example: <reason>`. Do NOT flag a missing `@example` on a private function, a function that takes `ctx`/state/modules, a `create…State` or `create…Api` factory, or a private type (`State`, `…Ctx`, internal records). Types and interfaces: what the type represents, when it is used and why it exists. Plugin `index.ts`: tier annotation (Nano/Micro/Standard/Complex/VeryComplex), what the plugin does, the events it emits, `@see README.md`.
 
 ### 4. Description quality
 
 A description explains what the function or type does, where it is used when that is not obvious, why it exists, what types it works with for generics, and what it returns beyond the signature. A description that restates the name (`/** Gets the count. */` on `getCount`) is low quality; `/** Returns the current counter value. Used by the dashboard to display live metrics. */` is the shape to ask for.
 
-### 5. Example quality
+### 5. Example placement, quality and truth
 
-Examples are syntactically correct TypeScript, runnable or clearly marked pseudo-code, demonstrate the primary use case, and show expected output where it helps.
+Apply the table in `jsdoc-examples.md`. The checks, each with its severity:
+
+| Id | Finding | Severity |
+|---|---|---|
+| E1 | **Signature echo.** The whole example is one call whose arguments are bare identifiers: `shut(gate);`, `const api = createClockApi(ctx);`. | BLOCKER |
+| E2 | **Docs on the implementation.** JSDoc sits on a member of the object literal returned by `create…Api` while an `Api` type exists. Only the type ships in the `.d.mts`, so the consumer sees nothing on hover. Fix: move description, `@param`, `@returns`, `@throws` and any behaviour note onto the type member; delete the block on the implementation. | BLOCKER |
+| E3 | **Undocumented public member.** A member of a public `…Api` type has no JSDoc, or has neither `@example` nor `@remarks No example:`. | BLOCKER |
+| E4 | **Untrue example.** Verify every example on a public member against the source: the called method exists on the `Api` type (grep it); the argument count and the literal shapes match the signature; a result comment matches the return type, and the asserting test in `__tests__/` when one exists; it shows the consumer's call (`app.<plugin>.<method>(…)`), not the framework's internal use; it uses nothing that exists in one runtime only when the plugin is isomorphic. Cite the line that contradicts it. | BLOCKER |
+| E5 | **Example where none belongs.** `@example` on a function that takes `ctx`/state/modules, on a `create…State`/`create…Api` factory, or on a private type. Fix: delete the example, keep description and tags. | WARNING |
+| E6 | **Private-API candidate.** A public member marked `@remarks No example:`. Not a defect in the docs — report it so the owner can decide to move it off the public API. | INFO |
+
+A scenario example has three parts: one comment line that says when a consumer calls it, a call with literal arguments, the result as a trailing comment. 2–6 lines.
 
 ```typescript
 /**
@@ -86,16 +97,17 @@ Examples are syntactically correct TypeScript, runnable or clearly marked pseudo
  *
  * @param path - The target route path (e.g., '/about', '/users/123')
  * @returns void
- *
  * @example
  * ```typescript
- * const router = app.router;
- * router.navigate('/about');
- * console.log(router.current()); // '/about'
+ * // The user picks "About" in the menu.
+ * app.router.navigate('/about');
+ * app.router.current(); // '/about'
  * ```
  */
 navigate: (path: string) => void;
 ```
+
+A private pure function gets one line with literals and the result, and nothing more: `passesNarrow({ intent: "merge" }, { intent: "sell" }); // false`.
 
 ### 6. Syntax rules
 
@@ -103,7 +115,7 @@ navigate: (path: string) => void;
 
 ### 7. Special cases
 
-A generic type alias documents what it extracts and who consumes it, with an `@example` showing the resolved type. A factory returning closures documents the `ctx` parameter, where the returned methods are mounted (`app.router`), and the returned API shape.
+A generic type alias documents what it extracts and who consumes it; when it is public, with an `@example` showing the resolved type. A factory returning closures documents the `ctx` parameter, where the returned methods are mounted (`app.router`), and the returned API shape.
 
 ## Process
 
@@ -111,8 +123,8 @@ A generic type alias documents what it extracts and who consumes it, with an `@e
 2. For each file, locate every non-trivial function body and apply part A with the exemptions. In `src/index.ts`, also check the `createApp`/`createPlugin` entry exports for the opaque wrapper form (flag #8).
 3. In the same pass, inventory the exports, including the grep seeds for Gap A and Gap B, and apply part B.
 4. For each readability offender record file, function name, body start and end lines, body line count, the violated rule numbers, and a concrete fix — which stanzas to split and their intent comments, which compound boolean becomes a named predicate, which literal becomes a named constant, which block becomes a helper (balanced; cite rule 9 when a stanza suffices instead of extraction).
-5. For each JSDoc finding record file, export name, what is missing (block, `@param`, `@returns`, `@example`, quality) and the fix.
+5. For each JSDoc finding record file, export name, what is missing (block, `@param`, `@returns`, quality) or which example check failed (E1–E6), and the fix. For E4 open the `Api` type and the plugin's `__tests__/` before judging; never pass an example you did not check.
 
 ## Output
 
-A short prose report — a readability table per file (function, lines, body size, rules, severity, issue) with the fixes underneath, then the JSDoc findings per file — followed by the fenced `json` contract from the preamble with `"agent": "moku-style-validator"`. `verdict` is FAIL when any blocker stands, PASS otherwise. Clear black-box bodies and missing JSDoc on public exports go in `blockers` with a structure-only `fix`; borderline readability and low-quality descriptions go in `warnings`.
+A short prose report — a readability table per file (function, lines, body size, rules, severity, issue) with the fixes underneath, then the JSDoc findings per file — followed by the fenced `json` contract from the preamble with `"agent": "moku-style-validator"`. `verdict` is FAIL when any blocker stands, PASS otherwise. Clear black-box bodies, missing JSDoc on public exports and E1–E4 go in `blockers` with a structure-only or comment-only `fix`; borderline readability, low-quality descriptions and E5 go in `warnings`. List the E6 members in the prose report under "Private-API candidates".

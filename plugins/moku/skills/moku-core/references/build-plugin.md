@@ -13,9 +13,13 @@ with `skeleton-conventions.md` (hook-compliant authoring) and `house-style.md` (
 6. `onStart`/`onStop` only for a real resource (listener, server, handle). `onStop` receives only
    `{ global }` — capture references in a closure during `onStart`. Keeping DOM or nav listeners is
    fine; add `// @no-resource-check — <why>` so the hook stays quiet.
-7. `import type` for every type-only import. Full multi-line JSDoc (`@param`/`@returns`/`@example`) on
-   every export. No `@returns` on throw-only stubs; `jsdoc/tag-lines` wants 1 blank line after the
-   description and 0 between tags.
+7. `import type` for every type-only import. Multi-line JSDoc with `@param`/`@returns` on every
+   export. `@example` only where `jsdoc-examples.md` asks for it: a scenario on every member of the
+   public `Api` type in `types.ts`, one literal line on a private pure function, none on a function
+   that takes `ctx`/state, never an echo of the signature. API method docs go on the `Api` type
+   member, never on the implementation in `api.ts` — only the type ships in the `.d.mts`. No
+   `@returns` on throw-only stubs; `jsdoc/tag-lines` wants 1 blank line after the description and 0
+   between tags.
 8. No inline type assertions (`x as T`, `{} as T`, `null as T`) in `createState`/`config` — use typed consts.
 9. Injectable and exported function types are structural (your own `interface`/`type`), never a runtime
    package's namespace type (`import("bun").SpawnOptions.X`) — that breaks the bundled `.d.ts` even

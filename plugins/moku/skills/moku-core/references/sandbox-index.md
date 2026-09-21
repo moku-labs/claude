@@ -53,7 +53,9 @@ plugin's size to decide the file split.
    `types.ts` (`type XCtx = PluginCtx<Config, State, Events>` alias) · `handlers.ts`
    (event-handler factories curried as `(ctx) => (payload) => {…}`). Factories are **arrow functions**.
 3. **JSDoc:** multi-line everywhere (`@param {Type} name - desc`, `@returns`, `@throws`,
-   `@example` fenced ```typescript blocks). Never single-line `/** … */`.
+   `@example` fenced ```typescript blocks). Never single-line `/** … */`. For WHERE the docs and
+   `@example` go, follow `jsdoc-examples.md`, not the sandbox: the sandbox still documents the
+   implementation in `api.ts`, and that never reaches the published types.
 4. **Errors:** two-line format `[<framework-or-plugin>] <what>.\n  <how to fix>.`
 5. **Events:** `events: register => ({ "auth:login": register<{ userId: string }>("desc") })`;
    naming `pluginName:action`. No explicit generics on `createPlugin`.

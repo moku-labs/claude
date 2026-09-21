@@ -494,10 +494,6 @@ export const [coreName] = createCorePlugin("[core-name]", {
    * Creates initial core plugin state.
    *
    * @param _ctx - Core plugin context (unused in skeleton).
-   * @example
-   * ```ts
-   * const state = createState(ctx);
-   * ```
    */
   createState(_ctx) {
     return {};
@@ -506,10 +502,6 @@ export const [coreName] = createCorePlugin("[core-name]", {
    * Creates the core plugin API surface.
    *
    * @param _ctx - Core plugin context (unused in skeleton).
-   * @example
-   * ```ts
-   * const api = coreApi(ctx);
-   * ```
    */
   api(_ctx) {
     return {};
@@ -609,10 +601,25 @@ export type State = {
 };
 export type Api = {
   // Use concrete method signatures from the plugin spec — not unknown.
-  // Example: methodName(arg: ConcreteType): ReturnType;
-  // placeholder method signatures per spec
+  // The contract lives HERE, not on the implementation in api.ts: only this type ships in the .d.mts.
+  /**
+   * [What the method does and why a consumer calls it — from the spec `## API` section.]
+   *
+   * @param arg - [description]
+   * @returns [description]
+   * @example
+   * ```ts
+   * // [When a consumer calls it.]
+   * app.[name].methodName("literal"); // [the real result]
+   * ```
+   */
+  methodName(arg: ConcreteType): ReturnType;
 };
 ~~~
+
+**Note:** Every `Api` member carries its JSDoc and a scenario `@example` (lint blocks 6b and 6c in
+`tooling-config.md` enforce it). Factories, `State` and functions that take `ctx` get a description and
+tags but no `@example`. Full rules: `jsdoc-examples.md`.
 
 **Note:** When generating skeleton-spec.md in Stage 3, populate `types.ts` with the actual method signatures and parameter types from the plugin's spec `## API` section. Use concrete types (e.g., `PixelData[]`, `FilterResult`) rather than `unknown` or `unknown[]`. The skeleton should be type-correct even before implementation — stubs in `api.ts` use `throw new Error("not implemented")` but the type signatures must match the spec.
 
@@ -629,10 +636,6 @@ import type { Config, State } from "./types";
  * @param _ctx - Minimal context with global and config.
  * @param _ctx.global - Global plugin registry.
  * @param _ctx.config - Resolved plugin configuration.
- * @example
- * ```ts
- * const state = createState({ global: {}, config: {} });
- * ```
  */
 export function createState(_ctx: {
   readonly global: Readonly<Record<string, unknown>>;
@@ -657,10 +660,6 @@ import type { Api } from "./types";
  * Creates the [name] plugin API surface.
  *
  * @param _ctx - Plugin context (unused in skeleton).
- * @example
- * ```ts
- * const api = createApi(ctx);
- * ```
  */
 export function createApi(_ctx: unknown): Api {
   throw new Error("not implemented");

@@ -88,11 +88,6 @@ import type { PluginCtx } from "@moku-labs/core";
  *
  * @param ctx - Plugin context (carries ctx.log + ctx.env from the common core plugins).
  * @returns The mailer API.
- * @example
- * ```ts
- * const api = createMailerApi(ctx);
- * api.send("hi@moku.dev");
- * ```
  */
 export const createMailerApi = (ctx: PluginCtx) => ({
   send: (to: string) => {

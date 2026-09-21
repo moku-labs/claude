@@ -131,7 +131,7 @@ The checker's one architecture BLOCKER is I1: a Layer-3 app that defines a frame
 - Structure: `src/config.ts`, `src/index.ts` and `src/plugins/` only. Any other root file or folder is justified to the user explicitly.
 - Consumer code imports `createApp` and `createPlugin` from the framework package, never from `@moku-labs/core`.
 - Include `onStart`/`onStop` only when there is a real resource to manage, and say why in the spec either way.
-- Every spec carries package dependencies, a testing strategy, verification criteria, full JSDoc requirements, and a consumer-API example with every plugin method typed.
+- Every spec carries package dependencies, a testing strategy, verification criteria, JSDoc requirements per `moku-core/references/jsdoc-examples.md` (the contract and a scenario `@example` on every `Api` type member), and a consumer-API example with every plugin method typed.
 - Specs are self-contained: someone reading them implements the whole thing without asking further questions.
 - Record non-obvious trade-offs in `.planning/decisions.md` per `decision-knowledge-graph.md`, so a later agent does not undo an intentional choice.
 - Read `.planning/STATE.md` at the start of each stage and write it at the end, refreshing the `## Recovery` block so a cold session rehydrates in one read.

@@ -260,7 +260,7 @@ All kernel errors: `[framework-name] <description>.\n  <actionable suggestion>.`
 
 ## Quality Requirements
 
-- Full JSDoc on all exported functions, types, and interfaces
+- JSDoc on all exported functions, types, and interfaces. API method docs and a scenario `@example` live on the members of the `Api` type in `types.ts`, never on the implementation; no `@example` on functions that take `ctx`; never a signature echo. See `references/jsdoc-examples.md`.
 - `import type` enforced via `@typescript-eslint/consistent-type-imports`
 - Biome formatting: 2-space indent, double quotes, semicolons, trailing commas off
 - ESLint: unicorn, sonarjs, jsdoc plugins active
@@ -289,6 +289,7 @@ For detailed specifications, consult:
 - `references/memory-schema.md` — `.planning/` durable layer + STATE.md Recovery block for fast multi-session resume
 - `references/tool-scoping.md` — Per-stage tool posture: why path-based write gates live in hooks, not `disallowed-tools`
 - `references/skeleton-conventions.md` — Hook-compliant authoring rules (≤30-line index, typed config, structural types, JSDoc) — read before writing skeleton/plugin source
+- `references/jsdoc-examples.md` — Where JSDoc and `@example` go: the contract on the `Api` type member, none on the implementation, no signature echo, every example true — read before writing or reviewing any JSDoc
 - `references/house-style.md` — Approved repo conventions validators do not block (api: createApi, framework test bootstrap, per-event register)
 - `references/glossary.md` — Domain terms + ESLint abbreviation allowList so agents/spell-check don't "correct" valid names
 

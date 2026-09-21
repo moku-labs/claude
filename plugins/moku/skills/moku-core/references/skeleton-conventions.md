@@ -69,7 +69,11 @@ the shipped type resolves to `undefined` even though `tsc --noEmit` passes. Decl
 
 ## 5. JSDoc (matches `jsdoc/*` + the project ESLint config)
 
-- Multi-line only (never single-line `/** … */`). `@example` on every exported function.
+- Multi-line only (never single-line `/** … */`). `@example` only where `jsdoc-examples.md` asks for
+  it: a scenario on every member of the public `Api` type, one literal line on a private pure
+  function, none on a function that takes `ctx`/state, never an echo of the signature.
+- API method docs live on the `Api` type member in `types.ts`. The object literal returned by
+  `create…Api` carries no JSDoc: only the type ships in the `.d.mts`.
 - **Omit `@returns` on throw-only stubs**; require it on value-returning functions. Use typed
   `@throws {Error}`. `@param` names must match exactly (including `_unused` and destructured sub-props).
 - `jsdoc/tag-lines`: exactly 1 blank line between the description and the first tag, 0 between tags.
