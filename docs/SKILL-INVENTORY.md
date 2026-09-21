@@ -4,7 +4,7 @@ A discoverability map of what each plugin brings into a session, so the componen
 rough context cost) is visible before relying on it. Use `claude plugin details <name>` for the live
 component list and `/usage` for actual token spend.
 
-One marketplace, eight plugins: the core (`moku`), one pack per framework, and a maintainer pack.
+One marketplace, nine plugins: the core (`moku`), one pack per framework, and a maintainer pack.
 A pack depends on `moku` and never reaches core files by path — it loads the `moku:moku-core` skill
 with the Skill tool and reads `references/<file>` under the base directory the tool prints.
 
@@ -17,6 +17,7 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 | `moku-room` | 1 | — | — | — | enabled |
 | `moku-native` | 1 | — | — | — | enabled |
 | `moku-system` | 1 | — | — | — | enabled |
+| `moku-common` | 1 | — | — | — | enabled |
 | `moku-maintainer` | 2 | — | — | — | `defaultEnabled: false` |
 
 ---
@@ -52,7 +53,7 @@ Model-invocable, no `model`/`effort` — they inherit the session.
 | `moku-plugin` | plugin structure, complexity tiers, createPlugin layout | Tiered plugin file organization (Nano → VeryComplex), naming, the wiring-harness rule, Layer-3 consumer plugins |
 | `moku-testing` | TDD, mock context, moku test patterns | Red → Green → Refactor protocol, mock-ctx and `createTestApp` scaffolds, type-level tests |
 | `moku-readable-code` | readable code, wall of text, stanza style | The 10-rule stanza style; paired with `moku-style-validator` |
-| `moku-common` | @moku-labs/common, branded cli, ctx.log, ctx.env | MC1–MC3 in `references/conventions.md`; paired with `moku-structure-validator` and the `validate-common-usage` hook |
+| `moku-common-conventions` | MC1–MC3, raw console or process.env in moku, log sink | MC1–MC3 in `references/conventions.md`; paired with `moku-structure-validator` and the `validate-common-usage` hook |
 | `moku-readme` | root readme, moku-labs readme style | The root-README house style: masthead, badges, central table, mermaid, footer |
 
 ### Agents (13)
@@ -156,6 +157,16 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
   Full catalog in `references/plugin-index.md`.
 - **Evals (1):** `system-result-not-runtime` — capabilities from their subpaths, outcomes narrowed from
   the result, no runtime branching and no hand-written fallbacks.
+
+## `moku-common` — the `@moku-labs/common` pack
+
+- **Skills (1):** `moku-common` — the shared package, synced to `0.3.2`: `logPlugin` and `envPlugin` as
+  core plugins a framework registers in `createCoreConfig`, the env providers per runtime (`processEnv`,
+  `dotenv`, `cloudflareBindings`, `browserEnv`, `workerSafeProcessEnv`), the branded `./cli` kit and the
+  `./browser` entry. The rules MC1–MC3 stay in the core skill `moku-common-conventions`. Full catalog in
+  `references/plugin-index.md`.
+- **Evals (1):** `common-framework-registers` — a framework registers the two core plugins once with a
+  provider; a consumer app inherits `ctx.log` / `ctx.env`.
 
 ## `moku-maintainer` — this repository's own tooling
 
