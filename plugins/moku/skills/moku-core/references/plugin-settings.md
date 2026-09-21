@@ -51,6 +51,7 @@ Anything about this repository's moku setup worth keeping next to the settings.
 | `autoFormat` | true | Run `bun run format` after edits. |
 | `bundleSizeTarget.js` | 8 | JS bundle target in KB, gzipped. |
 | `bundleSizeTarget.css` | 10 | CSS bundle target in KB, gzipped. |
+| `pluginIndexMaxLines` | 40 | Effective wiring lines the write hook allows in `plugins/*/index.ts`. |
 
 Model choice is not a project setting any more: every agent and skill pins `model` and `effort` in
 its own frontmatter (`DECISIONS §4`). Notification and sound settings are gone with the hooks that

@@ -8,7 +8,7 @@ import { after, describe, it } from "node:test";
 
 import { exitCodeFor, formatReport } from "../../lib/verify/report.mjs";
 import { verifyPlugin } from "../../lib/verify/verify.mjs";
-import { exportName, judgeWiring } from "../../lib/verify/wiring.mjs";
+import { exportName, judgeWiring, testCommand } from "../../lib/verify/wiring.mjs";
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "bin", "moku-verify-artifacts");
 const roots = [];
@@ -170,3 +170,16 @@ function run(args) {
     return { status: error.status, output: `${error.stdout ?? ""}${error.stderr ?? ""}` };
   }
 }
+
+describe("testCommand", () => {
+  it("runs Vitest when the project tests with Vitest", () => {
+    const manifest = { devDependencies: { vitest: "^3.2.0" }, scripts: { test: "vitest run" } };
+
+    assert.deepEqual(testCommand(manifest, "src/plugins/time"), { command: "bunx", args: ["vitest", "run", "src/plugins/time"] });
+  });
+
+  it("keeps bun test for a project without Vitest, or without a manifest", () => {
+    assert.deepEqual(testCommand({ devDependencies: {} }, "src/plugins/time"), { command: "bun", args: ["test", "src/plugins/time"] });
+    assert.deepEqual(testCommand(undefined, "src/plugins/time"), { command: "bun", args: ["test", "src/plugins/time"] });
+  });
+});

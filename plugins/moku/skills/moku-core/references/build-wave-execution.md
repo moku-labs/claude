@@ -85,10 +85,11 @@ contract. Pass it: plugin name and tier, the spec, the framework config, the dep
 the relevant decisions, and a **mode** — `greenfield` (net-new, tests fail on stubs first) or `delta`
 (an existing plugin: keep existing tests green, add RED-first tests for the new behavior only).
 
-For a wave with more than one builder, spawn each with `isolation: "worktree"` and merge each worktree
-back after it verifies. Builders write to disjoint plugin directories, but a repo-wide command or a
-stray `git checkout` from one reaches all of them — that reverted a sibling's plugin to stubs in a
-real build. The worktree is the isolation; the command ban in the prompt is the backup.
+All builders of a wave run in the one working tree. Do not spawn them with `isolation: "worktree"`: a
+git worktree has no `node_modules` and no `.planning/` (both are gitignored), so the builder would get
+no tooling and no spec. Two rules are the isolation instead. Each builder writes only inside its own
+`src/plugins/{name}/`, and the prompt bans repo-wide commands and git mutations — a stray
+`git checkout` from one builder reverted a sibling's plugin to stubs in a real build.
 
 ### Builder prompt
 
@@ -209,7 +210,9 @@ End your response with a fenced `json` code block:
 
 ### Agent turn limits
 
-TDD costs roughly 30% more turns than writing the implementation alone.
+TDD costs roughly 30% more turns than writing the implementation alone. The table is the budget per
+tier. The hard stop is the agent's own `maxTurns`: 60 for `moku-builder`, 80 for `moku-builder-deep`,
+which is why Complex and VeryComplex plugins go to the deep builder.
 
 | Tier | maxTurns |
 |------|----------|
@@ -219,7 +222,8 @@ TDD costs roughly 30% more turns than writing the implementation alone.
 | Complex | 70 |
 | VeryComplex | 80 |
 
-Near the limit with files missing, the builder finishes the GREEN phase first. Priority order:
+Builders lint each file as it turns green, so the final scoped pass finds nothing new and the output
+contract is never lost to a lint backlog. Near the limit with files missing, the builder finishes the GREEN phase first. Priority order:
 types.ts → index.ts (skeleton) → tests → state.ts → api.ts → handlers.ts → index.ts (final) → README.md.
 Tests come before implementation because failing tests still work as an executable spec.
 

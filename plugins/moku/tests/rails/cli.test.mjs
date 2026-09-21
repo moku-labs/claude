@@ -197,6 +197,44 @@ describe("moku-rails: the habit tracker walkthrough", () => {
   });
 });
 
+describe("moku-rails: a paused change", () => {
+  function paused() {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-09-21-flow", "--size", "M", "--type", "feature");
+    rails(root, "skip", "design", "--reason", "no screens");
+    rails(root, "enter", "plan");
+    rails(root, "pause", "--reason", "waiting for delta-spec approval");
+    return root;
+  }
+
+  it("reads as paused with its reason, not as a stuck station", () => {
+    const status = rails(paused(), "status").text;
+
+    assert.match(status, /Paused: 2026-09-21-flow .* inside station "plan": waiting for delta-spec approval\./);
+    assert.doesNotMatch(status, /stuck-station/);
+  });
+
+  it("reads as a stuck station again once work continues", () => {
+    const root = paused();
+    rails(root, "continue");
+
+    const status = rails(root, "status").text;
+
+    assert.match(status, /Debt \[stuck-station\]/);
+    assert.doesNotMatch(status, /waiting for delta-spec approval/);
+  });
+
+  it("says so when no reason was recorded", () => {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-09-21-flow", "--size", "M", "--type", "feature");
+    rails(root, "skip", "design", "--reason", "no screens");
+    rails(root, "enter", "plan");
+    rails(root, "pause");
+
+    assert.match(rails(root, "status").text, /Paused: .*no reason recorded\./);
+  });
+});
+
 describe("moku-rails: sessions, scope and recorded skips", () => {
   it("reports rails off in a directory nobody started a session in", () => {
     const root = mkdtempSync(join(tmpdir(), "moku-plain-"));

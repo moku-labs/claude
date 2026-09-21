@@ -13,7 +13,9 @@ already satisfies these. Read this BEFORE writing any plugin source.
 
 The plugin `index.ts` connects domain code to the system. It is NOT where logic lives. Effective
 lines (excluding the JSDoc header, blank lines, and `import` lines) must be ≤30. Start from this
-literal template and fill the blanks — do not author freehand and shrink afterward:
+literal template and fill the blanks — do not author freehand and shrink afterward. A Very Complex
+wiring harness may take ~40 (`spec/15 §2.5`); the write hook refuses above 40, or above
+`pluginIndexMaxLines` from `.claude/moku.local.md`:
 
 ```typescript
 /**

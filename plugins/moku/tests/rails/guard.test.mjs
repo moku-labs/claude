@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { guardWrite } from "../../lib/rails/guard.mjs";
+import { guardShell, guardWrite } from "../../lib/rails/guard.mjs";
+import { shellWriteTargets } from "../../lib/rails/shell.mjs";
 
 const building = [{ status: "open", station: "build" }];
 
@@ -66,5 +67,54 @@ describe("guardWrite", () => {
     const verdict = guardWrite("src/main.ts", { onRails: true, initialized: true, changes: [{ status: "closed", station: "build" }] });
 
     assert.equal(verdict.allow, false);
+  });
+});
+
+describe("guardShell", () => {
+  const planning = { onRails: true, initialized: true, changes: [{ status: "open", station: "plan" }] };
+  const allowed = (command) => assert.equal(guardShell(command, planning).allow, true, command);
+  const refused = (command) => assert.equal(guardShell(command, planning).allow, false, command);
+
+  it("lets a read-only command through although it redirects stderr and names src/", () => {
+    allowed("grep -rn createPlugin src/ 2>/dev/null");
+    allowed("grep -c '=>' src/index.ts 2>&1");
+    allowed('count=$(grep -rn createPlugin src/ 2>/dev/null | wc -l); echo "$count"');
+  });
+
+  it("lets a planning document be written although its body is full of source paths", () => {
+    allowed("cat > .planning/STATE.md <<'EOF'\n## Next\nbuild src/kit.ts\nEOF");
+    allowed("cat >> .planning/specs/03-flow.md <<EOF\ncat > src/plugins/flow/index.ts\nEOF");
+    allowed("sed -i '' 's#src/old.ts#src/new.ts#' .planning/specs/03-flow.md");
+    allowed("echo 'see src/kit.ts' | tee -a .planning/notes.md");
+  });
+
+  it("still refuses a redirect into a source file", () => {
+    refused("cat > src/plugins/x/index.ts <<'EOF'\nexport {};\nEOF");
+    refused('echo x > "src/a.ts"');
+    refused("cmd &> src/a.ts");
+    refused("echo x >> ./src/a.ts");
+    refused('note="$(date > src/stamp.ts)"');
+  });
+
+  it("still refuses the commands that write the files they name", () => {
+    refused("touch src/plugins/x/index.ts");
+    refused("cp /tmp/draft.ts src/plugins/x/api.ts");
+    refused("mv src/plugins/x/api.ts src/plugins/x/state.ts");
+    refused("git status && sed -i 's/a/b/' src/main.ts");
+    refused("echo x | tee src/a.ts");
+  });
+
+  it("judges the file a command writes, so copying a source file out is no write to it", () => {
+    allowed("cp src/main.ts /tmp/main.backup.ts");
+  });
+
+  it("follows cd, so a relative target lands in the directory the command moved to", () => {
+    assert.deepEqual(shellWriteTargets("cd ../web && echo x > src/a.ts"), ["../web/src/a.ts"]);
+    assert.deepEqual(shellWriteTargets("cd /tmp/other; touch src/a.ts"), ["/tmp/other/src/a.ts"]);
+    allowed("cd ../web && echo x > src/a.ts");
+  });
+
+  it("scans the rest of the command when a heredoc never closes", () => {
+    refused('echo "<< EOF"\ntouch src/a.ts');
   });
 });
