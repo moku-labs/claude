@@ -21,7 +21,7 @@ ctx.emit('page:render', { path: '/about', html: '<h1>About</h1>' });  // OK
 ctx.emit('unknown:event', { anything: true });                         // COMPILE ERROR
 ```
 
-**Hook error resilience:** `emit` is fire-and-forget. If a hook throws, error goes to `onError` handlers (framework + consumer). One failing hook does not prevent other hooks from running. The handlers themselves are guarded (0.1.2): a throwing framework `onError` does not block the consumer `onError`, and an error thrown by either handler is discarded — it never aborts dispatch and never surfaces as an unhandled rejection.
+**Hook error resilience:** `emit` is fire-and-forget. If a hook throws, error goes to `onError` handlers (framework + consumer). Since core 1.7 the framework handler is called as `onError(error, core)` with the core plugin APIs only (`{ log, env }`), so a framework can log the failure through `core.log`; the consumer handler keeps `(error, context: AppCallbackContext)`. One failing hook does not prevent other hooks from running. The handlers themselves are guarded (0.1.2): a throwing framework `onError` does not block the consumer `onError`, and an error thrown by either handler is discarded — it never aborts dispatch and never surfaces as an unhandled rejection.
 
 **No barrier semantics:** lifecycle completion does not imply completion of async hook work triggered by `emit()`. `createApp()` and `app.start()` may finish before those hook promises settle.
 

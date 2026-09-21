@@ -113,7 +113,7 @@ function createCore(
     plugins: readonly AnyPluginInstance[];
     pluginConfigs?: Record<string, unknown>;
     onReady?: (ctx: { config: Readonly<Config> }) => void;
-    onError?: (error: Error) => void;
+    onError?: (error: Error, core: Readonly<CoreApis>) => void;
   },
 ): {
   createApp: CreateAppFn<Config, Events, DefaultPlugins>;
@@ -124,7 +124,7 @@ function createCore(
 - `options.plugins` — default plugins that ship with the framework (consumer cannot remove). `readonly` since 0.1.2 — accepts `as const` / readonly tuples
 - `options.pluginConfigs` — default config overrides for framework plugins
 - `options.onReady` — optional callback after all plugins init
-- `options.onError` — optional error handler for hook dispatch failures only (lifecycle errors from `start()`/`stop()` propagate to the caller). Guarded since 0.1.2: a throwing framework handler never blocks the consumer `onError`, and errors thrown by either handler are discarded — dispatch never aborts
+- `options.onError` — optional error handler for hook dispatch failures only (lifecycle errors from `start()`/`stop()` propagate to the caller). Since 1.7 the second argument `core` holds the core plugin APIs keyed by plugin name, for example `{ log, env }`, and is `{}` when the framework registers no core plugins; it carries no `emit`, so the handler cannot recurse (before 1.7: `(error: Error) => void`, which still compiles). Guarded since 0.1.2: a throwing framework handler never blocks the consumer `onError`, and errors thrown by either handler are discarded — dispatch never aborts
 
 ```typescript
 // Example: index.ts
