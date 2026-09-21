@@ -124,10 +124,86 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
         "llms": "https://raw.githubusercontent.com/moku-labs/room/main/llms-full.txt"
       },
       "upgrade": { "migrationId": "moku-room-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "common",
+      "npm": "@moku-labs/common",
+      "repo": "https://github.com/moku-labs/common",
+      "localClone": "../common",
+      "layer": 2,
+      "role": "shared-infra",
+      "knownVersion": "0.0.0",
+      "pack": "moku",
+      "skill": "plugins/moku/skills/moku-common",
+      "pluginIndex": null,
+      "dependsOn": ["@moku-labs/core"],
+      "detect": { "packageJsonDep": "@moku-labs/common" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/common",
+        "github": "https://github.com/moku-labs/common",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/common/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/common/main/package.json"
+      },
+      "upgrade": { "migrationId": "moku-common-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "native",
+      "npm": "@moku-labs/native",
+      "repo": "https://github.com/moku-labs/native",
+      "localClone": "../native",
+      "layer": 2,
+      "role": "framework",
+      "knownVersion": "0.0.0",
+      "pack": "none yet: use the pack template",
+      "skill": null,
+      "pluginIndex": null,
+      "dependsOn": ["@moku-labs/core", "@moku-labs/common"],
+      "detect": { "packageJsonDep": "@moku-labs/native" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/native",
+        "github": "https://github.com/moku-labs/native",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/native/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/native/main/package.json",
+        "llms": "https://raw.githubusercontent.com/moku-labs/native/main/llms-full.txt"
+      },
+      "upgrade": { "migrationId": "moku-native-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "system",
+      "npm": "@moku-labs/system",
+      "repo": "https://github.com/moku-labs/system",
+      "localClone": "../system",
+      "layer": 2,
+      "role": "framework",
+      "knownVersion": "0.0.0",
+      "pack": "none yet: use the pack template",
+      "skill": null,
+      "pluginIndex": null,
+      "dependsOn": ["@moku-labs/core", "@moku-labs/common"],
+      "detect": { "packageJsonDep": "@moku-labs/system" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/system",
+        "github": "https://github.com/moku-labs/system",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/system/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/system/main/package.json",
+        "llms": "https://raw.githubusercontent.com/moku-labs/system/main/llms-full.txt"
+      },
+      "upgrade": { "migrationId": "moku-system-version", "distTagPolicy": "stable->latest,prerelease->next" }
     }
   ]
 }
 ```
+
+> **`common`, `native`, `system` (registered 2026-09-21, not synced yet):** the three entries carry
+> `knownVersion: "0.0.0"`, the value for a newly registered framework, so `/moku:upgrade` never fires for
+> them and the first `moku-sync <key>` treats everything as new. Upstream at registration:
+> `@moku-labs/common@0.3.1` (no `llms.txt`; the `moku:moku-common` skill in the core pack teaches it),
+> `@moku-labs/native@0.2.1` and `@moku-labs/system@0.2.0` (both ship `llms.txt`/`llms-full.txt`, both depend on
+> core and common). `native` and `system` have no pack yet, so `skill` is `null` and `pack` says so.
+> Not registered on purpose: `@moku-labs/game` (in development, `0.0.0`) and `@moku-labs/ai` (not verified).
 
 > **Provenance of the `worker` entry (latest sync):** **re-synced 2026-06-26** to `@moku-labs/worker@0.15.0`
 > (npm `dist-tags.latest`; surface from the `v0.15.0` tag source). **`0.11.0 → 0.15.0` delta — breaking +
@@ -307,10 +383,11 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 | `key` | Short id used by `moku-sync <key>` and migration ids. |
 | `npm` | Published package name; also the `package.json` dependency `/moku:upgrade` detects. |
 | `repo` / `localClone` | GitHub repo (release + raw-file source) and the optional sibling working copy `moku-sync` can read offline. |
+| `role` | `kernel`, `framework`, or `shared-infra` for `@moku-labs/common`: plugins every framework composes, not a framework an app is created from. |
 | `layer` | Moku layer: 1 = kernel (`@moku-labs/core`), 2 = framework, 3 = app (not registered — apps deploy; see the `moku:moku-release` skill, `references/release-model.md`). |
 | `knownVersion` | Last synced version. Behind upstream ⇒ "new things available". |
 | `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, or `moku` for the core and `@moku-labs/common`. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
-| `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export). |
+| `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export; both `null` while a framework has no pack). |
 | `dependsOn` | Other moku-family packages it requires (ordering hint: upgrade core before web). |
 | `detect.packageJsonDep` | Presence of this dep in a consumer's `package.json` ⇒ the framework applies to that project. |
 | `releaseSource` | `npm` (version-of-truth via `dist-tags.latest`), `github`/`releases` (notes), `packageJson` (deps/exports), `llms` (upstream `llms-full.txt` — `web` since 0.4.0, `core` since 0.1.1; cross-checked against `src/`, which wins on disagreement). |
@@ -331,6 +408,7 @@ Every framework's teaching material ships as its own marketplace plugin — a **
 | Room | `@moku-labs/room` | `moku-room` |
 | AI | `@moku-labs/ai` | none yet: use the pack template |
 | System | `@moku-labs/system` | none yet: use the pack template |
+| Native | `@moku-labs/native` | none yet: use the pack template |
 | Game engine (planned) | — | none yet: use the pack template |
 
 Every pack has the same shape:

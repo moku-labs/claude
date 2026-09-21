@@ -278,6 +278,69 @@ the block below.
   (`frameworks[room].releaseSource`).
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.
 
+### moku-common-version
+- **Title:** Bump `@moku-labs/common` to the current registry version
+- **Stack:** — (registry-driven, stack-independent)
+- **Applies to:** framework, app
+- **Default:** on
+- **Depends on:** moku-core-version (when the project also depends directly on `@moku-labs/core`)
+- **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/common` AND its
+  resolved/declared version `< frameworks[common].knownVersion` in `moku-frameworks.md`. The entry is
+  registered at `0.0.0`, so this migration stays silent until the first `moku-sync common`.
+- **Apply:**
+  1. Read `frameworks[common].knownVersion` from `moku-frameworks.md`.
+  2. `package.json`: set the `@moku-labs/common` dependency to that version (preserve the range operator
+     the project already uses — `^`/`~`/exact; default to exact if none).
+  3. Touch only a direct dependency. A project that gets `@moku-labs/common` through a framework (web, worker, room bundle it) has none to bump.
+  4. `bun install` to resolve.
+- **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build` for a publishable
+  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); never weaken types.
+- **Risk:** No breaking crossing is recorded yet. `moku-sync common` records them here when it syncs a
+  release that has one; review the release notes (`frameworks[common].releaseSource`).
+- **Rollback:** `git checkout -- package.json bun.lock && bun install`.
+
+### moku-native-version
+- **Title:** Bump `@moku-labs/native` to the current registry version
+- **Stack:** — (registry-driven, stack-independent)
+- **Applies to:** app
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/native` AND its
+  resolved/declared version `< frameworks[native].knownVersion` in `moku-frameworks.md`. The entry is
+  registered at `0.0.0`, so this migration stays silent until the first `moku-sync native`.
+- **Apply:**
+  1. Read `frameworks[native].knownVersion` from `moku-frameworks.md`.
+  2. `package.json`: set the `@moku-labs/native` dependency to that version (preserve the range operator
+     the project already uses — `^`/`~`/exact; default to exact if none).
+  3. Do NOT add a direct `@moku-labs/core` dependency — `@moku-labs/native` depends on core and `@moku-labs/common` itself.
+  4. `bun install` to resolve.
+- **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build` for a publishable
+  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); never weaken types.
+- **Risk:** No breaking crossing is recorded yet. `moku-sync native` records them here when it syncs a
+  release that has one; review the release notes (`frameworks[native].releaseSource`).
+- **Rollback:** `git checkout -- package.json bun.lock && bun install`.
+
+### moku-system-version
+- **Title:** Bump `@moku-labs/system` to the current registry version
+- **Stack:** — (registry-driven, stack-independent)
+- **Applies to:** app
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/system` AND its
+  resolved/declared version `< frameworks[system].knownVersion` in `moku-frameworks.md`. The entry is
+  registered at `0.0.0`, so this migration stays silent until the first `moku-sync system`.
+- **Apply:**
+  1. Read `frameworks[system].knownVersion` from `moku-frameworks.md`.
+  2. `package.json`: set the `@moku-labs/system` dependency to that version (preserve the range operator
+     the project already uses — `^`/`~`/exact; default to exact if none).
+  3. Do NOT add a direct `@moku-labs/core` dependency — `@moku-labs/system` depends on core and `@moku-labs/common` itself. Its `@tauri-apps/*` peers stay as the project declares them.
+  4. `bun install` to resolve.
+- **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build` for a publishable
+  package). On failure → **moku-error-diagnostician** (bounded 3 rounds); never weaken types.
+- **Risk:** No breaking crossing is recorded yet. `moku-sync system` records them here when it syncs a
+  release that has one; review the release notes (`frameworks[system].releaseSource`).
+- **Rollback:** `git checkout -- package.json bun.lock && bun install`.
+
 ---
 
 ## Reserved (future stack versions — not applied yet)
