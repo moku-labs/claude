@@ -30,3 +30,16 @@ claude plugin eval . --trust-plugin --no-publish --allow-tools Bash
 
 `baselines/0.62.4.json` is the score of the last monolithic release on the original seven cases
 (`web-island-attrs` has since moved to `evals/moku-web/`).
+`baselines/0.70.0.json` covers the whole marketplace at 0.70.0. `baselines/0.74.0.json` covers the core plugin
+at 0.74.0, 3 runs per case, haiku judge.
+
+Run the evals from a plain terminal, or strip the installed plugin's `bin` folders from `PATH` first. A
+Claude Code session puts `~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/bin` on `PATH`, the eval
+sandbox can execute those files but not read the `lib/` next to them, and the no-plugin arm sees the installed
+plugin. That run under-reports every delta and fails the rails cases on a sandbox error:
+
+```bash
+PATH=$(echo "$PATH" | tr ':' '
+' | grep -v "/.claude/plugins/cache/" | paste -sd: -) \
+  claude plugin eval plugins/moku --trust-plugin --no-publish --allow-tools Write Edit Bash -j 4
+```
