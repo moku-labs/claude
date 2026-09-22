@@ -23,6 +23,7 @@ wiring harness may take ~40 (`spec/15 §2.5`); the write hook refuses above 40, 
  *
  * @see README.md
  */
+import type { RegisterFunction } from "@moku-labs/core"; // only if events
 import { createPlugin } from "../../config";
 import { createXxxState } from "./state";
 import { createXxxApi } from "./api";
@@ -32,7 +33,7 @@ export const xxxPlugin = createPlugin("xxx", {
   config: defaultConfig,            // typed const from ./config or inline typed
   createState: createXxxState,      // factory by direct reference
   api: createXxxApi,                // factory by direct reference (house style)
-  events: (register) => ({ "xxx:done": register<{ id: string }>("…") }), // if events
+  events: (register: RegisterFunction) => ({ "xxx:done": register<{ id: string }>("…") }), // if events; typed param, see house-style §1
   // hooks / onStart / onStop only if the spec requires them
 });
 ```
