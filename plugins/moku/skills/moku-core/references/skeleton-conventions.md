@@ -31,7 +31,7 @@ import { handleXxxEvent } from "./handlers"; // only if hooks exist
 export const xxxPlugin = createPlugin("xxx", {
   config: defaultConfig,            // typed const from ./config or inline typed
   createState: createXxxState,      // factory by direct reference
-  api: createXxxApi,                // factory by direct reference (house style)
+  api: createXxxApi,                // by reference; with depends on a plugin that has events use `ctx => createXxxApi(ctx)` (house-style §1)
   events: (register) => ({ "xxx:done": register<{ id: string }>("…") }), // if events
   // hooks / onStart / onStop only if the spec requires them
 });
