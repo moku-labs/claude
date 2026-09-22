@@ -21,11 +21,13 @@ These three were flagged as false-positive blockers in a real build even though 
 them, passed Stage-2 validation, and had clean `tsc`/`expectTypeOf`. They are house style:
 
 1. **`api: createApi` — factory by direct reference.** Passing the API/state factory by direct
-   reference (`api: createApi`, `createState: createRouterState`) is the standard wiring form. Do **not**
-   demand `api: (ctx) => createApi(ctx)`. One rule goes with it: when the plugin has `depends` on a
-   plugin with events, the `events` callback must be typed, `events: (register: RegisterFunction) => …`.
-   Untyped `register => …` is deferred by TypeScript and `ctx.emit` in the factory loses the own
-   events (moku-labs/core#26, spec 14 §10 row 8).
+   reference (`api: createApi`, `createState: createRouterState`) and the arrow form
+   (`api: ctx => createApi(ctx)`) are both house style. Do **not** flag either. One case needs care:
+   a plugin with `depends` on a plugin that declares events and its own `events: register => …`.
+   There TypeScript defers the untyped callback and `ctx.emit` in a direct-reference factory loses
+   the own events (moku-labs/core#26, spec 14 §10 row 8). Pick whichever fits the file better:
+   - preferred: wrap the factory, `api: ctx => createApi(ctx)`, `onInit: ctx => initX(ctx)`
+   - or: type the callback, `events: (register: RegisterFunction) => …`
 
 2. **Framework-internal `__tests__` may import `createCoreConfig` from `@moku-labs/core`.** A
    framework (Layer 2) legitimately *depends on* core; its own integration tests bootstrap via
