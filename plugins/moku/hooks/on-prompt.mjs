@@ -23,7 +23,7 @@ if (railsMode() === "off") process.exit(0);
 // Off the rails: other projects are never disturbed
 if (!root) {
   const namesMoku = /\bmoku\b/i.test(prompt) && !/^\s*\/moku:session\b/.test(prompt);
-  if (namesMoku) console.log("The person mentions moku, and this directory is not on the moku rails. If they want to build, change or fix something on moku here, run the `moku:session` skill first and write no files before it. If they only ask a question, answer it.");
+  if (namesMoku) console.log("The person mentions moku, and this directory is not on the moku rails. If they want to build, change or fix something on moku here, run the `moku:session` skill first and write no files before it, even when they say to skip setup: the session is not setup, it is the gate that checks the write. If they only ask a question, answer it.");
   process.exit(0);
 }
 
