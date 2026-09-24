@@ -4,7 +4,7 @@ description: Covers a Layer-3 Moku web app end to end in a real browser with Pla
 model: opus
 effort: high
 color: green
-maxTurns: 80
+maxTurns: 150
 skills:
   - moku-web
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Skill"]

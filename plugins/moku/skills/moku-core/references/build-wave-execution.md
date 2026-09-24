@@ -217,12 +217,14 @@ End your response with a fenced `json` code block:
 
 ### Agent turn limits
 
-TDD costs roughly 30% more turns than writing the implementation alone. The table is the budget per
-tier. The hard stop is the agent's own `maxTurns`: 60 for `moku-builder`, 80 for `moku-builder-deep`,
-which is why Complex and VeryComplex plugins go to the deep builder.
+TDD costs roughly 30% more turns than writing the implementation alone. The table is the expected
+budget per tier for a net-new plugin. A delta reads the existing plugin first and often needs more.
+The hard stop is the agent's own `maxTurns`: 150 for `moku-builder` and for `moku-builder-deep`.
+Complex and VeryComplex plugins go to the deep builder for its higher reasoning effort, not for more
+turns.
 
-| Tier | maxTurns |
-|------|----------|
+| Tier | Expected turns |
+|------|----------------|
 | Nano | 25 |
 | Micro | 40 |
 | Standard | 55 |

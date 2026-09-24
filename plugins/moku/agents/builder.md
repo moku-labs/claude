@@ -4,7 +4,7 @@ description: Builds one Moku plugin in its own directory from a spec and skeleto
 model: opus
 effort: high
 color: yellow
-maxTurns: 60
+maxTurns: 150
 skills:
   - moku-core
   - moku-plugin

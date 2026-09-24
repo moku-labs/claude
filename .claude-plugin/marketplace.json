@@ -7,7 +7,7 @@
   "plugins": [
     {
       "name": "moku",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku",
       "description": "The Moku Core toolkit: a conversational conductor that leads you from an idea through init, plan, build, verify and release, with strict lifecycle rails underneath, the vendored Moku Core specification, TDD build waves and a validation pipeline.",
       "author": {
@@ -17,7 +17,7 @@
     },
     {
       "name": "moku-web",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-web",
       "description": "@moku-labs/web pack: Preact islands, scoped CSS and tokens, the web validator, and real-browser e2e with exploratory QA and UX review.",
       "author": {
@@ -27,7 +27,7 @@
     },
     {
       "name": "moku-design",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-design",
       "description": "Design station for Moku: multi-round UI, API and architecture design that ends in a design context, plus GPT-6 Astra (through Codex) as artist and second opinion on user experience.",
       "author": {
@@ -37,7 +37,7 @@
     },
     {
       "name": "moku-worker",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-worker",
       "description": "@moku-labs/worker pack: the Cloudflare Workers backend framework, with Durable Objects, Queues, R2, D1 and KV plugins.",
       "author": {
@@ -47,7 +47,7 @@
     },
     {
       "name": "moku-room",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-room",
       "description": "@moku-labs/room pack: couch multiplayer with a shared screen and phones, WebRTC state sync and QR join.",
       "author": {
@@ -57,7 +57,7 @@
     },
     {
       "name": "moku-native",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-native",
       "description": "@moku-labs/native pack: packages a Moku app as a Tauri 2 desktop or mobile app, with the permission surface generated from the composed system plugins.",
       "author": {
@@ -67,7 +67,7 @@
     },
     {
       "name": "moku-system",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-system",
       "description": "@moku-labs/system pack: one system API (store, notify, clipboard, tray, deep-link) that runs in the browser and in a Tauri shell behind a provider seam.",
       "author": {
@@ -77,7 +77,7 @@
     },
     {
       "name": "moku-common",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-common",
       "description": "@moku-labs/common pack: the shared logPlugin and envPlugin, env providers for Node, Cloudflare Workers and the browser, and the branded CLI kit.",
       "author": {
@@ -87,7 +87,7 @@
     },
     {
       "name": "moku-maintainer",
-      "version": "0.74.0",
+      "version": "0.74.1",
       "source": "./plugins/moku-maintainer",
       "description": "Maintainer tools for the moku plugin repository itself: re-vendor the Moku Core spec and sync framework knowledge from upstream releases. Not needed to build with Moku.",
       "author": {
