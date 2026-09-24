@@ -2,6 +2,23 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.74.2 (2026-09-25)
+
+A git worktree session works on the main checkout's plan.
+
+### Fixed
+- **A worktree gets `.planning/`.** `.planning/` is gitignored, so a session in a git worktree started with
+  no plan and no ledger. Hooks walked up from `.claude/worktrees/<name>` to the main checkout's ledger,
+  while `moku-rails` looked only in the worktree. The SessionStart hooks now link the worktree's
+  `.planning` to the main checkout's `.planning/`, so both find the same plan. A copy would drift from the
+  main checkout and be deleted with the worktree.
+- **The link stays out of git.** `.planning/` with a slash in `.gitignore` matches folders only, and git sees
+  a link as a file. The hook adds `.planning` to the repository's `info/exclude`, which every worktree
+  shares.
+
+  Subagent worktrees still have no `.planning/`: SessionStart does not run for them, and builders do not
+  use `isolation: "worktree"`.
+
 ## 0.74.1 (2026-09-25)
 
 The long-running agents get 150 turns. No code changes.
