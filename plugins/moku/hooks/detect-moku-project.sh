@@ -6,6 +6,9 @@
 # Emits SessionStart context for Claude — as structured hookSpecificOutput JSON
 # (additionalContext + sessionTitle) when jq is available, else plain stdout (fallback).
 
+# A git worktree first gets a link to the main checkout's .planning/
+node "$(dirname "$0")/link-planning.mjs" 2>/dev/null
+
 [ -f .planning/moku.md ] || [ -f .planning/state.json ] || exit 0
 
 PROJECT_TYPE=""
