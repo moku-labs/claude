@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
   "name": "moku",
   "displayName": "Moku",
-  "version": "0.74.0",
+  "version": "0.74.1",
   "description": "The Moku Core toolkit: a conversational conductor that leads you from an idea through init, plan, build, verify and release, with strict lifecycle rails underneath, the vendored Moku Core specification, TDD build waves and a validation pipeline.",
   "author": {
     "name": "Oleksandr Kucherenko",

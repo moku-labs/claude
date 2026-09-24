@@ -4,7 +4,7 @@ description: Executes the UX gate on a Layer-3 Moku web app — drives the real 
 model: sonnet
 effort: medium
 color: magenta
-maxTurns: 60
+maxTurns: 150
 skills:
   - moku-web
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob", "Skill"]
