@@ -4,7 +4,7 @@ description: Reviews a build wave's diff for logic errors, spec deviations, secu
 model: opus
 effort: high
 color: green
-maxTurns: 25
+maxTurns: 40
 skills:
   - moku-core
   - moku-plugin

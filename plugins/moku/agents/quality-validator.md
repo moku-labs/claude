@@ -4,7 +4,7 @@ description: Runs the project's type check, tests and lint through Bash and repo
 model: sonnet
 effort: medium
 color: yellow
-maxTurns: 40
+maxTurns: 60
 skills:
   - moku-core
   - moku-plugin
