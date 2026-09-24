@@ -2,6 +2,35 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.74.1 (2026-09-25)
+
+The long-running agents get 150 turns. No code changes.
+
+### Changed
+- **`maxTurns: 150` on five agents.** In a real project session they hit their limit on almost every delta
+  task, and the orchestrator resumed each one 2 to 4 times per task.
+
+  | Agent | From | To |
+  |---|---|---|
+  | `moku-builder` | 60 | 150 |
+  | `moku-builder-deep` | 80 | 150 |
+  | `moku-web-e2e-tester` | 80 | 150 |
+  | `moku-web-qa-explorer` | 80 | 150 |
+  | `moku-web-ux-reviewer` | 60 | 150 |
+
+  `build-wave-execution.md` says so. Its tier table is now the expected budget for a net-new plugin, and
+  Complex and VeryComplex plugins go to `moku-builder-deep` for its reasoning effort, not for more turns.
+- **Two short agents get more room.** In the same session `moku-quality-validator` used all its turns once
+  and `moku-code-reviewer` twice, and each was resumed to finish.
+
+  | Agent | From | To |
+  |---|---|---|
+  | `moku-quality-validator` | 40 | 60 |
+  | `moku-code-reviewer` | 25 | 40 |
+
+  The researcher, the design generator, the diagnosticians, the skeptic, the plan checker, the brainstorm
+  challenger and the other validators keep their limits.
+
 ## 0.74.0 (2026-09-21)
 
 Generated JSDoc examples say something, and lint enforces it. The rules were tried on `@moku-labs/game`
