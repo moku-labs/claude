@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -229,6 +229,52 @@ describe("session hook", () => {
     const root = project({ initialized: true });
 
     assert.match(hook("session-rails.mjs", { cwd: root }).out, /Rails: clean/);
+  });
+});
+
+describe("git worktree", () => {
+  const git = (cwd, ...args) => spawnSync("git", args, { cwd, encoding: "utf8" }).stdout;
+
+  /**
+   * A repository with a worktree under .claude/worktrees, where Claude Code creates one. `.gitignore` has
+   * `.planning/` with the slash, the form the init station appends.
+   */
+  function worktree({ initialized }) {
+    const main = realpathSync(mkdtempSync(join(tmpdir(), "moku-worktree-")));
+    git(main, "init", "-q", "-b", "main");
+    writeFileSync(join(main, ".gitignore"), ".planning/\n.claude/\n");
+    git(main, "add", ".gitignore");
+    git(main, "-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "init");
+    if (initialized) {
+      mkdirSync(join(main, ".planning"));
+      writeFileSync(join(main, ".planning", "moku.md"), "type: framework\nname: demo\n");
+    }
+    const tree = join(main, ".claude", "worktrees", "w1");
+    git(main, "worktree", "add", "-q", tree, "-b", "w1");
+    return { main, tree };
+  }
+
+  it("links to the main checkout's .planning/ and keeps the link out of git", () => {
+    const { main, tree } = worktree({ initialized: true });
+
+    assert.match(hook("session-rails.mjs", { cwd: tree }).out, /Project: initialized/);
+    assert.equal(readlinkSync(join(tree, ".planning")), join(main, ".planning"));
+    assert.equal(git(tree, "status", "--porcelain"), "");
+  });
+
+  it("gets no link when the main checkout is not on the rails", () => {
+    const { tree } = worktree({ initialized: false });
+
+    assert.equal(hook("session-rails.mjs", { cwd: tree }).out, "");
+    assert.equal(existsSync(join(tree, ".planning")), false);
+  });
+
+  it("is described by the project hook, which cannot wait for session-rails.mjs to link", () => {
+    const { tree } = worktree({ initialized: true });
+
+    const run = spawnSync(join(PLUGIN, "hooks", "detect-moku-project.sh"), { cwd: tree, input: "{}", encoding: "utf8" });
+
+    assert.match(run.stdout, /Moku Framework project detected/);
   });
 });
 
