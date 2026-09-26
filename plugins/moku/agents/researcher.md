@@ -4,13 +4,13 @@ description: Researches a domain for Moku work — solution approaches and archi
 model: sonnet
 effort: medium
 color: green
-maxTurns: 40
+maxTurns: 300 # read-only: the limit only bounds a loop that re-reads the same files; no real run comes near it
 skills:
   - moku-core
 tools: ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
 ---
 
-Turn budget: **40 turns** (`maxTurns`). At turn 32 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+Turn budget: **300 turns** (`maxTurns`). At turn 240 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 

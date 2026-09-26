@@ -4,7 +4,6 @@ description: Builds one Moku plugin in its own directory from a spec and skeleto
 model: opus
 effort: high
 color: yellow
-maxTurns: 150
 skills:
   - moku-core
   - moku-plugin
@@ -12,7 +11,7 @@ skills:
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ---
 
-Turn budget: **150 turns** (`maxTurns`). At turn 120 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+Turn budget: **no limit** (no `maxTurns`: the harness never stops you). Work until the task is done or blocked, then deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 

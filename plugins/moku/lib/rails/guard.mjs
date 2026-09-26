@@ -19,6 +19,7 @@ const SOURCE_PATH = /(?:^|\/)src\//;
  * @property {boolean} [initializing]
  * @property {boolean} [routed] false while the person's last request has not been placed on the route
  * @property {boolean} [subagent] true when the writer is a subagent the orchestrator spawned from the station
+ * @property {boolean} [agentsRunning] true while the station records live agents (`.planning/agents/`)
  * @property {Array<{ status: string, station: string | null }>} changes
  */
 
@@ -58,8 +59,10 @@ export function guardWrite(filePath, facts) {
 
   // An open change is not a free pass: every new request of the person is placed on the route before code
   // follows it. A subagent was spawned from the station after that routing, so the flag does not apply to it:
-  // a message that arrives while it runs must not stop it mid-file.
-  if (facts.routed === false && !facts.subagent) {
+  // a message that arrives while it runs must not stop it mid-file. The harness marks a subagent's hook
+  // payload with `agent_id`; should that marker ever be missing, the agents the station recorded as running
+  // are the second witness, so a builder is never refused by the flag.
+  if (facts.routed === false && !facts.subagent && !facts.agentsRunning) {
     return deny("The person's last request has not been routed yet. Load the `moku:moku` skill and place the request: `moku-rails continue` when it finishes work of the current station, `moku-rails scope \"<what is new>\"` when it adds something the plan does not cover, or `moku-rails open` for a separate change.");
   }
 

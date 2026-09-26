@@ -4,14 +4,14 @@ description: Reviews a build wave's diff for logic errors, spec deviations, secu
 model: opus
 effort: high
 color: green
-maxTurns: 120
+maxTurns: 300 # read-only: the limit only bounds a loop that re-reads the same files; no real run comes near it
 skills:
   - moku-core
   - moku-plugin
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 
-Turn budget: **120 turns** (`maxTurns`). At turn 96 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+Turn budget: **300 turns** (`maxTurns`). At turn 240 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
 

@@ -2,8 +2,8 @@
  * The agents running inside a station, and what an agent's ending looks like.
  *
  * `SubagentStart` writes one file per running agent under `.planning/agents/`, `SubagentStop` removes
- * it. One file per agent, so parallel builders never race on a shared ledger. `moku-rails pause` and
- * `status` read the directory.
+ * it. One file per agent, so parallel builders never race on a shared ledger. `status` names them,
+ * `moku-rails pause` warns about them, and the stop hook lets a turn end while they run.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -88,7 +88,8 @@ export function describeAgents(agents) {
 
 /**
  * The `maxTurns` of an agent definition, found by its frontmatter name in this plugin and its sibling
- * packs (the marketplace installs them next to each other). Undefined when no definition is found.
+ * packs (the marketplace installs them next to each other). Undefined when no definition is found, and
+ * for an agent that has no limit (builders, the e2e agents, the design generator).
  *
  * @param {string} agentType plain or plugin-qualified agent type
  * @returns {number | undefined}
@@ -103,7 +104,7 @@ export function agentLimit(agentType) {
       const text = readFileSync(join(dir, file), "utf8");
       if (!new RegExp(`^name:\\s*${name}\\s*$`, "m").test(text)) continue;
 
-      const limit = /^maxTurns:\s*(\d+)\s*$/m.exec(text);
+      const limit = /^maxTurns:\s*(\d+)\b/m.exec(text);
       return limit ? Number(limit[1]) : undefined;
     }
   }

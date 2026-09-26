@@ -6,9 +6,10 @@
  * a rails command routes it) and the model gets the project's standing plus the routing rule, so the
  * conductor's first step does not depend on the model remembering to load a skill.
  * A prompt the harness wrote (a subagent's hand-back, a task notification, a CI event, a comment relay, a
- * subagent's own spawn prompt) is not a request: the routing flag stays as it is, so builders running in
- * the background keep their gate open. A hand-back that says an agent produced no report gets the one
- * resume instruction.
+ * teammate message, a subagent's own spawn prompt) is not a request: the routing flag stays as it is, so
+ * builders running in the background keep their gate open, and nothing is printed, so the standing and the
+ * routing rule appear once per typed message and never on an agent's reply. The one exception: a hand-back
+ * that says an agent produced no report gets the one resume instruction.
  * Off the rails: silent, except for one hint when the person names moku.
  */
 
@@ -26,17 +27,17 @@ const root = rootForSession(payload);
 
 if (railsMode() === "off") process.exit(0);
 
+// A prompt the harness wrote is not a new request: nothing is re-routed, no gate closes, nothing is repeated
+if (isSystemPrompt(payload)) {
+  const noReport = /produced no report|without (a|its) report|no report|marked as partial|reached (its |the )?(max(imum)? )?turn|turn limit|maxTurns/i.test(prompt);
+  if (root && noReport) console.log(`moku: an agent ended without its report. ${RESUME_INSTRUCTION}`);
+  process.exit(0);
+}
+
 // Off the rails: other projects are never disturbed
 if (!root) {
   const namesMoku = /\bmoku\b/i.test(prompt) && !/^\s*\/moku:session\b/.test(prompt);
   if (namesMoku) console.log("The person mentions moku, and this directory is not on the moku rails. If they want to build, change or fix something on moku here, run the `moku:session` skill first and write no files before it, even when they say to skip setup: the session is not setup, it is the gate that checks the write. If they only ask a question, answer it.");
-  process.exit(0);
-}
-
-// A prompt the harness wrote is not a new request: nothing is re-routed, and no gate closes
-if (isSystemPrompt(payload)) {
-  const noReport = /produced no report|without (a|its) report|no report|marked as partial|reached (its |the )?(max(imum)? )?turn|turn limit|maxTurns/i.test(prompt);
-  if (noReport) console.log(`moku: an agent ended without its report. ${RESUME_INSTRUCTION}`);
   process.exit(0);
 }
 

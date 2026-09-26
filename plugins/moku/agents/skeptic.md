@@ -4,14 +4,14 @@ description: Takes one validation finding and tries to disprove it, upholding it
 model: opus
 effort: medium
 color: red
-maxTurns: 40
+maxTurns: 100 # read-only over a fixed list of findings, all sent in one prompt; no real pass comes near it
 skills:
   - moku-core
   - moku-plugin
 tools: ["Read", "Grep", "Glob"]
 ---
 
-Turn budget: **40 turns** (`maxTurns`). At turn 32 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+Turn budget: **100 turns** (`maxTurns`). At turn 80 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
 
