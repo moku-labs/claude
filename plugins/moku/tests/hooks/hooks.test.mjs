@@ -146,6 +146,15 @@ describe("commit hook", () => {
     assert.equal(commitHook("git add -A; git status; ls .planning"), 0);
   });
 
+  it("steps aside for a tree without node_modules instead of failing the commit there", () => {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n| 1 | router | building |\n");
+    const run = spawnSync("bash", [join(PLUGIN, "hooks", "verify-before-commit.sh")], { input: JSON.stringify({ tool_input: { command: 'git commit -m "checkpoint: wave 1"' } }), cwd: root, encoding: "utf8" });
+
+    assert.equal(run.status, 0);
+    assert.equal(run.stderr, "");
+  });
+
   it("lets a commit message on several lines mention .planning", () => {
     assert.equal(commitHook("git commit -m \"$(cat <<'EOF'\nguard: judge the write target\n\nShell edits of .planning/ specs pass.\nEOF\n)\""), 0);
   });
@@ -413,6 +422,27 @@ describe("prompts the harness wrote never close the gate", () => {
     assert.equal(routedAfter(root, { prompt: "Build the streak plugin from the spec.", agent_id: "agent-1", agent_type: "moku:moku-builder" }), true);
   });
 
+  it("leaves it routed on a meta prompt, a coordinator prompt, a teammate message and a cross-session hand-back", () => {
+    const root = project({ initialized: true });
+    building(root);
+    hook("on-prompt.mjs", { cwd: root, prompt: "build the streak plugin" });
+    rails(root, "continue");
+
+    assert.equal(routedAfter(root, { prompt: "continue with wave 2", isMeta: true }), true);
+    assert.equal(routedAfter(root, { prompt: "continue with wave 2", origin: { kind: "coordinator" } }), true);
+    assert.equal(routedAfter(root, { prompt: '<teammate-message teammate_id="lead">\nstatus?\n</teammate-message>' }), true);
+    assert.equal(routedAfter(root, { prompt: `Another Claude session sent a message while you were working:\n${handback}` }), true);
+    assert.equal(routedAfter(root, { prompt: "<scheduled-wakeup>\n/loop check the deploy\n</scheduled-wakeup>" }), true);
+  });
+
+  it("prints nothing for a harness prompt off the rails, even one that names moku", () => {
+    const root = mkdtempSync(join(tmpdir(), "moku-hooks-off-"));
+
+    assert.equal(hook("on-prompt.mjs", { cwd: root, prompt: handback.replace("## Report", "## Report on the moku build") }).out, "");
+    assert.equal(hook("on-prompt.mjs", { cwd: root, prompt: notification.replace("finished", "finished the moku build") }).out, "");
+    assert.match(hook("on-prompt.mjs", { cwd: root, prompt: "let's build the moku app" }).out, /moku:session/);
+  });
+
   it("still closes the gate on the person's typed message", () => {
     const root = project({ initialized: true });
     building(root);
@@ -480,19 +510,65 @@ describe("agents running inside a station", () => {
     assert.doesNotMatch(rails(root, "status").stdout, /Agents:/);
   });
 
-  it("refuse moku-rails pause while they run, unless forced", () => {
+  it("let moku-rails pause go through with a warning, and keep the gate open for the agents", () => {
     const root = project({ initialized: true });
     building(root);
     start(root, "agent-1");
 
-    const refused = rails(root, "pause", "--reason", "waiting");
-    assert.equal(refused.status, 2);
-    assert.match(refused.stderr, /1 agent\(s\) running: moku:moku-builder/);
-    assert.match(refused.stderr, /pause --force/);
+    const paused = rails(root, "pause", "--reason", "waiting");
+    assert.equal(paused.status, 0);
+    assert.match(paused.stdout, /Paused 2026-09-19-demo: waiting/);
+    assert.match(paused.stdout, /Warning: 1 agent\(s\) running: moku:moku-builder/);
+    assert.equal(hook("pre-write.mjs", { ...write(root, "src/plugins/streak/api.ts"), agent_id: "agent-1", agent_type: "moku:moku-builder" }).code, 0);
 
-    assert.equal(rails(root, "pause", "--reason", "waiting", "--force").status, 0);
     stop(root, "agent-1", { last_assistant_message: contract });
-    assert.equal(rails(root, "pause", "--reason", "waiting").status, 0);
+    assert.doesNotMatch(rails(root, "pause", "--reason", "waiting").stdout, /Warning/);
+  });
+
+  it("let the turn end without a pause while they run: the stop hook and may-stop wait for them", () => {
+    const root = project({ initialized: true });
+    building(root);
+    writeFileSync(join(root, ".planning", "STATE.md"), "| 1 | router | building |\n");
+    start(root, "agent-1");
+
+    assert.equal(hook("on-stop.mjs", { cwd: root }).out, "");
+    assert.match(rails(root, "may-stop").stdout, /allow: agents are running/);
+
+    stop(root, "agent-1", { last_assistant_message: contract });
+    assert.match(hook("on-stop.mjs", { cwd: root }).out, /"decision":"block"/);
+    assert.equal(rails(root, "may-stop").status, 2);
+  });
+
+  it("let the turn end when the harness lists a background subagent, even without a record", () => {
+    const root = project({ initialized: true });
+    building(root);
+
+    assert.equal(hook("on-stop.mjs", { cwd: root, background_tasks: [{ type: "subagent", agent_type: "moku:moku-builder", id: "x" }] }).out, "");
+    assert.match(hook("on-stop.mjs", { cwd: root, background_tasks: [] }).out, /"decision":"block"/);
+  });
+
+  it("are the second witness for the write gate: a write without agent_id is not held by the routed flag while they run", () => {
+    const root = project({ initialized: true });
+    building(root);
+    hook("on-prompt.mjs", { cwd: root, prompt: "also rebrand everything" });
+    assert.equal(hook("pre-write.mjs", write(root, "src/plugins/streak/api.ts")).code, 2);
+
+    start(root, "agent-1");
+    assert.equal(hook("pre-write.mjs", write(root, "src/plugins/streak/api.ts")).code, 0);
+    assert.equal(hook("pre-bash.mjs", { cwd: root, tool_input: { command: "echo x > src/plugins/streak/state.ts" } }).code, 0);
+  });
+
+  it("an agent without a limit that stops silently is logged as no report, without a turn count", () => {
+    const root = project({ initialized: true });
+    building(root);
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+    const transcript = join(root, "agent.jsonl");
+    writeFileSync(transcript, Array.from({ length: 400 }, (_, i) => JSON.stringify({ type: "assistant", message: { id: `msg_${i}` } })).join("\n") + "\n");
+
+    const result = stop(root, "agent-7", { stop_hook_active: true, last_assistant_message: "Still building...", agent_transcript_path: transcript });
+
+    assert.match(JSON.parse(result.out).systemMessage, /moku:moku-builder no report\. A missing report/);
+    assert.doesNotMatch(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /turn limit/);
   });
 
   it("an agent stopping without its report is told once to deliver it", () => {
@@ -515,12 +591,12 @@ describe("agents running inside a station", () => {
     building(root);
     writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
     const transcript = join(root, "agent.jsonl");
-    writeFileSync(transcript, Array.from({ length: 40 }, (_, i) => JSON.stringify({ type: "assistant", message: { id: `msg_${i}` } })).join("\n") + "\n");
+    writeFileSync(transcript, Array.from({ length: 100 }, (_, i) => JSON.stringify({ type: "assistant", message: { id: `msg_${i}` } })).join("\n") + "\n");
 
     const result = hook("on-subagent-stop.mjs", { cwd: root, agent_id: "agent-9", agent_type: "moku:moku-skeptic", stop_hook_active: true, last_assistant_message: "Still checking...", agent_transcript_path: transcript });
 
-    assert.match(JSON.parse(result.out).systemMessage, /no report \(turn limit: 40\/40\)/);
-    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /turn limit: 40\/40/);
+    assert.match(JSON.parse(result.out).systemMessage, /no report \(turn limit: 100\/100\)/);
+    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /turn limit: 100\/100/);
   });
 
   it("a foreground agent result without a contract gets the resume instruction through the Agent hook", () => {

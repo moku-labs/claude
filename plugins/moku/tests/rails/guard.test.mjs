@@ -137,6 +137,11 @@ describe("guardWrite for a subagent", () => {
     assert.equal(guardWrite("src/plugins/streak/api.ts", { onRails: true, initialized: true, routed: false, subagent: true, changes: building }).allow, true);
   });
 
+  it("is not held by the routed flag either when the station records live agents and the payload lacks agent_id", () => {
+    assert.equal(guardWrite("src/plugins/streak/api.ts", { onRails: true, initialized: true, routed: false, agentsRunning: true, changes: building }).allow, true);
+    assert.equal(guardWrite("src/plugins/streak/api.ts", { onRails: true, initialized: true, routed: false, agentsRunning: false, changes: building }).allow, false);
+  });
+
   it("still refuses source outside a writing station", () => {
     const verdict = guardWrite("src/plugins/streak/api.ts", { onRails: true, initialized: true, routed: false, subagent: true, changes: [{ status: "open", station: "plan" }] });
 
