@@ -131,3 +131,16 @@ describe("guardShell", () => {
     refused('echo "<< EOF"\ntouch src/a.ts');
   });
 });
+
+describe("guardWrite for a subagent", () => {
+  it("does not consult the routed flag: the station was routed when the agent was spawned", () => {
+    assert.equal(guardWrite("src/plugins/streak/api.ts", { onRails: true, initialized: true, routed: false, subagent: true, changes: building }).allow, true);
+  });
+
+  it("still refuses source outside a writing station", () => {
+    const verdict = guardWrite("src/plugins/streak/api.ts", { onRails: true, initialized: true, routed: false, subagent: true, changes: [{ status: "open", station: "plan" }] });
+
+    assert.equal(verdict.allow, false);
+    assert.match(verdict.reason, /writing station/);
+  });
+});

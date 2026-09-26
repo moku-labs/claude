@@ -390,3 +390,148 @@ describe("one root rule for every hook", () => {
     assert.equal(hook("on-prompt.mjs", { cwd: parent, session_id: "other", prompt: "go" }, env).out, "");
   });
 });
+
+describe("prompts the harness wrote never close the gate", () => {
+  const handback = '<agent-message from="a17e">\n[Subagent hand-back] The text below is the final report of a subagent...\n  ## Report\n</agent-message>';
+  const notification = "[SYSTEM NOTIFICATION - NOT USER INPUT]\nThis is an automated background-task event.\n<task-notification>\n<status>completed</status>\n<summary>Agent \"builder\" finished</summary>\n</task-notification>";
+
+  function routedAfter(root, payload) {
+    hook("on-prompt.mjs", { cwd: root, ...payload });
+    return JSON.parse(readFileSync(join(root, ".planning", "state.json"), "utf8")).turn?.routed;
+  }
+
+  it("leaves a routed request routed on a subagent hand-back, a task notification, a CI event and a comment relay", () => {
+    const root = project({ initialized: true });
+    building(root);
+    hook("on-prompt.mjs", { cwd: root, prompt: "build the streak plugin" });
+    rails(root, "continue");
+
+    assert.equal(routedAfter(root, { prompt: handback }), true);
+    assert.equal(routedAfter(root, { prompt: notification }), true);
+    assert.equal(routedAfter(root, { prompt: "<ci-monitor-event>\n<status>failure</status>\n</ci-monitor-event>" }), true);
+    assert.equal(routedAfter(root, { prompt: "[Artifact comment sent to Claude]\nplease fix the title" }), true);
+    assert.equal(routedAfter(root, { prompt: "Build the streak plugin from the spec.", agent_id: "agent-1", agent_type: "moku:moku-builder" }), true);
+  });
+
+  it("still closes the gate on the person's typed message", () => {
+    const root = project({ initialized: true });
+    building(root);
+
+    assert.equal(routedAfter(root, { prompt: "also rebrand everything" }), false);
+  });
+
+  it("hands over no standing and no routing rule for a harness prompt", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(hook("on-prompt.mjs", { cwd: root, prompt: notification }).out, "");
+  });
+
+  it("prints the one resume instruction when a hand-back says the agent produced no report", () => {
+    const root = project({ initialized: true });
+
+    const out = hook("on-prompt.mjs", { cwd: root, prompt: `${notification.replace("finished", "stopped at its turn limit and produced no report")}` }).out;
+
+    assert.match(out, /Resume the agent exactly once/);
+    assert.match(out, /Deliver your report now/);
+  });
+});
+
+describe("subagent writes inside a station", () => {
+  it("are not refused by the routed flag: a builder keeps writing while a new message arrives", () => {
+    const root = project({ initialized: true });
+    building(root);
+    hook("on-prompt.mjs", { cwd: root, prompt: "also rebrand everything" });
+
+    const orchestrator = hook("pre-write.mjs", write(root, "src/plugins/streak/api.ts"));
+    const builder = hook("pre-write.mjs", { ...write(root, "src/plugins/streak/api.ts"), agent_id: "agent-1", agent_type: "moku:moku-builder" });
+    const builderShell = hook("pre-bash.mjs", { cwd: root, agent_id: "agent-1", tool_input: { command: "echo x > src/plugins/streak/state.ts" } });
+
+    assert.equal(orchestrator.code, 2);
+    assert.equal(builder.code, 0);
+    assert.equal(builderShell.code, 0);
+  });
+
+  it("still need an open change at a writing station", () => {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-09-26-plan", "--size", "M", "--type", "feature");
+    rails(root, "skip", "design", "--reason", "none");
+    rails(root, "enter", "plan");
+
+    assert.equal(hook("pre-write.mjs", { ...write(root, "src/plugins/streak/api.ts"), agent_id: "agent-1" }).code, 2);
+  });
+});
+
+describe("agents running inside a station", () => {
+  const start = (root, id, type = "moku:moku-builder") => hook("on-subagent-start.mjs", { cwd: root, agent_id: id, agent_type: type });
+  const stop = (root, id, extra = {}) => hook("on-subagent-stop.mjs", { cwd: root, agent_id: id, agent_type: "moku:moku-builder", stop_hook_active: false, last_assistant_message: "", ...extra });
+  const contract = 'Done.\n```json\n{"agent":"moku-builder","verdict":"PASS","blockers":[],"warnings":[]}\n```';
+
+  it("are recorded on start and forgotten on stop, and status names them", () => {
+    const root = project({ initialized: true });
+    building(root);
+
+    start(root, "agent-1");
+    start(root, "agent-2");
+    start(root, "agent-x", "general-purpose");
+    assert.match(rails(root, "status").stdout, /Agents: 2 agent\(s\) running: moku:moku-builder ×2/);
+
+    stop(root, "agent-1", { last_assistant_message: contract });
+    stop(root, "agent-2", { last_assistant_message: contract });
+    assert.doesNotMatch(rails(root, "status").stdout, /Agents:/);
+  });
+
+  it("refuse moku-rails pause while they run, unless forced", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-1");
+
+    const refused = rails(root, "pause", "--reason", "waiting");
+    assert.equal(refused.status, 2);
+    assert.match(refused.stderr, /1 agent\(s\) running: moku:moku-builder/);
+    assert.match(refused.stderr, /pause --force/);
+
+    assert.equal(rails(root, "pause", "--reason", "waiting", "--force").status, 0);
+    stop(root, "agent-1", { last_assistant_message: contract });
+    assert.equal(rails(root, "pause", "--reason", "waiting").status, 0);
+  });
+
+  it("an agent stopping without its report is told once to deliver it", () => {
+    const root = project({ initialized: true });
+    building(root);
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+
+    const first = stop(root, "agent-1", { last_assistant_message: "I reviewed the files and found two issues." });
+    assert.deepEqual(JSON.parse(first.out).decision, "block");
+    assert.match(JSON.parse(first.out).reason, /Deliver it now/);
+    assert.equal(existsSync(join(root, ".planning", "build", "agent-log.md")), false, "the first stop is not the outcome");
+
+    const second = stop(root, "agent-1", { stop_hook_active: true, last_assistant_message: "I reviewed the files." });
+    assert.match(JSON.parse(second.out).systemMessage, /no report.*Resume the agent exactly once/);
+    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /moku:moku-builder \| no report/);
+  });
+
+  it("names the turn limit when the transcript shows the budget was used up", () => {
+    const root = project({ initialized: true });
+    building(root);
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+    const transcript = join(root, "agent.jsonl");
+    writeFileSync(transcript, Array.from({ length: 40 }, (_, i) => JSON.stringify({ type: "assistant", message: { id: `msg_${i}` } })).join("\n") + "\n");
+
+    const result = hook("on-subagent-stop.mjs", { cwd: root, agent_id: "agent-9", agent_type: "moku:moku-skeptic", stop_hook_active: true, last_assistant_message: "Still checking...", agent_transcript_path: transcript });
+
+    assert.match(JSON.parse(result.out).systemMessage, /no report \(turn limit: 40\/40\)/);
+    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /turn limit: 40\/40/);
+  });
+
+  it("a foreground agent result without a contract gets the resume instruction through the Agent hook", () => {
+    const root = project({ initialized: true });
+
+    const partial = hook("on-agent-result.mjs", { cwd: root, tool_name: "Agent", tool_input: { subagent_type: "moku:moku-code-reviewer", prompt: "review" }, tool_response: "Reviewed 12 files. (output marked as partial: the agent reached its maxTurns limit)" });
+    const complete = hook("on-agent-result.mjs", { cwd: root, tool_name: "Agent", tool_input: { subagent_type: "moku:moku-code-reviewer", prompt: "review" }, tool_response: contract });
+    const launched = hook("on-agent-result.mjs", { cwd: root, tool_name: "Agent", tool_input: { subagent_type: "moku:moku-builder", prompt: "build", run_in_background: true }, tool_response: "Async agent launched successfully. agentId: abc" });
+
+    assert.match(JSON.parse(partial.out).hookSpecificOutput.additionalContext, /turn limit.*Resume the agent exactly once/);
+    assert.equal(complete.out, "");
+    assert.equal(launched.out, "");
+  });
+});
