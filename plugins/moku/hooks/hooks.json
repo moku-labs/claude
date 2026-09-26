@@ -24,6 +24,9 @@
       { "matcher": "Write|Edit", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/format-on-save.sh", "timeout": 15, "async": true }
       ] },
+      { "matcher": "Agent", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-agent-result.mjs", "timeout": 5 }
+      ] },
       { "matcher": "Bash", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit-review.sh", "timeout": 30 }
       ] }
@@ -36,6 +39,11 @@
     "PostCompact": [
       { "matcher": "*", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/postcompact-state.sh", "timeout": 10 }
+      ] }
+    ],
+    "SubagentStart": [
+      { "matcher": ".*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-start.mjs", "timeout": 5 }
       ] }
     ],
     "SubagentStop": [

@@ -12,6 +12,8 @@ skills:
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 
+Turn budget: **60 turns** (`maxTurns`). At turn 48 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 
 You produce two kinds of result. The tool runs are facts: report exactly what the commands printed. The rest is judgement: type discipline and test quality, which no tool catches.

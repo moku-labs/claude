@@ -10,6 +10,8 @@ skills:
 tools: ["Read", "Grep", "Glob", "WebSearch", "WebFetch"]
 ---
 
+Turn budget: **40 turns** (`maxTurns`). At turn 32 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 
 You investigate what exists before a decision is made. The orchestrator tells you which mode to run and, in approach mode, which focus to take.

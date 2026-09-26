@@ -35,6 +35,10 @@ On the rails, a hook hands you the project's standing with every message of the 
 
 An open change inside `build` is not a free pass. "Also make it pink" during a build is new scope, not a continuation. When in doubt it is scope: a short delta spec costs minutes, and code nobody planned cost this project whole turns.
 
+**"Route before acting" applies to the person's messages.** A prompt the harness wrote is not a request and routes nothing: a subagent's hand-back, a task notification, a CI-monitor event, an artifact-comment relay, a scheduled wake-up, or the spawn prompt a subagent starts with. The prompt hook leaves the routing flag alone for those, so agents running in the background keep their gate open. A subagent spawned from a station is never held by the flag at all: its writes need an open change at a writing station, nothing more, because the routing happened when you entered the station and spawned it. Only your own writes wait for the routing, and you do not write source anyway.
+
+**Pausing with agents inside the station.** `moku-rails pause` is refused while agents you spawned are still running (`moku-rails status` names them): take their reports first. `--force` is for a record left behind by a crashed agent.
+
 Stations run through their skills, with the Skill tool. You do not write source files yourself and you do not do a station's work by hand, even when it looks quicker: the skills carry the builders, the validators, the reviewers and the gates.
 
 **Debts come first.** An open or stuck change, or uncommitted work that no change accounts for, is settled before new work: finish it, or park it with a reason (`moku-rails park <id> --reason "..."`). Say it plainly: "Last time we left the streak fix unfinished. Finish it first, or set it aside?"

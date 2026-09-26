@@ -8,6 +8,8 @@ maxTurns: 40
 tools: ["Read", "Write", "Bash", "Grep", "Glob", "Skill"]
 ---
 
+Turn budget: **40 turns** (`maxTurns`). At turn 32 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 You build one concept prototype for a design round: a runnable, clickable artifact that commits to a
 single art direction while showing the same features and the same demo data as every other concept in the
 round. The orchestrator screenshots the round and a human picks a winner.

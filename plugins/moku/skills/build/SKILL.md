@@ -167,6 +167,7 @@ Only this session spawns agents; no agent spawns another.
 | Validate structure, style, quality, architecture | `moku-structure-validator`, `moku-style-validator`, `moku-quality-validator`, `moku-architecture-validator` |
 | Filter Sonnet validators' findings | `moku-skeptic` — a finding that does not survive it does not count |
 | Decide continue / stop-for-review / retry after a wave | You do, with the table in `build-wave-execution.md` |
+| An agent returns without its report | You resume it exactly once ("Deliver your report now"), then record `FAIL` (`no report`) and go on. Never an open-ended wait: `agent-preamble.md` → "For the orchestrator" |
 
 ## Error recovery (`fix`)
 

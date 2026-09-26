@@ -1,6 +1,7 @@
 /**
  * Repository check: every plugin manifest parses, versions agree with the marketplace,
- * and every SKILL.md and agent file starts with parseable-looking frontmatter.
+ * every SKILL.md and agent file starts with parseable-looking frontmatter, and every agent's
+ * turn-budget line agrees with its `maxTurns`.
  *
  * Runs in CI where the `claude` CLI is not installed. `npm run validate` is the full local check.
  */
@@ -26,6 +27,19 @@ for (const file of markdownWithFrontmatter("plugins")) {
   if (!match) problems.push(`${file}: missing or unclosed frontmatter`);
   if (match && !/^(name|description):/m.test(match[1])) problems.push(`${file}: frontmatter has neither name nor description`);
   if (match && /<example>/.test(match[1])) problems.push(`${file}: <example> inside frontmatter breaks YAML`);
+}
+
+// Every agent states its budget and its stop turn in its first body line, matching the frontmatter
+for (const file of markdownWithFrontmatter("plugins").filter((path) => /\/agents\//.test(path))) {
+  const text = readFileSync(file, "utf8");
+  const limit = /^maxTurns:\s*(\d+)\s*$/m.exec(text);
+  const body = /^---\n[\s\S]*?\n---\n\n([^\n]*)/.exec(text)?.[1] ?? "";
+  const budget = /^Turn budget: \*\*(\d+) turns\*\*.*?At turn (\d+) stop new work/.exec(body);
+
+  if (!limit) problems.push(`${file}: agent has no maxTurns`);
+  if (!budget) problems.push(`${file}: first body line is not the "Turn budget: **N turns**" line`);
+  if (limit && budget && budget[1] !== limit[1]) problems.push(`${file}: Turn budget ${budget[1]} != maxTurns ${limit[1]}`);
+  if (limit && budget && Number(budget[2]) !== Math.round(Number(limit[1]) * 0.8)) problems.push(`${file}: stop turn ${budget[2]} is not 80 % of ${limit[1]}`);
 }
 
 if (problems.length > 0) {

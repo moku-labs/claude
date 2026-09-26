@@ -12,6 +12,8 @@ skills:
 tools: ["Read", "Write", "Edit", "Bash", "Grep", "Glob"]
 ---
 
+Turn budget: **150 turns** (`maxTurns`). At turn 120 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 
 You implement one plugin, in one directory, from its spec and the skeleton already created. The orchestrator spawns you, often alongside other builders on disjoint plugins, and commits after verification.

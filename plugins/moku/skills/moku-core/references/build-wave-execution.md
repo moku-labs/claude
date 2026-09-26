@@ -83,7 +83,12 @@ Spawn with `subagent_type: moku-builder` (or `moku-builder-deep`), never `genera
 already carries the TDD protocol, the filesystem rules, the scoped-lint contract and the JSON output
 contract. Pass it: plugin name and tier, the spec, the framework config, the dependency interfaces,
 the relevant decisions, and a **mode** — `greenfield` (net-new, tests fail on stubs first) or `delta`
-(an existing plugin: keep existing tests green, add RED-first tests for the new behavior only).
+(an existing plugin: keep existing tests green, add RED-first tests for the new behavior only). Add
+the turn rule to every spawn prompt: "Keep tool calls few: read and write whole files, run one check
+per group. Deliver the output contract before your turn budget ends, partial results with an honest
+verdict." A builder that returns without its contract gets exactly one resume ("Deliver your report
+now"), per `agent-preamble.md` → "For the orchestrator"; a second silence is `FAIL` (`no report`),
+and the wave goes on with what is on disk.
 
 All builders of a wave run in the one working tree. Do not spawn them with `isolation: "worktree"`: a
 git worktree has no `node_modules` and no `.planning/` (both are gitignored), so the builder would get
@@ -219,9 +224,12 @@ End your response with a fenced `json` code block:
 
 TDD costs roughly 30% more turns than writing the implementation alone. The table is the expected
 budget per tier for a net-new plugin. A delta reads the existing plugin first and often needs more.
-The hard stop is the agent's own `maxTurns`: 150 for `moku-builder` and for `moku-builder-deep`.
-Complex and VeryComplex plugins go to the deep builder for its higher reasoning effort, not for more
-turns.
+The hard stop is the agent's own `maxTurns`: 150 for `moku-builder`, 300 for `moku-builder-deep`. The
+Agent tool has no per-call override; a resume with `SendMessage` continues the same agent with a fresh
+budget, and that is the only way to give one more turns. Complex and VeryComplex plugins go to the deep
+builder for its higher reasoning effort and its larger budget. Every builder stops new work at 80 % of
+its budget and reports (`agent-preamble.md` → "Turn budget and the report"), so the table below is the
+work it should fit in, not the point where it goes silent.
 
 | Tier | Expected turns |
 |------|----------------|

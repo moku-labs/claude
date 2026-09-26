@@ -122,7 +122,8 @@ ledger. Every other project is left alone, whatever its `package.json` names: no
 | Invariant | Enforced by | What you see |
 |---|---|---|
 | Hooks act only where a session was started | every hook resolves its project from `.planning/state.json` or `.planning/moku.md`, found from the file being written | nothing, in your other projects |
-| Every request is routed before code follows it | prompt hook (`UserPromptSubmit`) marks the request unrouted; the write gate waits for `open`, `enter`, `continue` or `scope` | the conductor answers first, also in the middle of a build |
+| Every request is routed before code follows it | prompt hook (`UserPromptSubmit`) marks a typed message unrouted; the write gate waits for `open`, `enter`, `continue` or `scope`. A prompt the harness wrote (a subagent hand-back, a task notification, a CI event) routes nothing, and a subagent spawned from the station is not held by the flag | the conductor answers first, also in the middle of a build, and the builders keep working |
+| Every agent ends with a report | `SubagentStop` tells an agent that stops without its output contract to deliver it, once; `moku-rails pause` refuses while agents run inside the station | a partial report with an honest verdict instead of "produced no report" |
 | New scope goes back to plan | `moku-rails scope` | "That is new. Let me add it to the plan first" |
 | Optional stations are skipped on your word only | `moku-rails enter plan|build|close` refuses while design, e2e or another optional station is neither done nor skipped | "Shall I draw it first, or skip the design?" |
 | No source files before init | write gate (`PreToolUse`) | "Let me create the project first, it takes a minute" |

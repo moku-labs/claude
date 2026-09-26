@@ -80,7 +80,14 @@ Spawn COUNT `design-generator` agents with the Agent tool, all in one response. 
 3. its own art direction — no two generators share one,
 4. the MEDIUM and its prototype rules,
 5. the framing: this prototype communicates look, feel, behaviour and inventory, is not production code,
-   and will be re-implemented from scratch later.
+   and will be re-implemented from scratch later,
+6. the turn rule: "Keep tool calls few: write the whole file in one Write, check it once. Deliver the
+   output contract before your turn budget ends."
+
+A generator that returns without its report is resumed exactly once ("Deliver your report now: the output
+contract with an honest verdict on what is done. Do no more work."). Still silent: its concept counts as
+failed (`no report`) and the round goes on with the files that exist. No open-ended wait, no second
+reminder (`agent-preamble.md` in moku-core → "For the orchestrator").
 
 ### B2 — Assemble the gallery
 
