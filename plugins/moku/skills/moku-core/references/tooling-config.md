@@ -438,6 +438,8 @@ export default defineConfig({
 
 ```yaml
 pre-commit:
+  skip:
+    - run: test ! -d node_modules
   jobs:
     - name: build-and-validate
       run: bun run build && bun run validate
@@ -451,6 +453,13 @@ pre-commit:
     - name: test-all
       run: bun run test:unit && bun run test:integration
 ```
+
+The `skip` line makes the hook step aside in a tree without `node_modules`: a PR snapshot worktree or a
+fresh clone cannot run the build, lint or tests, and the checks already passed in the checkout that has
+them. In a project whose `lefthook.yml` predates this line, commit such a snapshot with `--no-verify`, and
+only there: the tree was checked in the main checkout, so the hook has nothing to add. Everywhere else
+`--no-verify` stays forbidden. The moku `verify-before-commit` hook skips its own tsc and lint gate on the
+same condition.
 
 ## .github/workflows
 

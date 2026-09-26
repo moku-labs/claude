@@ -211,11 +211,11 @@ export function close({ root, flags }) {
 }
 
 /**
- * Pause the active station while waiting for the user, so stopping is legitimate. Refused while agents
- * spawned from the station are still running: their work is not finished, and stopping would orphan it.
- * `--force` pauses anyway, for an agent record left behind by a crash.
+ * Pause the active station while waiting for the user, so stopping is legitimate. Agents spawned from the
+ * station keep running and keep their gate: a pause never closes it for them, and the pause only warns that
+ * they are still out, so their hand-backs are expected. `--force` is accepted and changes nothing.
  *
- * @param {Args} args flags: --reason, --force
+ * @param {Args} args flags: --reason
  * @returns {Result}
  * @example
  * pause({ root, positional: [], flags: { reason: "waiting for the plan approval" } });
@@ -226,18 +226,17 @@ export function pause({ root, flags }) {
   // Nothing open means nothing to pause; stopping is already legitimate
   if (!ledger.changes.some((entry) => entry.status === "open")) return ok("Nothing is open, so nothing needs pausing.");
 
-  // Agents still running inside the station finish first
-  const agents = runningAgents(root);
-  if (agents.length > 0 && flags.force !== true) {
-    return refused(`${describeAgents(agents)} inside the station (started ${agents[0].startedAt}). Wait for them and take their reports, then pause. If an agent is gone and its record is stale, run \`moku-rails pause --force\`.`);
-  }
-
   const change = findChange(ledger, optional(flags.change));
   change.paused = true;
   change.pauseReason = typeof flags.reason === "string" ? flags.reason : undefined;
   saveLedger(root, ledger);
 
-  return ok(`Paused ${change.id}${flags.reason ? `: ${flags.reason}` : ""}.`);
+  // Agents still running inside the station are not stopped by the pause; their reports are still to come
+  const agents = runningAgents(root);
+  const lines = [`Paused ${change.id}${flags.reason ? `: ${flags.reason}` : ""}.`];
+  if (agents.length > 0) lines.push(`Warning: ${describeAgents(agents)} inside the station (started ${agents[0].startedAt}). The pause does not stop them and does not close their gate; take their reports when they arrive. A record left behind by an agent that crashed is a file under .planning/agents/; delete it.`);
+
+  return { code: 0, lines };
 }
 
 /**
@@ -334,7 +333,7 @@ export function facts(root) {
 
   const ledger = loadLedger(root);
 
-  return { onRails: true, initialized: isInitialized(root), initializing: isInitializing(root), routed: ledger.turn?.routed, changes: ledger.changes };
+  return { onRails: true, initialized: isInitialized(root), initializing: isInitializing(root), routed: ledger.turn?.routed, agentsRunning: runningAgents(root).length > 0, changes: ledger.changes };
 }
 
 /**
@@ -449,7 +448,8 @@ export function init({ root, positional }) {
 }
 
 /**
- * May the session stop now. Refused while a change sits inside a writing station and is not paused.
+ * May the session stop now. Refused while a change sits inside a writing station and is not paused, unless
+ * agents spawned from the station are still running: then the turn ends to wait for them.
  *
  * @param {Args} args
  * @returns {Result}
@@ -460,6 +460,7 @@ export function mayStop({ root }) {
   const ledger = loadLedger(root);
   const active = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused);
   if (!active) return ok("allow");
+  if (runningAgents(root).length > 0) return ok("allow: agents are running inside the station, the turn ends to wait for them");
 
   return refused(`Change ${active.id} is inside station "${active.station}". Finish the station, or run \`moku-rails pause --reason <why>\` if you are waiting for the user.`);
 }

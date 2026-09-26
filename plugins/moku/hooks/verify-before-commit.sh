@@ -62,6 +62,10 @@ if [ -z "$ACTIVE_WAVE" ] && [ "$SKELETON_STATUS" != "in-progress" ]; then
   exit 0
 fi
 
+# A tree without node_modules (a PR snapshot worktree, a fresh clone) cannot run tsc or lint: the checks
+# already passed in the checkout that has them, so the gate steps aside instead of failing every commit.
+[ -d node_modules ] || exit 0
+
 # --- Run verification checks ---
 ERRORS=""
 

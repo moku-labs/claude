@@ -4,7 +4,7 @@ description: Runs the project's type check, tests and lint through Bash and repo
 model: sonnet
 effort: medium
 color: yellow
-maxTurns: 60
+maxTurns: 300 # read-only: the limit only bounds a loop that re-reads the same files; no real run comes near it
 skills:
   - moku-core
   - moku-plugin
@@ -12,7 +12,7 @@ skills:
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 
-Turn budget: **60 turns** (`maxTurns`). At turn 48 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+Turn budget: **300 turns** (`maxTurns`). At turn 240 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 

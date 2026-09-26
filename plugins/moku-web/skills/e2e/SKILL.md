@@ -50,6 +50,12 @@ finished run is `moku-rails done e2e`.
 Echo a one-line `Interpreting as: …` only when plain language was interpreted. A large multi-plugin feature
 (new routes plus worker endpoints plus state) belongs in `/moku:plan` and `/moku:build`; say so and stop.
 
+The agents of this station have no turn limit and may run in the background: their writes are never held
+by the routing flag, a prompt the harness writes while they run closes no gate, and ending your turn to
+wait for a hand-back is legitimate inside the station. The steps below are sequential all the same: each
+needs the report of the one before it. Only this session spawns agents; no agent spawns another. One
+agent edits the app at a time, and you commit after each green round.
+
 ## Step 0 — guards
 
 1. A `package.json` must be present, otherwise: "Not a Moku project — run from the app root." Stop.
@@ -96,8 +102,8 @@ triage. The full procedure is `references/e2e-testing.md` → "The UX gate". In 
 
 1. **Capture.** `moku-web-ux-reviewer` drives the app on desktop and mobile and writes one screenshot per
    screen inventory item per viewport into `.planning/e2e/shots/`. It also returns its own heuristic
-   findings (measured geometry, contrast, tap targets, axe violations). Run it in the foreground
-   (`run_in_background: false`) and take what it returns. If it comes back without a complete capture or
+   findings (measured geometry, contrast, tap targets, axe violations). Foreground or background, take its
+   report before the review starts. If it comes back without a complete capture or
    without a report, resume it once with the report instruction above and take that. Still nothing:
    finish the capture yourself with the script it left in `.planning/e2e/`, note in the triage file that
    the heuristics report is missing (`FAIL`, `no report`), and go on to the review.

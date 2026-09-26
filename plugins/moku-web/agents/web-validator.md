@@ -4,13 +4,13 @@ description: Validates Moku web conventions in a Layer-3 app — data-* styling 
 model: sonnet
 effort: medium
 color: blue
-maxTurns: 30
+maxTurns: 300 # read-only: the limit only bounds a loop that re-reads the same files; no real run comes near it
 skills:
   - moku-web
 tools: ["Read", "Grep", "Glob", "Skill"]
 ---
 
-Turn budget: **30 turns** (`maxTurns`). At turn 24 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+Turn budget: **300 turns** (`maxTurns`). At turn 240 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
 You validate Moku web conventions: data-attribute styling, `@scope` encapsulation, `@layer` ordering, island architecture, the two-layer token system, and reference-app structure.
 

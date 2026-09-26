@@ -2,12 +2,14 @@
  * Who wrote a prompt: the person at the keyboard, or the harness.
  *
  * `UserPromptSubmit` fires for more than typed messages: a subagent's hand-back, a task notification, a
- * CI-monitor event, an artifact-comment relay, a scheduled wake-up, and the spawn prompt a subagent
- * starts with. Only a typed message is a new request; the rest carry no routing decision.
+ * CI-monitor event, an artifact-comment relay, a teammate or cross-session message, a scheduled wake-up,
+ * and the spawn prompt a subagent starts with. The payload carries no flag for these (the docs list only
+ * `prompt`), so the text markers decide; `agent_id`, `isMeta` and `origin` are honoured when present.
+ * Only a typed message is a new request; the rest carry no routing decision.
  */
 
 /** Markers the harness puts at the start of a line of a prompt it wrote itself. */
-const SYSTEM_MARKERS = /^\s*(?:<task-notification\b|<agent-message\b|<ci-monitor-event\b|<scheduled-wakeup\b|<cron-event\b|\[SYSTEM NOTIFICATION\b|\[Subagent hand-back\]|\[Artifact comment sent to Claude\])/m;
+const SYSTEM_MARKERS = /^\s*(?:<task-notification\b|<agent-message\b|<teammate-message\b|<ci-monitor-event\b|<scheduled-wakeup\b|<cron-event\b|\[SYSTEM NOTIFICATION\b|\[Subagent hand-back\]|\[Artifact comment sent to Claude\])/m;
 
 /**
  * The prompt text, whichever field the harness put it in.

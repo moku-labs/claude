@@ -29,28 +29,34 @@ These are the canonical definitions of Moku-wide code rules. Every agent enforce
 
 ## Turn budget and the report
 
-Every agent has a turn budget: the `maxTurns` in its frontmatter, repeated as `Turn budget: **N turns**`
-in its first body line. The harness ends the agent at that limit with no warning, and an agent that
-ends there without a report has wasted every turn before it: the orchestrator sees "produced no
-report", resumes it once, and takes whatever partial answer comes back.
+Your first body line says which of two cases you are in.
+
+**No limit** (`Turn budget: **no limit**`; the frontmatter has no `maxTurns`). The harness never stops
+you: builders, the e2e agents and the design generator work until the task is done or blocked. A limit
+here only truncated work, so it is gone. What remains is the report.
+
+**A limit** (`Turn budget: **N turns**`; the frontmatter has `maxTurns: N`). The read-only agents keep
+one, far above any real run, to bound a loop that re-reads the same files. The harness ends the agent
+at that limit with no warning, and an agent that ends there without a report has wasted every turn
+before it: the orchestrator sees "produced no report", resumes it once, and takes whatever partial
+answer comes back.
 
 The rule, for every agent:
 
-1. **Reserve the last 10 turns for the report** (the last 20 % when the budget is under 50 turns).
-2. **When 80 % of the budget is used, stop new work.** Finish the check or file in hand, run no new
-   check and open no new file. The exact turn is in your `Turn budget` line.
-3. **Deliver the report through the hand-back**: your final message with the output contract below,
-   or `StructuredOutput` when the spawn requires it. Report what was done and what was not, with an
-   honest verdict: `PARTIAL` (or `FAIL` for a builder) with the open work in `blockers`. A partial
-   report with an honest verdict is a result; a full check with no report is a failure.
-4. **Never end a turn without a report.** Your last message is the report, whether the work finished
-   or the budget did.
-5. **Keep tool calls few.** Every tool call is one turn. Read and write whole files, not fragments.
+1. **Reserve the end of your work for the report.** Deliver it through the hand-back before stopping:
+   your final message with the output contract below, or `StructuredOutput` when the spawn requires
+   it. Say what was done and what was not, with an honest verdict: `PARTIAL` (or `FAIL` for a
+   builder) with the open work in `blockers`. A partial report with an honest verdict is a result; a
+   full check with no report is a failure.
+2. **Never end a turn without a report.** Your last message is the report, whether the work finished,
+   the work is blocked, or the budget did.
+3. **Keep tool calls few.** Every tool call is one turn. Read and write whole files, not fragments.
    Run one check per group (one `tsc`, one lint pass over the directory, one test run per suite), not
    one per file. Do not re-read a file you just wrote.
-
-Count turns from the start: one tool call or one message is one turn. When you are unsure how many
-are left, assume fewer.
+4. **With a limit: when 80 % of the budget is used, stop new work.** Finish the check or file in hand,
+   run no new check and open no new file, and report. The exact turn is in your `Turn budget` line.
+   Count turns from the start: one tool call or one message is one turn. When you are unsure how many
+   are left, assume fewer.
 
 ### For the orchestrator
 

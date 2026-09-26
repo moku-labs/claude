@@ -2,7 +2,8 @@
 /**
  * SubagentStart hook: record that a moku agent is running inside this project.
  *
- * `moku-rails pause` refuses while agents run, and `status` names them. The SubagentStop hook removes the record.
+ * `status` names them, `moku-rails pause` warns about them, and the stop hook lets a turn end while they run.
+ * The SubagentStop hook removes the record.
  * Silent off the rails and for agents that are not moku's.
  */
 

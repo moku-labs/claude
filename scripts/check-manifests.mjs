@@ -1,7 +1,7 @@
 /**
  * Repository check: every plugin manifest parses, versions agree with the marketplace,
  * every SKILL.md and agent file starts with parseable-looking frontmatter, and every agent's
- * turn-budget line agrees with its `maxTurns`.
+ * turn-budget line agrees with its `maxTurns` (or says "no limit" when there is none).
  *
  * Runs in CI where the `claude` CLI is not installed. `npm run validate` is the full local check.
  */
@@ -29,15 +29,20 @@ for (const file of markdownWithFrontmatter("plugins")) {
   if (match && /<example>/.test(match[1])) problems.push(`${file}: <example> inside frontmatter breaks YAML`);
 }
 
-// Every agent states its budget and its stop turn in its first body line, matching the frontmatter
+// Every agent states its budget in its first body line, matching the frontmatter: `**N turns**` with the
+// stop turn at 80 % when `maxTurns` is set, `**no limit**` when it is not. A limit that stays carries a
+// `# why` comment, so the next reader knows what runaway it bounds.
 for (const file of markdownWithFrontmatter("plugins").filter((path) => /\/agents\//.test(path))) {
   const text = readFileSync(file, "utf8");
-  const limit = /^maxTurns:\s*(\d+)\s*$/m.exec(text);
+  const limit = /^maxTurns:\s*(\d+)\b(.*)$/m.exec(text);
   const body = /^---\n[\s\S]*?\n---\n\n([^\n]*)/.exec(text)?.[1] ?? "";
   const budget = /^Turn budget: \*\*(\d+) turns\*\*.*?At turn (\d+) stop new work/.exec(body);
+  const unlimited = /^Turn budget: \*\*no limit\*\*/.test(body);
 
-  if (!limit) problems.push(`${file}: agent has no maxTurns`);
-  if (!budget) problems.push(`${file}: first body line is not the "Turn budget: **N turns**" line`);
+  if (!budget && !unlimited) problems.push(`${file}: first body line is not the "Turn budget: **N turns**" or "Turn budget: **no limit**" line`);
+  if (limit && unlimited) problems.push(`${file}: says "no limit" but has maxTurns ${limit[1]}`);
+  if (!limit && budget) problems.push(`${file}: says ${budget[1]} turns but has no maxTurns`);
+  if (limit && !/#\s*\S/.test(limit[2])) problems.push(`${file}: maxTurns ${limit[1]} has no "# why" comment`);
   if (limit && budget && budget[1] !== limit[1]) problems.push(`${file}: Turn budget ${budget[1]} != maxTurns ${limit[1]}`);
   if (limit && budget && Number(budget[2]) !== Math.round(Number(limit[1]) * 0.8)) problems.push(`${file}: stop turn ${budget[2]} is not 80 % of ${limit[1]}`);
 }
