@@ -72,7 +72,9 @@ straight to Phase B. Set `## Stage: round-1-generating`.
 
 ### B1 — Spawn generators in parallel
 
-Spawn COUNT `design-generator` agents with the Agent tool, all in one response. Each gets:
+Spawn COUNT `design-generator` agents with the Agent tool, all in one response, foreground or background
+(they have no turn limit, each writes only its own concept file, and ending your turn to wait for their
+hand-backs is legitimate inside the station). No generator spawns another. Each gets:
 
 1. its concept id (`r{N}c{M}`) and its single output path
    (`.planning/design/{SLUG}/concepts/r{N}c{M}.html`),

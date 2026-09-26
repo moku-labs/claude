@@ -2,6 +2,67 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.76.0 (2026-09-26)
+
+The limits that only truncated work are gone, and nothing that runs in the background closes a gate or
+blocks the end of a turn. Finishes what 0.75.0 started, from the same real project session on 0.74.1:
+agents died at their turn limit (the e2e tester three times, builder-deep, the code reviewer, the skeptic
+twice in one pass, the UX reviewer), and `moku-rails pause` refused while builders ran, so the orchestrator
+could neither pause nor end its turn.
+
+### Changed
+- **No turn limit on the agents that do the work.** `moku-builder`, `moku-builder-deep`,
+  `moku-web-e2e-tester`, `moku-web-qa-explorer`, `moku-web-ux-reviewer` and `design-generator` have no
+  `maxTurns` any more. In Claude Code an agent without the key has no cap: the harness never stops it, it
+  stops when the work is done or blocked. Their first body line says `Turn budget: **no limit**`. The
+  read-only agents keep a limit far above any real run, with the reason as a `# why` comment on the key,
+  and `scripts/check-manifests.mjs` requires the comment and the matching budget line.
+
+  | Agent | From | To |
+  |---|---|---|
+  | `moku-builder`, `moku-builder-deep` | 150, 300 | none |
+  | `moku-web-e2e-tester`, `moku-web-qa-explorer`, `moku-web-ux-reviewer` | 300, 150, 150 | none |
+  | `design-generator` | 40 | none |
+  | `moku-code-reviewer` | 120 | 300 |
+  | `moku-structure-validator`, `moku-style-validator`, `moku-quality-validator` | 40, 40, 60 | 300 |
+  | `moku-architecture-validator`, `moku-web-validator`, `moku-plan-checker` | 30 | 300 |
+  | `moku-researcher`, `brainstorm-challenger` | 40, 15 | 300 |
+  | `moku-error-diagnostician`, `moku-error-diagnostician-deep` | 25 | 300 |
+  | `moku-skeptic` | 40 | 100 |
+
+- **The report rule is written for both cases.** "Turn budget and the report" in `agent-preamble.md` now
+  starts from the two first-body lines: reserve the end of the work for the report, deliver it through the
+  hand-back before stopping, a partial report with an honest verdict beats none, keep tool calls few; and,
+  only where a limit still applies, stop new work at 80 % of it.
+- **`moku-rails pause` warns instead of refusing while agents run.** The pause never closed the gate for a
+  subagent (a subagent's write needs an open change at a writing station, nothing else), so refusing it
+  only left the orchestrator unable to end its turn. It now pauses and prints one warning naming the
+  agents; `--force` is accepted and changes nothing.
+- **The orchestrating skills allow background agents.** build, verify, e2e and design say that agents may
+  run in the background, that only this session spawns agents, that one builder writes a given plugin at a
+  time (two on the same files overwrote each other; a builder that finds another writer and refuses is
+  right), and that the orchestrator commits after each green round. The foreground stays the choice for a
+  non-interactive session, where a background completion may never arrive.
+
+### Fixed
+- **Waiting for spawned agents is a legitimate end of turn.** The `Stop` hook and `moku-rails may-stop`
+  let a turn end inside a station without a pause while the station records running agents
+  (`.planning/agents/`) or the harness lists a subagent in the payload's `background_tasks`. Before, the
+  orchestrator had to pause to end its turn, and the pause was refused while its builders ran.
+- **The routing flag holds no one while agents run.** The write and shell gates already let a payload with
+  `agent_id` through; the agents the station records are the second witness, so a builder is never refused
+  by "has not been routed yet" even if the marker were missing.
+- **A harness prompt prints nothing, on or off the rails.** The prompt hook used to print the off-rails
+  "the person mentions moku" hint on every subagent hand-back that named moku, and the standing plus the
+  routing rule on every hand-back before 0.75.0. It now recognises the harness prompt first, so the
+  standing and "route before acting" appear once per typed message and never on an agent's reply.
+  `<teammate-message>` joins the recognised markers, next to `isMeta`, `origin.kind` and `agent_id`.
+- **Commit gates step aside in a tree without `node_modules`.** The scaffolded `lefthook.yml` skips its
+  pre-commit jobs there (`skip: - run: test ! -d node_modules`) and the moku `verify-before-commit` hook
+  skips its tsc and lint gate on the same condition: a PR snapshot worktree cannot run them, and the tree
+  passed in the checkout that has them. `tooling-config.md` documents `--no-verify` for such a snapshot in
+  a project whose `lefthook.yml` predates the skip line, and only there.
+
 ## 0.75.0 (2026-09-26)
 
 Every agent ends with a report, and the write gate closes only on a typed message. Both were systemic

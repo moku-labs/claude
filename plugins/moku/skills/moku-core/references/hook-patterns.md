@@ -14,12 +14,12 @@ should teach the session what to do next, so every refusal carries its remedy.
 | PostToolUse | `Write\|Edit` | `format-on-save.sh` (async) | Formats the one file that was written, when biome and `node_modules` are present. |
 | PostToolUse | `Bash` | `pre-commit-review.sh` | After a wave checkpoint commit, reports stubs, `TODO`s, stray `console.*`, `tsc` and lint counts as `additionalContext`. Never blocks. |
 | PreCompact / PostCompact | `*` | `precompact-state.sh` / `postcompact-state.sh` | Re-inject the key `STATE.md` fields around a compaction boundary. |
-| UserPromptSubmit | | `on-prompt.mjs` | Marks the person's typed message as not routed and hands over the standing. A prompt the harness wrote (hand-back, task notification, CI event, comment relay, a subagent's own prompt) routes nothing; one that says an agent produced no report gets the resume instruction. |
+| UserPromptSubmit | | `on-prompt.mjs` | Marks the person's typed message as not routed and hands over the standing. A prompt the harness wrote (hand-back, task notification, CI event, comment relay, teammate message, a subagent's own prompt) routes nothing and prints nothing, on or off the rails; one that says an agent produced no report gets the resume instruction. |
 | PreToolUse | `Bash` | `pre-bash.mjs` | The shell write gate: a redirect or copy into `src/` is judged like a Write. |
 | PostToolUse | `Agent` | `on-agent-result.mjs` | A foreground moku agent that returned without its output contract: the orchestrator gets the one-resume instruction as `additionalContext`. |
-| SubagentStart | `.*` | `on-subagent-start.mjs` | Records a running moku agent under `.planning/agents/`, so `pause` refuses and `status` names it. |
+| SubagentStart | `.*` | `on-subagent-start.mjs` | Records a running moku agent under `.planning/agents/`: `status` names it, `pause` warns about it, the stop hook lets the turn end while it runs, and the write gate never holds it by the routing flag. |
 | SubagentStop | `.*` | `on-subagent-stop.mjs` | Forgets the agent. An agent stopping without its contract is told once (`decision: block`) to deliver it; a second silence is logged as `no report (turn limit: N/N)` when the transcript shows the budget was used up. Otherwise appends the verdict and blocker counts to `.planning/build/agent-log.md`. |
-| Stop | `*` | `on-stop.mjs` | Refuses to end the session while a change sits inside `build`, `verify` or `e2e` and is not paused. |
+| Stop | `*` | `on-stop.mjs` | Refuses to end the session while a change sits inside `build`, `verify` or `e2e` and is not paused, unless agents spawned from the station are still running (recorded under `.planning/agents/`, or listed in the payload's `background_tasks`): then the turn ends to wait for them. |
 
 `pre-write.mjs` calls four content checks in order, each a script reading the same payload and
 exiting 2 to refuse: `check-plugin-antipatterns.sh`, `validate-common-usage.sh`,

@@ -92,9 +92,13 @@ and the wave goes on with what is on disk.
 
 All builders of a wave run in the one working tree. Do not spawn them with `isolation: "worktree"`: a
 git worktree has no `node_modules` and no `.planning/` (both are gitignored), so the builder would get
-no tooling and no spec. Two rules are the isolation instead. Each builder writes only inside its own
-`src/plugins/{name}/`, and the prompt bans repo-wide commands and git mutations — a stray
-`git checkout` from one builder reverted a sibling's plugin to stubs in a real build.
+no tooling and no spec. Three rules are the isolation instead. Each builder writes only inside its own
+`src/plugins/{name}/`; one builder per plugin at a time, never two on the same directory (two builders on
+the same files overwrote each other in a real build, and a fresh builder that found another writer there
+refused, which is the right behaviour: keep it); and the prompt bans repo-wide commands and git mutations
+— a stray `git checkout` from one builder reverted a sibling's plugin to stubs in a real build. Builders
+may run in the background: their writes are never held by the routing flag, and your turn may end while
+they run. You commit after each green round; a builder never commits.
 
 ### Builder prompt
 
@@ -224,12 +228,12 @@ End your response with a fenced `json` code block:
 
 TDD costs roughly 30% more turns than writing the implementation alone. The table is the expected
 budget per tier for a net-new plugin. A delta reads the existing plugin first and often needs more.
-The hard stop is the agent's own `maxTurns`: 150 for `moku-builder`, 300 for `moku-builder-deep`. The
-Agent tool has no per-call override; a resume with `SendMessage` continues the same agent with a fresh
-budget, and that is the only way to give one more turns. Complex and VeryComplex plugins go to the deep
-builder for its higher reasoning effort and its larger budget. Every builder stops new work at 80 % of
-its budget and reports (`agent-preamble.md` → "Turn budget and the report"), so the table below is the
-work it should fit in, not the point where it goes silent.
+Builders have no hard stop: `moku-builder` and `moku-builder-deep` carry no `maxTurns`, so the harness
+never ends them mid-file (a limit only truncated real work; the only way to give a limited agent more
+turns is a `SendMessage` resume, since the Agent tool has no per-call override). Complex and VeryComplex
+plugins go to the deep builder for its higher reasoning effort. A builder works until the plugin is done
+or blocked and then reports (`agent-preamble.md` → "Turn budget and the report"), so the table below is
+the work to expect, not a point where it goes silent.
 
 | Tier | Expected turns |
 |------|----------------|
@@ -240,7 +244,7 @@ work it should fit in, not the point where it goes silent.
 | VeryComplex | 80 |
 
 Builders lint each file as it turns green, so the final scoped pass finds nothing new and the output
-contract is never lost to a lint backlog. Near the limit with files missing, the builder finishes the GREEN phase first. Priority order:
+contract is never lost to a lint backlog. When a builder must stop with files missing (blocked, or told to report), it finishes the GREEN phase first. Priority order:
 types.ts → index.ts (skeleton) → tests → state.ts → api.ts → handlers.ts → index.ts (final) → README.md.
 Tests come before implementation because failing tests still work as an executable spec.
 
