@@ -79,7 +79,7 @@ Only the orchestrating session spawns agents; no agent lists `Agent` in `tools`.
 A Sonnet agent never closes a gate: its findings go through `moku-skeptic` and the verdict is the
 orchestrating session's.
 
-### Hooks — 16 scripts across 7 events (`hooks/hooks.json`)
+### Hooks — 18 scripts across 9 events (`hooks/hooks.json`)
 
 | Event | Scripts |
 |---|---|
@@ -88,7 +88,9 @@ orchestrating session's.
 | `PreToolUse` (Bash) | `verify-before-commit.sh` |
 | `PostToolUse` (Write, Edit) | `format-on-save.sh` (async) |
 | `PostToolUse` (Bash) | `pre-commit-review.sh` |
+| `PostToolUse` (Agent) | `on-agent-result.mjs` |
 | `PreCompact` / `PostCompact` | `precompact-state.sh`, `postcompact-state.sh` |
+| `SubagentStart` | `on-subagent-start.mjs` |
 | `SubagentStop` | `on-subagent-stop.mjs` |
 | `Stop` | `on-stop.mjs` |
 

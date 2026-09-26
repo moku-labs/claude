@@ -2,6 +2,59 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.75.0 (2026-09-26)
+
+Every agent ends with a report, and the write gate closes only on a typed message. Both were systemic
+in a real project session on 0.74.1: agents hit their turn limit with "produced no report" and were
+resumed by hand, and every subagent hand-back or task notification closed the gate under builders
+running in the background.
+
+### Fixed
+- **No agent ends without a report.** The preamble has a new section, "Turn budget and the report":
+  reserve the last 10 turns for the report, stop new work at 80 % of the budget, deliver the output
+  contract with an honest verdict, never end a turn without one, keep tool calls few. Every agent's
+  first body line states its budget and its stop turn (`Turn budget: **40 turns** ... At turn 32 stop
+  new work`), and `scripts/check-manifests.mjs` fails when that line disagrees with `maxTurns`.
+- **The `SubagentStop` hook enforces it.** A moku agent that stops without its contract is told once,
+  through the stop decision, to deliver it now. A second silence is logged as
+  `no report (turn limit: 150/150)` when the agent transcript shows the budget was used up, and the
+  person sees the resume instruction. The prompt hook prints the same instruction when a hand-back or
+  task notification says an agent produced no report; a new PostToolUse hook on the `Agent` tool does
+  it for a foreground result. Stdout of `SubagentStop` never reaches the orchestrator, so those two are
+  the channels.
+- **The gate closes only on the person's message.** `on-prompt.mjs` leaves `turn.routed` untouched for
+  a prompt the harness wrote: a subagent hand-back, a task notification, a CI-monitor event, an
+  artifact-comment relay, a scheduled wake-up, and any prompt inside a subagent (`agent_id` present).
+  Before, each of those marked the turn unrouted and every builder's next write was refused with "has
+  not been routed yet".
+- **Subagent writes are not held by the routing flag.** The write and shell gates read the `agent_id`
+  the harness puts on every hook payload inside a subagent. A subagent's source write needs an open
+  change at a writing station and nothing else: the routing happened when the orchestrator entered the
+  station and spawned it. The orchestrator's own writes still wait for the routing.
+- **`moku-rails pause` refuses while agents run inside the station.** A new `SubagentStart` hook records
+  each running moku agent under `.planning/agents/`, `SubagentStop` removes it, `status` names them
+  (`Agents: 2 agent(s) running: moku:moku-builder ×2`). `pause --force` is for a record a crashed agent
+  left behind.
+
+### Changed
+- **Turn limits.** The Agent tool has no per-call override; a `SendMessage` resume is the only way to
+  give an agent more turns, so the definitions carry the room the work needs.
+
+  | Agent | From | To |
+  |---|---|---|
+  | `moku-web-e2e-tester` | 150 | 300 |
+  | `moku-builder-deep` | 150 | 300 |
+  | `moku-code-reviewer` | 40 | 120 |
+  | `moku-skeptic` | 12 | 40 |
+
+- **The orchestrating skills** (build, verify, e2e, design) put "keep tool calls few: read and write
+  whole files, run one check per group" in every spawn prompt and treat a missing report as a failure
+  that triggers exactly one "deliver your report now" resume, never an open-ended wait. `verify` no
+  longer retries a silent validator three times; a silent skeptic counts as upheld. `e2e` no longer
+  tells the orchestrator to finish the capture without messaging the reviewer at all.
+- **The moku skill** says that "route before acting" applies to the person's messages, what the
+  harness prompts are, and why a subagent is never held by the flag.
+
 ## 0.74.2 (2026-09-25)
 
 A git worktree session works on the main checkout's plan.
