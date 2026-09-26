@@ -611,3 +611,62 @@ describe("agents running inside a station", () => {
     assert.equal(launched.out, "");
   });
 });
+
+describe("the Agent hook reads the response the harness really passes", () => {
+  // Shapes captured from a live PostToolUse payload (Claude Code 2.1.280), trimmed
+  const prompt = 'Build the streak plugin.\nEnd with your contract:\n```json\n{"agent":"moku-builder","verdict":"PASS|FAIL"}\n```';
+  const launch = { isAsync: true, status: "async_launched", agentId: "a6de39f0468d85d2f", description: "Build streak", resolvedModel: "claude-sonnet-5", prompt, outputFile: "/private/tmp/claude-501/tasks/a6de39f0468d85d2f.output", canReadOutputFile: true };
+  const finished = (text, extra = {}) => ({ status: "completed", prompt, agentId: "ad1a396173b7a5d11", agentType: "moku:moku-builder", content: [{ type: "text", text }], totalToolUseCount: 12, ...extra });
+  const contract = 'Built streak.\n```json\n{"agent":"moku-builder","verdict":"PASS","blockers":[],"warnings":[]}\n```';
+  const launchText = "Async agent launched successfully.\nagentId: a6de39f0468d85d2f\nThe agent is working in the background. You will be notified automatically when it completes.";
+  const pointer = 'This agent\'s report was delivered to you as a message from "ad1a396173b7a5d11" (its SubagentHandback call). Read it there; it is not repeated here.\n';
+
+  const agentHook = (root, tool_response, input = {}) => hook("on-agent-result.mjs", { cwd: root, tool_name: "Agent", tool_input: { subagent_type: "moku:moku-builder", prompt, ...input }, tool_response });
+  const context = (result) => JSON.parse(result.out).hookSpecificOutput.additionalContext;
+
+  it("stays silent on a background launch, structured, with or without run_in_background in the input", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(agentHook(root, launch).out, "");
+    assert.equal(agentHook(root, launch, { run_in_background: true }).out, "");
+    assert.equal(agentHook(root, { agentId: "a6de39f0468d85d2f", outputFile: "/tmp/a.output" }).out, "");
+  });
+
+  it("stays silent on a background launch given as text", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(agentHook(root, launchText).out, "");
+    assert.equal(agentHook(root, [{ type: "text", text: launchText }]).out, "");
+  });
+
+  it("stays silent when the report went through the hand-back and the response only points at it", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(agentHook(root, finished(pointer, { handback: "send" })).out, "");
+    assert.equal(agentHook(root, finished(pointer)).out, "");
+  });
+
+  it("stays silent on a foreground return that carries its contract", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(agentHook(root, finished(contract)).out, "");
+    assert.equal(agentHook(root, contract).out, "");
+  });
+
+  it("names a foreground return without its contract, and never reads the orchestrator's prompt as the report", () => {
+    const root = project({ initialized: true });
+
+    const result = agentHook(root, finished("Now let's run the full unit and integration suite."));
+
+    assert.match(context(result), /^moku: moku:moku-builder returned without its output contract\. A missing report/);
+    assert.doesNotMatch(context(result), /turn limit/);
+  });
+
+  it("names the turn limit on a partial foreground return", () => {
+    const root = project({ initialized: true });
+
+    const result = agentHook(root, finished("Reviewed 12 files. (output marked as partial: the agent reached its maxTurns limit)"));
+
+    assert.match(context(result), /It stopped at its turn limit\. .*Resume the agent exactly once/);
+  });
+});

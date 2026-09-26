@@ -2,6 +2,24 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.76.1 (2026-09-26)
+
+The Agent hook reads the response the harness really passes. Seen on every background spawn in a real
+project session on 0.76.0 (Claude Code 2.1.280, Agent tool in the background by default): the orchestrator
+was told to resume an agent that had not run yet.
+
+### Fixed
+- **A background launch is not a missing report.** The harness passes the Agent response as an object
+  (`status: "async_launched"`, `agentId`, `outputFile`), not as launch text, and the hook never read
+  `run_in_background` from the input. `on-agent-result.mjs` now stays silent on any of these, and on the
+  launch text.
+- **A report sent through the hand-back is not a missing report.** A finished call with
+  `handback: "send"` returns only a pointer to the report. The hand-back itself reaches the prompt hook,
+  which checks it as before.
+- **A contract in a finished call is found.** The hook read the whole response object as JSON text. The
+  escaped newlines hid the fenced contract, and the orchestrator's `prompt` was read as the agent's words.
+  It now reads only the text blocks of `content`.
+
 ## 0.76.0 (2026-09-26)
 
 The limits that only truncated work are gone, and nothing that runs in the background closes a gate or
