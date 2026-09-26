@@ -11,6 +11,8 @@ skills:
 tools: ["Read", "Grep", "Glob", "Bash"]
 ---
 
+Turn budget: **25 turns** (`maxTurns`). At turn 20 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 
 You diagnose build errors: classify the root cause and propose a targeted fix. You return the diagnosis and the orchestrator acts on it, so keep the proposals concrete enough to apply without you.

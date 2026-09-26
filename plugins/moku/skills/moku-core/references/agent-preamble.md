@@ -27,9 +27,50 @@ These are the canonical definitions of Moku-wide code rules. Every agent enforce
 - **R8 — Plugin tests live with the plugin**: Tests in `src/plugins/[name]/__tests__/`. Never in root `tests/unit/plugins/` or `tests/integration/plugins/`.
 - **R9 — No lazy `unknown` / `any` / `Record<string, unknown>` for a knowable shape**: Moku is type-first — when the shape of a value is *derivable*, define and use an explicit type; never widen to `unknown`, `any`, or `Record<string, unknown>` and then cast field-by-field. A shape is derivable when it comes from a known contract: a DB row (the SQL schema is the type), a parsed API/queue/config payload, a function parameter with a fixed caller, the framework's own exported types (e.g. `WorkerEnv`, `Router.LayoutContext`). Before writing `unknown`/`Record<string, unknown>`, **assume the structure and look for (or declare) the type** — derive it from the schema, the spec, or the callers. `unknown` is reserved for *genuine* dynamic boundaries (untrusted `JSON.parse`/`fetch` results, `catch (e)` clauses, plugin-agnostic kernel slots) and there it is narrowed or validated immediately, not cast straight through. A `: Record<string, unknown>` / `: unknown` / `<unknown>` / `<Record<string, unknown>>` annotation (or a chain of `as` casts hung off one) where a concrete type is derivable is a **BLOCKER**. Derives from `spec/09-TYPE-SYSTEM.md`'s "full inference, zero casts" philosophy; complements R6 (no inline assertions) and R7 (no `as any`). **Allowlisted:** `as unknown as <ExternalType>` for partial **test** mocks of complex external SDK types (`D1Database`, `DurableObjectStub`, a full plugin `Ctx`); a generic's `<T = unknown>` *default*; and `unknown` at a real boundary that is narrowed before use.
 
+## Turn budget and the report
+
+Every agent has a turn budget: the `maxTurns` in its frontmatter, repeated as `Turn budget: **N turns**`
+in its first body line. The harness ends the agent at that limit with no warning, and an agent that
+ends there without a report has wasted every turn before it: the orchestrator sees "produced no
+report", resumes it once, and takes whatever partial answer comes back.
+
+The rule, for every agent:
+
+1. **Reserve the last 10 turns for the report** (the last 20 % when the budget is under 50 turns).
+2. **When 80 % of the budget is used, stop new work.** Finish the check or file in hand, run no new
+   check and open no new file. The exact turn is in your `Turn budget` line.
+3. **Deliver the report through the hand-back**: your final message with the output contract below,
+   or `StructuredOutput` when the spawn requires it. Report what was done and what was not, with an
+   honest verdict: `PARTIAL` (or `FAIL` for a builder) with the open work in `blockers`. A partial
+   report with an honest verdict is a result; a full check with no report is a failure.
+4. **Never end a turn without a report.** Your last message is the report, whether the work finished
+   or the budget did.
+5. **Keep tool calls few.** Every tool call is one turn. Read and write whole files, not fragments.
+   Run one check per group (one `tsc`, one lint pass over the directory, one test run per suite), not
+   one per file. Do not re-read a file you just wrote.
+
+Count turns from the start: one tool call or one message is one turn. When you are unsure how many
+are left, assume fewer.
+
+### For the orchestrator
+
+The skills that spawn agents (build, verify, e2e, design) apply the same rule from the other side:
+
+- Pass "keep tool calls few: read and write whole files, run one check per group" in every spawn
+  prompt, and name the turn budget when the work is large.
+- **A missing report is a failure**, not a delay. Resume the agent exactly once with `SendMessage`:
+  "Deliver your report now: the output contract with an honest verdict on what is done. Do no more
+  work." Take what comes back. If it still has no report, record the agent as `FAIL` (`no report`),
+  use what it left on disk, and go on. Never wait open-ended, never send a second reminder.
+- The hooks make the pattern visible and mechanical. `SubagentStop` tells an agent that stops without
+  its contract to deliver it, once, and logs `no report (turn limit: N/N)` when the transcript shows the
+  budget was used up. The prompt hook prints this resume instruction when a hand-back or task
+  notification says an agent produced no report; the `Agent` PostToolUse hook does the same for a
+  foreground result.
+
 ## Output Contract
 
-End your response with a fenced `json` code block containing structured results: the prose report first (for the reader), the JSON block last (for the parser). If you were spawned via a workflow that requires `StructuredOutput`, call it as your final action; otherwise emit the fenced ```json block. A run that ends without the contract counts as a failed validator, not as PASS. The `fix` field is allowed (optional) on warnings too — include it when you have a concrete fix.
+End your response with a fenced `json` code block containing structured results: the prose report first (for the reader), the JSON block last (for the parser). If you were spawned via a workflow that requires `StructuredOutput`, call it as your final action; otherwise emit the fenced ```json block. A run that ends without the contract counts as a failed validator, not as PASS, and a run that ends at its turn limit without the contract is the failure the section above exists to prevent. The `fix` field is allowed (optional) on warnings too — include it when you have a concrete fix.
 
 ```json
 {

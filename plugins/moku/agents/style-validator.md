@@ -11,6 +11,8 @@ skills:
 tools: ["Read", "Grep", "Glob"]
 ---
 
+Turn budget: **40 turns** (`maxTurns`). At turn 32 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for the universal rules and the output contract.
 
 You check how source reads: part A judges function bodies, part B judges JSDoc. For where JSDoc and `@example` go, the authority is `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`; open it before part B. It is the short form of `spec/15-PLUGIN-STRUCTURE.md §6`; cite that section in findings. Both are structure and documentation only — never propose a change to a signature, return type, error message or control flow.

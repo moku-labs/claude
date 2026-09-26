@@ -67,9 +67,19 @@ Spawn `moku-web-e2e-tester` with:
   and specs (`.planning/specs/*`, `app-spec.md`) plus what each build wave delivered, and the app source
   (`src/routes.tsx`, components, islands, pages, worker `endpoints.ts`).
 
+Add the turn rule to the spawn prompt, here and for every agent of this station: "Keep tool calls few:
+read and write whole files, run the suite once per round, not once per spec. Deliver the output contract
+before your turn budget ends, partial results with an honest verdict."
+
 It enumerates screens and controls, closes coverage gaps, runs the suite, fixes real defects, and returns a
 coverage table with its verdict. A `FAIL` verdict stops the sequence here: present the failing items and the
 fix each needs, and offer to continue. Never present a "should work".
+
+**An agent that returns without its report** (the `SubagentStop` hook and the hand-back say so) gets
+exactly one resume with `SendMessage`: "Deliver your report now: the output contract with an honest verdict
+on what is done. Do no more work." Take what comes back. If it still has no report, record `FAIL`
+(`no report`), use what it left on disk (specs, baselines, screenshots), and go on. Never wait open-ended
+and never send a second reminder: `agent-preamble.md` → "For the orchestrator".
 
 ## Step 2 — exploratory QA
 
@@ -88,9 +98,9 @@ triage. The full procedure is `references/e2e-testing.md` → "The UX gate". In 
    screen inventory item per viewport into `.planning/e2e/shots/`. It also returns its own heuristic
    findings (measured geometry, contrast, tap targets, axe violations). Run it in the foreground
    (`run_in_background: false`) and take what it returns. If it comes back without a complete capture or
-   without a report, do not message it and wait: a reply may never arrive, and the session then hangs
-   inside the station. Finish the capture yourself with the script it left in `.planning/e2e/`, note in
-   the triage file that the heuristics report is missing, and go on to the review.
+   without a report, resume it once with the report instruction above and take that. Still nothing:
+   finish the capture yourself with the script it left in `.planning/e2e/`, note in the triage file that
+   the heuristics report is missing (`FAIL`, `no report`), and go on to the review.
 2. **Astra.** If the `moku-design` pack is installed and `moku-astra` is on PATH:
 
    ```bash

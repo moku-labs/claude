@@ -107,9 +107,16 @@ The web validator comes from the `moku-web` pack. Run it only when that pack is 
 the project is a web app. When the project is a web app and the pack is absent, skip it and say so
 in the report: the web axes were not checked because `moku-web` is not installed.
 
-Each validator ends with the JSON output contract. Retry one that returns no parseable verdict, up
-to three times. A validator that still returns no verdict did not run, which means the project was
-not fully checked — that is a `FAIL`, not a shrug.
+Put the turn rule in every spawn prompt, validators and skeptics alike: "Keep tool calls few: read
+whole files, one grep per pattern, one check per group. Deliver the output contract before your turn
+budget ends, partial results with an honest verdict."
+
+Each validator ends with the JSON output contract. One that returns without a parseable verdict is
+resumed exactly once with `SendMessage`: "Deliver your report now: the output contract with an honest
+verdict on what is done. Do no more work." Take what comes back. A validator that still returns no
+verdict did not run, which means the project was not fully checked — that is a `FAIL` (`no report`),
+not a shrug, and not a reason to wait. The same one resume applies to a skeptic; a silent skeptic
+counts as "upheld", never as "refuted". The rule is `agent-preamble.md` → "For the orchestrator".
 
 ## The loop
 

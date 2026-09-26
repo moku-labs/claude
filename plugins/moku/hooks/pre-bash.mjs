@@ -11,6 +11,7 @@ import { relative, resolve } from "node:path";
 
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
+import { isSubagent } from "../lib/hooks/origin.mjs";
 import { bindSession, rootForSession } from "../lib/hooks/root.mjs";
 import { facts } from "../lib/rails/commands.mjs";
 import { guardShell } from "../lib/rails/guard.mjs";
@@ -32,7 +33,7 @@ if (!root) process.exit(0);
 const cwd = typeof payload.cwd === "string" ? payload.cwd : process.cwd();
 const locate = (/** @type {string} */ target) => relative(root, resolve(cwd, target.replace(/^~(?=\/|$)/, homedir())));
 
-const verdict = guardShell(command, facts(root), locate);
+const verdict = guardShell(command, { ...facts(root), subagent: isSubagent(payload) }, locate);
 if (verdict.allow) process.exit(0);
 
 console.error(`moku rails${mode === "warn" ? " (warn)" : ""}: ${verdict.reason}`);

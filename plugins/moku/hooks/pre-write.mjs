@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForFile } from "../lib/hooks/root.mjs";
+import { isSubagent } from "../lib/hooks/origin.mjs";
 import { facts } from "../lib/rails/commands.mjs";
 import { guardWrite } from "../lib/rails/guard.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
@@ -34,7 +35,7 @@ if (!root) process.exit(0);
 
 // Rails: a source file may only arrive at the right station
 const mode = railsMode();
-const verdict = mode === "off" ? { allow: true } : guardWrite(relative(root, resolve(payload.cwd ?? process.cwd(), filePath)), facts(root));
+const verdict = mode === "off" ? { allow: true } : guardWrite(relative(root, resolve(payload.cwd ?? process.cwd(), filePath)), { ...facts(root), subagent: isSubagent(payload) });
 
 if (!verdict.allow && mode === "warn") console.error(`moku rails (warn): ${verdict.reason}`);
 if (!verdict.allow && mode === "strict") {

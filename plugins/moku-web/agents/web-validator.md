@@ -10,6 +10,8 @@ skills:
 tools: ["Read", "Grep", "Glob", "Skill"]
 ---
 
+Turn budget: **30 turns** (`maxTurns`). At turn 24 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 You validate Moku web conventions: data-attribute styling, `@scope` encapsulation, `@layer` ordering, island architecture, the two-layer token system, and reference-app structure.
 
 For the universal rules and the output contract format, load the `moku:moku-core` skill with the Skill tool, then read `references/agent-preamble.md` under the base directory it prints. The **moku-web** skill in this pack carries the conventions themselves.

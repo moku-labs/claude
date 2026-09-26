@@ -2,20 +2,26 @@
 /**
  * UserPromptSubmit hook: every request of the person is placed on the route before code follows it.
  *
- * On the rails: it marks the request as not routed (the write gate refuses source until a rails command
- * routes it) and hands the model the project's standing plus the routing rule, so the conductor's first
- * step does not depend on the model remembering to load a skill.
+ * On the rails: a typed message of the person is marked as not routed (the write gate refuses source until
+ * a rails command routes it) and the model gets the project's standing plus the routing rule, so the
+ * conductor's first step does not depend on the model remembering to load a skill.
+ * A prompt the harness wrote (a subagent's hand-back, a task notification, a CI event, a comment relay, a
+ * subagent's own spawn prompt) is not a request: the routing flag stays as it is, so builders running in
+ * the background keep their gate open. A hand-back that says an agent produced no report gets the one
+ * resume instruction.
  * Off the rails: silent, except for one hint when the person names moku.
  */
 
+import { RESUME_INSTRUCTION } from "../lib/hooks/agents.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
+import { isSystemPrompt, promptText } from "../lib/hooks/origin.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
 import { status } from "../lib/rails/commands.mjs";
 import { markPrompt } from "../lib/rails/ledger.mjs";
 
 const { payload } = readHookInput();
-const prompt = String(payload.prompt ?? "");
+const prompt = promptText(payload);
 const root = rootForSession(payload);
 
 if (railsMode() === "off") process.exit(0);
@@ -27,7 +33,14 @@ if (!root) {
   process.exit(0);
 }
 
-// On the rails: the request starts unrouted
+// A prompt the harness wrote is not a new request: nothing is re-routed, and no gate closes
+if (isSystemPrompt(payload)) {
+  const noReport = /produced no report|without (a|its) report|no report|marked as partial|reached (its |the )?(max(imum)? )?turn|turn limit|maxTurns/i.test(prompt);
+  if (noReport) console.log(`moku: an agent ended without its report. ${RESUME_INSTRUCTION}`);
+  process.exit(0);
+}
+
+// On the rails: the person's request starts unrouted
 markPrompt(root);
 
 const report = status({ root, positional: [], flags: {} });

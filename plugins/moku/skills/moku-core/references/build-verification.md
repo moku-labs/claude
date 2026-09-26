@@ -55,7 +55,10 @@ Record it beside the full hash (Step 4d2).
    Exit 0 is pass, exit 2 is fail. It covers the three levels: files exist, content is substantive
    rather than stubs, and the plugin is wired with lint and tests passing.
 2. In parallel, spawn `moku-code-reviewer` with the wave's git diff, the specs, the plugin list and
-   the builder intent summaries.
+   the builder intent summaries, plus the turn rule: "Keep tool calls few: read whole files, one
+   grep per pattern. Report before the budget ends." A review that comes back without its contract
+   gets one resume ("Deliver your report now") and no second one; a silent reviewer is a `FAIL`
+   (`no report`) in the wave record, and the wave is treated as unreviewed, not as clean.
 3. Update each plugin: `built` → `verified` on exit 0, `built` → `verify-failed` on exit 2.
 4. Any `verify-failed` plugin sends the wave into gap closure (Step 4c). Hold the code review findings
    until gap closure resolves — reviewing code that is about to be rewritten is wasted. Afterwards,

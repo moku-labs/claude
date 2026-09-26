@@ -9,6 +9,7 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
+import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
 import { activate, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, saveLedger, setInitializing } from "./ledger.mjs";
 import { headCommit, reconcile } from "./reconcile.mjs";
@@ -44,8 +45,10 @@ export function status({ root }) {
   if (debts.length === 0) lines.push("Rails: clean. Ready for new work.");
   for (const debt of debts) lines.push(debt.kind === "paused" ? `Paused: ${debt.detail}` : `Debt [${debt.kind}]: ${debt.detail}`);
   if (ledger.ideas.length > 0) lines.push(`Backlog: ${ledger.ideas.length} idea(s) parked for later.`);
+  const agents = runningAgents(root);
+  if (agents.length > 0) lines.push(`Agents: ${describeAgents(agents)}.`);
 
-  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas } };
+  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas, agents } };
 }
 
 /**
@@ -208,9 +211,11 @@ export function close({ root, flags }) {
 }
 
 /**
- * Pause the active station while waiting for the user, so stopping is legitimate.
+ * Pause the active station while waiting for the user, so stopping is legitimate. Refused while agents
+ * spawned from the station are still running: their work is not finished, and stopping would orphan it.
+ * `--force` pauses anyway, for an agent record left behind by a crash.
  *
- * @param {Args} args flags: --reason
+ * @param {Args} args flags: --reason, --force
  * @returns {Result}
  * @example
  * pause({ root, positional: [], flags: { reason: "waiting for the plan approval" } });
@@ -220,6 +225,12 @@ export function pause({ root, flags }) {
 
   // Nothing open means nothing to pause; stopping is already legitimate
   if (!ledger.changes.some((entry) => entry.status === "open")) return ok("Nothing is open, so nothing needs pausing.");
+
+  // Agents still running inside the station finish first
+  const agents = runningAgents(root);
+  if (agents.length > 0 && flags.force !== true) {
+    return refused(`${describeAgents(agents)} inside the station (started ${agents[0].startedAt}). Wait for them and take their reports, then pause. If an agent is gone and its record is stale, run \`moku-rails pause --force\`.`);
+  }
 
   const change = findChange(ledger, optional(flags.change));
   change.paused = true;

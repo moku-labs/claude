@@ -11,6 +11,8 @@ skills:
 tools: ["Read", "Grep", "Glob"]
 ---
 
+Turn budget: **30 turns** (`maxTurns`). At turn 24 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
 
 You validate that framework, plugin and consumer-app (Layer 3) plans are complete, correct and internally consistent before they reach the user.
