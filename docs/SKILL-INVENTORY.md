@@ -189,8 +189,8 @@ Version bumps touch both `plugins/<name>/.claude-plugin/plugin.json` and the mat
 
 Copy `docs/pack-template/` and follow its five steps. The pack contract — same shape for every pack,
 plus the registry row — is in `plugins/moku/skills/moku-core/references/moku-frameworks.md`
-(§ Pack contract). Frameworks without a pack yet: `@moku-labs/ai`, `@moku-labs/system`, and the
-planned game engine.
+(§ Pack contract). Every registered framework has a pack. `moku-game` teaches two of them, `@moku-labs/game` and its
+dev tooling `@moku-labs/editor`.
 
 ## Cost note
 
