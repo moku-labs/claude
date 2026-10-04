@@ -290,4 +290,5 @@ and not exported from the package root.
 Every handler runs under the lane `"{task}/{provider}/default"`: 60 rpm, 4 concurrent, breaker
 after 5 retryable failures. A `limits.lanes` override replaces the whole map, so repeat the shipped
 `video/apimodels` and `video/ark` lanes when adding one. `limits` is a core plugin: `defineConfig`
-does not type it, so `pluginConfigs.limits` needs a cast until moku-labs/core#28 lands.
+does not type it, so `pluginConfigs.limits` needs a cast. core 1.7.1 fixes the type (moku-labs/core#29); the cast
+goes away once `@moku-labs/ai` ships on core 1.7.1 (0.14.1 still pins 1.6.0).

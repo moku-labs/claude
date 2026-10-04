@@ -5,7 +5,7 @@ screen that shows "Hello, world" and a tappable button that counts taps. It runs
 dev page with the editor, and is the smallest game the playtest station can drive.
 
 Derived from the engine's fixture `tests/integration/merge-game/` and its `llms.txt` "Minimal game".
-Verified end to end (typecheck, assets, test, build, dev page, editor) against `@moku-labs/game@0.4.0`,
+Verified end to end (typecheck, assets, test, build, dev page, editor) against `@moku-labs/game@0.4.2`,
 `@moku-labs/editor@0.0.2`, `pixi.js@8.22`, `typescript@7.0` and Bun 1.3.14. Both packages move fast:
 install with `@latest`, never hard-pin. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: the game package ships it since 0.4.0 and it is the
@@ -46,7 +46,7 @@ nodes/home.ts  nodes/tap.ts  flows/main.ts
 features/ui/{assets.ts, LICENSE-fonts.txt, assets/font-body.fnt, assets/font-body.png}
 features/hello/{index.ts, view.tsx, scene.ts, strings/en.json}
 generated/{assets.ts, strings.ts, strings.en.ts}*
-web/{index.html, main.ts, dev.ts, serve.ts, build.ts, assets.ts}
+web/{index.html, main.ts, dev.ts, serve.ts, build.ts}
 tests/hello.test.ts
 ```
 
@@ -62,8 +62,8 @@ tests/hello.test.ts
   "scripts": {
     "dev": "moku-editor web/index.html --port 3000 --root .",
     "serve": "bun web/serve.ts",
-    "assets:keys": "bun web/assets.ts --root .",
-    "assets:check": "bun web/assets.ts --root . --check",
+    "assets:keys": "moku-game-assets --root .",
+    "assets:check": "moku-game-assets --root . --check",
     "build:web": "bun web/build.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
@@ -75,11 +75,6 @@ tests/hello.test.ts
 `bun add` fills `dependencies` (`@moku-labs/game`, `pixi.js`) and `devDependencies` (`@moku-labs/editor`,
 `typescript`, `@types/bun`, `vitest`). With `--root .` the asset CLI writes `manifest.json` and
 `generated/` at the root; `--manifest` and `--keys` move them.
-
-**The bin `moku-game-assets` is broken in 0.4.0.** It still passes `compileStrings` where `runCli` now
-takes `{ compile, exportStrings, importStrings }`, and fails with `compile is not a function`. Until a
-fixed release, the game runs the CLI through `web/assets.ts` (below). Once the bin works, the scripts
-become `"assets:keys": "moku-game-assets --root ."` and `web/assets.ts` goes away.
 
 ## tsconfig.json
 
@@ -473,17 +468,6 @@ for (const feature of readdirSync("features")) {
 
   if (existsSync(assets)) cpSync(assets, `dist/web/${assets}`, { recursive: true });
 }
-```
-
-```ts
-// web/assets.ts
-/**
- * @file The asset CLI of `@moku-labs/game/assets`: keys, manifest, strings, `--check`, `--pack`.
- * Stands in for the bin `moku-game-assets`, which passes the wrong argument in 0.4.0.
- */
-import { compileStrings, exportStrings, importStrings, runCli } from "@moku-labs/game/assets";
-
-process.exitCode = await runCli(process.argv.slice(2), { compile: compileStrings, exportStrings, importStrings });
 ```
 
 (`console.*` is fine in these scripts: they are build tooling, not a Moku plugin. A game that adds

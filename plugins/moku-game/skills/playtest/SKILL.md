@@ -115,13 +115,14 @@ Follow `references/editor.md`:
    recipe of `editor.md` (receiver in Bash, `w.fetch` from the game frame, flatten on the page colour).
    For every animation the change touched take a contact sheet,
    `capture { sheet: { frames: 8, everyMs: 100 } }`; `capture { legend: true }` numbers the keyed views
-   when a finding needs to point at one. With editor 0.0.2 and game 0.4.0 the palette's "Take a
+   when a finding needs to point at one. With editor 0.0.2 and game 0.4.x the palette's "Take a
    screenshot" and "Record a series…" fail (`game.capture gave no picture`); use them again once the
    editor is updated. Copy what the report cites into `.planning/e2e/game/` (`<flow>-<node>.png`,
    `<animation>-sheet.png`, or `<animation>.mp4` from a series via the ffmpeg line of `editor.md`).
-5. Read Console at level `warn` after the playthrough (`doors.sources.log`). A warning the change
-   introduced is a finding. `registry:source-failed` for `game.sounds` in a game without `audioPlugin`
-   is a known editor warning, not a finding.
+5. Read Console at level `warn` after the playthrough (`doors.sources.log`). Skip `registry:source-failed`
+   and `link:watch-failed` for `game.sounds` / `game.effects` in a game without that plugin: editor 0.0.2
+   logs the game's not-installed answer as a failure. A warning the change
+   introduced is a finding.
 6. Run `doors.read(game, doors.sources.ui)` once and `app.ui.lint()` through a script
    (`w.game.ui.lint()`): tap targets under 44 pt, overflowing text, absolute elements without a `reason`.
    Each is a finding.

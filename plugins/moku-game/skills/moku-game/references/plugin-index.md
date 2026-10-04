@@ -1,6 +1,6 @@
 # @moku-labs/game — Plugin & Property Index
 
-**Synced version:** `0.4.0` (catalog from the repo at `main` after PRs #19 and #20, equal to npm `0.4.0`:
+**Synced version:** `0.4.2` (catalog from the repo at `main` after PRs #19, #20 and #21, equal to npm `0.4.2`:
 `llms.txt`, `docs/plugins.md`, `docs/events.md`, `docs/configuration.md`, `docs/doors.md`, `docs/jsx.md`,
 `src/plugins/*/README.md`). Built on `@moku-labs/core@1.7.0` +
 `@moku-labs/common@0.3.3` (regular deps). `pixi.js ^8.0.0` is a **peer** dependency; `playwright-core` and
@@ -8,9 +8,8 @@
 
 The second half indexes **`@moku-labs/editor@0.0.2`** (peer `@moku-labs/game >= 0.0.2`).
 
-> The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). Its "Doors" lines
-> are one step behind: they still list the source `rect` and miss `locate`, `explain`, `diff`, `schema`,
-> `at`, `timeScale`, `trace`. `docs/doors.md` and the tables below are current; they win.
+> The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). It matches the
+> installed version.
 
 **Breaking in 0.4.0** (pre-1.0): a literal `{ component, field }` text bind became `bind(Component, "field")`;
 `game.capture` answers `{ png }`, not a string; `game.rect` became `game.locate`; `assets.audio(key)` answers
@@ -102,7 +101,7 @@ flowchart LR
 | Entry | Runs in | Exports |
 |---|---|---|
 | `@moku-labs/game/testing` | node, bun | `createHeadless`, `runRepro`, `stepFrames`, `fakeClock`, `memory`, `saveOf`, `defineVisualTest`, `runVisualTests`, `parseVisualArgv` |
-| `@moku-labs/game/assets` | node, bun | `scanAssets`, `emitKeys`, `emitManifest`, `compileStrings`, `checkStrings`, `packAssets`, `exportStrings`, `importStrings`, `runCli(argv, { compile: compileStrings, exportStrings, importStrings })`. Flags: `--root <dir>` (default `.`), `--manifest <file>` (default `<root>/manifest.json`), `--keys <file>` (default `<root>/generated/assets.ts`), `--pack <dir>`, `--check`, `--no-cache`, `--pseudo` (en-XA), `--export <dir>`, `--import <dir>`, `--source <locale>` (default `en`). Audio `.mp3` or `.m4a`. Bin `moku-game-assets` (Bun shebang); broken in 0.4.0, it passes `compileStrings` alone |
+| `@moku-labs/game/assets` | node, bun | `scanAssets`, `emitKeys`, `emitManifest`, `compileStrings`, `checkStrings`, `packAssets`, `exportStrings`, `importStrings`, `runCli(argv, { compile: compileStrings, exportStrings, importStrings })`. Flags: `--root <dir>` (default `.`), `--manifest <file>` (default `<root>/manifest.json`), `--keys <file>` (default `<root>/generated/assets.ts`), `--pack <dir>`, `--check`, `--no-cache`, `--pseudo` (en-XA), `--export <dir>`, `--import <dir>`, `--source <locale>` (default `en`). Audio `.mp3` or `.m4a`. Bin `moku-game-assets` (Bun shebang) |
 | `@moku-labs/game/fonts/*` | files | `font-body.fnt`, `font-body.png` (Pangolin Regular MSDF, one 512×512 page), `LICENSE.txt` (SIL OFL 1.1). Copy into `features/ui/assets/` for the key `ui.font-body` |
 | `@moku-labs/game/inspect` | anywhere | `read`, `watch`, `defineSource`, `sources`, types `Source`, `InputSchema`, `InputOf` |
 | `@moku-labs/game/control` | dev builds | `run`, `defineCommand`, `controlRefused`, `commands`, types `Command`, `Ran` |
@@ -233,8 +232,8 @@ createApp({ config: { orientation: "portrait", referenceSide: 1080, referenceLon
 | `ui` | `game.ui` | — | frame | `ui.tree()` |
 | `locate` | `game.locate` | `{ key: "string?", target: "json?" }`, exactly one | frame | Page rect `{ x, y, w, h }` in CSS px of a ui element or a view `{ projection, key }`; `undefined` off screen. Replaces `game.rect` |
 | `render` | `game.render` | — | frame | `renderer.stats()` |
-| `effects` | `game.effects` | — | frame | `effects.stats()` (only with `effectsPlugin`) |
-| `sounds` | `game.sounds` | `{ last: "number?" }` | frame | `audio.journal()`; fails to read without `audioPlugin` |
+| `effects` | `game.effects` | — | frame | `effects.stats()`; without `effectsPlugin` it throws `[game] The source game.effects needs effectsPlugin.` |
+| `sounds` | `game.sounds` | `{ last: "number?" }` | frame | `audio.journal()`; without `audioPlugin` it throws `[game] The source game.sounds needs audioPlugin.` |
 | `assets` | `game.assets` | — | frame | `assets.usage()` |
 | `log` | `game.log` | `{ level: "string?" }` | frame | `log.trace()` |
 | `explain` | `game.explain` | `{ entity: "number" }` | frame | `{ id, owner, key, components, skipped, motions }` of one entity |
@@ -263,7 +262,7 @@ createApp({ config: { orientation: "portrait", referenceSide: 1080, referenceLon
 | `reducedMotion` | `game.reducedMotion` | `{ on }` | cosmetic | `anim.setReducedMotion` |
 
 The catalogue is data shaped for MCP tools (each descriptor is `{ id, title, input, … }`); an editor or
-an MCP layer lists `Object.values(sources)` and `Object.values(commands)`. No MCP server ships in 0.4.0.
+an MCP layer lists `Object.values(sources)` and `Object.values(commands)`. No MCP server ships in 0.4.2.
 
 `run(app, command, input?)` resolves `{ value, state: { path, frame, tainted } }`. Input schema kinds:
 `"string"`, `"number"`, `"boolean"`, `"json"`, with a trailing `?` for optional. A game's own ids are
@@ -277,7 +276,7 @@ camelCase words joined by dots, at least two (`dice.rolls`).
 `@moku-labs/common@0.3.3`, `preact`, `elkjs`. Bin `moku-editor <game-html> [--port 3000] [--root .]`
 (Bun only). The tools page ships prebuilt in `dist/tools/`.
 
-> Editor 0.0.2 predates game 0.4.0. Two paths break: `gameView` calibrates from `game.rect` (gone, now
+> Editor 0.0.2 predates game 0.4.x. Two paths break: `gameView` calibrates from `game.rect` (gone, now
 > `game.locate`), so the element picker fails; `capture` expects `game.capture` to answer a string (now
 > `{ png }`), so `editor.capture`, `editor.series`, Shot and Series fail. The rest works.
 

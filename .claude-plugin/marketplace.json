@@ -94,6 +94,26 @@
         "name": "Oleksandr Kucherenko"
       },
       "category": "development"
+    },
+    {
+      "name": "moku-game",
+      "version": "0.76.1",
+      "source": "./plugins/moku-game",
+      "description": "@moku-labs/game + @moku-labs/editor pack: 2D games on PixiJS, a hello world that opens in the editor, the playtest station, device builds through moku-native, and the game validator.",
+      "author": {
+        "name": "Oleksandr Kucherenko"
+      },
+      "category": "development"
+    },
+    {
+      "name": "moku-ai",
+      "version": "0.76.1",
+      "source": "./plugins/moku-ai",
+      "description": "@moku-labs/ai pack: AI asset builds (images, sprites, video, music, sfx, voice) with keys, providers, cost estimates before paid runs, and the path into a game's features.",
+      "author": {
+        "name": "Oleksandr Kucherenko"
+      },
+      "category": "development"
     }
   ]
 }
