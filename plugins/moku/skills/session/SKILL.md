@@ -31,6 +31,7 @@ Decide from what you see, and ask only when it is not obvious.
 | A parent folder of several repositories, and the person described a new project | Propose a new folder by name (`./site`) and wait for a yes. |
 | Some other project with its own code | Ask: work in this directory, or create a new one beside it? Name the path of each choice. |
 | The person named a directory | Use it. |
+| The person wants to make a new game | Always confirm, even in an empty directory: "Make the game here, in `<pwd>`?" Offer the current directory first when it is empty, otherwise a new folder named after the game beside it. |
 
 One question, two or three choices, a recommended one first. If the person wants neither, stop here: the rails stay off and nothing was written.
 

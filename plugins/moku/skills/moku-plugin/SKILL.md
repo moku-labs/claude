@@ -321,6 +321,7 @@ For plugins with sub-module directories (Very Complex tier), read `references/do
 - **moku-core** — Architecture fundamentals, factory chain, lifecycle, event system, type system
 - **`moku-web:moku-web`** (pack `moku-web`) — Web-specific plugin patterns, island architecture, CSS encapsulation
 - **`moku-worker:moku-worker`** (pack `moku-worker`) — Cloudflare Workers resource plugins
+- **`moku-game:moku-game`** (pack `moku-game`) — game features, nodes and flows on `@moku-labs/game`
 - **`moku-room:moku-room`** (pack `moku-room`) — couch-multiplayer plugins
 - **`moku-native:moku-native`** (pack `moku-native`) — Tauri packaging plugins
 - **`moku-system:moku-system`** (pack `moku-system`) — system capability plugins (store, notify, clipboard, tray, deep-link)

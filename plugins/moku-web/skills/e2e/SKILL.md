@@ -59,7 +59,9 @@ agent edits the app at a time, and you commit after each green round.
 ## Step 0 — guards
 
 1. A `package.json` must be present, otherwise: "Not a Moku project — run from the app root." Stop.
-2. **Web surface check.** A `createApp` from a web framework (`@moku-labs/web`, or a web-bearing app on
+2. **Game check.** `@moku-labs/game` in `package.json` means a canvas game, not a DOM app. Hand over to
+   `moku-game:playtest` with the Skill tool and stop here.
+3. **Web surface check.** A `createApp` from a web framework (`@moku-labs/web`, or a web-bearing app on
    `@moku-labs/worker` / `@moku-labs/room`), an `src/index.html` plus `src/routes.tsx`, or a built
    `dist/client`. No web surface: say that `/moku-web:e2e` drives a browser and this project has none, then
    `moku-rails done e2e` with that note. Stop.

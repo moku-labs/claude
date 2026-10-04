@@ -1,0 +1,526 @@
+# Hello world — the minimal screen game
+
+The exact files `moku:init` scaffolds for `type: game`. One rest node, one transit node, one feature with a
+screen that shows "Hello, world" and a tappable button that counts taps. It runs headless in Bun, on the
+dev page with the editor, and is the smallest game the playtest station can drive.
+
+Derived from the engine's fixture `tests/integration/merge-game/` and its `llms.txt` "Minimal game".
+Verified end to end (typecheck, assets, test, build, dev page, editor) against `@moku-labs/game@0.4.2`,
+`@moku-labs/editor@0.0.2`, `pixi.js@8.22`, `typescript@7.0` and Bun 1.3.14. Both packages move fast:
+install with `@latest`, never hard-pin. When something here does not compile, read
+`node_modules/@moku-labs/game/llms.txt` first: the game package ships it since 0.4.0 and it is the
+engine in one page, always matching the installed version. The editor ships no `llms.txt`; read
+`node_modules/@moku-labs/editor/README.md`.
+
+## Install
+
+```sh
+bun add @moku-labs/game@latest pixi.js
+bun add -d @moku-labs/editor@latest typescript @types/bun vitest
+```
+
+## Font
+
+Text is drawn from an **MSDF bitmap font**. Without one the `text` tag draws nothing. The game package
+ships one: Pangolin Regular, SIL OFL 1.1, one 512×512 page, under the subpath `fonts/`. Copy it into the
+game; a path in `node_modules` is never an asset key.
+
+```sh
+mkdir -p features/ui/assets
+cp node_modules/@moku-labs/game/fonts/font-body.* features/ui/assets/
+cp node_modules/@moku-labs/game/fonts/LICENSE.txt features/ui/LICENSE-fonts.txt
+```
+
+The folder `features/ui/` gives the key `ui.font-body`, the default of `text` config `fonts.body`, so the
+built-in style `body` needs no config. `ui` is a plugin name, so no feature is called `ui`: the folder
+holds art only and a real feature lists its bundle (`assets: uiAssets`), as the engine fixture does. The
+licence sits beside `assets/`, not inside it. The `.fnt` names its page `font-body.png`, so keep both
+file names. No `digits` font ships: a game that uses the style `digits` brings `ui.font-digits` itself.
+For another face, build the pair from an OFL `.ttf` with `msdf-bmfont-xml`: BMFont XML, one 512×512 page.
+
+## Layout
+
+```
+package.json  tsconfig.json  manifest.json*  state.ts  kit.ts  game.ts
+nodes/home.ts  nodes/tap.ts  flows/main.ts
+features/ui/{assets.ts, LICENSE-fonts.txt, assets/font-body.fnt, assets/font-body.png}
+features/hello/{index.ts, view.tsx, scene.ts, strings/en.json}
+generated/{assets.ts, strings.ts, strings.en.ts}*
+web/{index.html, main.ts, dev.ts, serve.ts, build.ts}
+tests/hello.test.ts
+```
+
+`*` written by `bun run assets:keys`. Commit them; `--check` in CI keeps them honest.
+
+## package.json
+
+```json
+{
+  "name": "hello-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "moku-editor web/index.html --port 3000 --root .",
+    "serve": "bun web/serve.ts",
+    "assets:keys": "moku-game-assets --root .",
+    "assets:check": "moku-game-assets --root . --check",
+    "build:web": "bun web/build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" }
+}
+```
+
+`bun add` fills `dependencies` (`@moku-labs/game`, `pixi.js`) and `devDependencies` (`@moku-labs/editor`,
+`typescript`, `@types/bun`, `vitest`). With `--root .` the asset CLI writes `manifest.json` and
+`generated/` at the root; `--manifest` and `--keys` move them.
+
+## tsconfig.json
+
+```json
+{
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
+    "module": "Preserve",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "noEmit": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "types": ["bun"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "@moku-labs/game"
+  },
+  "include": ["*.ts", "nodes", "flows", "features", "generated", "web", "tests"]
+}
+```
+
+## state.ts
+
+```ts
+/**
+ * @file The state of the game: what a save holds, what one session holds, and the new player.
+ */
+
+/**
+ * The saved player.
+ */
+export type Player = { taps: number };
+
+/**
+ * The session: never saved.
+ */
+export type Session = { opened: number };
+
+/**
+ * The state of a new player.
+ */
+export const startingPlayer: Player = { taps: 0 };
+
+/**
+ * The session at every start.
+ */
+export const startingSession: Session = { opened: 0 };
+```
+
+## kit.ts
+
+```ts
+/**
+ * @file The authoring helpers bound to the types of this game, once. Asset and bundle keys come from
+ * `generated/assets.ts` and message keys from `generated/strings.ts`, so a key the game does not have
+ * does not compile.
+ */
+import { defineGame } from "@moku-labs/game";
+import type { AssetKey, BundleKey } from "./generated/assets";
+import type { Strings } from "./generated/strings";
+import type { Player, Session } from "./state";
+
+export const { defineNode, defineFlow, defineFeature, projection, defineBundles, defineScene, tr } =
+  defineGame<{
+    player: Player;
+    session: Session;
+    assets: AssetKey;
+    bundles: BundleKey;
+    scenes: "hello";
+    strings: Strings;
+  }>();
+```
+
+## nodes/home.ts and nodes/tap.ts
+
+```ts
+// nodes/home.ts
+/**
+ * @file Rest node `home`: the checkpoint the screen is shown on. It waits for the one button.
+ */
+import { type } from "@moku-labs/game";
+import { defineNode } from "../kit";
+
+export const home = defineNode({
+  scene: "hello",
+  outcomes: { tap: type() },
+  rest: true,
+  checkpoint: true
+});
+```
+
+```ts
+// nodes/tap.ts
+/**
+ * @file Transit node `tap`: counts one tap into the save and one into the session.
+ */
+import { type } from "@moku-labs/game";
+import { defineNode } from "../kit";
+
+export const tap = defineNode({
+  outcomes: { done: type() },
+  run: ({ player, session, out }) => {
+    player.taps += 1;
+    session.opened += 1;
+    return out.done();
+  }
+});
+```
+
+## flows/main.ts
+
+```ts
+/**
+ * @file The main flow: home waits, tap counts, back to home.
+ */
+import { defineFlow } from "../kit";
+import { home } from "../nodes/home";
+import { tap } from "../nodes/tap";
+
+export const mainFlow = defineFlow("main", {
+  nodes: { home, tap },
+  start: "home",
+  edges: {
+    home: { tap: "tap" },
+    tap: { done: "home" }
+  }
+});
+```
+
+## features/hello/
+
+```ts
+// features/ui/assets.ts
+/**
+ * @file The bundle of the interface, tier "boot": awaited in onStart, never unloaded. It holds the
+ * body font. The folder is named after the key the `text` config reads by default, `ui.font-body`.
+ */
+import { defineBundles } from "../../kit";
+
+export const uiAssets = defineBundles({ ui: { tier: "boot" } });
+```
+
+```ts
+// features/hello/scene.ts
+/**
+ * @file The Hello scene: the bundle and the screen. Every scene gets a `ui` layer on top.
+ */
+import { defineScene } from "../../kit";
+import { helloScreen } from "./view";
+
+export const helloScene = defineScene("hello", {
+  bundle: "ui",
+  layers: {},
+  projections: [helloScreen]
+});
+```
+
+```tsx
+// features/hello/view.tsx
+/**
+ * @file The Hello screen: a greeting, the tap counter and one button that answers the `home` gate
+ * with the intent `tap`.
+ */
+import { projection, tr } from "../../kit";
+import type { Player } from "../../state";
+
+/**
+ * What the screen reads of the player.
+ */
+export type HelloView = { taps: number };
+
+export const helloScreen = projection({
+  name: "hello.screen",
+  layer: "ui",
+  from: (player: Player): HelloView => ({ taps: player.taps }),
+  view: item => (
+    <screen key="helloScreen" style={{ direction: "column", align: "center", justify: "center", gap: 48 }}>
+      <text key="greeting" style="body" content={tr("hello.greeting")} />
+      <text key="taps" style="body" content={tr("hello.taps", { n: item.taps })} />
+      <button key="tap" intent="tap" style={{ width: 480, height: 120, fill: 0x2f5a3b, radius: 24, align: "center", justify: "center" }}>
+        <text key="tapLabel" style="body" content={tr("hello.tap")} />
+      </button>
+    </screen>
+  )
+});
+```
+
+```json
+// features/hello/strings/en.json
+{
+  "hello.greeting": "Hello, world",
+  "hello.taps": "{n, plural, one {# tap} other {# taps}}",
+  "hello.tap": "Tap me"
+}
+```
+
+```ts
+// features/hello/index.ts
+/**
+ * @file Hello as a feature: its scene, its screen, the interface bundle and the compiled strings.
+ */
+import enStrings from "../../generated/strings.en";
+import { defineFeature } from "../../kit";
+import { uiAssets } from "../ui/assets";
+import { helloScene } from "./scene";
+import { helloScreen } from "./view";
+
+export const helloFeature = defineFeature("hello", {
+  scenes: [helloScene],
+  projections: [helloScreen],
+  assets: uiAssets,
+  strings: { en: enStrings }
+});
+```
+
+Run `bun run assets:keys` now. It writes `manifest.json` (bundle `ui`, key `ui.font-body`),
+`generated/assets.ts` (`AssetKey = "ui.font-body"`, `FontKey`, `BundleKey = "ui"`, `nineSlice`),
+`generated/strings.ts` (`Strings = { "hello.greeting": Record<string, never>; "hello.taps": { n: number };
+"hello.tap": Record<string, never> }`) and `generated/strings.en.ts`. Never edit them.
+
+## game.ts
+
+```ts
+/**
+ * @file The composition root: one headless app for tests, one app with the screen for the page.
+ */
+import { createApp, screen } from "@moku-labs/game";
+import { helloFeature } from "./features/hello";
+import { mainFlow } from "./flows/main";
+import { startingPlayer, startingSession } from "./state";
+
+/**
+ * What a caller may pin.
+ */
+export type GameOptions = { seed?: number; mount?: string; manifest?: string };
+
+/**
+ * Creates the game. Without `mount` the renderer is inert and the same app runs in plain Bun.
+ *
+ * @param options - The rng seed, the mount selector and the manifest URL.
+ * @returns The app, not started.
+ */
+export function createGame(options: GameOptions = {}) {
+  return createApp({
+    plugins: [...screen, helloFeature],
+    pluginConfigs: {
+      model: { initialPlayer: startingPlayer, initialSession: startingSession, seed: options.seed ?? 42 },
+      flow: { mainFlow, safeNode: "home" },
+      renderer: options.mount === undefined ? {} : { mount: options.mount },
+      assets: options.manifest === undefined ? {} : { manifest: options.manifest }
+    },
+    onStart: ctx => {
+      ctx.flow.run().catch((error: unknown) => {
+        ctx.log.error("hello: the graph failed", { error });
+      });
+    }
+  });
+}
+```
+
+For a headless test the screen plugins are inert; `helloFeature.logicOnly` is the stricter choice when
+the game grows (`plugins: [helloFeature.logicOnly]`).
+
+## web/
+
+```html
+<!-- web/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>hello-game</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #10161d; }
+      #game { width: 100%; height: 100%; touch-action: none; }
+    </style>
+  </head>
+  <body>
+    <div id="game"></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
+```
+
+```ts
+// web/dev.ts
+/**
+ * @file The dev flag. `web/main.ts` imports this first, so the `/control` door and the editor work on
+ * the dev page. The engine declares the global; the game never re-declares it.
+ */
+globalThis.__MOKU_GAME_DEV__ = true;
+```
+
+```ts
+// web/main.ts
+/**
+ * @file The dev page: the game with a real canvas, the two door handles, and the editor agent.
+ */
+import "./dev";
+import { commands, run } from "@moku-labs/game/control";
+import { read, sources, watch } from "@moku-labs/game/inspect";
+import { bridgePlugin, capturePlugin, createApp as createEditor } from "@moku-labs/editor/agent";
+import { createGame } from "../game";
+
+const app = createGame({ mount: "#game", manifest: "/manifest.json" });
+
+// The visual tests, the playtest station and the editor reach the game through these two handles.
+Reflect.set(globalThis, "game", app);
+Reflect.set(globalThis, "doors", { read, watch, sources, run, commands });
+
+// The editor agent: bridge and capture only in a dev build. A production define of `false` leaves them off.
+const devPlugins = __MOKU_GAME_DEV__ ? [bridgePlugin, capturePlugin] : [];
+const editor = createEditor({
+  plugins: devPlugins,
+  pluginConfigs: { registry: { game: app, modules: [], name: "hello-game 0.1.0" } }
+});
+Reflect.set(globalThis, "editor", editor);
+
+await app.start();
+await editor.start(); // never waits for the editor server
+```
+
+```ts
+// web/serve.ts
+/**
+ * @file Dev server without the editor: the page on `/`, every file of the project root as static.
+ * `bun web/serve.ts [--port 3000]`. The editor bin (`bun run dev`) does the same plus the tools page.
+ */
+import path from "node:path";
+import { file } from "bun";
+import index from "./index.html";
+
+const root = new URL("..", import.meta.url).pathname;
+const at = process.argv.indexOf("--port");
+const port = at === -1 ? 3000 : Number(process.argv[at + 1]);
+
+/**
+ * Answers one file of the project root, or a 404.
+ *
+ * @param request - The request of the page.
+ * @returns The file or a 404.
+ */
+function serveFile(request: Request): Response {
+  // The browser percent-encodes the braces of a nine-slice tag; the disk does not.
+  const relative = decodeURIComponent(new URL(request.url).pathname);
+
+  if (relative.includes("..")) return new Response("not found", { status: 404 });
+
+  const asset = file(path.join(root, relative));
+
+  return asset.size > 0 ? new Response(asset) : new Response("not found", { status: 404 });
+}
+
+const server = Bun.serve({ port, development: true, routes: { "/": index }, fetch: serveFile });
+
+console.info(`hello-game on ${server.url}`);
+```
+
+```ts
+// web/build.ts
+/**
+ * @file The production page: `__MOKU_GAME_DEV__` defined false, so every `/control` command body is
+ * stripped and the editor plugins stay off. This is the loose build: `manifest.json` and every
+ * `features/<f>/assets` copied beside the page. Packed art (`assets:keys -- --pack`, needs `sharp`)
+ * is a later step with its own manifest; it replaces this copy.
+ */
+import { cpSync, existsSync, readdirSync } from "node:fs";
+
+const result = await Bun.build({
+  entrypoints: ["web/index.html"],
+  outdir: "dist/web",
+  minify: true,
+  define: { __MOKU_GAME_DEV__: "false" }
+});
+
+if (!result.success) {
+  console.error(result.logs.map(String).join("\n"));
+  process.exit(1);
+}
+
+// The loose build: the manifest and every feature's art beside the page, at the paths the manifest names.
+cpSync("manifest.json", "dist/web/manifest.json");
+for (const feature of readdirSync("features")) {
+  const assets = `features/${feature}/assets`;
+
+  if (existsSync(assets)) cpSync(assets, `dist/web/${assets}`, { recursive: true });
+}
+```
+
+(`console.*` is fine in these scripts: they are build tooling, not a Moku plugin. A game that adds
+`@moku-labs/common/cli` renders them through `createBrandConsole()` as the fixture does.)
+
+## tests/hello.test.ts
+
+```ts
+/**
+ * @file The game plays without a screen: three taps count three taps.
+ */
+import type { Flow } from "@moku-labs/game";
+import { createHeadless } from "@moku-labs/game/testing";
+import { expect, it } from "vitest";
+import { createGame } from "../game";
+
+const tapOnce: Flow.RouteStep = { at: "home", intent: "tap" };
+
+it("counts taps headless", async () => {
+  const app = createGame({ seed: 42 });
+  const game = await createHeadless(app);
+
+  const state = await game.walk([tapOnce, tapOnce, tapOnce]);
+
+  expect(state.path).toBe("home");
+  expect(app.model.store.snapshot().player).toEqual({ taps: 3 });
+  expect(app.model.store.snapshot().session).toEqual({ opened: 3 });
+
+  await game.stop();
+});
+```
+
+## Run it
+
+```sh
+bun run assets:keys      # manifest.json, generated/*
+bun run test             # headless, plain Bun
+bun run typecheck
+bun run dev              # Game http://127.0.0.1:3000/  Tools http://127.0.0.1:3000/__editor/
+```
+
+On the page, tap the button: the counter text changes on the next commit. In the tools page, State shows
+`player.taps`, Flow shows `home → tap → home`, Console shows the log. See `editor.md`.
+
+## Next steps a real game adds
+
+- `tables.ts` and `rules/` (pure functions, L4), one file per node under `nodes/`, sub-flows under `flows/`.
+- `features/<f>/styles.ts` with `defineStyle` and `defineTextStyles`; the kit gets `textStyles: "body" | "digits" | "ui.title"`.
+- A HUD number without a message: `component("Counter", { value: 0 })` and
+  `<text bind={bind(Counter, "value")} components={[Counter({ value: hud.coins })]} />`; a timer is
+  `bind(Countdown, "left", { format: "mm:ss" })` with `components={[Countdown({ until: player.opensAt })]}`.
+- `audioPlugin` + `.mp3` files; `effectsPlugin` for particles and filters; `platformPlugin` + `platform-bridge.ts`
+  over `@moku-labs/system` for Back, haptics and keep-awake; `native.ts` on `@moku-labs/native` (see `device.md`).
+- `tests/visual/` with `defineVisualTest` and a `run.ts` calling `runVisualTests`.
+- A `.dev` module with `defineSource` / `defineCommand` for the game's own cheats, passed to the editor's
+  `registry.modules`.

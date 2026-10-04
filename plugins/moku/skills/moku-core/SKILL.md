@@ -17,7 +17,7 @@ Follow the Moku Core specification when generating, reviewing, or modifying code
 
 ## For packs
 
-A pack (`moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, `moku-common`, `moku-design`) is a separate plugin, so
+A pack (`moku-web`, `moku-worker`, `moku-room`, `moku-game`, `moku-ai`, `moku-native`, `moku-system`, `moku-common`, `moku-design`) is a separate plugin, so
 `${CLAUDE_PLUGIN_ROOT}` there points at the pack, not at the core. A pack that needs core knowledge
 loads this skill with the Skill tool (`moku:moku-core`); the tool prints the skill's base directory,
 and the pack reads `references/<file>` under it — `agent-preamble.md`, `moku-idioms.md`,
@@ -322,6 +322,8 @@ as scarce:
 - **moku-plugin** — Plugin structure, complexity tiers, file organization, wiring harness pattern
 - **`moku-web:moku-web`** (pack `moku-web`) — Preact web patterns (Vite-free, Bun-bundled), island architecture, CSS architecture with @scope/@layer
 - **`moku-worker:moku-worker`** (pack `moku-worker`) — Cloudflare Workers backend: Durable Objects, Queues, R2, D1, KV
+- **`moku-game:moku-game`** (pack `moku-game`) — 2D games on `@moku-labs/game` with `@moku-labs/editor`; `moku-game:playtest` is a game's e2e station
+- **`moku-ai:moku-ai`** (pack `moku-ai`) — AI asset builds with `@moku-labs/ai`: images, video, music, voice; keys and providers
 - **`moku-room:moku-room`** (pack `moku-room`) — couch multiplayer: shared screen + phones, WebRTC state sync
 - **`moku-native:moku-native`** (pack `moku-native`) — Tauri 2 packaging: desktop and mobile builds, permission codegen, doctor
 - **`moku-system:moku-system`** (pack `moku-system`) — system API behind a Tauri/web provider seam: store, notify, clipboard, tray, deep-link

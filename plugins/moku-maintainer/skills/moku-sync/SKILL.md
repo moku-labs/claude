@@ -90,6 +90,12 @@ emitted events + payloads, context API, config keys).
   Public Export Shape convention in `plugins/moku/skills/moku-core/SKILL.md` (explicit,
   individually-documented consts, not destructured).
 - If new **plugins / events / commands** appeared, call them out in the report.
+- **Shared pack.** `game` and `editor` share the pack `moku-game` and one `plugin-index.md`: the engine
+  catalog first, the editor catalog in its own second half. Sync each key into its own half only, and
+  re-check the cross-notes (which editor version works with which game version) whenever either moves.
+- **Fast movers.** `game`, `editor` and `ai` release several times a day while pre-1.0. Run
+  `moku-sync game editor ai --check` before game or asset work, and treat a breaking minor as a pack
+  change: re-scaffold `references/hello-world.md` and prove it runs, do not only edit the index.
 
 ### 6. Wire the upgrade skill (`/moku:upgrade`, `plugins/moku/skills/upgrade/`)
 - Update the registry entry's `knownVersion` to `latest`.

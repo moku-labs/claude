@@ -166,6 +166,16 @@ decision.
 A consumer app inherits `ctx.log` and `ctx.env` from its framework and does not register
 `logPlugin`/`envPlugin` itself.
 
+### Game (Layer 3 on `@moku-labs/game`)
+
+The source tree, `web/` entry, dev server, editor wiring and the first headless test come from the
+`moku-game` pack, `references/hello-world.md`. The tooling files above stay the same, with two
+differences the pack names: `tsconfig.json` gets `"jsx": "react-jsx"` and
+`"jsxImportSource": "@moku-labs/game"`, and `package.json` gets the `dev` and `assets:keys` scripts.
+
+Dependencies: `@moku-labs/game@latest`, `pixi.js`; dev `@moku-labs/editor@latest`. `@moku-labs/core`
+never appears here, as for any consumer app.
+
 ### Tools / library
 
 ```
@@ -211,8 +221,9 @@ Run every item. Fix and re-run a failing one before moving on.
 | 4 | Tests | `bun run test` — the placeholder suites pass |
 | 5 | Build | `bun run build` |
 | 6 | Package validation | `bun run validate` (packages only) |
-| 7 | Sources match the type | Framework: `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists. Consumer: `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` is absent from `dependencies` — if present, remove it, re-run `bun install`, re-check. Library: `src/index.ts` exists. |
+| 7 | Sources match the type | Framework: `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists. Consumer: `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` is absent from `dependencies` — if present, remove it, re-run `bun install`, re-check. Library: `src/index.ts` exists. Game: `@moku-labs/game` in `dependencies`, `@moku-labs/editor` in `devDependencies`, `bun run assets:keys` exits 0, the headless test walks the first flow. |
 | 8 | Git | `.git` exists; `bunx lefthook install` succeeded |
+| 8.5 | Game runs | Games only: init Step 5.5 showed the scene in the editor. |
 | 9 | Release plumbing | Packages: `.github/workflows/ci.yml` and `publish.yml` present, all eight scripts in `package.json`. Apps: `ci.yml` present, five scripts. |
 
 Only after all of these are green does `init` write `.planning/moku.md`.
