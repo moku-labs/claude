@@ -104,10 +104,12 @@ Only this session spawns agents; no agent spawns another. Commit after each gree
 | `moku:moku-quality-validator` | Runs `tsc`, tests and lint through Bash as facts, then judges test quality. |
 | `moku:moku-architecture-validator` | Cross-plugin dependency graph, event flow, API consistency. |
 | `moku-web:moku-web-validator` | Web patterns and reference-app conformance. |
+| `moku-game:moku-game-validator` | Game conventions: deterministic logic, lazy Pixi, dev-only doors and editor, typed asset keys, feature layout. |
 
 The web validator comes from the `moku-web` pack. Run it only when that pack is installed **and**
 the project is a web app. When the project is a web app and the pack is absent, skip it and say so
-in the report: the web axes were not checked because `moku-web` is not installed.
+in the report: the web axes were not checked because `moku-web` is not installed. The game validator
+follows the same rule with the `moku-game` pack and a project that depends on `@moku-labs/game`.
 
 Put the turn rule in every spawn prompt, validators and skeptics alike: "Keep tool calls few: read
 whole files, one grep per pattern, one check per group. Deliver the output contract before your turn

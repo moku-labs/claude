@@ -37,6 +37,7 @@ Apply the gate **before** framing any design:
 | Detected project | Default | Action |
 |---|---|---|
 | **Consumer App (Layer 3)** on a web framework | `MEDIUM=web` | Proceed — this is the common, expected case. |
+| **Game (Layer 3)** on `@moku-labs/game` (`type: game` in `.planning/moku.md`) | `MEDIUM=game` | Proceed with the game concept format (§3). |
 | **Consumer App (Layer 3)** on a CLI/TUI framework | `MEDIUM=cli`/`tui` | Proceed with the terminal concept format (§3). |
 | **Framework (Layer 2)** | gated | There is usually nothing to design. **Decline gracefully** with guidance (below) **unless** the user is explicitly designing a **DX surface** — a CLI, an interactive setup/"show", a branded console experience — in which case switch to `MEDIUM=cli`/`tui`. |
 | **Tools/Library** | gated | Same as Framework — only proceed for a CLI/TUI/DX surface. |
@@ -64,6 +65,17 @@ can redirect in one click. Record the resolved decision in the design's `state.m
 
 The **process** (frame → generate N concepts → converge → polish → capture) is identical across media.
 What changes is the **artifact** each generator produces and the **inventory** the synthesizer captures.
+
+### `game`
+- **Concept artifact:** one self-contained HTML file per concept that shows the game's screens as still
+  frames at the game's reference size (portrait 1080×1920 scaled to a 390-wide phone frame, or landscape),
+  with the art direction, palette, type and the core-loop moment drawn in. No engine code: the engine
+  builds the real screen later.
+- **Art:** concept art and sprites come from Astra (`moku-astra generate`) for a handful of images, or
+  from the `moku-ai` pack for batches. The person's own sketches and references go into the brief.
+- **Inventory:** scenes, popups, HUD elements, the moments of the core loop, motions and sounds.
+- **After build:** compare the chosen concept against shots of the running game in the editor
+  (`moku-game:playtest`), not against HTML.
 
 ### `web` (the common case)
 - **Concept artifact:** one **self-contained, runnable, clickable HTML file** per concept — inline CSS

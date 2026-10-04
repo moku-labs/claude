@@ -59,7 +59,7 @@ still runs the normal flow:
   modify / tweak / adjust" → `update`; "add a … plugin" → `add plugin`; "port / bring over / convert
   existing code" → `migrate`; "continue / pick up where I left off" → `resume`.
 - **Types:** map the noun — "tool / engine / library / SSG / framework" → `framework`; "app /
-  service / server / game / site" → `app`; "plugin" → `plugin`.
+  service / server / site" → `app`; "game" → `game`; "plugin" → `plugin`.
 - **Description slot:** the descriptive part of the sentence fills the command's
   description/requirements argument, e.g. `plan add plugin auth "JWT auth with refresh tokens"`.
 - **Flags from intent:** "quick / rough pass" → `--quick`; "go deep / thorough" → `--deep`; "use the

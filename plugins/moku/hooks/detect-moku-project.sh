@@ -31,6 +31,8 @@ if [ -z "$PROJECT_TYPE" ]; then
   # Check for Moku project markers
   if [ -f src/config.ts ] && grep -q 'createCoreConfig' src/config.ts 2>/dev/null; then
     PROJECT_TYPE="framework"
+  elif [ -f package.json ] && grep -q '"@moku-labs/game"' package.json 2>/dev/null; then
+    PROJECT_TYPE="game"
   elif [ -f package.json ] && grep -q 'createApp' src/index.ts 2>/dev/null; then
     PROJECT_TYPE="consumer"
   elif [ -f package.json ] && [ -f biome.json ] && [ -f vitest.config.ts ]; then
@@ -69,6 +71,10 @@ case "$PROJECT_TYPE" in
     ;;
   consumer)
     add "Moku Consumer App detected (Layer 3)."
+    ;;
+  game)
+    add "Moku Game detected (Layer 3 on @moku-labs/game, dev tools from @moku-labs/editor)."
+    add "Play it in the editor: the moku-game pack's playtest skill. Assets: the moku-ai pack."
     ;;
   tools)
     add "Moku Tools/Library project detected."

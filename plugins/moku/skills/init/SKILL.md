@@ -60,13 +60,16 @@ Ask with `AskUserQuestion`, header "Project type":
 | Framework | Layer 2. Creates plugins, exports `createApp`/`createPlugin`, depends on `@moku-labs/core`. | `framework` |
 | Consumer App | Layer 3. Imports a framework, uses `createApp`. | `consumer` |
 | Tools/Library | Plain TypeScript with Moku tooling, no Moku dependencies. | `tools` |
+| Game | Layer 3 on `@moku-labs/game` (2D, PixiJS), played and inspected through `@moku-labs/editor`. | `game` |
 
-Default to Framework when the context already makes it clear. For a Consumer App, also ask for the
+Default to Framework when the context already makes it clear. When the person said they want to make a
+game, the type is Game: do not ask. For a Consumer App, also ask for the
 framework package name (`@moku-labs/web`, `@moku-labs/worker`, `@moku-labs/room`) now — Step 3 needs
 it.
 
 Frameworks and libraries are **packages**: they publish to npm and get the full release plumbing.
-Consumer apps **deploy**: they get CI only.
+Consumer apps and games **deploy**: they get CI only. A game ships to stores later through
+`@moku-labs/native`; that is a release decision, not an init one.
 
 Resolve `$ABSOLUTE_PROJECT_PATH` from the argument or `pwd`, and use it in every Bash command. The
 working directory does not survive between tool calls.
@@ -91,6 +94,11 @@ procedure, the per-type source templates, and the verification checklist. In sho
 4. Write the release plumbing (Step 4 below).
 5. `bun install`, `bunx lefthook install`, `bun run format`.
 
+A game takes its sources from the `moku-game` pack: load the `moku-game:moku-game` skill and follow
+`references/hello-world.md` under the base directory it prints. The packages change fast, so a game
+installs `@moku-labs/game@latest`, `pixi.js` and `-d @moku-labs/editor@latest`, never a remembered
+version. Without the `moku-game` pack, stop and say the pack is missing: a game scaffold from memory
+drifts from the engine.
 ## Step 4 — release plumbing, from the first commit
 
 A project carries its release path from commit one, so the first release is not an archaeology
@@ -135,6 +143,18 @@ reasoning is in `${CLAUDE_PLUGIN_ROOT}/skills/moku-release/references/release-mo
 Run the checklist in `scaffold.md` §"Verification". Fix what fails and re-run the failing item. Do
 not continue to Step 6 while anything is red: the marker means "this project is ready".
 
+## Step 5.5 — a game: show it running
+
+A game is not ready until the person has seen it. After the checklist is green:
+
+1. Start the dev server in the background: `bun run dev` (the editor's `moku-editor` bin, port 3000).
+2. Open `http://127.0.0.1:3000/__editor/` in the built-in browser pane (`preview_start` with the url).
+3. Take one screenshot, check the hello-world scene drew and the console has no error, and show it.
+4. Say in one line that the setup works, and leave the server running.
+
+If the page stays blank, read the server log and the browser console, fix the cause, and repeat.
+The marker waits until the game draws.
+
 ## Step 6 — write the marker, last
 
 Only after the checklist is green, write `.planning/moku.md`, then run `moku-rails init done`. Keep the format exactly as the
@@ -149,7 +169,7 @@ core_version: 0.1.3
 created: 2026-09-19
 ```
 
-`type` is `framework`, `consumer` or `tools`. `core_version` is the installed `@moku-labs/core`
+`type` is `framework`, `consumer`, `tools` or `game`. `core_version` is the installed `@moku-labs/core`
 version, or empty for a library. Get the date from `date +%F`.
 
 ## Step 7 — report and hand back
@@ -162,6 +182,10 @@ sets up the project, the conductor runs the lifecycle.
 For a framework, mention that `src/config.ts` is where `Config` and `Events` get their real shapes.
 For a consumer app with UI, mention that the design station exists when the `moku-design` pack is
 installed.
+
+For a game, the next step is the person's idea: ask what game they want, and offer to look at any
+sketches, references or art they already have. Mention that assets (art, music, voice) can be produced
+with the `moku-ai` pack when they want it.
 
 ## Rules
 

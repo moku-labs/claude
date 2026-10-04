@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "moku-game",
+  "displayName": "Moku Game",
+  "version": "0.76.1",
+  "description": "@moku-labs/game pack: the 2D puzzle engine on PixiJS v8 (graph of nodes, deterministic state, JSX screens), the @moku-labs/editor devtools, the game validator, and the playtest station in the browser pane, the simulator and on device.",
+  "author": {
+    "name": "Oleksandr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "game",
+    "pixi",
+    "puzzle",
+    "editor",
+    "playtest",
+    "tauri"
+  ],
+  "dependencies": [
+    "moku"
+  ]
+}

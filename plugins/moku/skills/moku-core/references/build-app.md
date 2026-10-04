@@ -110,6 +110,7 @@ that is precisely why `@moku-labs/worker`'s `deploy` and `cli` go into the one a
 **Group B (parallel):**
 - `moku-quality-validator` — `tsc`, tests and lint as facts, then test quality
 - `moku-web-validator` (web apps) — `components/`, `islands/`, `styles/`, `index.html`
+- `moku-game-validator` (games, `moku-game` pack) — `features/`, `nodes/`, `flows/`, `web/`
 
 Findings from these Sonnet validators go through `moku-skeptic` before they count. Blockers enter gap
 closure; warnings go into the report.
@@ -190,6 +191,9 @@ UX and responsiveness review.
 That gate lives in the `moku-web` pack. If the `moku-web:e2e` skill is available, invoke it with the
 Skill tool — it is the `e2e` station, normally driven by the conductor. If the pack is not installed,
 say so plainly and continue: the station is unavailable, not silently skipped.
+
+A game (`@moku-labs/game`) has its gate in the `moku-game` pack: invoke `moku-game:playtest` instead.
+It plays the game headless, in the editor and, when needed, on a device.
 
 No web surface (no `@moku-labs/web` client, no full-stack worker-backed app, no `@moku-labs/room` app)
 means there is nothing to test — note it in one line and move on.

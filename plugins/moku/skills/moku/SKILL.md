@@ -70,12 +70,25 @@ moku-rails open 2026-09-26-streak-midnight --size S --type fix --title "Streak b
 
 ## A new project, step by step
 
-1. Engage with the idea in the person's own words. Ask only what decides the shape: app or framework, UI or not, backend or not.
+1. Engage with the idea in the person's own words. Ask only what decides the shape: app or framework, UI or not, backend or not. A person who wants to make a game needs no shape questions: it is a game on `@moku-labs/game`.
 2. Say what it is in moku terms in one sentence ("a Layer-3 web app on `@moku-labs/web`") and propose: "Shall I create the project?"
 3. On yes, run `moku:init`. It leaves `.planning/moku.md`, which the rails read as "initialized".
+   For a game, init also installs everything, scaffolds a hello world and opens it in the editor in the browser pane, so the person sees the setup works before any idea work starts.
 4. Open the first change, size L, type `project`: a new project always has the full route. Propose the next station: brainstorm when the person brought an idea and not a task, design when there is UI or a public API to shape, otherwise plan.
 
 When the person brings an idea without a clear task, offer the discussion page once: the brainstorm station can put its reasoning on a page with diagrams and tables that the person comments on and corrects. It is their choice; say it in one sentence and accept a no.
+
+### A game
+
+After the hello world runs, the route is the usual one, with game material in it:
+
+- **brainstorm**: the game idea, the core loop, the feel. Ask for anything the person already has: sketches, references, screenshots of games they like, their own art. Read every image they send.
+- **design**: screens and the look. Shots come from the running game in the editor, not from HTML mockups.
+- **plan**, **build**, **verify** as for any app. Delta specs for later changes.
+- **e2e** runs as playtest (`moku-game:playtest`): headless walks, visual tests, play in the editor, and the phone when the change needs it.
+- **assets**: when the person asks for art, music, sound or voice in bulk, use the `moku-ai` pack. Keys, providers and costs are its job. Always show the cost estimate and wait for a yes before a paid run.
+
+The editor in the browser pane is the shared screen. You screenshot it, record PNG series and turn them into video, and read the `@moku …` reference lines the person pastes from it.
 
 Deep exploration belongs to the brainstorm station, after the project exists. Do not turn the first reply into a long questionnaire.
 
@@ -89,7 +102,9 @@ The person never needs a station name or a command. Do not hand them one ("say `
 | "show me how it looks", "draw it", "add graphics, pictures" | `moku-design:design` |
 | "ok, plan it and build it", "go" | `moku:plan`, then `moku:build`, each with its gate |
 | "check that everything is right" | `moku:verify` |
-| "check it in the browser", "and on a phone", "click through it" | `moku-web:e2e` |
+| "check it in the browser", "and on a phone", "click through it" | `moku-web:e2e`; for a game `moku-game:playtest` |
+| "run it on my phone", "show it in the simulator", "build for iPhone / Android" | `moku-game:playtest`, device leg (packaging through `moku-native`) |
+| "make sprites, art, music, sounds, a voice", "add a key for fal / OpenAI / ElevenLabs", "add a provider" | `moku-ai:moku-ai` |
 | "where are we", "what is next" | `moku:status` |
 | "clean up after yourself" | `moku:clean` |
 
@@ -110,7 +125,7 @@ The person never needs a station name or a command. Do not hand them one ("say `
 | plan | `moku:plan` | S changes skip it. M changes get a delta spec, not a full replan. |
 | build | `moku:build` | For S: reproduce the bug with a failing test first when practical. |
 | verify | `moku:verify` | Scope it to what the change touched. |
-| e2e | `moku-web:e2e` | Only when the change has UI. |
+| e2e | `moku-web:e2e`, or `moku-game:playtest` for a game | Only when the change has UI. A game always has. |
 | release | `moku:moku-release` | Packages only. First cycle of a package needs a green `release:doctor`. |
 
 A skill from a pack that is not installed is not a dead end. Say which pack is missing, and offer to continue without that optional station.

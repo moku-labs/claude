@@ -41,6 +41,7 @@ and stops.
 
 - `src/config.ts` with `createCoreConfig` → Framework (Layer 2).
 - `createApp` imported from a framework package → Consumer App (Layer 3).
+- `@moku-labs/game` in `dependencies` → Game (Layer 3).
 - `package.json` only → generic project.
 - None of these → stop with: "This does not appear to be a Moku project. No package.json found in
   the current directory. Run check from the root of a Node.js or Moku project."
@@ -66,6 +67,8 @@ cache). Suggest, do not install.
 | `@moku-labs/web` | `moku-web` | The web validator and the e2e station are unavailable. |
 | `@moku-labs/worker` | `moku-worker` | No worker knowledge skill. |
 | `@moku-labs/room` | `moku-room` | No room knowledge skill. |
+| `@moku-labs/game` or `@moku-labs/editor` | `moku-game` | No game knowledge skill, no hello-world scaffold, no playtest station. |
+| `@moku-labs/ai`, or `*.moku.yaml` build files | `moku-ai` | No asset build knowledge: keys, providers, costs. |
 | `@moku-labs/native` | `moku-native` | No native packaging knowledge skill. |
 | `@moku-labs/system` | `moku-system` | No system API knowledge skill. |
 | `@moku-labs/common` as a direct dependency (a framework, a CLI) | `moku-common` | No package knowledge skill; the MC1–MC3 rules stay in the core. |

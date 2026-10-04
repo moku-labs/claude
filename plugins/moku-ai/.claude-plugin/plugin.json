@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "moku-ai",
+  "displayName": "Moku AI",
+  "version": "0.76.1",
+  "description": "@moku-labs/ai pack: a build system for AI-generated assets. Declarative *.moku.yaml build files in, images, video, music and voice out, with cost estimates, a budget gate and a resumable cache.",
+  "author": {
+    "name": "Oleksandr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "ai",
+    "assets",
+    "image",
+    "video",
+    "music",
+    "voiceover"
+  ],
+  "dependencies": [
+    "moku"
+  ]
+}
