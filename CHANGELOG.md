@@ -2,6 +2,34 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.77.0 (2026-10-04)
+
+A new project type, `game`, and two packs. A person who says "I want to make a game" gets a confirmed
+folder, a hello world that installs, builds and opens in the editor in the browser pane, and then the usual
+rails: brainstorm, design, plan, build, verify, playtest.
+
+### Added
+- **`type: game`** in `.planning/moku.md`. Session confirms the folder, init scaffolds from the `moku-game`
+  pack and shows the running game (Step 5.5) before it writes the marker. The conductor, `check`,
+  `verify`, `build-app`, the design medium, web e2e and the SessionStart hook branch on it.
+- **`moku-game` pack** for `@moku-labs/game` 0.4.2 and `@moku-labs/editor` 0.0.2: the engine skill, a
+  hello world proven end to end, the editor as the shared screen (captures, PNG series to mp4, `@moku`
+  reference lines), the device loop through `moku-native`, the `playtest` station that replaces web e2e
+  for a game, and `moku-game-validator`.
+- **`moku-ai` pack** for `@moku-labs/ai` 0.14.1: keys in `.env.local` pasted by the person, providers and
+  custom ones through `moku.config.ts`, `sprite` and `sfx` tasks, estimate and a yes before any paid run,
+  `--flat` export straight into a game feature.
+- **Registry rows** `game`, `editor`, `ai`, their upgrade migrations, and `moku-sync` notes for a shared
+  pack and for packages that release several times a day.
+- **Evals** `moku-game/game-hello-world` and `moku-ai/ai-estimate-first`.
+
+### Changed
+- Core `knownVersion` 1.7.1: `createApp` `pluginConfigs` accepts core-plugin keys (moku-labs/core#29).
+
+### Known
+- Editor 0.0.2 against game 0.4.x: the element picker and `editor.capture` fail, and opt-in sources are
+  logged as failures. The packs carry the workarounds until the editor ships a fix.
+
 ## 0.76.1 (2026-09-26)
 
 The Agent hook reads the response the harness really passes. Seen on every background spawn in a real
