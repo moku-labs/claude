@@ -1,6 +1,6 @@
 # Providers, tasks, models, and custom plugins
 
-Verified against `@moku-labs/ai@0.14.0` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
+Verified against `@moku-labs/ai@0.14.2` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
 `src/plugins/<provider>/README.md`, `src/plugins/cli/project-config.ts`. Prices are the bundled
 tables; `priceOverrides` replaces them.
 
@@ -187,8 +187,8 @@ export default defineConfig({
 ```
 
 `defineConfig` returns its argument. It types `pluginConfigs`, also for the custom plugins in
-`plugins`, so an unknown key or a wrong value is an editor error. The core plugins (`journal`,
-`store`, `limits`) are not typed there.
+`plugins`, so an unknown key or a wrong value is an editor error. Since 0.14.2 (core 1.7.1) the
+core plugins `journal`, `store` and `limits` are typed there too.
 
 A config that does not load prints `[ai] Could not load <path>.` and the reason, then exits `3`
 before any app exists: a `--config` file that does not exist, a module that throws, or a default
@@ -289,6 +289,5 @@ and not exported from the package root.
 
 Every handler runs under the lane `"{task}/{provider}/default"`: 60 rpm, 4 concurrent, breaker
 after 5 retryable failures. A `limits.lanes` override replaces the whole map, so repeat the shipped
-`video/apimodels` and `video/ark` lanes when adding one. `limits` is a core plugin: `defineConfig`
-does not type it, so `pluginConfigs.limits` needs a cast. core 1.7.1 fixes the type (moku-labs/core#29); the cast
-goes away once `@moku-labs/ai` ships on core 1.7.1 (0.14.1 still pins 1.6.0).
+`video/apimodels` and `video/ark` lanes when adding one. `pluginConfigs.limits` is typed by
+`defineConfig` (0.14.2 on core 1.7.1): no cast, and a wrong lane value is an editor error.

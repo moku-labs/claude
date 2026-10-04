@@ -1,7 +1,7 @@
 # @moku-labs/worker — Plugin & Property Index
 
-**Synced version:** `0.20.2` (npm `dist-tags.latest`; surface read from the `v0.20.2` git tag's source —
-upstream `llms.txt`/`llms-full.txt` are stale at this tag, the source wins. The `0.15.0 → 0.20.2` delta,
+**Synced version:** `0.20.3` (npm `dist-tags.latest`; surface read from the `v0.20.3` git tag's source —
+upstream `llms.txt`/`llms-full.txt` are stale at this tag, the source wins. The `0.15.0 → 0.20.3` delta,
 additive, 9 → **10 plugins**: **0.15.1** the `deploy.dev` watcher drops stale watch-echo batches (a rebuild
 can no longer schedule the next one); **0.16.0** added the **`turn` plugin** (`turnPlugin`) — Cloudflare
 Realtime TURN keys as a declared deploy resource — plus the `"turn"` resource kind on
@@ -10,7 +10,8 @@ keys into the standard flow (plan → provision → bind the two worker secrets 
 failures are degraded-class, the deploy continues); **0.18.0** made TURN existence name-anchored (a key with
 the declared name exists AND both secrets are bound); **0.19.0** added `turn.<key>.verifyPath` (live mint
 check at preflight, default `"/api/ice"`); **0.20.0** added the `.env.local` key-pair escape hatch;
-**0.20.1**/**0.20.2** are CI and dependency bumps only. Earlier, `0.11.0 → 0.15.0`: **0.12.0 (BREAKING)**
+**0.20.1**/**0.20.2** are CI and dependency bumps only; **0.20.3** moved `@moku-labs/core` and
+`@moku-labs/common` from `dependencies` to `peerDependencies`, no source change. Earlier, `0.11.0 → 0.15.0`: **0.12.0 (BREAKING)**
 removed the **`stage` plugin** and rebranded the plugin id to **`"worker"`** — deployment stage is now plain
 global config (`config.stage`, read via `ctx.global.stage`), no stage plugin; **0.12.1** sourced the env provider
 `workerSafeProcessEnv` from `@moku-labs/common`; **0.13.0** added the **`deploy --delete`** teardown command
@@ -18,9 +19,11 @@ global config (`config.stage`, read via `ctx.global.stage`), no stage plugin; **
 **0.14.0** added **`endpoint.new(guard)`** — a chainable guard factory; **0.15.0** let guards **enrich** the
 request context (a guard returning an object merges a typed field onto `ctx`). Earlier: `0.11.0` (`#42`)
 removed the `./cli` subpath — `deployPlugin`/`cliPlugin` + the manifest types ship **only** from the package
-root). Built on `@moku-labs/core@1.6.0`; uses `@moku-labs/common@0.3.2` (both pinned exactly, bumped from
-`1.5.0` / `0.3.0` at 0.20.2; `common` supplies the `log` + `env` core plugins, plus `workerSafeProcessEnv`,
-sourced from it since 0.12.1). `wrangler` is an **optional `peerDependency`** (`>=3`). Engines: node ≥24,
+root). Since 0.20.3 `@moku-labs/core` (`^1.7.1`) and `@moku-labs/common` (`^0.3.4`) are
+**`peerDependencies`**, no longer bundled `dependencies`: the consumer project installs them, and one copy
+is shared with sibling frameworks. Dev-pinned to core `1.7.1` / common `0.3.4` at the tag (0.20.2 pinned
+`1.6.0` / `0.3.2` as `dependencies`). `common` supplies the `log` + `env` core plugins, plus
+`workerSafeProcessEnv`, sourced from it since 0.12.1. `wrangler` is an **optional `peerDependency`** (`>=3`). Engines: node ≥24,
 bun ≥1.3.14.
 
 A Cloudflare Worker modelled as composable Moku plugins: each primitive (KV, D1, R2, Queues, Durable

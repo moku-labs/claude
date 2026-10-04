@@ -5,12 +5,12 @@ screen that shows "Hello, world" and a tappable button that counts taps. It runs
 dev page with the editor, and is the smallest game the playtest station can drive.
 
 Derived from the engine's fixture `tests/integration/merge-game/` and its `llms.txt` "Minimal game".
-Verified end to end (typecheck, assets, test, build, dev page, editor) against `@moku-labs/game@0.4.2`,
-`@moku-labs/editor@0.0.2`, `pixi.js@8.22`, `typescript@7.0` and Bun 1.3.14. Both packages move fast:
-install with `@latest`, never hard-pin. When something here does not compile, read
+Verified end to end (typecheck, assets, test, build, dev page, editor picker, Shot, hot reload) against
+`@moku-labs/game@0.4.3`, `@moku-labs/editor@0.2.1`, `pixi.js@8.22`, `typescript@7.0` and Bun 1.3.14. Both
+packages move fast: install with `@latest`, never hard-pin. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: the game package ships it since 0.4.0 and it is the
-engine in one page, always matching the installed version. The editor ships no `llms.txt`; read
-`node_modules/@moku-labs/editor/README.md`.
+engine in one page, always matching the installed version. The editor ships `llms.txt` and
+`llms-full.txt` since 0.1.0 (`node_modules/@moku-labs/editor/`).
 
 ## Install
 
@@ -73,7 +73,8 @@ tests/hello.test.ts
 ```
 
 `bun add` fills `dependencies` (`@moku-labs/game`, `pixi.js`) and `devDependencies` (`@moku-labs/editor`,
-`typescript`, `@types/bun`, `vitest`). With `--root .` the asset CLI writes `manifest.json` and
+`typescript`, `@types/bun`, `vitest`). `@moku-labs/core` and `@moku-labs/common` are peers of both
+packages since game 0.4.3 and editor 0.2.1; Bun installs them on its own. With `--root .` the asset CLI writes `manifest.json` and
 `generated/` at the root; `--manifest` and `--keys` move them.
 
 ## tsconfig.json
@@ -377,12 +378,12 @@ globalThis.__MOKU_GAME_DEV__ = true;
 ```ts
 // web/main.ts
 /**
- * @file The dev page: the game with a real canvas, the two door handles, and the editor agent.
+ * @file The dev page: the game with a real canvas, the two door handles, and the editor agent in a
+ * dev build only.
  */
 import "./dev";
 import { commands, run } from "@moku-labs/game/control";
 import { read, sources, watch } from "@moku-labs/game/inspect";
-import { bridgePlugin, capturePlugin, createApp as createEditor } from "@moku-labs/editor/agent";
 import { createGame } from "../game";
 
 const app = createGame({ mount: "#game", manifest: "/manifest.json" });
@@ -391,16 +392,19 @@ const app = createGame({ mount: "#game", manifest: "/manifest.json" });
 Reflect.set(globalThis, "game", app);
 Reflect.set(globalThis, "doors", { read, watch, sources, run, commands });
 
-// The editor agent: bridge and capture only in a dev build. A production define of `false` leaves them off.
-const devPlugins = __MOKU_GAME_DEV__ ? [bridgePlugin, capturePlugin] : [];
-const editor = createEditor({
-  plugins: devPlugins,
-  pluginConfigs: { registry: { game: app, modules: [], name: "hello-game 0.1.0" } }
-});
-Reflect.set(globalThis, "editor", editor);
-
 await app.start();
-await editor.start(); // never waits for the editor server
+
+// The editor agent, dev only. With `__MOKU_GAME_DEV__` defined false the bundle keeps no editor code.
+if (__MOKU_GAME_DEV__) {
+  const { bridgePlugin, capturePlugin, createApp } = await import("@moku-labs/editor/agent");
+  const editor = createApp({
+    plugins: [bridgePlugin, capturePlugin],
+    pluginConfigs: { registry: { game: app, modules: [], name: "hello-game 0.1.0" } }
+  });
+
+  Reflect.set(globalThis, "editor", editor);
+  await editor.start(); // after the game; never waits for the editor server
+}
 ```
 
 ```ts
@@ -443,7 +447,7 @@ console.info(`hello-game on ${server.url}`);
 // web/build.ts
 /**
  * @file The production page: `__MOKU_GAME_DEV__` defined false, so every `/control` command body is
- * stripped and the editor plugins stay off. This is the loose build: `manifest.json` and every
+ * stripped and no editor code is bundled. This is the loose build: `manifest.json` and every
  * `features/<f>/assets` copied beside the page. Packed art (`assets:keys -- --pack`, needs `sharp`)
  * is a later step with its own manifest; it replaces this copy.
  */
@@ -510,7 +514,10 @@ bun run dev              # Game http://127.0.0.1:3000/  Tools http://127.0.0.1:3
 ```
 
 On the page, tap the button: the counter text changes on the next commit. In the tools page, State shows
-`player.taps`, Flow shows `home → tap → home`, Console shows the log. See `editor.md`.
+`player.taps`, Flow shows `home → tap → home`, Console shows the log. Save a file of the game (for
+example the button `fill` in `view.tsx`): Bun hot reload puts the new code on the page and the game comes
+back with its taps, toast "Game reloaded · state restored". `bun run build:web` keeps no editor code:
+`grep -c "/__editor/hello" dist/web/*.js` answers `0`. See `editor.md`.
 
 ## Next steps a real game adds
 

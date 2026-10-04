@@ -1,13 +1,13 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.0.2` beside a game on `@moku-labs/game@0.4.2` in the chat pane, reads the live game and takes pictures. The
+How Claude runs `@moku-labs/editor@0.2.1` beside a game on `@moku-labs/game@0.4.3` in the chat pane, reads the live game and takes pictures. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
 ## 1. Start the dev server in the background
 
 The game's `dev` script is the editor bin: `moku-editor web/index.html --port 3000 --root .`. It serves
-the game on `/`, the tools page on `/__editor/`, and the project root's files as static (manifest, art,
+the game with Bun hot reload on (`--no-hmr` turns it off) on `/`, the tools page on `/__editor/`, and the project root's files as static (manifest, art,
 sounds; dotfiles and `node_modules` refused). Bun only. It binds `127.0.0.1` only.
 
 Preferred: `.claude/launch.json` plus `mcp__Claude_Browser__preview_start`, which starts the server and
@@ -43,27 +43,63 @@ resize_window({ width: 720, height: 900 })   // one half
 resize_window({ preset: "desktop" })         // back to the pane's own size when done
 ```
 
-At 480 the rail collapses and side panels overlay; at 720 they dock. Phones are out of scope for the
-tools page (D-21). The game iframe follows the Device chips of the Game workspace.
+At 480 the rail collapses and side panels overlay; at 720 they dock. Below 900 px the top bar is compact:
+Pause, Step, Reference mode and Hot reload are icons, the rest sits in the ⋯ menu (`data-action="more"`).
+The game iframe follows the device of the Game workspace: 21 presets, the iPhone 18 Pro by default.
 
 ## 3. Find your way on the tools page
 
 | Key | Action |
 |---|---|
-| `1`–`6` (or ⌘1–⌘6) | Flow · Game · Render · State · Files · Console |
-| ⌘K | Palette: "Select element", "Take a screenshot", "Record a series…", "Overlay in game", "Device: …", "Reload" |
+| ⌘1–⌘6 (or `1`–`6`) | Game · Flow · Render · State · Files · Console. Game is the default |
+| ⌘K | Palette: "Select element", "Take a screenshot", "Record a series…", "Overlay in game", "Device: …", "Density: …", "Reload" |
 | `P` | Pause / resume the game |
 | `.` | Step one frame, only while paused |
 | `O` | Overlay in game on / off |
 | `G` | Show / hide the preview of the current workspace |
-| `i` or ⌘⇧C | Element picker (Game workspace) |
+| `R` | Reference mode on / off |
+| `H` | Hot reload switch (it only shows the state; see section 4) |
+| `M` | Sound, in Game. Dimmed until the game has `game.mute` (no game release has it yet) |
+| ⌘⇧C | Element picker (Game workspace) |
 | ← → `b` | Previous / next shot, mark a bug, while the contact sheet is open |
 | Esc | Closes one thing, outermost first |
+
+Keys go to the game while its iframe has focus. A click on the device stage gives the game the keys; a
+click outside the device returns them.
 
 The link pill in the top bar goes `connecting` → `live · frame N` once the game page's bridge said
 `hello`. `paused` while the game is paused, `silent` after 6 s without a heartbeat, `lost` with a retry
 countdown, `empty` when no game page is open. Prefer `read_page` and `find` over screenshots to read
 State, Console and the Element tab: they are plain DOM.
+
+**Pick an element.** Click "Select element" (or ⌘⇧C), then click the element on the stage. The Element tab
+shows its path, bounds, style, the Code section (JSX and `defineStyle` block with `file:line`) and the
+reference block. The pick also bookmarks the game and writes three files to `.moku/captures/`: the crop
+`<key>-f<frame>.png`, the frame `f<frame>.png` and the card `<key>-f<frame>.md`. Read the card with the
+Read tool: it is the whole reference, ready for a fix.
+
+```text
+@moku tapLabel · text · main/home · f58
+path: helloScreen/tap/tapLabel
+source: features/hello/view.tsx:22
+layout: tap < helloScreen (column, gap 48)
+bounds: 182,462 37×15 px · ref 490,1242 100×40
+state: visible
+flow: home
+game: hello-game 0.1.0 · s-185e · f58 · 23:52:56 · live · clean
+device: iPhone 18 Pro 402×874 portrait · dpr 3 · safe 62/0/34/0
+restore: bookmark tapLabel-f57
+shot: .moku/captures/tapLabel-f58.png · frame: .moku/captures/f58.png
+```
+
+The pick also copies one line for the chat,
+`@moku <name> <type> · <flow/node> · <file:line> · ref <x>,<y> <w>×<h> · <card path>`. In Claude's pane
+the clipboard write fails (toast "Copy failed", console warn `gameView: copy reference failed`). Not a
+finding: the card file and the Element tab hold the same text. When the user pastes such a line, open the
+card it names; `<name>` is the element key for `doors.sources.locate`.
+
+**Reference mode** (`R`) lays invisible `data-moku-*` proxies over the game elements, so `read_page` and
+`find` see them by name. A click on a proxy is a pick. The game gets no input while it is on.
 
 ## 4. Read and drive the game by script
 
@@ -126,54 +162,52 @@ The capture is a PNG with a transparent background: the page colour is CSS, not 
 before you look at it, for example `magick shot.png -background '#10161d' -flatten shot-flat.png`.
 A `diff` capture restores a bookmark and journals itself as a raw write, so it taints the session.
 
-**The capture recipe.** A data URL is too big for a tool result. Save it to disk through a one-shot
-receiver. Start it in the background with the Bash tool:
+**A picture on disk.** A data URL is too big for a tool result. Let the tools page write it: click the
+Shot button (`find("Take a screenshot")`, then `computer` `left_click` on its ref). It runs
+`editor.capture` and writes `.moku/captures/<yyyy-mm-dd-hhmm>-<flow>.png` (`-2`, `-3` … when taken)
+through the server's `files` sandbox; the capture card names the path. Flatten it, then Read it.
+For `legend`, `layers`, `sheet` or `diff`, call `doors.commands.capture` and keep only lengths and
+`legend` in the tool result.
 
-```sh
-bun -e 'Bun.serve({ port: 3999, async fetch(r) { await Bun.write(process.argv[1], Buffer.from((await r.text()).split(",")[1], "base64")); setTimeout(() => process.exit(0), 50); return new Response("ok", { headers: { "access-control-allow-origin": "*" } }); } })' shot.png
-```
-
-Then post from the **game frame**, `w.fetch`, not the tools page: the tools page CSP allows
-`connect-src 'self'` and websockets only, so its own `fetch` to another port is refused.
-
-```js
-const shot = await doors.run(game, doors.commands.capture);
-await w.fetch("http://127.0.0.1:3999/", { method: "POST", body: shot.value.png });
-```
-
-When the page set `globalThis.editor`, the agent's in-process channel adds the editor commands:
+When the page set `globalThis.editor`, the agent's in-process channel runs the editor commands:
 
 ```js
 const { editor } = w;
+(await editor.channel.run("editor.capture")).value;        // { image: "data:image/png;base64,…", frame, device: { w, h, orientation } }
 (await editor.channel.run("editor.series", { durationMs: 2000, intervalMs: 100 })).value.shots.length; // 20
 await editor.channel.run("editor.seriesStop");
 editor.channel.status();                                   // LinkStatus
 await editor.channel.read("game.locate", { key: "tap" });  // every door source by id, through the channel
 ```
 
-**`editor.capture` and `editor.series` are broken with game 0.4.x.** Editor 0.0.2 expects
-`game.capture` to answer a string; it now answers `{ png }`. Both throw `game.capture gave no picture`,
-and so do the Shot and Series buttons of the tools page. Use `doors.commands.capture` and the receiver
-above until the editor catches up.
-
-**Reload.** Save a `.ts`/`.tsx`/`.css`/`.json` in Files and the workspace bookmarks the game, reloads the
-frame and restores the bookmark (D-07). From a script: `w.location.reload()` reloads the game page
-without the restore. A reload makes the session a new one; wait for the pill to say `live` again.
+**Hot reload.** The bin serves with Bun hot reload on. A save of a game source, by the Files workspace or
+by Claude's Edit tool, makes Bun reload the game page. The bridge keeps a `game.bookmark` in
+`sessionStorage` before and restores it after, and the tools page toasts "Game reloaded · state
+restored". The game comes back where it was, with a new session id, frame counting from 0 and
+`tainted: true`. It takes about a second. With `--no-hmr` (or a game's own server) a save in Files still
+keeps the state: the editor bookmarks, reloads the frame and restores (D-07). The Hot reload switch (`H`)
+only shows the state; Bun cannot change it on a running server, so restart the bin with or without
+`--no-hmr`. From a script, `w.location.reload()` reloads the game page without the restore. Wait for the
+pill to say `live` again after any reload.
 
 ## 5. Captures on disk
 
-Only a user action, a palette item or a `gameView` api call takes a picture; nothing captures on its own.
-With game 0.4.x and editor 0.0.2 the Shot and Series paths below fail (`editor.capture` reads the old
-`game.capture` shape, see section 4). Use the capture recipe of section 4 until the editor is updated.
+Only a user action, a pick, a palette item or a `gameView` api call writes a picture; nothing captures on
+its own.
 
 - The Shot button of the Game workspace, or palette → "Take a screenshot": one PNG at
   `.moku/captures/<yyyy-mm-dd-hhmm>-<flow>.png`, written through the server's `files` sandbox (only
   `.moku/captures/` takes binary writes).
+- A pick: `<key>-f<frame>.png` (the element plus 8 px), `f<frame>.png` and the card `<key>-f<frame>.md`.
 - Palette → "Record a series…": pick a duration (1 s … 20 s) and an interval (16 … 1000 ms). The result is
   `.moku/captures/series-<stamp>/NNN.png` plus `index.json` (`{ label, durationMs, intervalMs, fromFrame,
   shots: [{ file, frame, atMs, bug }], device, stoppedEarly }`), and the contact sheet opens.
 - Claude's own `computer({ action: "screenshot" })` of the pane is the quickest proof for a report; it
-  shows the tools page, not the raw canvas. For the raw canvas use `game.capture` above.
+  shows the tools page, not the raw canvas.
+
+The capture is a PNG with a transparent background: the page colour is CSS, not canvas. Flatten it
+before you look at it, for example `magick shot.png -background '#10161d' -flatten shot-flat.png`.
+A `diff` capture restores a bookmark and journals itself as a raw write, so it taints the session.
 
 Turn a series into a video with ffmpeg (frame rate = 1000 / intervalMs):
 
@@ -188,32 +222,24 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
 
 - **No MCP server yet.** "MCP doors" in game 0.4.x means the catalogue is shaped for one: every source
   and command is data `{ id, title, input, effect? }` with a typed input schema, which an MCP layer
-  lists as tools one to one. Neither game 0.4.2 nor editor 0.0.2 ships that server. Claude uses the same
+  lists as tools one to one. Neither game 0.4.3 nor editor 0.2.1 ships that server. Claude uses the same
   catalogue through `javascript_tool`: list it with
   `Object.values(doors.sources).map(s => [s.id, s.input])` and
   `Object.values(doors.commands).map(c => [c.id, c.input, c.effect])`, then call `doors.read` or
   `doors.run` with the input the schema names. A game's own `.dev` sources and commands appear the same
   way once `web/main.ts` passes them to `registry.modules`.
-- **Reference mode is planned (D-27), not shipped.** The plan: key `R` turns on invisible proxy divs over
-  the game frame with `aria-label` and `data-moku-*` attributes, so `read_page` and `find` see game
-  elements by name, and "Copy reference" in the Element tab copies one line
-  `@moku <name> · <type> · <flow/node> · <file:line> · <x>,<y> <w>×<h>`. When the user pastes such a
-  line, treat it as a pointer to that element: `<name>` is the element key (`doors.read(game,
-  doors.sources.locate, { key })`), `<flow/node>` the graph position, `<file:line>` where its style or view
-  lives. Until the proxies ship, pick elements with `i` and read the Element tab.
-- **The element picker is broken with game 0.4.x.** Editor 0.0.2 calibrates from `game.rect`, which
-  0.4.0 renamed to `game.locate`: the console says `gameView: calibration failed` and the stage says
-  "Picker needs one keyed element". Read rects by script with `sources.locate` and `sources.at` instead.
-  Text has no style card yet. Safe areas are guides only.
-- **`registry:source-failed` for `game.sounds` / `game.effects`.** A game without `audioPlugin` or
-  `effectsPlugin` answers `[game] The source <id> needs <plugin>.`; editor 0.0.2 has no not-installed state
-  and logs it with two `link:watch-failed`. Not a finding.
+- **Not installed is not a failure.** A game without `audioPlugin` or `effectsPlugin` has no
+  `game.sounds` / `game.effects`. The registry lists them `available: false`, logs
+  `registry:source-unavailable` at level info, and Render says "Effects not installed in this game".
+- **No sound switch yet.** Sound (`M`) needs `game.mute`, which no game release has. It stays dimmed.
 - **The hub is loopback only** (`127.0.0.1`, Host + Origin + token). A phone or a simulator cannot connect
   its game page to the tools page. See `device.md`.
-- **Hidden pane stops the frames.** While the pane is hidden the game page is `visibilityState: hidden`:
-  fps drops to 0 and the pill may say `Paused`. Input still reaches the model, but the canvas does not
-  redraw, and `editor.series` returns a few shots instead of 20. Front the pane, or `pause` then `step`
-  a few frames before a capture.
+- **Hidden pane: the game stays paused.** While the pane is hidden the game page is
+  `visibilityState: hidden` and the game holds its own pause reason `"background"`. The pill says
+  `Paused` and the canvas does not redraw. `game.resume` answers `true`, but the game stays paused: it only
+  pops `"devtools"`. Show the pane, then resume. Without the pane, `game.step { frames }` still advances
+  the game, so step a few frames before a Shot. Not a finding.
 - **Bun dev reload can break.** After many files change at once the game page can show Bun's "Failed to
-  load bundled module './main.ts'", and a reload does not fix it. Restart `bun run dev`, then reload the
+  load bundled module './main.ts'", and a reload does not fix it. Bun 1.3.14 can also crash the dev
+  server after many hot reloads in a row (known to the editor team). Restart `bun run dev`, then reload the
   tools page. `navigate` to the same URL with only a new `#hash` does not reload; use `location.reload()`.

@@ -1,20 +1,21 @@
 # @moku-labs/native — Plugin & Property Index
 
-**Synced version:** `0.2.2` (npm `dist-tags.latest`; catalog generated from the `v0.2.2` git tag **source**,
-cross-checked against the root README and `llms.txt` / `llms-full.txt`). Dependencies, all regular (no peer
-dependencies): `@moku-labs/core@1.6.0` and `@moku-labs/common@0.3.2` as **exact pins**, plus
-`@tauri-apps/cli@^2`. One `bun add @moku-labs/native` is the whole install. Engines node ≥24, bun ≥1.3.14.
+**Synced version:** `0.3.2` (npm `dist-tags.latest`; catalog generated from the `v0.3.2` git tag **source**,
+cross-checked against the root README and `llms.txt` / `llms-full.txt`). Dependencies: `@tauri-apps/cli@^2`
+(regular). **Peer dependencies since 0.3.2:** `@moku-labs/core@^1.7.1` and `@moku-labs/common@^0.3.4` (0.2.x
+exact-pinned core 1.6.0 / common 0.3.2 as regular deps). Install the peers beside the package. Engines
+node ≥24, bun ≥1.3.14.
 
-⚠️ Places where the upstream docs are **stale versus the `v0.2.2` source** (the source wins):
+⚠️ Places where the upstream docs are **stale versus the `v0.3.2` source** (the source wins):
 
 | Doc | Says | Source says |
 |-----|------|-------------|
-| `llms-full.txt:11` | `Version: 0.1.0` | `package.json` → `0.2.2` |
-| `llms-full.txt:917`, `llms.txt:81` | `Pick<TauriApi, "version">`; "gate on `completeness()` first" | `Pick<TauriApi, "getVersion">` (`src/plugins/doctor/checks/types.ts`); `project.getCompleteness({ target })` |
+| `llms-full.txt:11` | `Version: 0.1.0`, deps common 0.3.0 / core 1.5.0 | `package.json` → `0.3.2`, peers common `^0.3.4` / core `^1.7.1` |
+| `llms-full.txt:1017`, `llms.txt:81` | `Pick<TauriApi, "version">`; "gate on `completeness()` first" | `Pick<TauriApi, "getVersion">` (`src/plugins/doctor/checks/types.ts`); `project.getCompleteness({ target })` |
 | Root `README.md` plugin table | `completeness`, `version`, `runner` | `getCompleteness`, `getVersion`, `getRunner` (`src/plugins/{project,tauri}/types.ts`) |
 | `llms.txt` quick reference, `project` list | omits two methods | `Api` also has `getBundleLayout` and `resolveDerivedPath` |
 | `llms*.txt`, doctor README | checks run via `Promise.allSettled` | `Promise.all` over per-check `.catch(...)` (`src/plugins/doctor/api.ts`). Same behaviour: one rejected check becomes a `fail` row |
-| `llms.txt` "Config validation" list | 4 kinds of error | `validate.ts` also checks `app.version`, `app.buildNumber`, the Android env-var names, the deep-link scheme shape, `projectDir` and `outDir` |
+| `llms.txt` "Config validation" list | 6 kinds of error | `validate.ts` also checks `app.version`, `app.buildNumber`, the Android env-var names, the deep-link scheme shape, `projectDir` and `outDir` |
 | `llms*.txt`, root README | `tauri` is "Standard tier" | `src/plugins/tauri/index.ts` JSDoc: "Complex tier (flat layout)" |
 
 Config fields, defaults, events and all other method names in `llms.txt` match the source.
@@ -32,10 +33,18 @@ under the base directory it prints.
 **Entry points:** one, `@moku-labs/native` (`.`). `import` → `dist/index.mjs` + `index.d.mts`; `require` →
 `dist/index.cjs` + `index.d.cts`. No sub-path exports.
 
-> ⚠️ **Breaking changes the upstream README lists for this release** (verified in source): flat
-> `web.devCommand` / `web.devUrl` (was `web.dev.command` / `.url`); `tauri.mobileInit({ target })` (was
-> `{ platform }`); the plugin namespaces are **type-only**, import `TauriError` by name; default `targets`
-> is the host desktop target, not all five; `RegistryRow.npmPackage` / `crate` / `rustInit` are optional.
+> **Changes 0.2.2 → 0.3.2** (verified in source; no API removals or renames):
+> - 0.3.0: first iOS build works (the runner rewrite no longer eats the quote that opens the pbxproj `shellScript`). New
+>   `app.orientation` and `app.backgroundColor`. iOS safe-area hook in `lib.rs`. New registry rows `back`
+>   and `haptics`. Generated `Cargo.toml` pins `tauri = "2.12"` plus an iOS-only `objc2 = "0.6"` table.
+>   Phase durations use a monotonic clock.
+> - 0.3.1: first Android build works. The Android required file is `settings.gradle` (was
+>   `settings.gradle.kts`), and the runner rewrite also handles `BuildTask.kt`. Android status-bar icons
+>   follow `app.backgroundColor`.
+> - 0.3.2: `@moku-labs/core` and `@moku-labs/common` are peer dependencies.
+>
+> Earlier breaking changes (0.2.0): flat `web.devCommand` / `web.devUrl`; `tauri.mobileInit({ target })`;
+> type-only plugin namespaces; default `targets` is the host desktop target.
 
 ## 1. Public exports (`src/index.ts`)
 
@@ -45,9 +54,9 @@ under the base directory it prints.
 | Plugin instances | `projectPlugin`, `tauriPlugin`, `buildPlugin`, `doctorPlugin`, `cliPlugin` |
 | Type-only namespaces | `Project`, `Tauri`, `Build`, `Doctor`, `Cli` (each is `export type * as X from "./<name>/types"`) |
 | Helpers, constants, runtime class | `hostTargets`, `TARGETS`, `PHASE_ORDER`, `TauriError` |
-| Types | `AppleExportMethod`, `AppleSigning`, `BuildFlavor`, `CapabilityConfigMap`, `Config`, `Events`, `MobileTarget`, `NativeCompleteEvent`, `NativePhase`, `NativePhaseEvent`, `SigningConfig`, `Target`, `TauriRunner` |
+| Types | `AppleExportMethod`, `AppleSigning`, `BuildFlavor`, `CapabilityConfigMap`, `Config`, `Events`, `MobileTarget`, `NativeCompleteEvent`, `NativePhase`, `NativePhaseEvent`, `Orientation`, `SigningConfig`, `Target`, `TauriRunner` |
 
-## 2. App form (v0.2.2)
+## 2. App form (v0.3.2)
 
 The five plugins plus core `logPlugin` / `envPlugin` are **defaults** — already wired. `createApp` accepts
 `config`, `pluginConfigs`, `plugins` (extra consumer plugins, appended) and `onReady` / `onError` /
@@ -61,7 +70,8 @@ import { createApp } from "@moku-labs/native";
 import { systemPlugins } from "./system";
 export const native = createApp({
   config: {
-    app: { name: "MyApp", identifier: "com.example.myapp", icon: "assets/icon.png" },
+    app: { name: "MyApp", identifier: "com.example.myapp", icon: "assets/icon.png",
+      orientation: "portrait", backgroundColor: "#10161d" },
     web: { build: "bun run build", devCommand: "bun run dev", devUrl: "http://localhost:5173", dist: "dist" },
     system: systemPlugins,
     capabilities: { "deep-link": { mode: "scheme", scheme: "myapp" } },
@@ -88,12 +98,14 @@ this package's `createPlugin` and goes into `plugins`; hooking `doctor:check` ne
 | `app.version` | `string?` | unset → `"0.1.0"` | `MAJOR.MINOR.PATCH` with optional suffix |
 | `app.icon` | `string?` | unset | 1024×1024 PNG, relative to cwd. Unset → placeholder at `<projectDir>/placeholder-icon.png` |
 | `app.category`, `app.buildNumber` | `string?` | unset | → `bundle.category`; `/^[\w.]+$/` → `bundle.iOS.bundleVersion` and `bundle.macOS.bundleVersion` |
+| `app.orientation` | `Orientation?` (`"portrait" \| "landscape" \| "any"`) | unset = `"any"` | Build-time mobile lock, no runtime lock. iOS `Info.ios.plist`: `portrait` → `UISupportedInterfaceOrientations` [Portrait], `~ipad` [Portrait, PortraitUpsideDown], `UIRequiresFullScreen` true; `landscape` → both [LandscapeLeft, LandscapeRight] + `UIRequiresFullScreen`. Android `android:screenOrientation`: `portrait` / `sensorLandscape`; `any` removes the attribute |
+| `app.backgroundColor` | `string?` (`#rrggbb` or `#rrggbbaa`) | unset = platform default | → `app.windows[0].backgroundColor`. Android: patched `MainActivity.kt` `enableEdgeToEdge()` gets light status-bar icons when relative luminance < 0.179, else dark icons. Unset restores the bare call |
 | `web.build`, `web.devCommand` | `string` | `"bun run build"`, `"bun run dev"` | → `beforeBuildCommand` / `beforeDevCommand` (script + `cwd`). Tauri runs them; the pipeline has no separate web phase |
 | `web.devUrl` | `string` | `"http://localhost:5173"` | → `devUrl`, `DevHandle.url`, readiness-poll target |
 | `web.dist` | `string` | `"dist"` | → `frontendDist`, resolved from `web.cwd`, rebased onto `src-tauri` |
 | `web.cwd` | `string?` | unset → process cwd | Web package root for monorepos. `doctor` reads `package.json` from here |
 | `system` | `ReadonlyArray<{ name: string }>` | `[]` | The composed `@moku-labs/system` plugin names. Unknown name throws at `createApp` |
-| `capabilities` | `Partial<CapabilityConfigMap>` | `{}` | Only `deep-link` takes parameters: `{ mode: "scheme"; scheme: string }` |
+| `capabilities` | `Partial<CapabilityConfigMap>` | `{}` | Keys: `store`, `notification`, `clipboard-manager`, `tray`, `deep-link`, `back`, `haptics`. Only `deep-link` takes parameters: `{ mode: "scheme"; scheme: string }` |
 | `targets` | `readonly Target[]` | `hostTargets(process.platform)` | `darwin`→`["macos"]`, `win32`→`["windows"]`, `linux`→`["linux"]`, other→`[]`. Mobile is opt-in |
 | `projectDir` | `string` | `".moku/tauri"` | Generated Tauri project (contains `src-tauri/`). Gitignored. Must resolve inside the project or the OS temp root |
 | `outDir` | `string` | `"dist-native"` | Delivery root. Refused only if a filesystem root, `$HOME`, or an ancestor of cwd / `$HOME` |
@@ -129,8 +141,8 @@ the pure artifacts with write-if-changed, gates and patches the mobile `gen/` tr
 ⚠️ Never spawns a process. **Depends:** none. **Config:** none. **State:** none. **Events:** none.
 
 **Lifecycle:** `onInit` → `validateProjectConfig(ctx.global)`. Throws `[native] …` at `createApp` for: empty
-`app.name`; invalid `app.identifier`; an empty `web.*` field; invalid `app.version`, `app.buildNumber` or
-`signing.android.*Env` (must be env-var **names**); `projectDir` outside the project; forbidden `outDir`;
+`app.name`; invalid `app.identifier`; an empty `web.*` field; invalid `app.version`, `app.buildNumber`,
+`app.backgroundColor`, `app.orientation` or `signing.android.*Env` (must be env-var **names**); `projectDir` outside the project; forbidden `outDir`;
 unknown `config.system` name; `deep-link` composed without a valid `capabilities["deep-link"].scheme`.
 
 ```ts
@@ -155,23 +167,28 @@ Generated artifacts (all under `<projectDir>/src-tauri/`):
 
 | File | Content |
 |------|---------|
-| `tauri.conf.json` | `productName`, `identifier`, `version`, `build.*` from `web`, one window, `bundle` (icons, `category`, `iOS`, `macOS`, `windows`, `android`), `plugins` |
-| `Cargo.toml` | package slug from `app.name`, `tauri = { version = "2", features = [...] }`, one pinned crate per plugin-backed capability |
-| `build.rs`, `src/lib.rs`, `src/main.rs` | `tauri_build::build()`; `.plugin(<rustInit>)` per capability |
+| `tauri.conf.json` | `productName`, `identifier`, `version`, `build.*` from `web`, one window (`main`, `backgroundColor` when set), `bundle` (icons, `category`, `iOS`, `macOS`, `windows`, `android`), `plugins` |
+| `Cargo.toml` | package slug from `app.name`, `tauri = { version = "2.12", features = [...] }` (2.12 floor: `core:app:allow-exit`), one pinned crate per plugin-backed capability, and a `[target.'cfg(target_os = "ios")'.dependencies]` table with `objc2 = "0.6"` |
+| `build.rs`, `src/lib.rs`, `src/main.rs` | `tauri_build::build()`; `.plugin(<rustInit>)` per capability; a `.setup` hook that on iOS sets the `main` WKWebView scroll view's `contentInsetAdjustmentBehavior` to `.never`, so the page is not shrunk by the safe area (tauri-apps/tauri#8166) |
 | `capabilities/default.json` | `core:default` + every resolved capability's permissions, scoped to the target platform |
-| `Entitlements.plist`, `Info.ios.plist` | Conditional. Entitlements: only `macos` with `signing.apple.appStore === true` and no `entitlements` (sandbox + network client). The iOS sidecar: only when a capability carries plist entries; every v1 row carries none, so v1 never writes it |
+| `Entitlements.plist`, `Info.ios.plist` | Entitlements: only `macos` with `signing.apple.appStore === true` and no `entitlements` (sandbox + network client). `Info.ios.plist`: **always** written for `ios` (an empty `<dict>` when nothing is locked, since the writer never deletes), never for other targets. Carries the `app.orientation` keys |
 
 Gotchas:
 - Only `deep-link` writes a `plugins.<name>` key into `tauri.conf.json`. An empty `{}` under another
   plugin's key aborts the app at startup, so empty fragments are dropped.
 - The writer refuses paths outside `projectDir` or through `target`, `.gradle`, `DerivedData`, `Pods`.
 - Required files — `gen/apple`: `project.yml`, `Assets.xcassets`, `Sources`, `ExportOptions.plist`;
-  `gen/android`: `build.gradle.kts`, `settings.gradle.kts`, `gradle.properties`, `app/build.gradle.kts`,
-  `app/src/main/AndroidManifest.xml`.
+  `gen/android`: `build.gradle.kts`, `settings.gradle` (Groovy, since 0.3.1; was `settings.gradle.kts`),
+  `gradle.properties`, `app/build.gradle.kts`, `app/src/main/AndroidManifest.xml`.
 - `patchMobile` is idempotent. iOS: `CODE_SIGN_ALLOW_ENTITLEMENTS_MODIFICATION` in the pbxproj and
-  `project.yml`, plus the runner rewrite to the absolute `<node> <tauri.js>` pair. Android: the
-  `// MOKU-SIGNING-START … END` block in `app/build.gradle.kts` (passwords via `System.getenv`), plus
-  the runner rewrite. It throws when the Android `gen/` tree is missing.
+  `project.yml`, plus the runner rewrite to the absolute `<node> <tauri.js>` pair (0.3.0 fixed the rewrite
+  that swallowed the quote opening the pbxproj `shellScript` and broke the first iOS build). Android, in order: the
+  `// MOKU-SIGNING-START … END` block in `app/build.gradle.kts` (passwords via `System.getenv`); the main
+  `<activity>` attributes in `AndroidManifest.xml` (`android:screenOrientation`); the `MainActivity.kt`
+  `enableEdgeToEdge()` status-bar style from `app.backgroundColor`; then the runner rewrite, including
+  the Kotlin `BuildTask.kt` `executable` + `listOf(...)` shape. It throws when the Android `gen/` tree or
+  `AndroidManifest.xml` is missing, and when a colour is set but there is not exactly one
+  `MainActivity.kt` calling `enableEdgeToEdge()`.
 - ⚠️ `clean()` with no target deletes the whole `projectDir`; a mobile target deletes `gen/<platform>`; a
   desktop target deletes its `bundle/<format>` directories. It refuses a `projectDir` that is not strictly
   inside the project anchor (nearest `.git` or `workspaces` ancestor) or the OS temp root. Symlinks are
@@ -328,10 +345,14 @@ Core `log` + `env` (`@moku-labs/common`) are on every `ctx`. `project` and `taur
 | `clipboard-manager` | `tauri-plugin-clipboard-manager` / `@tauri-apps/plugin-clipboard-manager` | `tauri_plugin_clipboard_manager::init()` | `clipboard-manager:allow-read-text`, `clipboard-manager:allow-write-text` | all five | — |
 | `tray` | none — cargo feature `tray-icon` on `tauri` | none | `core:tray:default`, `core:menu:default`, `core:image:default`, `core:resources:default`, `core:app:allow-default-window-icon` | macos, windows, linux | — |
 | `deep-link` | `tauri-plugin-deep-link` / `@tauri-apps/plugin-deep-link` | `tauri_plugin_deep_link::init()` | `deep-link:default` | all five | `{ desktop: { schemes: [s] }, mobile: [{ scheme: [s], appLink: false }] }` |
+| `back` | none — `onBackButtonPress` / `exit` ship in `@tauri-apps/api/app` | none | `core:app:allow-exit` | android | — |
+| `haptics` | `tauri-plugin-haptics` / `@tauri-apps/plugin-haptics` | `tauri_plugin_haptics::init()` | `haptics:allow-impact-feedback`, `haptics:allow-notification-feedback`, `haptics:allow-selection-feedback`, `haptics:allow-vibrate` (no default set) | ios, android | — |
 
 A row is applied to a target only when its `platforms` list includes it, so `tray` is dropped from `ios`
-and `android` builds. `deep-link` is custom-scheme only in v1 (no universal links). Official Tauri plugins
-merge their own `AndroidManifest.xml` needs, so v1 ships no XML patching.
+and `android` builds, and `back` / `haptics` from desktop. `deep-link` is custom-scheme only (no universal
+links). Official Tauri plugins merge their own `AndroidManifest.xml` permissions (haptics merges `VIBRATE`
+itself), so no permission XML is patched. The only manifest edits are presentation: the orientation
+attribute and the status-bar style (§4.1).
 
 ## 8. Targets and artifacts (`TARGETS`)
 

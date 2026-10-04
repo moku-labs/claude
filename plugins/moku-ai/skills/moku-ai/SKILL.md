@@ -12,7 +12,8 @@ description: >
 
 # Moku AI Patterns
 
-> **Synced to `@moku-labs/ai@0.14.0`** (npm `dist-tags.latest`; catalog from the main branch source).
+> **Synced to `@moku-labs/ai@0.14.2`** (npm `dist-tags.latest`; catalog from the `v0.14.2` tag source).
+> Peers: `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`.
 > Full surface — the 24 plugins, every API, config key and event — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Provider keys:
 > [`references/setup.md`](references/setup.md). Providers, models and custom plugins:
@@ -61,7 +62,9 @@ bunx moku new assets        # writes assets.moku.yaml + .moku/build.schema.json
 ```
 
 Node 24 or newer, Bun 1.3.14 or newer. The journal uses `bun:sqlite` on Bun, `better-sqlite3` on
-Node. `sharp` comes with the package (the `sprite` pixel step). Add `.moku/` and `.env.local` to
+Node. `sharp` comes with the package (the `sprite` pixel step). Since 0.14.2 `@moku-labs/core`
+(`^1.7.1`) and `@moku-labs/common` (`^0.3.4`) are peer dependencies; Bun and npm install them
+with the package, so one project shares a single core. Add `.moku/` and `.env.local` to
 `.gitignore` (see `references/setup.md`).
 
 ## Build file anatomy

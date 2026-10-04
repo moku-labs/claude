@@ -105,24 +105,26 @@ Follow `references/editor.md`:
 
 1. Start the dev server in the background (`preview_start` with the `game-editor` launch config, or
    `bun run dev` in the background) and open `http://127.0.0.1:3000/__editor/` in the pane. Wait for the
-   link pill to say `live`.
+   link pill to say `live`. `Paused` with a hidden pane is the page's own pause; `resume` answers true and
+   the game stays paused. Show the pane, then resume. Not a finding.
 2. `resize_window({ width: 480, height: 900 })`; use 720 when a workspace needs the room.
 3. For each flow in FOCUS, play it as a player: tap through the screen in the Game workspace, or drive
    it by script through `iframe[data-game-frame]` → `doors.run(game, doors.commands.tap, { key })`. After
    each step read `doors.sources.position` and the State workspace; the path and the committed state are
    the proof, the picture is the evidence.
-4. Take one screenshot per screen or popup of FOCUS with `doors.commands.capture` and the capture
-   recipe of `editor.md` (receiver in Bash, `w.fetch` from the game frame, flatten on the page colour).
-   For every animation the change touched take a contact sheet,
-   `capture { sheet: { frames: 8, everyMs: 100 } }`; `capture { legend: true }` numbers the keyed views
-   when a finding needs to point at one. With editor 0.0.2 and game 0.4.x the palette's "Take a
-   screenshot" and "Record a series…" fail (`game.capture gave no picture`); use them again once the
-   editor is updated. Copy what the report cites into `.planning/e2e/game/` (`<flow>-<node>.png`,
+4. Take one screenshot per screen or popup of FOCUS with the Shot button of the Game workspace
+   (`find("Take a screenshot")`, then click it). It writes `.moku/captures/<stamp>-<flow>.png`; flatten
+   it on the page colour before you look at it. For every animation the change touched record a series
+   (palette → "Record a series…", or `editor.channel.run("editor.series", …)` through the game frame); the
+   palette writes the frames and `index.json` under `.moku/captures/series-<stamp>/` and opens the contact
+   sheet. When a finding needs to point at an element, pick it (⌘⇧C, then click) and cite the card
+   `<key>-f<frame>.md` the pick writes; `capture { legend: true }` gives the rects of every keyed view as
+   data. Copy what the report cites into `.planning/e2e/game/` (`<flow>-<node>.png`,
    `<animation>-sheet.png`, or `<animation>.mp4` from a series via the ffmpeg line of `editor.md`).
-5. Read Console at level `warn` after the playthrough (`doors.sources.log`). Skip `registry:source-failed`
-   and `link:watch-failed` for `game.sounds` / `game.effects` in a game without that plugin: editor 0.0.2
-   logs the game's not-installed answer as a failure. A warning the change
-   introduced is a finding.
+5. Read Console at level `warn` after the playthrough (`doors.sources.log`). A warning the change
+   introduced is a finding. Two are not: `gameView: copy reference failed` (the pane has no clipboard
+   access; the card file holds the reference) and the info line `registry:source-unavailable` for
+   `game.sounds` / `game.effects` in a game without that plugin.
 6. Run `doors.read(game, doors.sources.ui)` once and `app.ui.lint()` through a script
    (`w.game.ui.lint()`): tap targets under 44 pt, overflowing text, absolute elements without a `reason`.
    Each is a finding.

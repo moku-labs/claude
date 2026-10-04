@@ -31,7 +31,7 @@ The game source at the project root: `state.ts`, `kit.ts`, `tables.ts`, `game.ts
 Logic files are: `rules/**`, `nodes/**`, `flows/**`, `state.ts`, `tables.ts`, and every `run:` body of a
 `defineNode` wherever it lives (a feature may hold nodes under `features/<f>/nodes.ts` or `flow.ts`).
 
-The rules below come from the engine's own `eslint.config.ts` (L1–L13) and its docs. Game 0.4.2 ships
+The rules below come from the engine's own `eslint.config.ts` (L1–L13) and its docs. Game 0.4.3 ships
 no ESLint config entry (there is no `@moku-labs/game/eslint`), so you check them by reading.
 
 ## What You Check
@@ -103,8 +103,11 @@ folder. Read the exported functions for `state.x = …` patterns.
 
 - **BLOCKER**: `@moku-labs/editor` (any subpath) imported from a logic file, a feature view, `game.ts` or
   `kit.ts`. The editor is a dev dependency; only `web/main.ts` (or a dev entry) composes the agent.
-- **WARNING**: `bridgePlugin` or `capturePlugin` passed unconditionally. The shape is
-  `const devPlugins = __MOKU_GAME_DEV__ ? [bridgePlugin, capturePlugin] : [];`.
+- **WARNING**: the agent imported outside the dev branch. The shape is
+  `if (__MOKU_GAME_DEV__) { const { bridgePlugin, capturePlugin, createApp } = await import("@moku-labs/editor/agent"); … }`,
+  so a build with the flag `false` keeps no editor code. The older
+  `__MOKU_GAME_DEV__ ? [bridgePlugin, capturePlugin] : []` with a `createApp` outside the branch keeps the
+  agent core in the production bundle.
 - **WARNING**: `@moku-labs/editor` under `dependencies` instead of `devDependencies` in `package.json`.
 - **INFO**: `registry.game` is not the app made by the game's `createApp`, or `registry.name` is missing.
 

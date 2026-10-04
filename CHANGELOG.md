@@ -2,6 +2,26 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.78.0 (2026-10-04)
+
+Every framework pack is synced to what npm ships today. The family moved `@moku-labs/core` and
+`@moku-labs/common` to peer dependencies on the same day, and the editor caught up with game 0.4.
+
+### Changed
+- **Packs synced** from the released tags: web 2.4.4, worker 0.20.3, room 0.8.3, common 0.3.4, native 0.3.2,
+  system 0.3.1, game 0.4.3, editor 0.2.1, ai 0.14.2. Registry `knownVersion` and migration detect lines follow.
+- **core and common are peers** in every family package (`^1.7.1` / `^0.3.4`). Bun and npm install them, so an
+  app still declares neither. The registry records the ordering: core 1.7.1 first.
+- **moku-game on editor 0.2.1.** The editor 0.0.2 workarounds are gone: the picker, `editor.capture`, series and
+  the Shot button work, opt-in sources show as not installed, Reference mode and the pick card are in, and the
+  hello world loads the editor agent through a dev-only dynamic import, so a production build carries none of it
+  (checked with a grep of `dist/`). Hot reload keeps the game state. The hidden-pane pause is documented as
+  expected, not a finding. The validator asks for the dynamic import.
+- **moku-ai:** `pluginConfigs.limits` is typed, the cast notes are gone.
+- **moku-native:** `app.orientation`, `app.backgroundColor`, capabilities `back` and `haptics`.
+- **moku-system:** `lifecyclePlugin`, `backPlugin`, `hapticsPlugin`, `keepAwakePlugin`.
+- **moku-web:** `build.env`, `navigate({ replace })`.
+
 ## 0.77.0 (2026-10-04)
 
 A new project type, `game`, and two packs. A person who says "I want to make a game" gets a confirmed

@@ -9,7 +9,7 @@ description: >
 
 # Moku Worker Patterns
 
-> **Synced to `@moku-labs/worker@0.20.2`** (npm `dist-tags.latest`; surface from the `v0.20.2` git tag
+> **Synced to `@moku-labs/worker@0.20.3`** (npm `dist-tags.latest`; surface from the `v0.20.3` git tag
 > source). Full surface — every plugin, its API/config/events, the
 > dependency graph, and the runtime-vs-node-only boundary — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -63,7 +63,7 @@ plugins, so the config it generates is missing the bindings, and keeping two com
 hand is where it goes wrong. When someone proposes that split, say so and compose `deploy` and `cli`
 into the one runtime app. Reference: `tracker/src/server.ts`.
 
-## Framework API (@moku-labs/worker v0.20.2)
+## Framework API (@moku-labs/worker v0.20.3)
 
 One entry: **`@moku-labs/worker`**. The node-only deploy/CLI plugins (`deployPlugin`/`cliPlugin`) ship from
 the same root export and are tree-shaken out unless you list them, so they stay out of the runtime bundle.

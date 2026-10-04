@@ -1,6 +1,6 @@
 # Pipeline: moku-ai assets into a @moku-labs/game project
 
-Verified against `@moku-labs/ai@0.14.0` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
+Verified against `@moku-labs/ai@0.14.2` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
 `sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.4.0` (`src/plugins/assets/README.md`,
 `scan/keys.ts`, `scan/scan.ts`), plus the worked fixture `tests/integration/merge-game/` in the
 game repository.
@@ -190,7 +190,7 @@ the file name as `{nine=left,top,right,bottom}` in texture px; the key drops the
 
 ## Art
 
-- Source: @moku-labs/ai 0.14.0, build file `src/features/ui/assets.moku.yaml`, provider `fal`,
+- Source: @moku-labs/ai 0.14.2, build file `src/features/ui/assets.moku.yaml`, provider `fal`,
   model `gpt-image-2.5` with a transparent background, cut by the `sprite` task (`none`),
   run on 2026-10-04.
 - Style reference: `refs/style-sheet.png` (drawn by Astra, 2026-09-22).
