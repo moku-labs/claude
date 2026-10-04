@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "1.7.0",
+      "knownVersion": "1.7.1",
       "pack": "moku",
       "skill": "plugins/moku/skills/moku-core",
       "pluginIndex": null,
@@ -192,12 +192,83 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
         "llms": "https://raw.githubusercontent.com/moku-labs/system/main/llms-full.txt"
       },
       "upgrade": { "migrationId": "moku-system-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "game",
+      "npm": "@moku-labs/game",
+      "repo": "https://github.com/moku-labs/game",
+      "localClone": "../game",
+      "layer": 2,
+      "role": "framework",
+      "knownVersion": "0.4.2",
+      "pack": "moku-game",
+      "skill": "plugins/moku-game/skills/moku-game",
+      "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
+      "dependsOn": ["@moku-labs/core", "@moku-labs/common"],
+      "detect": { "packageJsonDep": "@moku-labs/game" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/game",
+        "github": "https://github.com/moku-labs/game",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/game/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/game/main/package.json",
+        "llms": "https://raw.githubusercontent.com/moku-labs/game/main/llms.txt"
+      },
+      "upgrade": { "migrationId": "moku-game-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "editor",
+      "npm": "@moku-labs/editor",
+      "repo": "https://github.com/moku-labs/editor",
+      "localClone": "../editor",
+      "layer": 2,
+      "role": "framework",
+      "knownVersion": "0.0.2",
+      "pack": "moku-game",
+      "skill": "plugins/moku-game/skills/moku-game",
+      "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
+      "dependsOn": ["@moku-labs/core", "@moku-labs/game"],
+      "detect": { "packageJsonDep": "@moku-labs/editor" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/editor",
+        "github": "https://github.com/moku-labs/editor",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/editor/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/editor/main/package.json",
+        "llms": "https://raw.githubusercontent.com/moku-labs/editor/main/llms.txt"
+      },
+      "upgrade": { "migrationId": "moku-editor-version", "distTagPolicy": "stable->latest,prerelease->next" }
+    },
+    {
+      "key": "ai",
+      "npm": "@moku-labs/ai",
+      "repo": "https://github.com/moku-labs/ai",
+      "localClone": "../ai",
+      "layer": 2,
+      "role": "framework",
+      "knownVersion": "0.14.1",
+      "pack": "moku-ai",
+      "skill": "plugins/moku-ai/skills/moku-ai",
+      "pluginIndex": "plugins/moku-ai/skills/moku-ai/references/plugin-index.md",
+      "dependsOn": ["@moku-labs/core", "@moku-labs/common"],
+      "detect": { "packageJsonDep": "@moku-labs/ai" },
+      "releaseSource": {
+        "npm": "https://registry.npmjs.org/@moku-labs/ai",
+        "github": "https://github.com/moku-labs/ai",
+        "tagGlob": "v*",
+        "releases": "https://github.com/moku-labs/ai/releases",
+        "packageJson": "https://raw.githubusercontent.com/moku-labs/ai/main/package.json",
+        "llms": "https://raw.githubusercontent.com/moku-labs/ai/main/llms.txt"
+      },
+      "upgrade": { "migrationId": "moku-ai-version", "distTagPolicy": "stable->latest,prerelease->next" }
     }
   ]
 }
 ```
 
-> **Provenance of the `core` entry (latest sync 2026-09-21):** `@moku-labs/core@1.7.0` (npm `dist-tags.latest`).
+> **Provenance of the `core` entry (latest sync 2026-10-04):** `@moku-labs/core@1.7.1` (npm `dist-tags.latest`).
+> `1.7.0 → 1.7.1`: `createApp` `pluginConfigs` accepts core-plugin keys such as `limits` (#29, closes #28), no
+> runtime change. Earlier sync: `1.7.0` on 2026-09-21.
 > Spec and sandbox are vendored from `main` at `d95c279`, which is `v1.7.0` plus the docs-only JSDoc rules of
 > spec 15 §6 (#24, #25). **`1.6.1 → 1.7.0` delta, additive:** `1.7.0` (#21, #22, #23) the framework `onError` of
 > `createCore` receives the core plugin APIs as a second argument, `(error, core)`, for example `{ log, env }`, or
@@ -230,7 +301,16 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > `dist-tags.latest`), catalog generated from the `v0.3.2` tag source and READMEs; upstream ships no
 > `llms.txt`. Pins `@moku-labs/core@1.6.0` exactly. Pack: `moku-common`. The family rules MC1–MC3 stay in the
 > core skill `moku:moku-common-conventions`; the pack teaches the package.
-> Not registered on purpose: `@moku-labs/game` (in development, `0.0.0`) and `@moku-labs/ai` (not verified).
+>
+> **Provenance of the `game`, `editor` and `ai` entries (first sync 2026-10-04):** `@moku-labs/game@0.4.2`,
+> `@moku-labs/editor@0.0.2` and `@moku-labs/ai@0.14.1` (npm `dist-tags.latest`), catalogs from the repos' `main`
+> source, cross-checked against the shipped `llms.txt` (game since 0.4.0) and the READMEs (the editor ships no
+> `llms.txt` yet). game and editor pin `@moku-labs/core@1.7.0` + `@moku-labs/common@0.3.3`; ai pins
+> `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2`. The editor peers on `@moku-labs/game >=0.0.2`, and 0.0.2
+> breaks against game 0.4.x (picker reads the removed `game.rect`, capture expects a string). Packs: `moku-game`
+> teaches game and editor together (the editor is the game's dev tooling); `moku-ai` teaches ai. All three
+> move fast: a game project installs `@latest`, and the packs tell the reader to check the installed
+> `llms.txt` / README when an API looks stale.
 
 > **Provenance of the `worker` entry (latest sync 2026-09-21):** re-synced to `@moku-labs/worker@0.20.2`
 > (npm `dist-tags.latest`; surface from the `v0.20.2` tag **source**; upstream `llms.txt`/`llms-full.txt` are
@@ -458,7 +538,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 | `role` | `kernel`, `framework`, or `shared-infra` for `@moku-labs/common`: plugins every framework composes, not a framework an app is created from. |
 | `layer` | Moku layer: 1 = kernel (`@moku-labs/core`), 2 = framework, 3 = app (not registered — apps deploy; see the `moku:moku-release` skill, `references/release-model.md`). |
 | `knownVersion` | Last synced version. Behind upstream ⇒ "new things available". |
-| `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, `moku-common`, or `moku` for the core. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
+| `pack` | The marketplace plugin that ships this framework's skill: `moku-web`, `moku-worker`, `moku-room`, `moku-native`, `moku-system`, `moku-common`, `moku-game`, `moku-ai`, or `moku` for the core. A framework with no pack yet carries `"none yet: use the pack template"` — see [Pack contract](#pack-contract). |
 | `skill` / `pluginIndex` | Skill directory this framework backs and the generated plugin/property index (`null` for the kernel — single export; both `null` while a framework has no pack). |
 | `dependsOn` | Other moku-family packages it requires (ordering hint: upgrade core before web). |
 | `detect.packageJsonDep` | Presence of this dep in a consumer's `package.json` ⇒ the framework applies to that project. |
@@ -478,10 +558,11 @@ Every framework's teaching material ships as its own marketplace plugin — a **
 | Web | `@moku-labs/web` | `moku-web` |
 | Worker | `@moku-labs/worker` | `moku-worker` |
 | Room | `@moku-labs/room` | `moku-room` |
-| AI | `@moku-labs/ai` | none yet: use the pack template |
+| AI | `@moku-labs/ai` | `moku-ai` |
 | System | `@moku-labs/system` | `moku-system` |
 | Native | `@moku-labs/native` | `moku-native` |
-| Game engine (planned) | — | none yet: use the pack template |
+| Game | `@moku-labs/game` | `moku-game` |
+| Game editor | `@moku-labs/editor` | `moku-game` (with the engine) |
 
 Every pack has the same shape:
 

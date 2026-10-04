@@ -13,8 +13,8 @@ description: >
 
 # Moku Game Patterns
 
-> **Synced to `@moku-labs/game@0.4.0`** and **`@moku-labs/editor@0.0.2`** (game catalog from the repo at
-> `main` after PRs #19 and #20, equal to npm `0.4.0`; game bundles `@moku-labs/core@1.7.0` + `@moku-labs/common@0.3.3`). The 17 game
+> **Synced to `@moku-labs/game@0.4.2`** and **`@moku-labs/editor@0.0.2`** (game catalog from the repo at
+> `main` after PRs #19, #20 and #21, equal to npm `0.4.2`; game bundles `@moku-labs/core@1.7.0` + `@moku-labs/common@0.3.3`). The 17 game
 > plugins, every API, event and config field are in [`references/plugin-index.md`](references/plugin-index.md).
 > The minimal screen game is [`references/hello-world.md`](references/hello-world.md). How Claude drives
 > the editor is [`references/editor.md`](references/editor.md). The simulator and device loop is
@@ -45,7 +45,7 @@ You `createApp` **from the game**: `createApp`, `createPlugin` and every helper 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | `@moku-labs/game` 0.4.0. Entries: `.` (engine), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
+| Framework | `@moku-labs/game` 0.4.2. Entries: `.` (engine), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
 | Built on | `@moku-labs/core@1.7.0` + `@moku-labs/common@0.3.3` (regular deps: kernel, `ctx.log`, `ctx.env`) |
 | Rendering | `pixi.js ^8` **peer dependency**, loaded lazily with `import()`. WebGPU first, Pixi's WebGL fallback. No DOM, no React: screens are JSX laid out by `yoga-layout` (bundled, lazy) |
 | Dev tools | `@moku-labs/editor` 0.0.2 (dev dep). Agent core on the page, server core in Bun (`bunx moku-editor`), tools page prebuilt |
@@ -85,7 +85,6 @@ web/main.ts               the dev page: createApp with the screen, the editor ag
 web/dev.ts                globalThis.__MOKU_GAME_DEV__ = true; first import of main.ts
 web/serve.ts              Bun.serve: the page on /, the root's files as static (dev without the editor)
 web/build.ts              Bun.build of the page, define __MOKU_GAME_DEV__ false, packed assets beside it
-web/assets.ts             runs runCli of @moku-labs/game/assets (stand-in for the bin, broken in 0.4.0)
 tests/                    headless scenarios; tests/visual/ the visual tests and baselines
 ```
 
@@ -214,9 +213,7 @@ tests import; every command body starts with the inline guard
   `--check` fails when any output is stale. `--pack dist/assets` writes the production pack: WebP atlas
   pages, content-hashed names, a v2 manifest (needs `sharp`). `--pseudo` adds the pseudo-locale `en-XA`;
   `--export <dir>` / `--import <dir>` exchange strings with translators (`--source <locale>`, default `en`).
-- The package bin `moku-game-assets` is this CLI, but in 0.4.0 it fails with `compile is not a function`
-  (it passes `compileStrings` where `runCli(argv, { compile, exportStrings, importStrings })` is expected).
-  Run it through `web/assets.ts` as in `references/hello-world.md` until a fixed release.
+- The package bin `moku-game-assets` is this CLI: `"assets:keys": "moku-game-assets --root ."`.
 - Strings: ICU adds `{x, duration, short}`; a value may be `{ "text": "…", "note": "for the translator" }`.
 - The page fetches `/manifest.json`; paths in it are relative to that URL. Text needs an MSDF font:
   the built-in styles `body` and `digits` read `text.fonts` (default `ui.font-body`, `ui.font-digits`).
@@ -289,7 +286,7 @@ await editor.start(); // never waits for the editor server
 - The server binds `127.0.0.1` only and gates every socket with Host, Origin and a per-start token.
 - Saving a style or a node in Files bookmarks the game, reloads the frame and restores the bookmark.
   The session reads as tainted afterwards.
-- Editor 0.0.2 against game 0.4.0: the element picker (reads the removed `game.rect`) and `editor.capture`,
+- Editor 0.0.2 against game 0.4.x: the element picker (reads the removed `game.rect`) and `editor.capture`,
   `editor.series`, the Shot and Series buttons (expect a string from `game.capture`, now `{ png }`) fail.
   Flow, State, Render, Console and the doors by script work. Workarounds are in `references/editor.md`.
 

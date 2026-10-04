@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.0.2` beside a game on `@moku-labs/game@0.4.0` in the chat pane, reads the live game and takes pictures. The
+How Claude runs `@moku-labs/editor@0.0.2` beside a game on `@moku-labs/game@0.4.2` in the chat pane, reads the live game and takes pictures. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
@@ -151,7 +151,7 @@ editor.channel.status();                                   // LinkStatus
 await editor.channel.read("game.locate", { key: "tap" });  // every door source by id, through the channel
 ```
 
-**`editor.capture` and `editor.series` are broken with game 0.4.0.** Editor 0.0.2 expects
+**`editor.capture` and `editor.series` are broken with game 0.4.x.** Editor 0.0.2 expects
 `game.capture` to answer a string; it now answers `{ png }`. Both throw `game.capture gave no picture`,
 and so do the Shot and Series buttons of the tools page. Use `doors.commands.capture` and the receiver
 above until the editor catches up.
@@ -163,7 +163,7 @@ without the restore. A reload makes the session a new one; wait for the pill to 
 ## 5. Captures on disk
 
 Only a user action, a palette item or a `gameView` api call takes a picture; nothing captures on its own.
-With game 0.4.0 and editor 0.0.2 the Shot and Series paths below fail (`editor.capture` reads the old
+With game 0.4.x and editor 0.0.2 the Shot and Series paths below fail (`editor.capture` reads the old
 `game.capture` shape, see section 4). Use the capture recipe of section 4 until the editor is updated.
 
 - The Shot button of the Game workspace, or palette → "Take a screenshot": one PNG at
@@ -186,9 +186,9 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
 
 ## 6. What the editor can and cannot do yet
 
-- **No MCP server yet.** "MCP doors" in game 0.4.0 means the catalogue is shaped for one: every source
+- **No MCP server yet.** "MCP doors" in game 0.4.x means the catalogue is shaped for one: every source
   and command is data `{ id, title, input, effect? }` with a typed input schema, which an MCP layer
-  lists as tools one to one. Neither game 0.4.0 nor editor 0.0.2 ships that server. Claude uses the same
+  lists as tools one to one. Neither game 0.4.2 nor editor 0.0.2 ships that server. Claude uses the same
   catalogue through `javascript_tool`: list it with
   `Object.values(doors.sources).map(s => [s.id, s.input])` and
   `Object.values(doors.commands).map(c => [c.id, c.input, c.effect])`, then call `doors.read` or
@@ -201,12 +201,13 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
   line, treat it as a pointer to that element: `<name>` is the element key (`doors.read(game,
   doors.sources.locate, { key })`), `<flow/node>` the graph position, `<file:line>` where its style or view
   lives. Until the proxies ship, pick elements with `i` and read the Element tab.
-- **The element picker is broken with game 0.4.0.** Editor 0.0.2 calibrates from `game.rect`, which
+- **The element picker is broken with game 0.4.x.** Editor 0.0.2 calibrates from `game.rect`, which
   0.4.0 renamed to `game.locate`: the console says `gameView: calibration failed` and the stage says
   "Picker needs one keyed element". Read rects by script with `sources.locate` and `sources.at` instead.
   Text has no style card yet. Safe areas are guides only.
-- **`registry:source-failed` for `game.sounds`** without `audioPlugin`: the source is in the catalogue
-  but reads `audio.journal()`. Harmless; the console shows one warning and one `link:watch-failed`.
+- **`registry:source-failed` for `game.sounds` / `game.effects`.** A game without `audioPlugin` or
+  `effectsPlugin` answers `[game] The source <id> needs <plugin>.`; editor 0.0.2 has no not-installed state
+  and logs it with two `link:watch-failed`. Not a finding.
 - **The hub is loopback only** (`127.0.0.1`, Host + Origin + token). A phone or a simulator cannot connect
   its game page to the tools page. See `device.md`.
 - **Hidden pane stops the frames.** While the pane is hidden the game page is `visibilityState: hidden`:

@@ -31,7 +31,7 @@ The game source at the project root: `state.ts`, `kit.ts`, `tables.ts`, `game.ts
 Logic files are: `rules/**`, `nodes/**`, `flows/**`, `state.ts`, `tables.ts`, and every `run:` body of a
 `defineNode` wherever it lives (a feature may hold nodes under `features/<f>/nodes.ts` or `flow.ts`).
 
-The rules below come from the engine's own `eslint.config.ts` (L1–L13) and its docs. Game 0.4.0 ships
+The rules below come from the engine's own `eslint.config.ts` (L1–L13) and its docs. Game 0.4.2 ships
 no ESLint config entry (there is no `@moku-labs/game/eslint`), so you check them by reading.
 
 ## What You Check
@@ -179,14 +179,14 @@ The 0.4.0 breaking changes. Each hit does not compile or fails at run time.
 - **BLOCKER**: `assets.audio(key)` used as raw bytes. Fix: it answers `{ bytes, mime }`.
 - **BLOCKER**: `runCli(argv, compileStrings)`. Fix:
   `runCli(argv, { compile: compileStrings, exportStrings, importStrings })`.
-- **WARNING**: a `package.json` script that runs the bin `moku-game-assets` while `@moku-labs/game` is
-  `0.4.0`: the bin fails with `compile is not a function`. Fix: `bun web/assets.ts --root .` from
-  `references/hello-world.md`, until a release with a fixed bin.
+- **WARNING**: a `package.json` script that runs a local `web/assets.ts` (the 0.4.0 stand-in for the bin).
+  Fix: `"assets:keys": "moku-game-assets --root ."` and `"assets:check": "moku-game-assets --root . --check"`,
+  then delete `web/assets.ts`. The bin works since 0.4.2.
 - **INFO**: a font copied by `curl` from the engine's GitHub fixture. The package ships it under
   `node_modules/@moku-labs/game/fonts/`.
 
 **How to check:** Grep `sources\.rect`, `"game\.rect"`, `bind=\{\{`, `capture`, `\.audio\(`, `runCli(`,
-`moku-game-assets` over `web/**`, `tests/**`, `features/**`, `*.dev.ts` and `package.json`.
+`web/assets\.ts` over `web/**`, `tests/**`, `features/**`, `*.dev.ts` and `package.json`.
 
 ## Severity Levels
 
@@ -238,7 +238,7 @@ The 0.4.0 breaking changes. Each hit does not compile or fails at run time.
 
 ### API drift (§10)
 - 0.4.0 breaking changes left: [none / list with file:line and the fix]
-- assets script: [web/assets.ts / bin (WARN in 0.4.0)]
+- assets script: [bin / web/assets.ts (WARN: use the bin)]
 
 ### Platform (§9)
 - Native imports outside the bridge: [none / list]

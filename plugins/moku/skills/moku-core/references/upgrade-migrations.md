@@ -343,6 +343,76 @@ the block below.
 
 ---
 
+### moku-game-version
+- **Title:** Bump `@moku-labs/game` to the current registry version
+- **Stack:** — (registry-driven, stack-independent)
+- **Applies to:** game
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/game` AND its
+  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.4.2`).
+- **Apply:**
+  1. Read `frameworks[game].knownVersion` from `moku-frameworks.md`.
+  2. `package.json`: set the `@moku-labs/game` dependency to that version (preserve the range operator
+     the project already uses — `^`/`~`/exact; default to exact if none).
+  3. Do NOT add a direct `@moku-labs/core` dependency. Bump `@moku-labs/editor` in the same step (moku-editor-version): the editor follows the engine's door catalogue. Re-run `bun run assets:keys` after the install.
+  4. `bun install` to resolve.
+- **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
+  **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
+  `skills/moku-game/references/plugin-index.md`, never weaken types.
+- **Risk:** pre-1.0, minors may break. Read the release notes (`frameworks[game].releaseSource`) and the
+  installed `llms.txt` / README before applying; `moku-sync game` records breaking crossings here.
+- **Rollback:** `git checkout -- package.json bun.lock && bun install`.
+
+---
+
+### moku-editor-version
+- **Title:** Bump `@moku-labs/editor` to the current registry version
+- **Stack:** — (registry-driven, stack-independent)
+- **Applies to:** game
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/editor` AND its
+  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.0.2`).
+- **Apply:**
+  1. Read `frameworks[editor].knownVersion` from `moku-frameworks.md`.
+  2. `package.json`: set the `@moku-labs/editor` dependency to that version (preserve the range operator
+     the project already uses — `^`/`~`/exact; default to exact if none).
+  3. Keep it a devDependency. It peers on `@moku-labs/game`; apply moku-game-version first.
+  4. `bun install` to resolve.
+- **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
+  **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
+  `skills/moku-game/references/plugin-index.md`, never weaken types.
+- **Risk:** pre-1.0, minors may break. Read the release notes (`frameworks[editor].releaseSource`) and the
+  installed `llms.txt` / README before applying; `moku-sync editor` records breaking crossings here.
+- **Rollback:** `git checkout -- package.json bun.lock && bun install`.
+
+---
+
+### moku-ai-version
+- **Title:** Bump `@moku-labs/ai` to the current registry version
+- **Stack:** — (registry-driven, stack-independent)
+- **Applies to:** app, game, framework, library (anything that builds assets)
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/ai` AND its
+  resolved/declared version `< frameworks[ai].knownVersion` in `moku-frameworks.md` (currently `0.14.1`).
+- **Apply:**
+  1. Read `frameworks[ai].knownVersion` from `moku-frameworks.md`.
+  2. `package.json`: set the `@moku-labs/ai` dependency to that version (preserve the range operator
+     the project already uses — `^`/`~`/exact; default to exact if none).
+  3. Keep it a devDependency unless the app calls it at run time. Re-run `moku validate` and `moku estimate` on the build files; never a paid `moku run` as verification.
+  4. `bun install` to resolve.
+- **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
+  **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
+  `skills/moku-ai/references/plugin-index.md`, never weaken types.
+- **Risk:** pre-1.0, minors may break. Read the release notes (`frameworks[ai].releaseSource`) and the
+  installed `llms.txt` / README before applying; `moku-sync ai` records breaking crossings here.
+- **Rollback:** `git checkout -- package.json bun.lock && bun install`.
+
+---
+
+
 ## Reserved (future stack versions — not applied yet)
 
 Documented so the extension path is concrete; `/moku:upgrade` ignores these until they are promoted
