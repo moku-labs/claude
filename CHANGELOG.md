@@ -2,6 +2,14 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.78.1 (2026-10-05)
+
+### Changed
+- **MC3 knows `build.env`.** A name listed in `@moku-labs/web` 2.4+ `build.env` is a bundle-time constant, not a
+  runtime read, so client code may use it. `import.meta.env.NAME` is preferred; a `process.env.NAME` line in a
+  file the hook scans carries `// @env-allow`. An unlisted name is still MC3: in the browser it is `undefined`.
+  Shared exception #5 in `moku-common-conventions`.
+
 ## 0.78.0 (2026-10-04)
 
 Every framework pack is synced to what npm ships today. The family moved `@moku-labs/core` and

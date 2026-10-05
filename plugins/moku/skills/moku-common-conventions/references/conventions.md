@@ -37,6 +37,13 @@ Never flag these — they are allowed by construction:
 4. **Env providers** — the module backing `envPlugin` (path-matched as `*/env/*`, or a file
    exporting a `*EnvProvider` / named `env-provider.ts`) reads `process.env` by definition; that is
    where validated access is implemented (MC3 does not apply there).
+5. **Bundle-time env constants** — `@moku-labs/web` 2.4+ `build.env` turns each listed name into a
+   `Bun.build` `define`, written as `process.env.NAME` and `import.meta.env.NAME`. These are not runtime reads:
+   the bundler replaces them with a string literal, and a dead branch is dropped. Client code (islands,
+   components, the SPA entry) may read a name that is listed in `build.env`. Prefer `import.meta.env.NAME`.
+   `process.env.NAME` is allowed too; on a line the hook scans (plugins, CLI, scripts) mark it
+   `// @env-allow`. A name that is not listed in `build.env` is still an MC3 finding: in the browser it is
+   `undefined`.
 
 ---
 
@@ -148,6 +155,8 @@ const port = ctx.env.get("PORT") ?? 3000;        // validated accessor with a de
 - A legitimate **passthrough** — e.g. spreading `process.env` into a spawned subprocess (a
   wrangler/CLI child) — may mark that line with a `// @env-allow` comment; the hook skips marked
   lines (the same escape-hatch pattern as `// @log-sink` for MC2).
+- A name listed in the web app's `build.env` is a bundle-time constant, not a read (shared exception #5).
+  Check the name against `pluginConfigs.build.env` before flagging.
 - Reading `process.env.NODE_ENV` in a build/tooling config is a gray area — prefer `ctx.env` in app
   code, but a `*.config.ts` is already exempt (shared exception #1).
 
