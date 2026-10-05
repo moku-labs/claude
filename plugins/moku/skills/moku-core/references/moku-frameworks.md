@@ -200,7 +200,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../game",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.4.3",
+      "knownVersion": "0.4.4",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -285,6 +285,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 >   `@tauri-apps/plugin-haptics@^2.4.0`.
 > - **ai 0.14.1 → 0.14.2:** peers only; `pluginConfigs.limits` is typed, no cast.
 > - **game 0.4.2 → 0.4.3:** peers only (`pixi.js ^8` stays a peer).
+> - **game 0.4.3 → 0.4.4 (2026-10-05):** the `game.mute` door (#24); the editor's Sound switch works from game 0.4.4.
 > - **editor 0.0.2 → 0.2.1:** works with game 0.1.x and 0.4.x (`game.locate` with a `game.rect` fallback,
 >   `game.capture` `{ png }`); opt-in sources answer not installed (-32008); the agent tree-shakes out of a
 >   production build behind a dev-only dynamic import; Reference mode, pick card `.md`, Copy reference;

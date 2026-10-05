@@ -2,6 +2,22 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.78.3 (2026-10-05)
+
+### Fixed
+- **A game lints its own code.** The tooling ESLint blocks aimed at `src/**`, which a game does not have, so only
+  tests and configs were linted. The game template has its own `eslint.config.ts` over the root files and
+  `{nodes,flows,rules,features,web}`, with the engine rules a game must keep: no static Pixi or native import,
+  editor and `game/control` in dev files only (L2, L13), no module-scope state (L5), determinism in logic (L3),
+  a rule imports only its siblings (L4). `generated/` is ignored. `tsconfig.json` includes `rules/`.
+- **Apps commit through a hook they can run.** The tooling `lefthook.yml` ran `validate`, `test:unit` and
+  `test:integration`, which an app does not have. Apps now take an app variant (build, biome, eslint, typecheck,
+  test), and init names the app scripts: `lint`, `typecheck`, `test`, `test:coverage`, `build`, `deploy`.
+
+### Changed
+- `@moku-labs/game` 0.4.4: the `game.mute` door, so the editor's Sound switch works (it reports
+  "needs audioPlugin" in a game without audio).
+
 ## 0.78.2 (2026-10-05)
 
 The game route, tested end to end: evals and a live `claude -p` run from an empty folder to a running hello world.

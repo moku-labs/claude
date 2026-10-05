@@ -1,9 +1,10 @@
 # @moku-labs/game — Plugin & Property Index
 
-**Synced version:** `0.4.3` (catalog from the `v0.4.3` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
-`docs/configuration.md`, `docs/doors.md`, `docs/jsx.md`, `src/plugins/*/README.md`). 0.4.3 changes no API:
-`@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4` moved from regular deps to **peer** dependencies
-(Bun installs them on `bun add`). `pixi.js ^8.0.0` is a **peer** dependency; `playwright-core` and `sharp`
+**Synced version:** `0.4.4` (catalog from the `v0.4.4` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
+`docs/configuration.md`, `docs/doors.md`, `docs/jsx.md`, `src/plugins/*/README.md`). 0.4.4 adds the
+`game.mute` door for the editor's Sound switch: the command `game.mute`, the source `game.audioMuted` and
+`audio.muted(bus)`. Nothing else changes. Since 0.4.3 `@moku-labs/core ^1.7.1` and
+`@moku-labs/common ^0.3.4` are **peer** dependencies (Bun installs them on `bun add`). `pixi.js ^8.0.0` is a **peer** dependency; `playwright-core` and `sharp`
 are optional peers. Engines node ≥24, bun ≥1.3.14. ESM only.
 
 The second half indexes **`@moku-labs/editor@0.2.1`** (peer `@moku-labs/game >= 0.0.2`, works with game
@@ -49,7 +50,7 @@ is refused when it equals any plugin name above, or `log` / `env`.
 | `i18n` | Complex | flow | Strings as data: `tr(key, params)` is a `Message`; ICU MessageFormat compiled by `compileStrings`; `Part[]` at run time | `locale()`, `setLocale(locale)` (async), `format(message, locale?)`, `plain(message)`, `has(key)`, `duration(ms, style?)`, `locales()`. ICU `{x, duration, short}`; a string may be `{ "text", "note" }` for translators; pseudo-locale `en-XA` |
 | `text` | Complex | time, flow, world, renderer, assets, i18n | The `Text` component, `label()`, `defineTextStyles()`, tags `<b> <i> <color=#hex> <icon=key>`, measurement from the font's advance table, BitmapText from MSDF fonts; `bind(Component, "field", { format? })` shows a numeric component field (`int`, `mm:ss`, `h:mm:ss`, `duration`); `Countdown({ until })` counts down to a `clock` moment | `measure(content, style)`, `hasGlyph(char, style)`, `styles()` |
 | `ui` | Very Complex | input, anim, text | A screen is a projection whose `view` returns JSX; reconciled by identity into entities, one Yoga solve per change; `defineComponent` with `local` and `outcomes`, `popup` as an effect, `defineStyle`, `defineTokens`; the `input` tag is a text field; `scroll` has a windowed form `rows`, `rowHeight`, `overscan` (5), `row`; plays `change` hooks of any component in `motion` | `tree()`, `find(key)`, `lint()`, `fill(key, value)` |
-| `audio` | Standard | lifecycle, model, flow, assets, scenes | Opt-in. Buses `master`, `music`, `sfx`; `sfx()` and `music()` descriptors; the scene's `music`; volumes from the committed player; music `"decode"` (gapless buffer) or `"stream"` (`<audio>` element, about 12 MB instead of 58 MB); the iOS audio session (`"ambient"` by default) | `setVolume(bus, value)`, `volume(bus)`, `mute(bus, on)`, `unlocked()`, `journal()` |
+| `audio` | Standard | lifecycle, model, flow, assets, scenes | Opt-in. Buses `master`, `music`, `sfx`; `sfx()` and `music()` descriptors; the scene's `music`; volumes from the committed player; music `"decode"` (gapless buffer) or `"stream"` (`<audio>` element, about 12 MB instead of 58 MB); the iOS audio session (`"ambient"` by default) | `setVolume(bus, value)`, `volume(bus)`, `mute(bus, on)`, `muted(bus)` (since 0.4.4), `unlocked()`, `journal()` |
 | `effects` | Complex | flow, world, renderer, assets, anim | Opt-in. Particles (`defineEmitter`, `Emitter`); filters (`defineFilter` with WGSL + GLSL twin; built-in `Glow`, `Outline`, `Blur`, `ColorMatrix`, `Noise`, `Displacement`, `Alpha`). Headless draws nothing | `stats()` |
 | `platform` | Standard | lifecycle, flow, input | Opt-in, last. The phone as a `PlatformProvider`: pause/resume → `"background"`, Back chain (Escape, then intent `back`, then `exit()`), `haptic` effect, `keepAwake`. Inert without a provider | `back()` |
 
@@ -235,6 +236,7 @@ createApp({ config: { orientation: "portrait", referenceSide: 1080, referenceLon
 | `render` | `game.render` | — | frame | `renderer.stats()` |
 | `effects` | `game.effects` | — | frame | `effects.stats()`; without `effectsPlugin` it throws `[game] The source game.effects needs effectsPlugin.` |
 | `sounds` | `game.sounds` | `{ last: "number?" }` | frame | `audio.journal()`; without `audioPlugin` it throws `[game] The source game.sounds needs audioPlugin.` |
+| `audioMuted` | `game.audioMuted` | — | frame | `audio.muted("master")`, since 0.4.4; without `audioPlugin` it throws `[game] The source game.audioMuted needs audioPlugin.` |
 | `assets` | `game.assets` | — | frame | `assets.usage()` |
 | `log` | `game.log` | `{ level: "string?" }` | frame | `log.trace()` |
 | `explain` | `game.explain` | `{ entity: "number" }` | frame | `{ id, owner, key, components, skipped, motions }` of one entity |
@@ -261,9 +263,10 @@ createApp({ config: { orientation: "portrait", referenceSide: 1080, referenceLon
 | `capture` | `game.capture` | `{ legend?, layers?, sheet?, diff? }` | read (raw with `diff`) | `{ png, legend? }`. `legend` numbers keyed views; `layers` draws only those; `sheet: { frames, everyMs }` a contact sheet of 2–12 frames; `diff: bookmark` red where pixels differ |
 | `debug` | `game.debug` | `{ nineSlice }` | cosmetic | Nine-slice outlines |
 | `reducedMotion` | `game.reducedMotion` | `{ on }` | cosmetic | `anim.setReducedMotion` |
+| `mute` | `game.mute` | `{ muted }` | cosmetic | `audio.mute("master", muted)`, since 0.4.4. Music and sfx go silent, the stored volumes stay. Value: `audio.muted("master")`. Without `audioPlugin` it throws `[game] The command game.mute needs audioPlugin.` |
 
 The catalogue is data shaped for MCP tools (each descriptor is `{ id, title, input, … }`); an editor or
-an MCP layer lists `Object.values(sources)` and `Object.values(commands)`. No MCP server ships in game 0.4.3 or editor 0.2.1.
+an MCP layer lists `Object.values(sources)` and `Object.values(commands)`. No MCP server ships in game 0.4.4 or editor 0.2.1.
 
 `run(app, command, input?)` resolves `{ value, state: { path, frame, tainted } }`. Input schema kinds:
 `"string"`, `"number"`, `"boolean"`, `"json"`, with a trailing `?` for optional. A game's own ids are
@@ -282,7 +285,9 @@ prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-full.txt` sinc
 
 **Works with game 0.1.x and 0.4.x.** Element rects come from `game.locate { key }`, else `game.rect`.
 `game.capture` may answer a data URL (0.1) or `{ png, legend? }` (0.4); `editor.capture`, `editor.series`,
-Shot and Series take both. No game release has `game.mute` yet, so the Sound switch is dimmed.
+Shot and Series take both. The Sound switch runs `game.mute`: it works with game ≥0.4.4 and is dimmed
+on an older game. The registry does not probe commands, so in a game without `audioPlugin` the switch is
+lit and a press toasts "Sound switch failed · [game] The command game.mute needs audioPlugin."
 
 **Breaking since 0.0.2** (pre-1.0): Notes are gone (`flowView.notes`, the gameView `attach` api, the
 `notesDir` options, the event `workspace:new-note`). Game is the default workspace; ⌘1–⌘6 are Game, Flow,

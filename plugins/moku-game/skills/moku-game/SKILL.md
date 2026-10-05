@@ -13,7 +13,7 @@ description: >
 
 # Moku Game Patterns
 
-> **Synced to `@moku-labs/game@0.4.3`** and **`@moku-labs/editor@0.2.1`** (catalogs from the release tags;
+> **Synced to `@moku-labs/game@0.4.4`** and **`@moku-labs/editor@0.2.1`** (catalogs from the release tags;
 > both take `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` as peers). The 17 game
 > plugins, every API, event and config field are in [`references/plugin-index.md`](references/plugin-index.md).
 > The minimal screen game is [`references/hello-world.md`](references/hello-world.md). How Claude drives
@@ -45,7 +45,7 @@ You `createApp` **from the game**: `createApp`, `createPlugin` and every helper 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | `@moku-labs/game` 0.4.3. Entries: `.` (engine), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
+| Framework | `@moku-labs/game` 0.4.4. Entries: `.` (engine), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
 | Built on | `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (peer deps since 0.4.3, Bun installs them: kernel, `ctx.log`, `ctx.env`) |
 | Rendering | `pixi.js ^8` **peer dependency**, loaded lazily with `import()`. WebGPU first, Pixi's WebGL fallback. No DOM, no React: screens are JSX laid out by `yoga-layout` (bundled, lazy) |
 | Dev tools | `@moku-labs/editor` 0.2.1 (dev dep, imported only in a dev build). Agent core on the page, server core in Bun (`bunx moku-editor`, Bun hot reload on), tools page prebuilt |
@@ -176,10 +176,10 @@ and a rest node with `inbox: ["elapsed"]`. State is plain JSON, changed only thr
 | `@moku-labs/game/control` | `run(app, command, input?)`, `defineCommand`, `controlRefused`, `commands` | Dev only. `run` throws unless `__MOKU_GAME_DEV__ === true` |
 
 Base sources (`sources.*`): `graph`, `position`, `history`, `tainted`, `cheats`, `model`, `entities`,
-`projections`, `ui`, `locate`, `render`, `effects`, `sounds`, `assets`, `log`, `explain`, `diff`, `schema`,
+`projections`, `ui`, `locate`, `render`, `effects`, `sounds`, `audioMuted`, `assets`, `log`, `explain`, `diff`, `schema`,
 `at`. `game.rect` is gone since 0.4.0: `locate` takes `{ key }` or `{ target: { projection, key } }`.
 Base commands (`commands.*`): `answer`, `tap`, `drag`, `key`, `fill`, `walk`, `bookmark`, `restore`, `step`,
-`pause`, `resume`, `capture`, `debug`, `reducedMotion`, `timeScale`, `trace`. `capture` takes
+`pause`, `resume`, `capture`, `debug`, `reducedMotion`, `timeScale`, `mute`, `trace`. `capture` takes
 `{ legend?, layers?, sheet?, diff? }` and answers `{ png, legend? }`, not a bare string. The catalogue is
 plain data shaped for MCP tools (id, title, input schema); no MCP server ships yet. Effects: `read`, `route`, `cosmetic`, `cheat`, `raw`; a `cheat` or `raw` taints the
 session and is journaled.
@@ -258,6 +258,9 @@ tests import; every command body starts with the inline guard
 | L9 | The JSX runtime is reached only through `jsx-runtime.ts` and `jsx-dev-runtime.ts` |
 | L13 | No import of `@moku-labs/system`, `@moku-labs/native` or `@tauri-apps/*` in the engine; the game builds its `PlatformProvider` in its own layer (`platform-bridge.ts`) |
 
+The game's own `eslint.config.ts` (`references/hello-world.md`) enforces L2, L3, L4, L5 and L13 on the
+game folders; `moku-game-validator` checks the rest.
+
 JSDoc in a game is always the multi-line form (`/**` on its own line), never `/** one line */`.
 
 ## Editor wiring
@@ -296,7 +299,8 @@ if (__MOKU_GAME_DEV__) {
 - A save of a game source (Files, or an agent writing the file) reloads the page through Bun and restores
   the game where it was, in about a second. The session reads as tainted afterwards.
 - Works with game 0.1.x and 0.4.x. A game without `audioPlugin` or `effectsPlugin` shows those sources as
-  "not installed", not as errors. The Sound switch needs `game.mute`, which no game release has yet.
+  "not installed", not as errors. The Sound switch works with game ≥0.4.4: it runs `game.mute`. In a
+  game without `audioPlugin` a press toasts "Sound switch failed".
   Recipes are in `references/editor.md`.
 
 ## Native packaging and the platform bridge
