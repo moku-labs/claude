@@ -12,32 +12,48 @@ When you change the prescribed stack, do all three in the same release:
 
 ---
 
-## Current target — Stack version 3 (TypeScript 6 baseline · Node 24 runtime floor)
+## Current target — Stack version 4 (current lint stack: Biome + oxlint · TypeScript 7 · Node 24 floor)
 
-Introduced in moku Claude **v0.45.0**. Stack 3 raises the declared Node engines floor to 24 on
-top of the Stack 2 TypeScript 6 baseline (v0.30.0), which is otherwise unchanged. The hardcoded
-target for `/moku:upgrade` ships with the installed plugin version.
+Stack 4 makes the current lint stack the default (`lint-stacks.md`). Biome + oxlint replaces
+Biome + ESLint, and TypeScript moves to 7, the native compiler. The Node 24 floor of Stack 3 is
+unchanged. The hardcoded target for `/moku:upgrade` ships with the installed plugin version.
 
-### Pinned tool versions (devDependencies)
+There are two lint stacks. The root file says which one a project is on.
+
+| Root file | Stack | TypeScript | Status |
+|---|---|---|---|
+| `.oxlintrc.json` | **current**: Biome + oxlint | `7.0.2` | Default. `/moku:init` writes it for every new project. |
+| `eslint.config.*` | **legacy**: Biome + ESLint | `6.0.3` | Kept. Never written for a new project. Moves only through the opt-in `moku-lint-oxlint` migration. |
+
+A legacy project is not "below target" because of its linter. It stays on TypeScript 6, because
+typescript-eslint needs the TypeScript JS API, which TS 7 does not have.
+
+### Pinned tool versions, current stack (devDependencies)
 
 | Package | Version | Notes |
 |---------|---------|-------|
-| `typescript` | `6.0.3` | TS6 = last JS-codebase release; bridge to TS7 (native `tsgo`). |
-| `typescript-eslint` | `8.58.0` | First version to officially support TS6 (≥8.58.0). Older versions print an "unsupported TypeScript version" warning. |
-| `tsdown` | `0.22.1` | First version whose `typescript` peer range allows `^6` (`rolldown-plugin-dts ^0.25.1`). |
-| `@biomejs/biome` | `2.4.16` | Rust parser — TS-version-agnostic; bumped for freshness. |
-| `@types/bun` | `1.3.14` | No `typescript` peer dep — does not gate the TS version. |
-| `@arethetypeswrong/cli` / `core` | `0.18.3` | Bundles its own TS; decoupled from project TS. |
+| `typescript` | `7.0.2` | Native compiler, no JS API. Nothing in the stack imports it as a library. |
+| `oxlint` | `1.86.0` | Second linter. JS plugins are alpha: re-check the notes in `tooling-config.md` on every bump. |
+| `eslint-plugin-jsdoc` | `65.1.0` | Loaded by oxlint as JS plugin `jsdoc-js`, for all jsdoc rules. |
+| `eslint-plugin-unicorn` | `63.0.0` | Exact. Loaded as JS plugin `unicorn-js`, for `prevent-abbreviations` only. 70+ fails to load. |
+| `tsdown` | `0.23.0` | First version that emits declarations on TS 7: `rolldown-plugin-dts` 0.28 runs the TS 7 binary (`tsgo` generator). |
+| `@biomejs/biome` | `2.4.16` | Adds `noExcessiveCognitiveComplexity` (max 15) in place of sonarjs. |
+| `@types/bun` | `1.3.14` | No `typescript` peer dep. |
+| `@arethetypeswrong/cli` / `core` | `0.18.3` | Bundles its own TypeScript 5.6; works next to TS 7. |
 | `publint` | `0.3.21` | No TS dependency. |
-| `vitest` / `@vitest/coverage-istanbul` | `4.0.18` | `typecheck` shells out to `tsc`; diagnostic format unchanged in TS6. |
-| `eslint` | `9.39.3` | Flat config; unchanged. |
-| `eslint-config-biome` | `2.1.3` | Must be last in the ESLint array. |
-| `eslint-plugin-jsdoc` | `62.6.0` | unchanged |
-| `eslint-plugin-sonarjs` | `4.0.0` | unchanged |
-| `eslint-plugin-unicorn` | `63.0.0` | unchanged |
-| `globals` | `17.4.0` | unchanged |
-| `jiti` | `2.6.1` | unchanged |
+| `vitest` / `@vitest/coverage-istanbul` | `4.0.18` | unchanged |
 | `lefthook` | `2.1.1` | unchanged |
+
+Removed from the current stack: `eslint`, `eslint-config-biome`, `eslint-plugin-sonarjs`,
+`typescript-eslint`, `jiti`, `globals`.
+
+### Pinned tool versions, legacy stack
+
+The Stack 3 pins, unchanged: `typescript` `6.0.3`, `typescript-eslint` `8.58.0`, `tsdown` `0.22.1`,
+`eslint` `9.39.3`, `eslint-config-biome` `2.1.3`, `eslint-plugin-jsdoc` `62.6.0`,
+`eslint-plugin-sonarjs` `4.0.0`, `eslint-plugin-unicorn` `63.0.0`, `globals` `17.4.0`, `jiti` `2.6.1`.
+The rest equals the current stack. Full bodies: `tooling-config.md`, section
+`Legacy stack (ESLint, TypeScript 6)`.
 
 ### Runtime / engines
 
@@ -55,7 +71,9 @@ below what its own dependencies enforce.
 
 ### tsconfig deltas vs Stack version 1
 
-These are the only tsconfig changes a TS5.9 project needs for TS6 (everything else moku already set):
+These are the only tsconfig changes a TS5.9 project needs for TS6 (everything else moku already set).
+TS 7 needs none on top. The current stack also drops `declarations.d.ts` from `include`, because no
+untyped package is imported any more:
 
 | Option | Required value | Why |
 |--------|----------------|-----|
@@ -68,11 +86,12 @@ Already-correct (no change needed): `module: Preserve`, `moduleResolution: bundl
 
 ### Detection signature (how `/moku:upgrade` recognizes a below-target project)
 
-A project is **below** the current target if ANY of these hold:
+Detect the lint stack first (`lint-stacks.md`). A project is **below** its target if ANY of these hold:
 
-- `package.json` → `devDependencies.typescript` matches `^5` or `5.*` (not `^6`/`6.*`).
-- `package.json` → `devDependencies["typescript-eslint"]` `< 8.58.0`.
-- `package.json` → `devDependencies.tsdown` `< 0.22.1`.
+- Current stack (`.oxlintrc.json`): `devDependencies.typescript` below `7.0.2`, `tsdown` below `0.23.0`,
+  `oxlint` below `1.86.0`, or `eslint-plugin-unicorn` not exactly `63.0.0`.
+- Legacy stack (`eslint.config.*`): `devDependencies.typescript` matches `^5` or `5.*` (not `^6`/`6.*`),
+  `typescript-eslint` `< 8.58.0`, or `tsdown` `< 0.22.1`. TypeScript 6 is the legacy target, not a gap.
 - `tsconfig.json` → `compilerOptions.types` is absent (TS6 needs it explicit).
 - `tsconfig.build.json` → `compilerOptions.rootDir` is absent.
 - `.bun-version` `< 1.3.14` (freshness, advisory).
@@ -96,6 +115,7 @@ maintainer skill.
 
 | Stack | moku Claude | Headline | Migration id(s) |
 |-------|-------------|----------|-----------------|
+| **4** | next release | Current lint stack is the default: Biome + oxlint, TypeScript 7.0.2, tsdown 0.23.0; legacy ESLint + TS 6 kept | `moku-lint-oxlint` (opt-in) |
 | **3** | v0.45.0 | Node 24 runtime floor — `engines.node` `>=22` → `>=24`, aligning with `@moku-labs/core@0.1.3` / `@moku-labs/web@1.6.2` engines | `node24-floor` |
 | **2** | v0.30.0 | TypeScript 6 baseline + tooling freshness; opt-in `tsgo` fast-check | `ts6-core`, `tooling-freshness`, `tsgo-fastcheck` (opt-in) |
 | **1** | ≤ v0.29.0 | TypeScript 5.9.3 baseline (tsdown 0.20.x, typescript-eslint 8.56, Bun 1.3.8) | — (initial) |
@@ -105,12 +125,11 @@ maintainer skill.
 ## Reserved / on the horizon (not yet active)
 
 These are documented so the registry's extension path is obvious; they are **not** part of Stack
-version 3 and `/moku:upgrade` does not apply them yet.
+version 4 and `/moku:upgrade` does not apply them yet.
 
-- **Stack version 4 — TypeScript 7 native (`tsc`/Corsa GA).** When TS7 ships stable (it was Beta as
-  of mid-2026), the target swaps `typescript` to `^7`, makes the deprecation cleanup mandatory
-  (`ignoreDeprecations` stops working in TS7), and may revisit the `isolatedDeclarations` stance for
-  the native declaration emitter. The `tsgo-fastcheck` opt-in from Stack v2 is the on-ramp.
+- **Type-aware oxlint rules.** `oxlint --type-aware` with `oxlint-tsgolint` adds the
+  typescript-eslint type rules (`no-floating-promises`, `no-misused-promises`, …). New findings, so
+  it lands as its own step after the switch.
 - **De-vibecoding migrations.** A future class of migrations that detect and repair patterns flagged
   in `invariants.md` / `house-style.md` (e.g. explicit generics on `createPlugin`, inline logic in
   `index.ts`, missing JSDoc). Each becomes a registry entry with detect → transform → verify.

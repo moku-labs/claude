@@ -34,13 +34,13 @@ Identical for framework, consumer app and library. Copy each body from `tooling-
 | 2 | `.bun-version` | `1.3.14` |
 | 3 | `package.json` | `"type": "module"`, `engines`, the script contract, devDependencies at the exact pinned versions. `main`/`module`/`types`/`exports`/`files`/`repository` for packages; an app may omit them. |
 | 4 | `biome.json` | |
-| 5 | `eslint.config.ts` | `biomeConfig` last in the array. The `sonarjs.configs!.recommended` line needs its `// biome-ignore lint/style/noNonNullAssertion:` comment. The `unicorn/prevent-abbreviations` allowList ships pre-expanded — do not shrink it. |
-| 6 | `declarations.d.ts` | Ambient declarations for untyped JS packages; `strict` would otherwise error on `eslint-config-biome`. |
-| 7 | `tsconfig.json` | `include` must carry `declarations.d.ts` and `*.config.ts` beside `src` and `tests`. TypeScript 6 defaults `types` to `[]`, so `"types": ["bun"]` is required or `tsc` cannot find `Bun`. |
+| 5 | `.oxlintrc.json` | The current lint stack, copied as plain data. The `unicorn-js/prevent-abbreviations` allowList ships pre-expanded — do not shrink it. Never write `eslint.config.ts` for a new project; the ESLint bodies are legacy only. |
+| 6 | `declarations.d.ts` | Not written. Add it only when the project imports an untyped JS package, and add it to `include` then. |
+| 7 | `tsconfig.json` | `include` must carry `*.config.ts` beside `src` and `tests`. TypeScript 7 keeps the TS 6 default `types: []`, so `"types": ["bun"]` is required or `tsc` cannot find `Bun`. |
 | 8 | `tsconfig.build.json` | Declaration emit, `rootDir: "./src"`. |
 | 9 | `tsdown.config.ts` | ESM + CJS + declarations. |
 | 10 | `vitest.config.ts` | unit and integration projects, 90% coverage thresholds. |
-| 11 | `lefthook.yml` | pre-commit: build, biome format, eslint, tests. Packages take the main block, apps the app variant (no `validate`, plain `test`), games the pack's own. |
+| 11 | `lefthook.yml` | pre-commit: build, biome format, oxlint, tests. Packages take the main block, apps the app variant (no `validate`, plain `test`), games the pack's own. |
 | 12 | `.editorconfig` | UTF-8, LF, two spaces. |
 | 13 | `.gitignore` | Includes `.claude` and `.planning`. |
 | 14 | `cspell.json` | Seed `words` from `../../moku-core/references/glossary.md`. |
@@ -217,8 +217,8 @@ Run every item. Fix and re-run a failing one before moving on.
 | # | Check | Command or evidence |
 |---|---|---|
 | 1 | Dependencies installed | `bun install` exited 0 |
-| 2 | Types | `bun run typecheck` clean. The usual failure is a missing `include` entry (`declarations.d.ts`, `*.config.ts`) — compare the written `tsconfig.json` against `tooling-config.md` and rewrite it before re-running. |
-| 3 | Lint | `bun run lint` — biome and eslint, zero warnings |
+| 2 | Types | `bun run typecheck` clean. The usual failure is a missing `include` entry (`*.config.ts`) — compare the written `tsconfig.json` against `tooling-config.md` and rewrite it before re-running. |
+| 3 | Lint | `bun run lint` — biome and oxlint, zero warnings |
 | 4 | Tests | `bun run test` — the placeholder suites pass |
 | 5 | Build | `bun run build` |
 | 6 | Package validation | `bun run validate` (packages only) |

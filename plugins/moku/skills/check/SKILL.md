@@ -111,11 +111,13 @@ under 50 lines, `README.md` present, `__tests__/` present. Report name, tier ass
 - `bun run typecheck` and `bun run lint`. Report PASS or FAIL.
 - `@moku-labs/core` version for a framework; peer-dependency warnings.
 - Target stack: compare against
-  `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md`. When `typescript` is pinned
-  below `^6`, `tsconfig.json` has no `compilerOptions.types`, `typescript-eslint` is below 8.58.0 (legacy lint stack only) or
-  `tsdown` below 0.22.1, report
-  `INFO: project is below the current Moku target stack (v3, TypeScript 6) — run /moku:upgrade` with
-  the one-line diff. Do not fix it here; `upgrade` owns that.
+  `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md`, per lint stack.
+  Current stack (`.oxlintrc.json`): `typescript` below 7.0.2 or `tsdown` below 0.23.0.
+  Legacy stack (`eslint.config.*`): `typescript` below `^6`, `typescript-eslint` below 8.58.0 or
+  `tsdown` below 0.22.1. TypeScript 6 on the legacy stack is its target, not a gap.
+  Both: `tsconfig.json` has no `compilerOptions.types`. On a gap, report
+  `INFO: project is below the Moku target stack (v4; current stack TypeScript 7, legacy TypeScript 6) — run /moku:upgrade`
+  with the one-line diff. Do not fix it here; `upgrade` owns that.
 
 ## Output
 
