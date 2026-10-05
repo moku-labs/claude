@@ -159,6 +159,9 @@ con.box(["Done"]);
   freely.
 - **Env providers** (the module that backs `envPlugin`, e.g. `*/env/*` / a `*EnvProvider`) read
   `process.env` by definition — that is where validated access is implemented.
+- **Bundle-time env constants** of a web app: a name listed in `@moku-labs/web` `build.env` is replaced by
+  the bundler, so client code may read it. Prefer `import.meta.env.NAME`; a `process.env.NAME` line in a
+  scanned file carries `// @env-allow`. An unlisted name is still MC3.
 
 ## References
 
