@@ -5,10 +5,10 @@ screen that shows "Hello, world" and a tappable button that counts taps. It runs
 dev page with the editor, and is the smallest game the playtest station can drive.
 
 Derived from the engine's fixture `tests/integration/merge-game/` and its `llms.txt` "Minimal game".
-Verified end to end (typecheck, assets, test, build, dev page, editor picker, Shot, hot reload) against
-`@moku-labs/game@0.4.4`, `@moku-labs/editor@0.2.1`, `pixi.js@8.22`, Bun 1.3.14 and the init tooling stack
-(`typescript@6.0.3`, `vitest@4.0.18`). Every CI script and the lefthook pre-commit pass on the fresh
-scaffold. Both game packages move fast: install them with `@latest`, never hard-pin. When something here does not compile, read
+Verified end to end (typecheck, assets, lint, test, build, dev page, editor, lefthook pre-commit) against
+`@moku-labs/game@0.4.6`, `@moku-labs/editor@0.3.0`, `pixi.js@8.22`, Bun 1.3.14 and the init tooling
+stack, current lint stack (`typescript@7.0.2`, `oxlint@1.86.0`, `vitest@4.0.18`). Both game packages
+move fast: install them with `@latest`, never hard-pin. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: the game package ships it since 0.4.0 and it is the
 engine in one page, always matching the installed version. The editor ships `llms.txt` and
 `llms-full.txt` since 0.1.0 (`node_modules/@moku-labs/editor/`).
@@ -20,12 +20,13 @@ bun add @moku-labs/game@latest pixi.js
 bun add -d @moku-labs/editor@latest
 ```
 
-Every other dev dependency is init's tooling set. Init writes it into `package.json` at the versions
-`tooling-config.md` pins: TypeScript, `@types/bun`, Vitest, `@vitest/coverage-istanbul`, Biome, ESLint
-and its plugins, `globals`, `jiti`, lefthook. Leave out the package-only `@arethetypeswrong/*`,
-`publint` and `tsdown`. Never add `typescript@latest`. TypeScript 7 has no JS API: ESLint's sonarjs
-plugin crashes on it (`reading 'FunctionType'`), and typescript-eslint accepts only `<6.1`. Never
-add `vitest@latest` either: the coverage plugin must be the same version as Vitest.
+Every other dev dependency is init's tooling set of the current lint stack. Init writes it into
+`package.json` at the versions `tooling-config.md` pins: TypeScript 7, `@types/bun`, Vitest,
+`@vitest/coverage-istanbul`, Biome, oxlint, `eslint-plugin-jsdoc`, `eslint-plugin-unicorn`, lefthook.
+Leave out the package-only `@arethetypeswrong/*`, `publint` and `tsdown`: `web/build.ts` builds the
+game. Never add `vitest@latest`: the coverage plugin must be the same version as Vitest. The engine's
+lint rules need no package of their own: they ship in `@moku-labs/game` as `@moku-labs/game/lint`
+since 0.4.6.
 
 ## Font
 
@@ -63,18 +64,18 @@ tests/hello.test.ts
 
 ## Tooling a game changes
 
-Init writes the tooling files of `tooling-config.md`. A game has no `src/` and no npm package, so these
-change:
+Init writes the tooling files of `tooling-config.md`, current lint stack: Biome + oxlint on
+TypeScript 7. A game has no `src/` and no npm package, so these change:
 
 | File | For a game |
 |---|---|
 | `package.json`, `tsconfig.json` | The two below. |
-| `vitest.config.ts`, `lefthook.yml`, `eslint.config.ts` | The three below. |
-| `biome.json` | The tooling file with two edits, below. |
+| `vitest.config.ts`, `lefthook.yml` | The two below. |
+| `biome.json`, `.oxlintrc.json` | The tooling file with the edits below. |
 | `tsconfig.build.json`, `tsdown.config.ts` | Not written. `web/build.ts` builds the game. |
 
-The rest is unchanged: `bunfig.toml`, `.bun-version`, `declarations.d.ts`,
-`.editorconfig`, `.gitignore` (with `.planning`), `cspell.json`, `CLAUDE.md`. The CI is
+The rest is unchanged: `bunfig.toml`, `.bun-version`, `.editorconfig`, `.gitignore` (with
+`.planning`), `cspell.json`, `CLAUDE.md`. No `eslint.config.ts` and no `declarations.d.ts`. The CI is
 `examples/app/ci.yml` of `@moku-labs/ci`, without its `build_worker_script` and `migrate_script` lines
 (init Step 4).
 
@@ -90,250 +91,65 @@ engine's own repo. `generated/` and `manifest.json` stay out: the asset CLI owns
 { "includes": ["**/*.tsx"], "linter": { "rules": { "a11y": { "useButtonType": "off" } } } }
 ```
 
-The tooling `eslint.config.ts` aims its rule blocks at `src/**`. A game has no `src/`, so it would lint
-only the tests and the config files. The game's file aims the same blocks at the game folders and the root
-`.ts` files, and adds the engine rules a game can carry: L2, L3, L4, L5 and L13. `generated/` stays
-out, as for Biome. The rest of L1–L13 is engine-internal; `moku-game-validator` checks what ESLint cannot.
+`.oxlintrc.json`: the tooling body with four edits. A game has no `src/`, so the overrides name the
+game folders and the root `.ts` files. `generated/` and `.moku/` (the editor's) stay out.
 
-```ts
-// eslint.config.ts
-import biomeConfig from "eslint-config-biome";
-import jsdocPlugin from "eslint-plugin-jsdoc";
-import sonarjs from "eslint-plugin-sonarjs";
-import eslintPluginUnicorn from "eslint-plugin-unicorn";
-import tseslint from "typescript-eslint";
+1. `jsPlugins`: the engine's plugin `moku-game` after the two tooling entries.
 
-export default [
-  // 1. Global ignores. The asset CLI writes `generated/`; the editor writes `.moku/`.
-  {
-    ignores: [
-      "dist/**",
-      "coverage/**",
-      "generated/**",
-      ".moku/**",
-      "bun.lock",
-      ".claude/**",
-      ".planning/**",
-      "node_modules/**",
-      "declarations.d.ts"
-    ]
-  },
+   ```json
+   "jsPlugins": [
+     { "name": "jsdoc-js", "specifier": "eslint-plugin-jsdoc" },
+     { "name": "unicorn-js", "specifier": "eslint-plugin-unicorn" },
+     "@moku-labs/game/lint"
+   ],
+   ```
 
-  // 2. TypeScript parser for all TS files
-  tseslint.configs.base,
+2. `ignorePatterns`:
 
-  // 3. Unicorn recommended + abbreviation allowlist
-  eslintPluginUnicorn.configs.recommended,
-  {
-    rules: {
-      "unicorn/prevent-abbreviations": [
-        "error",
-        {
-          // Pre-expanded so builds don't have to widen this mid-flight. See references/glossary.md.
-          allowList: {
-            ctx: true, fn: true, cb: true, ref: true, args: true, params: true, props: true,
-            env: true, i18n: true, l10n: true, spa: true, ssg: true, ssr: true, seo: true,
-            api: true, dev: true, prod: true, md: true, dir: true, doc: true, docs: true,
-            db: true, util: true, utils: true, pkg: true, src: true, dist: true, config: true,
-            cfg: true, e2e: true, cli: true, dom: true, css: true, html: true, url: true, uri: true,
-            str: true, num: true, msg: true, err: true, req: true, res: true, opts: true, attr: true
-          }
-        }
-      ]
-    }
-  },
+   ```json
+   "ignorePatterns": ["dist/**", "coverage/**", "generated/**", ".moku/**", ".claude/**", ".planning/**"],
+   ```
 
-  // 4. SonarJS recommended
-  // biome-ignore lint/style/noNonNullAssertion: sonarjs types mark configs as possibly undefined but it exists at runtime
-  sonarjs.configs!.recommended,
+3. `rules`: the six engine rules added after the tooling rules.
 
-  // 5. JSDoc TypeScript preset
-  jsdocPlugin.configs["flat/recommended-typescript-error"],
+   ```json
+   "moku-game/lazy-imports": "error",
+   "moku-game/native-imports": "error",
+   "moku-game/dev-imports": "error",
+   "moku-game/no-module-state": "error",
+   "moku-game/determinism": "error",
+   "moku-game/rules-siblings": "error"
+   ```
 
-  // 5b. JSDoc style overrides
-  {
-    rules: {
-      "jsdoc/no-types": "off",
-      "jsdoc/tag-lines": ["error", "never", { startLines: 1 }]
-    }
-  },
+4. `overrides`: the first entry gets the game's files, the `src/**/types.ts` entry goes (a game has no
+   plugin `Api` types), the test entry gets the game's files. The `*.config.ts` entry stays last.
 
-  // 6. Game source: strict JSDoc. The root files and the game folders, `.tsx` views included.
-  {
-    files: ["*.ts", "{nodes,flows,rules,features,web}/**/*.{ts,tsx}"],
-    rules: {
-      "jsdoc/require-jsdoc": [
-        "error",
-        {
-          require: {
-            ArrowFunctionExpression: false,
-            ClassDeclaration: true,
-            FunctionDeclaration: true,
-            FunctionExpression: true,
-            MethodDefinition: true
-          },
-          contexts: ["TSInterfaceDeclaration", "TSTypeAliasDeclaration"]
-        }
-      ],
-      "jsdoc/require-description": "error",
-      "jsdoc/require-param": "error",
-      "jsdoc/require-param-description": "error",
-      "jsdoc/require-returns": "error",
-      "jsdoc/require-returns-description": "error",
-      "jsdoc/require-example": "off",
-      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
-      "unicorn/require-module-specifiers": "off"
-    }
-  },
+   ```json
+   "files": ["*.ts", "{nodes,flows,rules,features,web}/**/*.{ts,tsx}"]
+   ```
 
-  // 6c. No signature echo (L8): an example whose whole body is one call with bare identifiers.
-  {
-    files: ["*.ts", "{nodes,flows,rules,features,web}/**/*.{ts,tsx}"],
-    rules: {
-      "jsdoc/match-description": [
-        "error",
-        {
-          mainDescription: false,
-          contexts: ["any"],
-          tags: {
-            example:
-              "^(?!\\s*```(?:ts|typescript)\\n\\s*(?:(?:const|let) \\w+(?:: [\\w.<>\\[\\]]+)? = )?(?:await )?[\\w.]+\\((?:[\\w.]+(?:, [\\w.]+)*)?\\);?\\s*```\\s*$)[\\s\\S]+$"
-          }
-        }
-      ]
-    }
-  },
+   ```json
+   "files": ["tests/**/*.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"]
+   ```
 
-  // G1. L2 + L13 + dev only: what the logic and the screens may import. Pixi and Yoga load lazily
-  // inside the engine; a native package goes through `platform-bridge.ts`; the editor and the
-  // control door stay in `web/` and `.dev` modules.
-  {
-    files: ["state.ts", "tables.ts", "kit.ts", "game.ts", "{nodes,flows,rules,features}/**/*.{ts,tsx}"],
-    ignores: ["**/*.dev.ts", "**/__tests__/**"],
-    rules: {
-      "@typescript-eslint/no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "pixi.js",
-              allowTypeImports: true,
-              message: "The renderer loads Pixi lazily. Draw with the engine's tags. Types may be imported."
-            },
-            {
-              name: "yoga-layout",
-              allowTypeImports: true,
-              message: "The ui plugin loads Yoga lazily. Types may be imported."
-            }
-          ],
-          patterns: [
-            {
-              regex: "^(?:@moku-labs/(?:system|native)(?:/|$)|@tauri-apps/)",
-              message: "Only platform-bridge.ts, native.ts and web/main.ts import a native package."
-            },
-            {
-              regex: "^@moku-labs/(?:editor(?:/|$)|game/control$)",
-              message: "Dev only: web/main.ts and .dev modules import the editor and the control door."
-            }
-          ]
-        }
-      ]
-    }
-  },
+The six rules come from `@moku-labs/game/lint` (game 0.4.6 and later). Their defaults match this
+layout, so they take no options here.
 
-  // G2. L5: no module-scope state. State lives in `player` and `session`.
-  {
-    files: ["*.ts", "{nodes,flows,rules,features,web}/**/*.{ts,tsx}"],
-    ignores: ["**/__tests__/**"],
-    rules: {
-      "no-restricted-syntax": [
-        "error",
-        { selector: "Program > VariableDeclaration[kind='let']", message: "No module-scope state." },
-        {
-          selector:
-            "Program > :matches(VariableDeclaration, ExportNamedDeclaration) NewExpression[callee.name=/^(Map|Set|WeakMap|WeakSet)$/]",
-          message: "No module-scope collections."
-        }
-      ]
-    }
-  },
+| Rule | Engine rule | Reports | Where by default |
+|---|---|---|---|
+| `moku-game/lazy-imports` | L2 | A static value import of `pixi.js` or `yoga-layout`. `import type` and `import()` pass. `import { type A }` is reported: write `import type`. | every file |
+| `moku-game/native-imports` | L13 | `@moku-labs/system`, `@moku-labs/native`, `@tauri-apps/*` | the logic, `kit.ts`, `game.ts` |
+| `moku-game/dev-imports` | dev only | `@moku-labs/editor`, `@moku-labs/game/control` | all but `web/main.ts`, `web/dev*.ts`, `web/editor*.ts`, `*.dev.ts(x)` |
+| `moku-game/no-module-state` | L5 | A module-scope `let` or `var`, a module-scope `new Map/Set/WeakMap/WeakSet` | every file |
+| `moku-game/determinism` | L3 | `Math.random`, `Date.now`, `performance.now`, `new Date()`, `setTimeout`, `setInterval`. `new Date(now)` passes. | the logic |
+| `moku-game/rules-siblings` | L4 | A file under `rules/` that imports anything but a `./` sibling | `rules/**` |
 
-  // G3. L3: determinism in the logic and the screens. Time is `now`, randomness is an rng stream.
-  {
-    files: ["state.ts", "tables.ts", "{nodes,flows,rules,features}/**/*.{ts,tsx}"],
-    ignores: ["**/*.dev.ts", "**/__tests__/**"],
-    rules: {
-      "no-restricted-properties": [
-        "error",
-        { object: "Date", property: "now", message: "Use `now` from the node context." },
-        { object: "performance", property: "now", message: "Use `now` from the node context." },
-        { object: "Math", property: "random", message: "Use an rng stream: rng.stream(id)." }
-      ],
-      "no-restricted-globals": [
-        "error",
-        { name: "setTimeout", message: "Store the moment in player, await fx(schedule(moment))." },
-        { name: "setInterval", message: "Store the moment in player, await fx(schedule(moment))." }
-      ],
-      // This block replaces G2's rule on these files, so its two selectors are repeated.
-      "no-restricted-syntax": [
-        "error",
-        { selector: "NewExpression[callee.name='Date']", message: "Use `now` from the node context." },
-        { selector: "Program > VariableDeclaration[kind='let']", message: "No module-scope state." },
-        {
-          selector:
-            "Program > :matches(VariableDeclaration, ExportNamedDeclaration) NewExpression[callee.name=/^(Map|Set|WeakMap|WeakSet)$/]",
-          message: "No module-scope collections."
-        }
-      ]
-    }
-  },
-
-  // G4. L4: a rule imports only its siblings in `rules/`: (state, input, tables) => result.
-  {
-    files: ["rules/**/*.ts"],
-    ignores: ["**/__tests__/**"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        { patterns: [{ regex: String.raw`^(?!\./)`, message: "A rule imports only its siblings in rules/." }] }
-      ]
-    }
-  },
-
-  // 7. Test files: relaxed rules
-  {
-    files: ["tests/**/*.{ts,tsx}", "**/__tests__/**/*.{ts,tsx}"],
-    rules: {
-      "jsdoc/require-jsdoc": "off",
-      "jsdoc/require-description": "off",
-      "jsdoc/require-param": "off",
-      "jsdoc/require-returns": "off",
-      "jsdoc/require-example": "off",
-      "jsdoc/match-description": "off",
-      "unicorn/no-useless-undefined": "off",
-      "sonarjs/no-duplicate-string": "off",
-      "unicorn/prevent-abbreviations": "off"
-    }
-  },
-
-  // 8. Config files: relaxed rules
-  {
-    files: ["*.config.ts"],
-    rules: {
-      "jsdoc/require-jsdoc": "off",
-      "jsdoc/require-description": "off",
-      "unicorn/no-abusive-eslint-disable": "off"
-    }
-  },
-
-  // 9. MUST be last: eslint-config-biome disables rules Biome handles
-  biomeConfig
-];
-```
-
-Blocks 2 to 9 are the tooling file's; 6, 6c and 7 get the game's paths and 6b is gone. G1 is L2 and L13,
-G2 is L5, G3 is L3, G4 is L4. Door guards, asset keys and the feature layout stay with
-`moku-game-validator`.
+The logic is `**/state.ts`, `**/tables.ts` and `**/{nodes,flows,rules,features}/**`. Every rule skips
+the tests (`tests/**`, `**/__tests__/**`, `*.test.ts`). Every rule takes
+`["error", { "files": [...], "ignores": [...] }]`. The globs are relative to the directory oxlint runs
+in, and a key given replaces its default. A disable comment names the rule:
+`// eslint-disable-next-line moku-game/determinism -- <why>`. The rest of L1–L13 is engine-internal.
+Door guards, asset keys, the feature layout and the kit stay with `moku-game-validator`.
 
 ```ts
 // vitest.config.ts
@@ -369,17 +185,18 @@ pre-commit:
       glob: "*.{ts,tsx,js,mjs,cjs,json,jsonc}"
       run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
       stage_fixed: true
-    - name: eslint-check
+    - name: oxlint-check
       glob: "*.{ts,tsx,js,mjs,cjs}"
-      run: bunx eslint --no-fix --no-warn-ignored {staged_files}
+      run: bunx oxlint --no-error-on-unmatched-pattern {staged_files}
     - name: typecheck
       run: bun run typecheck
     - name: test
       run: bun run test
 ```
 
-The tooling hook runs `validate`, `test:unit` and `test:integration`. A game has none of them.
-`--no-warn-ignored` keeps the hook quiet on files the ESLint config does not cover.
+This is the app variant of the tooling hook. The package hook runs `validate`, `test:unit` and
+`test:integration`; a game has none of them. `--no-error-on-unmatched-pattern` keeps the hook quiet
+when every staged file is ignored, for example `generated/`.
 
 ## package.json
 
@@ -393,8 +210,8 @@ The tooling hook runs `validate`, `test:unit` and `test:integration`. A game has
     "serve": "bun web/serve.ts",
     "assets:keys": "moku-game-assets --root .",
     "assets:check": "moku-game-assets --root . --check",
-    "lint": "biome check . && eslint .",
-    "lint:fix": "biome check --write . && eslint --fix .",
+    "lint": "biome check . && oxlint",
+    "lint:fix": "biome check --write . && oxlint --fix",
     "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -864,7 +681,7 @@ it("counts taps headless", async () => {
 bun run assets:keys      # manifest.json, generated/*
 bun run test             # headless, plain Bun
 bun run typecheck
-bun run lint             # biome + eslint
+bun run lint             # biome + oxlint, the engine rules included
 bun run build            # assets:check, then dist/web
 bun run dev              # Game http://127.0.0.1:3000/  Tools http://127.0.0.1:3000/__editor/
 ```

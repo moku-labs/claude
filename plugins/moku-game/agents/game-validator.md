@@ -1,6 +1,6 @@
 ---
 name: moku-game-validator
-description: Validates Moku game conventions in a Layer-3 game on @moku-labs/game — determinism in logic (no Math.random, Date.now, timers), no static pixi import, no module-scope state, doors gated by __MOKU_GAME_DEV__, editor imports dev-only, asset keys only through generated/assets.ts, the feature folder layout and the kit. The orchestrator runs it after nodes, rules, features or the dev page change.
+description: Validates the Moku game conventions lint cannot see in a Layer-3 game on @moku-labs/game — doors gated by __MOKU_GAME_DEV__, the editor agent behind the dev branch, asset keys only through generated/assets.ts, the feature folder layout and the kit, rule purity and node context use. Determinism, static pixi imports, module-scope state, rules siblings, native and dev imports are oxlint rules of @moku-labs/game/lint; it reads them by hand only in a game without that plugin. The orchestrator runs it after nodes, rules, features or the dev page change.
 model: sonnet
 effort: medium
 color: green
@@ -31,17 +31,43 @@ The game source at the project root: `state.ts`, `kit.ts`, `tables.ts`, `game.ts
 Logic files are: `rules/**`, `nodes/**`, `flows/**`, `state.ts`, `tables.ts`, and every `run:` body of a
 `defineNode` wherever it lives (a feature may hold nodes under `features/<f>/nodes.ts` or `flow.ts`).
 
-The rules below come from the engine's own lint config (L1–L13) and its docs. Game 0.4.5 ships no
-lint entry (there is no `@moku-labs/game/lint` yet), so you check them by reading, whatever the game's
-lint stack (`.oxlintrc.json` or a legacy `eslint.config.ts`).
+The rules below come from the engine's own lint config (L1–L13) and its docs.
+
+### Lint first
+
+Since game 0.4.6 oxlint enforces part of these rules through the JS plugin `@moku-labs/game/lint`.
+The quality validator runs `bun run lint`, so do not report what lint reports.
+
+Read `.oxlintrc.json` once. The game is **lint-covered** when `jsPlugins` lists `"@moku-labs/game/lint"`
+and `rules` sets the six `moku-game/*` rules to `"error"`. Then skip every check marked
+**[lint: `<rule id>`]** below. Otherwise (a legacy `eslint.config.ts`, or game below 0.4.6) check them by
+reading, as written.
+
+| Check | Rule id |
+|---|---|
+| §1 `Math.random`, `Date.now`, `performance.now`, `new Date()`, timers in logic | `moku-game/determinism` |
+| §2 a rule imports outside `rules/` | `moku-game/rules-siblings` |
+| §3 static `pixi.js` or `yoga-layout` import | `moku-game/lazy-imports` |
+| §4 module-scope `let`, `var`, `Map`, `Set`, `WeakMap`, `WeakSet` | `moku-game/no-module-state` |
+| §5 and §6 `@moku-labs/game/control` or `@moku-labs/editor` outside the dev files | `moku-game/dev-imports` |
+| §9 a native package in the logic, `kit.ts`, `game.ts` | `moku-game/native-imports` |
+
+What lint cannot see stays yours, also on a lint-covered game:
+
+- **WARNING**: a `moku-game/*` rule set to `"off"` or `"warn"`, or its `files` / `ignores` options
+  narrowed so a game folder drops out (`nodes`, `flows`, `rules`, `features`, `state.ts`, `tables.ts`).
+- **WARNING**: an `eslint-disable` comment for a `moku-game/*` rule without a `-- reason`.
+- **WARNING**: logic outside the rule's default files: a `defineNode` with a `run:` body in `web/`, the
+  root or any folder that is not `nodes`, `flows`, `rules` or `features`. `moku-game/determinism`
+  does not read it, so run §1 by hand on it.
 
 ## What You Check
 
 ### 1. Determinism in logic (L3)
 
-- **BLOCKER**: `Math.random(`, `Date.now(`, `performance.now(`, `new Date(` in a logic file or a node
-  body. Fix: `rng.stream("id").range(…)` and `now` from the node context.
-- **BLOCKER**: `setTimeout(` or `setInterval(` in a logic file. Fix: store the due moment in `player`,
+- **BLOCKER** [lint: `moku-game/determinism`]: `Math.random(`, `Date.now(`, `performance.now(`, `new Date()`
+  (no argument; `new Date(now)` is fine) in a logic file or a node body. Fix: `rng.stream("id").range(…)` and `now` from the node context.
+- **BLOCKER** [lint: `moku-game/determinism`]: `setTimeout(` or `setInterval(` in a logic file. Fix: store the due moment in `player`,
   `await fx(schedule(moment))`, wait at a rest node with `inbox: ["elapsed"]`.
 - **WARNING**: a node body reads `app.model`, `app.clock`, `app.time` or any `app.` member. A node only
   uses its context `{ input, player, session, rng, fx, out, signal, now }`.
@@ -53,7 +79,7 @@ confirm it is logic. Grep `\bapp\.(model|clock|time|flow)\b` inside `nodes/**` a
 
 ### 2. Rules are pure (L4)
 
-- **BLOCKER**: a file in `rules/` imports from `@moku-labs/game`, `pixi.js`, `../kit`, `../state` or any
+- **BLOCKER** [lint: `moku-game/rules-siblings`]: a file in `rules/` imports from `@moku-labs/game`, `pixi.js`, `../kit`, `../state` or any
   path outside `rules/` (except `import type` of its own `types.ts` sibling).
 - **WARNING**: a rule function mutates its argument instead of returning a new tree (assignment to a
   parameter's property). Rules are `(state, input, tables) => result`; the node writes the result into the
@@ -64,8 +90,8 @@ folder. Read the exported functions for `state.x = …` patterns.
 
 ### 3. No static pixi or yoga import (L2)
 
-- **BLOCKER**: `import … from "pixi.js"` or `from "yoga-layout"` (value or type import that is not
-  `import type`) anywhere in game source. Rendering goes through the engine's components (`Sprite`,
+- **BLOCKER** [lint: `moku-game/lazy-imports`]: `import … from "pixi.js"` or `from "yoga-layout"` (value
+  import, or `import { type A }`, that is not `import type`) anywhere in game source. Rendering goes through the engine's components (`Sprite`,
   `NineSlice`, `Shape`, the JSX tags); Pixi is loaded lazily by `renderer`.
 - **OK**: `import type { … } from "pixi.js"` in a test that fakes `loadPixi`.
 
@@ -73,7 +99,7 @@ folder. Read the exported functions for `state.x = …` patterns.
 
 ### 4. No module-scope state (L5)
 
-- **BLOCKER**: top-level `let`, or a top-level `const x = new Map(` / `new Set(` / `new WeakMap(` /
+- **BLOCKER** [lint: `moku-game/no-module-state`]: top-level `let` or `var`, or a top-level `const x = new Map(` / `new Set(` / `new WeakMap(` /
   `new WeakSet(` in any game source file. Game state lives in `player` and `session`; plugin state lives
   in `createState`.
 - **OK**: frozen data (`as const`, `defineStyle(...)`, `defineAnimation(...)`, tables), `const` primitives,
@@ -88,7 +114,7 @@ folder. Read the exported functions for `state.x = …` patterns.
   `defineCommand` adds no guard of its own.
 - **BLOCKER**: `declare var __MOKU_GAME_DEV__` or `declare global { var __MOKU_GAME_DEV__ … }` in the game.
   The engine ships the declaration; a game never re-declares it.
-- **WARNING**: `@moku-labs/game/control` imported from a file that is not `web/main.ts`, `web/dev.ts`, a
+- **WARNING** [lint: `moku-game/dev-imports`]: `@moku-labs/game/control` imported from a file that is not `web/main.ts`, `web/dev.ts`, a
   `.dev.ts` module or a test. Control is dev-only; a production entry must never reach it.
 - **WARNING**: `web/dev.ts` missing or not the first import of `web/main.ts`, while `web/main.ts` uses the
   doors or the editor. Without the flag `run` throws on the page.
@@ -102,7 +128,7 @@ folder. Read the exported functions for `state.x = …` patterns.
 
 ### 6. Editor imports are dev-only
 
-- **BLOCKER**: `@moku-labs/editor` (any subpath) imported from a logic file, a feature view, `game.ts` or
+- **BLOCKER** [lint: `moku-game/dev-imports`]: `@moku-labs/editor` (any subpath) imported from a logic file, a feature view, `game.ts` or
   `kit.ts`. The editor is a dev dependency; only `web/main.ts` (or a dev entry) composes the agent.
 - **WARNING**: the agent imported outside the dev branch. The shape is
   `if (__MOKU_GAME_DEV__) { const { bridgePlugin, capturePlugin, createApp } = await import("@moku-labs/editor/agent"); … }`,
@@ -161,7 +187,7 @@ positions over `features/**` and `view/**`.
 
 ### 9. Platform bridge and native (L13)
 
-- **BLOCKER**: `@moku-labs/system`, `@moku-labs/native` or `@tauri-apps/*` imported from `rules/`,
+- **BLOCKER** [lint: `moku-game/native-imports`]: `@moku-labs/system`, `@moku-labs/native` or `@tauri-apps/*` imported from `rules/`,
   `nodes/`, `flows/`, `features/` or `kit.ts`. Only `platform-bridge.ts`, `web/main.ts` and `native.ts`
   may.
 - **WARNING**: `platformPlugin` composed but no `PlatformProvider` passed and no comment saying the
@@ -200,19 +226,26 @@ The 0.4.0 breaking changes. Each hit does not compile or fails at run time.
   `defineNode` from the root (§8); a native package in the engine-facing layers (§9); a 0.4.0 breaking
   change left in the source (§10).
 - **WARNING**: everything named WARNING above.
+- On a lint-covered game the checks marked [lint: …] are oxlint's errors, not yours.
 - **INFO**: naming, order and tsconfig notes.
 
 ## Process
 
-1. Read `package.json`, `tsconfig.json`, `kit.ts`, `game.ts`, `web/main.ts`, `web/dev.ts`, `web/build.ts`.
+1. Read `.oxlintrc.json` (Lint first), `package.json`, `tsconfig.json`, `kit.ts`, `game.ts`, `web/main.ts`,
+   `web/dev.ts`, `web/build.ts`.
 2. Glob the logic files and the features.
-3. Run §1–§10 in order, grep first, then read each hit in context.
+3. Run §1–§10 in order, grep first, then read each hit in context. On a lint-covered game skip the
+   checks marked [lint: …].
 4. Report.
 
 ## Output Format
 
 ```
 ## Game Patterns Validation Report
+
+### Lint (Lint first)
+- `@moku-labs/game/lint`: [lint-covered, [lint: …] checks skipped / not covered (legacy or game < 0.4.6), checked by reading]
+- Rules weakened or disabled without a reason: [none / list]
 
 ### Determinism (§1–§2)
 - Logic files scanned: N
@@ -221,6 +254,7 @@ The 0.4.0 breaking changes. Each hit does not compile or fails at run time.
 ### Renderer and state (§3–§4)
 - Static pixi/yoga imports: [none / list]
 - Module-scope state: [none / list]
+  (On a lint-covered game both lines say "oxlint".)
 
 ### Doors and dev build (§5–§6)
 | Check | Status | Where |
