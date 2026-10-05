@@ -283,6 +283,7 @@ For detailed specifications, consult:
 - `references/type-system.md` — Type helpers, BuildPluginApis, type flow
 - `references/invariants.md` — Guarantees, error format, anti-patterns
 - `references/tooling-config.md` — Exact Biome, ESLint, TypeScript, Lefthook, Vitest configs (canonical target stack, TS6 baseline)
+- `references/lint-stacks.md` — The two lint stacks (current Biome + oxlint on TS 7, legacy Biome + ESLint on TS 6): how to detect one and the scoped commands for each
 - `references/target-stack.md` — Versioned target-stack manifest (pinned versions, tsconfig deltas, detection signature) `/moku:upgrade` migrates toward
 - `references/upgrade-migrations.md` — Extensible `detect→apply→verify` migration registry for `/moku:upgrade` (TS6 now; TS7/de-vibe reserved)
 - `references/sandbox-index.md` — Coding-style exemplars (real moku code) — open the tier-matching plugin before writing source

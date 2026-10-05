@@ -47,6 +47,9 @@ and stops.
   the current directory. Run check from the root of a Node.js or Moku project."
 
 Report the type and, where it applies, the framework name and whether `.planning/moku.md` exists.
+Report the lint stack too (`lint-stacks.md`): current (`.oxlintrc.json`), legacy (`eslint.config.*`), in
+migration (both) or Biome only. Legacy is informational, not a finding: the move is the opt-in
+`moku-lint-oxlint` migration.
 
 ## Check 2 — environment
 
@@ -109,7 +112,7 @@ under 50 lines, `README.md` present, `__tests__/` present. Report name, tier ass
 - `@moku-labs/core` version for a framework; peer-dependency warnings.
 - Target stack: compare against
   `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md`. When `typescript` is pinned
-  below `^6`, `tsconfig.json` has no `compilerOptions.types`, `typescript-eslint` is below 8.58.0 or
+  below `^6`, `tsconfig.json` has no `compilerOptions.types`, `typescript-eslint` is below 8.58.0 (legacy lint stack only) or
   `tsdown` below 0.22.1, report
   `INFO: project is below the current Moku target stack (v3, TypeScript 6) — run /moku:upgrade` with
   the one-line diff. Do not fix it here; `upgrade` owns that.

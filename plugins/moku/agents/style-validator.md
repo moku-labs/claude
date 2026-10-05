@@ -64,7 +64,7 @@ export const createApp = framework.createApp;
 
 Detection: an `ExportNamedDeclaration > VariableDeclaration` whose declarator id is an `ObjectPattern`. Grep seed `^export const \{`. Every name destructured there is an undocumented public export, whatever JSDoc sits above the statement.
 
-**Gap B — factory-result const exports.** Any `export const … = <CallExpression>;` with no directly preceding JSDoc block: `export const routerPlugin = createPlugin("router", { … });`, `export const app = createApp({ … });`. ESLint's `jsdoc/require-jsdoc` ignores a `VariableDeclaration` initialized by a `CallExpression`, so these ship undocumented while lint stays green. Grep seed `^export const \w+ = \w+\(`.
+**Gap B — factory-result const exports.** Any `export const … = <CallExpression>;` with no directly preceding JSDoc block: `export const routerPlugin = createPlugin("router", { … });`, `export const app = createApp({ … });`. The jsdoc `require-jsdoc` rule (ESLint, or oxlint's `jsdoc-js` plugin) ignores a `VariableDeclaration` initialized by a `CallExpression`, so these ship undocumented while lint stays green. Grep seed `^export const \w+ = \w+\(`.
 
 **Gap C — `@file` is not per-export JSDoc.** A top-of-file `@file`/`@fileoverview` comment can hoist onto the first declaration in the bundled `.d.ts` and look like a real symbol doc. Only a block in the export's own directly preceding position (no blank line, no intervening statement) counts.
 

@@ -129,13 +129,14 @@ trade-offs — follow them rather than re-deciding. Omit the section when there 
 Sibling builders run concurrently, so a repo-wide command from you corrupts their work.
 - Write only under `src/plugins/[name]/` and its `__tests__/`. Leave `src/config.ts`,
   `src/index.ts`, `src/plugins/index.ts`, `package.json` and every sibling plugin alone.
-- Run no repo-wide command: no `lint:fix`, no `bun run format`, no `biome … .`, no `eslint .`.
+- Run no repo-wide command: no `lint:fix`, no `bun run format`, no `biome … .`, no `eslint .`, no `oxlint .`.
 - Run no git mutation: no `checkout`, `restore`, `reset`, `stash`, `clean`, `add`, `commit`.
-- Scoped checks only: `bunx biome format --write src/plugins/[name]/` and
-  `bunx eslint src/plugins/[name]/ --fix`. Biome alone misses the unicorn rules (`no-null`,
+- Scoped checks only: `bunx biome format --write src/plugins/[name]/` and the project's second linter
+  with `--fix` on the same directory: `bunx oxlint` when `.oxlintrc.json` is at the root, `bunx eslint`
+  when `eslint.config.*` is (`lint-stacks.md`). Biome alone misses the unicorn rules (`no-null`,
   `prevent-abbreviations`, `prefer-structured-clone`, `consistent-function-scoping`,
-  `prefer-regexp-test`) and ESLint ignores `.tsx`, so a builder that runs only Biome reports
-  "lint clean" and the orchestrator's repo-wide ESLint then fails.
+  `prefer-regexp-test`) and the jsdoc rules, so a builder that runs only Biome reports "lint clean"
+  and the orchestrator's repo-wide `bun run lint` then fails.
 - Report what `--fix` cannot resolve as a hint; the orchestrator fixes repo-wide after the wave.
 
 ## Build Rules
