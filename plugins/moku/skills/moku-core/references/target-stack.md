@@ -115,7 +115,7 @@ maintainer skill.
 
 | Stack | moku Claude | Headline | Migration id(s) |
 |-------|-------------|----------|-----------------|
-| **4** | next release | Current lint stack is the default: Biome + oxlint, TypeScript 7.0.2, tsdown 0.23.0; legacy ESLint + TS 6 kept | `moku-lint-oxlint` (opt-in) |
+| **4** | v0.79.0 | Current lint stack is the default: Biome + oxlint, TypeScript 7.0.2, tsdown 0.23.0; legacy ESLint + TS 6 kept | `moku-lint-oxlint` (opt-in) |
 | **3** | v0.45.0 | Node 24 runtime floor — `engines.node` `>=22` → `>=24`, aligning with `@moku-labs/core@0.1.3` / `@moku-labs/web@1.6.2` engines | `node24-floor` |
 | **2** | v0.30.0 | TypeScript 6 baseline + tooling freshness; opt-in `tsgo` fast-check | `ts6-core`, `tooling-freshness`, `tsgo-fastcheck` (opt-in) |
 | **1** | ≤ v0.29.0 | TypeScript 5.9.3 baseline (tsdown 0.20.x, typescript-eslint 8.56, Bun 1.3.8) | — (initial) |

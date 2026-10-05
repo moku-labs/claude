@@ -243,7 +243,7 @@ tests import; every command body starts with the inline guard
   `app.time.step(16)`.
 - Layout: `tests/` for scenarios, `features/<f>/__tests__/` for feature tests, `rules/__tests__/` for rules.
 
-## Lint rules L1–L13 (the engine's `eslint.config.ts`; a game follows the same rules)
+## Lint rules L1–L13 (the engine's lint config; a game follows the same rules)
 
 | Rule | Says |
 |---|---|
@@ -258,8 +258,8 @@ tests import; every command body starts with the inline guard
 | L9 | The JSX runtime is reached only through `jsx-runtime.ts` and `jsx-dev-runtime.ts` |
 | L13 | No import of `@moku-labs/system`, `@moku-labs/native` or `@tauri-apps/*` in the engine; the game builds its `PlatformProvider` in its own layer (`platform-bridge.ts`) |
 
-The game's own `eslint.config.ts` (`references/hello-world.md`) enforces L2, L3, L4, L5 and L13 on the
-game folders; `moku-game-validator` checks the rest.
+The game's own lint config (`references/hello-world.md`: `.oxlintrc.json`, or `eslint.config.ts` on the
+legacy stack) enforces L2, L3, L4, L5 and L13 on the game folders; `moku-game-validator` checks the rest.
 
 JSDoc in a game is always the multi-line form (`/**` on its own line), never `/** one line */`.
 

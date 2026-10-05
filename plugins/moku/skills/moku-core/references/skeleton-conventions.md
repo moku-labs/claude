@@ -1,7 +1,7 @@
 # Skeleton & Plugin Authoring Conventions (hook-compliant by construction)
 
 **Why this file exists.** moku generates spec/skeleton code, but that code used to violate moku's OWN
-hooks + ESLint config — so every build the agent re-discovered the rules and reworked every file
+hooks + lint config — so every build the agent re-discovered the rules and reworked every file
 (16× `INDEX-RULE` and repeated `ANTIPATTERN`/`STRUCTURE` hits in one real build). These rules are now
 **permanent** and must be honored when WRITING spec/skeleton/plugin code, so the output is correct on
 the first try instead of being shrunk/fixed in review.
@@ -67,7 +67,7 @@ the shipped type resolves to `undefined` even though `tsc --noEmit` passes. Decl
 - No `function wireXPlugin(factory, dep) { … }`. Import `createPlugin` and dependencies directly.
 - No explicit generics on `createPlugin`/`createCorePlugin` — types infer from the spec object.
 
-## 5. JSDoc (matches `jsdoc/*` + the project ESLint config)
+## 5. JSDoc (matches the jsdoc rules of the project lint config: `jsdoc-js/*` in oxlint, `jsdoc/*` in the legacy ESLint stack)
 
 - Multi-line only (never single-line `/** … */`). `@example` only where `jsdoc-examples.md` asks for
   it: a scenario on every member of the public `Api` type, one literal line on a private pure
@@ -76,15 +76,18 @@ the shipped type resolves to `undefined` even though `tsc --noEmit` passes. Decl
   `create…Api` carries no JSDoc: only the type ships in the `.d.mts`.
 - **Omit `@returns` on throw-only stubs**; require it on value-returning functions. Use typed
   `@throws {Error}`. `@param` names must match exactly (including `_unused` and destructured sub-props).
-- `jsdoc/tag-lines`: exactly 1 blank line between the description and the first tag, 0 between tags.
+- `tag-lines`: exactly 1 blank line between the description and the first tag, 0 between tags.
   Keep `@file` and `@see` adjacent.
 
-## 6. SonarJS / unicorn
+## 6. unicorn, and house rules from SonarJS
 
 - No bare `void X;` statements; don't consume a throw-only return value.
 - No string literal repeated 3+ times in `src` — hoist to a const.
-- Abbreviations: the project ESLint ships a pre-expanded `unicorn/prevent-abbreviations` allowList
-  (see `glossary.md` and the `eslint.config.ts` scaffolded by `/moku:init`). Use canonical short names
+- These two came from SonarJS. Only the legacy ESLint stack lints them; on the current stack they stay
+  house style, and Biome's `noExcessiveCognitiveComplexity` (max 15) is the one complexity rule.
+- Abbreviations: the project lint config ships a pre-expanded `prevent-abbreviations` allowList
+  (see `glossary.md` and the `.oxlintrc.json` scaffolded by `/moku:init`; `eslint.config.ts` in a
+  legacy project). Use canonical short names
   (`ctx`, `api`, `env`, `cfg`, …) freely; do not invent new abbreviations outside the allowList.
 
 ## 7. Lifecycle

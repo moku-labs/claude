@@ -89,10 +89,10 @@ one-page marketing site to a multi-locale app with hundreds of routes.
 | `.bun-version` | toolchain pin | bare version; CI reads it via `setup-bun` |
 | `tsconfig.json` | strict TS, no Vite | `jsx: "react-jsx"`, `jsxImportSource: "preact"`, `moduleResolution: "bundler"`, `verbatimModuleSyntax`, `noEmit`, `strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, **`types: ["bun","node"]`** (TS6 defaults `types` to `[]`) |
 | `biome.json` | format + lint | 2-space, double quotes, semicolons, no trailing commas; exclude `**/*.css` + `src/index.html` |
-| `eslint.config.ts` | deep lint (flat) | `tseslint` + `unicorn` + `sonarjs` + `jsdoc`; **`eslint-config-biome` LAST** |
+| `.oxlintrc.json` | deep lint | unicorn (native) + `jsdoc-js` + `unicorn-js/prevent-abbreviations`, copied from `tooling-config.md`. A legacy project keeps `eslint.config.ts` (`lint-stacks.md`) |
 | `vitest.config.ts` | unit + integration | two `projects`; coverage on pure-logic dirs (`lib/`, `i18n/`) |
 | `playwright.config.ts` | e2e + visual | `webServer` serves a built fixture corpus; per-OS baselines |
-| `lefthook.yml` | git pre-commit | typecheck → biome → eslint → unit+integration |
+| `lefthook.yml` | git pre-commit | typecheck → biome → oxlint (legacy: eslint) → unit+integration |
 | `wrangler.jsonc` | deploy target | `pages_build_output_dir: "dist"` — see [deploy-and-ci.md](deploy-and-ci.md) |
 | `.gitignore` | ignores | `dist`, `coverage`, `.env*`, `node_modules`; commit visual baselines |
 
@@ -224,8 +224,8 @@ Three tiers, each guarding a different thing — applies to any project type:
   (`build.notFound`) or it flips to SPA mode.
 - **R7 — Never hardcode a bundle URL.** Filenames are content-hashed; use the `<!--moku:assets-->`
   placeholders.
-- **R8 — `bun` only; pinned deps; multi-line JSDoc** on every `src/**` export; `eslint-config-biome`
-  LAST in the flat config.
+- **R8 — `bun` only; pinned deps; multi-line JSDoc** on every `src/**` export. In a legacy ESLint
+  project, `eslint-config-biome` stays LAST in the flat config.
 
 ## 12. RECOMMENDATIONS (SHOULD)
 
@@ -265,7 +265,7 @@ The structure (§2) and rules (§11) are constant; what changes is the data laye
 ## 14. Scaffold sequence (any project)
 
 1. **Root configs** — `package.json` (deps `@moku-labs/web` + `preact`; dev toolchain; `engines`),
-   `bunfig.toml` (`exact`), `tsconfig`, `biome`, `eslint`, `vitest`, `playwright`, `lefthook`,
+   `bunfig.toml` (`exact`), `tsconfig`, `biome`, `.oxlintrc.json`, `vitest`, `playwright`, `lefthook`,
    `.bun-version`, `.gitignore`. `bun install`.
 2. **Identity (+ i18n if multi-locale)** — `src/config.ts` (`SITE`); `src/i18n/` if needed.
 3. **Shell + styles** — `src/index.html` (4 `moku:*` placeholders), `src/styles/main.css` (`@layer`

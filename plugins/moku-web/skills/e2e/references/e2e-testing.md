@@ -260,8 +260,9 @@ file group; then re-capture and re-score. Run it whenever a design context exist
   pathname predicate: `u => u.pathname === "/" || u.pathname.startsWith("/board/")`.
 - **`fullPage: true` misrepresents `position: fixed` overlays**, menus and modals by pinning them to the
   layout origin. Capture overlays with `fullPage: false` (viewport).
-- **ESLint must ignore generated dirs** (`.wrangler/**`, `playwright-report/**`, `test-results/**`,
-  `dist-e2e/**`) or `bun run lint` breaks once the dev server has run.
+- **The second linter must ignore generated dirs** (`.wrangler/**`, `playwright-report/**`, `test-results/**`,
+  `dist-e2e/**`): `ignorePatterns` in `.oxlintrc.json`, `ignores` in a legacy `eslint.config.ts`. Otherwise
+  `bun run lint` breaks once the dev server has run.
 - **`bun run dev` regenerates `wrangler.jsonc`** (the deploy plugin owns it), so `git checkout wrangler.jsonc`
   before committing to keep the dev-run side effect out.
 - **Playwright wipes `outputDir` (`test-results/`) each run**, so committed goldens live outside it. The

@@ -253,7 +253,7 @@ These hold for every skeleton file:
 - `createPlugin` with no explicit type parameters; `createCorePlugin` with no `depends`, `events` or `hooks`.
 - `onStart`/`onStop` only for plugins approved in Stage 1 for lifecycle management.
 - JSDoc: a minimal `@file` tag per file — `/** @file [plugin name] — [Tier] skeleton */`. Use `@file`,
-  not `@fileoverview` (ESLint `jsdoc/check-tag-names` rejects it). No `@module` in plugin files. The
+  not `@fileoverview` (the jsdoc `check-tag-names` rule rejects it, in both lint stacks). No `@module` in plugin files. The
   common abbreviations (`ctx`, `fn`, `cb`) are whitelisted in the unicorn config.
 - JSDoc on spec-object methods: arrows nested in `createPlugin` spec objects (`createState`, `api`,
   `events: register => (...)`) need no JSDoc — the lint config sets `ArrowFunctionExpression: false`.
@@ -261,10 +261,10 @@ These hold for every skeleton file:
   on either: see `jsdoc-examples.md`.
 - `@param` names match the parameter exactly, underscore included (`@param _ctx`). Destructured object
   parameters list each property (`@param _ctx.global`, `@param _ctx.config`).
-- No `@returns` on throw-only stubs — `jsdoc/require-returns-check` rejects it.
+- No `@returns` on throw-only stubs — the jsdoc `require-returns-check` rule rejects it.
 - Subscribe-style stubs returning an unsubscribe arrow need
   `// eslint-disable-next-line unicorn/consistent-function-scoping` before the inner return: the empty
-  `() => {}` closes over nothing.
+  `() => {}` closes over nothing. The comment and the rule name are the same in both lint stacks.
 - No redundant casts where a config field's type is already inferred from its default
   (`config: { locale: "en" }` infers `string`). Cast only when the inferred type is genuinely
   insufficient, such as widening a literal to a union.

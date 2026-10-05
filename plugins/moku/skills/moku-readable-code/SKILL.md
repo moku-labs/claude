@@ -76,7 +76,7 @@ over cleverness).
 
 - Helpers are defined **above** the function that uses them (file convention).
 - Module-private helpers still get JSDoc (description, `@param`, `@returns`) per the repo's
-  eslint-plugin-jsdoc rules — `import type`, `@param name - desc`, blank line before tags.
+  jsdoc lint rules (`eslint-plugin-jsdoc`, run by oxlint or, in a legacy project, ESLint) — `import type`, `@param name - desc`, blank line before tags.
   `@example` only on a pure helper, as one line with literals and the result
   (`passesNarrow({ intent: "merge" }, { intent: "sell" }); // false`); none on a helper that takes
   `ctx`/state, and never an echo of the signature. See the `moku-core` skill

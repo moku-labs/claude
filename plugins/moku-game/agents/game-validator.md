@@ -31,8 +31,9 @@ The game source at the project root: `state.ts`, `kit.ts`, `tables.ts`, `game.ts
 Logic files are: `rules/**`, `nodes/**`, `flows/**`, `state.ts`, `tables.ts`, and every `run:` body of a
 `defineNode` wherever it lives (a feature may hold nodes under `features/<f>/nodes.ts` or `flow.ts`).
 
-The rules below come from the engine's own `eslint.config.ts` (L1–L13) and its docs. Game 0.4.4 ships
-no ESLint config entry (there is no `@moku-labs/game/eslint`), so you check them by reading.
+The rules below come from the engine's own lint config (L1–L13) and its docs. Game 0.4.5 ships no
+lint entry (there is no `@moku-labs/game/lint` yet), so you check them by reading, whatever the game's
+lint stack (`.oxlintrc.json` or a legacy `eslint.config.ts`).
 
 ## What You Check
 

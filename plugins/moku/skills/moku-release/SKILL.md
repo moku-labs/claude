@@ -51,7 +51,7 @@ YAML: a project with two tsconfigs chains both inside its own `typecheck`.
 ```json
 {
   "scripts": {
-    "lint": "biome check . && eslint .",
+    "lint": "biome check . && oxlint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "build": "tsdown",
@@ -63,6 +63,9 @@ YAML: a project with two tsconfigs chains both inside its own `typecheck`.
   "publishConfig": { "access": "public" }
 }
 ```
+
+The script name is the contract, not its body. A legacy-stack project keeps
+`"lint": "biome check . && eslint ."` (`lint-stacks.md`), and CI does not change.
 
 `repository.url` has to match the git remote, or provenance fails with `E422`.
 

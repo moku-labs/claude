@@ -271,8 +271,8 @@ Plugin index.ts carries:
 
 The plugin export itself is documented: export the factory as an explicit,
 individually-documented const with a directly-preceding JSDoc block — not
-destructured, and not relying on a file-level `@file` comment. ESLint's
-`jsdoc/require-jsdoc` ignores a const initialized by a call (`createPlugin(…)`), so a
+destructured, and not relying on a file-level `@file` comment. The jsdoc
+`require-jsdoc` rule (oxlint `jsdoc-js`, or ESLint in a legacy project) ignores a const initialized by a call (`createPlugin(…)`), so a
 plugin-factory export with no block above it ships undocumented while lint stays green;
 its docs also fail to reach editor hover and the emitted `dist/*.d.ts`. The block above
 the `createPlugin` call is what `moku-style-validator` and consumers actually see.

@@ -1,7 +1,7 @@
 # JSDoc and `@example`: where the docs live
 
 The single source for where JSDoc and `@example` go in Moku source. Builders write by it,
-`moku-style-validator` checks by it, the scaffolded ESLint config enforces the mechanical part.
+`moku-style-validator` checks by it, the scaffolded lint config (`.oxlintrc.json`, or `eslint.config.ts` in a legacy project) enforces the mechanical part.
 It is the short form of `spec/15-PLUGIN-STRUCTURE.md §6`, which carries the same rules; the sandbox `cms/content` module shows them applied.
 
 ## Why
@@ -113,8 +113,8 @@ export function createClockApi(ctx: ClockCtx): Api {
 
 | Check | Enforced by |
 |---|---|
-| every `…Api` member in `types.ts` has JSDoc | ESLint block 6b, `jsdoc/require-jsdoc` |
-| every `…Api` member has `@example`, no exemption: a red lint forces the decision to write a true example, move the member off the API, or delete it | ESLint block 6b, `jsdoc/require-example` |
-| no example whose whole body is one call with bare identifiers | ESLint block 6c, `jsdoc/match-description` |
-| implementation arrows need no JSDoc | ESLint block 6, `ArrowFunctionExpression: false` |
+| every `…Api` member in `types.ts` has JSDoc | override `src/**/types.ts`, `jsdoc-js/require-jsdoc` (legacy ESLint: block 6b, `jsdoc/require-jsdoc`) |
+| every `…Api` member has `@example`, no exemption: a red lint forces the decision to write a true example, move the member off the API, or delete it | override `src/**/types.ts`, `jsdoc-js/require-example` (legacy: block 6b) |
+| no example whose whole body is one call with bare identifiers | override `src/**/*.{ts,tsx}`, `jsdoc-js/match-description` (legacy: block 6c) |
+| implementation arrows need no JSDoc | override `src/**/*.{ts,tsx}`, `ArrowFunctionExpression: false` (legacy: block 6) |
 | the example is true; docs sit on the type and not on the implementation; no `@example` on ctx functions; a member with no honest example leaves the API | `moku-style-validator` checks E2, E4, E5, E6 |

@@ -18,11 +18,12 @@ section id in your output. `.planning/` is local-only state and is never staged 
 
 ## What this skill does
 
-`upgrade` brings an **existing Moku project** (framework, consumer app, plugin, or web project) up to the **target stack hardcoded into this version of the moku plugin**. It is the official, version-agnostic migration path: today it delivers the TypeScript 6 baseline + Node 24 engines floor; the same command will deliver TypeScript 7, build-tool swaps, and de-vibecoding migrations in future plugin versions, because the work is defined by a registry, not by this command's prose.
+`upgrade` brings an **existing Moku project** (framework, consumer app, plugin, or web project) up to the **target stack hardcoded into this version of the moku plugin**. It is the official, version-agnostic migration path: today it delivers the TypeScript 6 baseline, the Node 24 engines floor and, on the owner's yes, the move to the current lint stack (Biome + oxlint on TypeScript 7); the same command will deliver build-tool swaps and de-vibecoding migrations in future plugin versions, because the work is defined by a registry, not by this command's prose.
 
 The target is hardcoded and there are no version arguments: `upgrade` migrates the project to whatever the installed plugin's target stack is.
 
-- **Target stack:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md` (current: **Stack version 3**).
+- **Target stack:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md` (current: **Stack version 4**).
+- **Lint stacks:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/lint-stacks.md`. Detect the stack first. A legacy project (`eslint.config.*`) is not below target because of its linter.
 - **Migration registry:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/upgrade-migrations.md`.
 - **Canonical configs:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.
 
@@ -63,9 +64,10 @@ and stops.
 ## Step 1 — Compute the upgrade plan
 
 1. Determine the project's current **stack version** from the detection signatures in `target-stack.md`. If the project is at or above the target stack **and** no registry-driven framework-version migration fires (Step 0.4 — no depended-on moku-family package is below its `knownVersion`), output:
-   `Already on Stack version <N> (<headline>). Nothing to upgrade.` — then stop. If the stack is current but a `@moku-labs/*` dependency is behind the registry, do NOT stop — proceed with just the framework-version migration(s).
+   `Already on Stack version <N> (<headline>). Nothing to upgrade.` — then stop, unless an opt-in fires (item 4). If the stack is current but a `@moku-labs/*` dependency is behind the registry, do NOT stop — proceed with just the framework-version migration(s).
 2. From `upgrade-migrations.md`, select every migration whose `Applies to` includes this project type AND whose `Detect` condition fires. Order them as listed (respect `Depends on`). This includes the **registry-driven framework-version migrations** (`moku-web-version`, `moku-core-version`): each fires when the project depends on that moku-family package at a version below the registry's `knownVersion`, and bumps it to that version (core before web per `dependsOn`).
-3. Separate them into **default-on** (applied unless the user deselects) and **opt-in** (`Default: off`, e.g. `tsgo-fastcheck` — only applied if the user explicitly says yes).
+3. Separate them into **default-on** (applied unless the user deselects) and **opt-in** (`Default: off`, e.g. `moku-lint-oxlint`, `tsgo-fastcheck` — only applied if the user explicitly says yes).
+4. A legacy project with nothing default-on to do is not "Nothing to upgrade" while an opt-in fires. Print `Already on Stack version <N> (legacy lint stack).`, offer the opt-in(s) in Step 2, and stop if the owner says no.
 
 ## Step 2 — Present the plan & gate
 
@@ -85,14 +87,17 @@ Will apply (default):
   node24-floor       engines.node >=22.0.0 → >=24.0.0 (aligns with core 0.1.3 / web 1.6.2 engines)
 
 Optional (off by default):
+  moku-lint-oxlint   ESLint → oxlint and TypeScript 6 → 7. Lint and tsc up to 8x faster;
+                     sonarjs rules go away. Only on your yes.
   tsgo-fastcheck     add @typescript/native-preview + `typecheck:fast` (TS7 native, side-by-side
-                     with tsc; tsc stays the authoritative gate)
+                     with tsc; tsc stays the authoritative gate). Legacy stack, not with moku-lint-oxlint.
 
 Verification after each step: bunx tsc --noEmit · bun run lint · bun run test
 (+ build · publint · attw for publishable libraries)
 ```
 
 - For each **opt-in** migration, ask the user (AskUserQuestion) whether to include it, summarizing its risk (e.g. tsgo is Beta — fast checker only, not the emit/publish compiler).
+- `moku-lint-oxlint` is offered with exactly one line: `Swap ESLint for oxlint and move to TypeScript 7: lint and tsc up to 8x faster, sonarjs rules go away, the rest of your rules stay. Apply?` Default answer: no. It is never applied by default, never as part of another migration, and never without that yes. When it is chosen, `tsgo-fastcheck` is not offered.
 - Then ask for a single **approval gate** to proceed with the apply.
 - If `--dry-run` was passed, stop here after printing the plan (do not ask, do not apply).
 
@@ -166,6 +171,6 @@ Re-running `/moku:upgrade` with an `in-progress` `.planning/UPGRADE.md`:
 
 - Do not weaken `strict` or any compiler strictness to make `tsc` pass. The error is real; fix it.
 - Do not commit and do not use `--no-verify`. This skill edits and verifies; the person commits.
-- An `off`-by-default migration is applied only after an explicit yes at the gate.
+- An `off`-by-default migration is applied only after an explicit yes at the gate. That includes `moku-lint-oxlint`: a legacy project keeps ESLint until its owner says yes.
 - Every edit is idempotent: a second run on an upgraded project reports "Nothing to upgrade."
 - `.planning/` is local-only state and is never staged or committed.
