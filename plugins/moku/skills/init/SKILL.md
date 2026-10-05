@@ -110,8 +110,9 @@ project.
 - `package.json` scripts: `lint`, `typecheck`, `test`, `build`, `validate`, `release:setup`,
   `release:doctor`, `release`.
 
-**Apps** get one thin `.github/workflows/ci.yml` that calls the app-deploy workflow, and the first
-five scripts.
+**Apps** get one thin `.github/workflows/ci.yml` that calls the app-deploy workflow, and the five scripts
+that workflow runs: `lint`, `typecheck`, `test:coverage`, `build`, `deploy`. Plus `test`, which the
+pre-commit hook runs. No `validate`: an app is not published.
 
 The workflow files have one home: the `@moku-labs/ci` package, which ships them beside the
 `moku-release` CLI. Install it, then copy from the installed package. This plugin carries no copy of

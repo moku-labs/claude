@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.2.1` beside a game on `@moku-labs/game@0.4.3` in the chat pane, reads the live game and takes pictures. The
+How Claude runs `@moku-labs/editor@0.2.1` beside a game on `@moku-labs/game@0.4.4` in the chat pane, reads the live game and takes pictures. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
@@ -59,7 +59,7 @@ The game iframe follows the device of the Game workspace: 21 presets, the iPhone
 | `G` | Show / hide the preview of the current workspace |
 | `R` | Reference mode on / off |
 | `H` | Hot reload switch (it only shows the state; see section 4) |
-| `M` | Sound, in Game. Dimmed until the game has `game.mute` (no game release has it yet) |
+| `M` | Sound, in Game. Runs `game.mute`: works with game ≥0.4.4, dimmed on an older game |
 | ⌘⇧C | Element picker (Game workspace) |
 | ← → `b` | Previous / next shot, mark a bug, while the contact sheet is open |
 | Esc | Closes one thing, outermost first |
@@ -222,7 +222,7 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
 
 - **No MCP server yet.** "MCP doors" in game 0.4.x means the catalogue is shaped for one: every source
   and command is data `{ id, title, input, effect? }` with a typed input schema, which an MCP layer
-  lists as tools one to one. Neither game 0.4.3 nor editor 0.2.1 ships that server. Claude uses the same
+  lists as tools one to one. Neither game 0.4.4 nor editor 0.2.1 ships that server. Claude uses the same
   catalogue through `javascript_tool`: list it with
   `Object.values(doors.sources).map(s => [s.id, s.input])` and
   `Object.values(doors.commands).map(c => [c.id, c.input, c.effect])`, then call `doors.read` or
@@ -231,7 +231,11 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
 - **Not installed is not a failure.** A game without `audioPlugin` or `effectsPlugin` has no
   `game.sounds` / `game.effects`. The registry lists them `available: false`, logs
   `registry:source-unavailable` at level info, and Render says "Effects not installed in this game".
-- **No sound switch yet.** Sound (`M`) needs `game.mute`, which no game release has. It stays dimmed.
+- **Sound switch needs game ≥0.4.4 and `audioPlugin`.** Sound (`M`) runs `game.mute { muted }`, which game
+  0.4.4 ships. On an older game it stays dimmed. The registry does not probe commands, so in a game
+  without `audioPlugin` (the hello world) the switch is lit and a press toasts
+  "Sound switch failed · [game] The command game.mute needs audioPlugin." Not a finding. Check the flag
+  with `doors.read(game, doors.sources.audioMuted)`.
 - **The hub is loopback only** (`127.0.0.1`, Host + Origin + token). A phone or a simulator cannot connect
   its game page to the tools page. See `device.md`.
 - **Hidden pane: the game stays paused.** While the pane is hidden the game page is

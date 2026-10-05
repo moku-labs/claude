@@ -40,7 +40,7 @@ Identical for framework, consumer app and library. Copy each body from `tooling-
 | 8 | `tsconfig.build.json` | Declaration emit, `rootDir: "./src"`. |
 | 9 | `tsdown.config.ts` | ESM + CJS + declarations. |
 | 10 | `vitest.config.ts` | unit and integration projects, 90% coverage thresholds. |
-| 11 | `lefthook.yml` | pre-commit: build, biome format, eslint, tests. |
+| 11 | `lefthook.yml` | pre-commit: build, biome format, eslint, tests. Packages take the main block, apps the app variant (no `validate`, plain `test`), games the pack's own. |
 | 12 | `.editorconfig` | UTF-8, LF, two spaces. |
 | 13 | `.gitignore` | Includes `.claude` and `.planning`. |
 | 14 | `cspell.json` | Seed `words` from `../../moku-core/references/glossary.md`. |
@@ -225,6 +225,6 @@ Run every item. Fix and re-run a failing one before moving on.
 | 7 | Sources match the type | Framework: `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists. Consumer: `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` is absent from `dependencies` — if present, remove it, re-run `bun install`, re-check. Library: `src/index.ts` exists. Game: `@moku-labs/game` in `dependencies`, `@moku-labs/editor` in `devDependencies`, `bun run assets:keys` exits 0, the headless test walks the first flow. |
 | 8 | Git | `.git` exists; `bunx lefthook install` succeeded |
 | 8.5 | Game runs | Games only: init Step 5.5 showed the scene in the editor. |
-| 9 | Release plumbing | Packages: `.github/workflows/ci.yml` and `publish.yml` present, all eight scripts in `package.json`. Apps: `ci.yml` present, five scripts. |
+| 9 | Release plumbing | Packages: `.github/workflows/ci.yml` and `publish.yml` present, all eight scripts in `package.json`. Apps and games: `ci.yml` present; `lint`, `typecheck`, `test`, `test:coverage`, `build`, `deploy` in `package.json`; the app variant of `lefthook.yml`. |
 
 Only after all of these are green does `init` write `.planning/moku.md`.

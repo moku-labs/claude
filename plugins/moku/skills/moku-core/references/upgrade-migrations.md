@@ -350,7 +350,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/game` AND its
-  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.4.3`).
+  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.4.4`).
 - **Apply:**
   1. Read `frameworks[game].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/game` dependency to that version (preserve the range operator

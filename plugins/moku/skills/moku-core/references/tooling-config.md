@@ -454,6 +454,30 @@ pre-commit:
       run: bun run test:unit && bun run test:integration
 ```
 
+**App variant.** An app (and a game) is not published and has no `validate`, `test:unit` or
+`test:integration` script, so its hook runs the scripts it has. A game takes its own variant from the
+`moku-game` pack, `references/hello-world.md`.
+
+```yaml
+pre-commit:
+  skip:
+    - run: test ! -d node_modules
+  jobs:
+    - name: build
+      run: bun run build
+    - name: biome-format
+      glob: "*.{ts,tsx,js,mjs,cjs,json,jsonc}"
+      run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
+      stage_fixed: true
+    - name: eslint-check
+      glob: "*.{ts,tsx,js,mjs,cjs}"
+      run: bunx eslint --no-fix {staged_files}
+    - name: typecheck
+      run: bun run typecheck
+    - name: test
+      run: bun run test
+```
+
 The `skip` line makes the hook step aside in a tree without `node_modules`: a PR snapshot worktree or a
 fresh clone cannot run the build, lint or tests, and the checks already passed in the checkout that has
 them. In a project whose `lefthook.yml` predates this line, commit such a snapshot with `--no-verify`, and
