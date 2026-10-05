@@ -6,8 +6,9 @@ dev page with the editor, and is the smallest game the playtest station can driv
 
 Derived from the engine's fixture `tests/integration/merge-game/` and its `llms.txt` "Minimal game".
 Verified end to end (typecheck, assets, test, build, dev page, editor picker, Shot, hot reload) against
-`@moku-labs/game@0.4.3`, `@moku-labs/editor@0.2.1`, `pixi.js@8.22`, `typescript@7.0` and Bun 1.3.14. Both
-packages move fast: install with `@latest`, never hard-pin. When something here does not compile, read
+`@moku-labs/game@0.4.4`, `@moku-labs/editor@0.2.1`, `pixi.js@8.22`, Bun 1.3.14 and the init tooling stack
+(`typescript@6.0.3`, `vitest@4.0.18`). Every CI script and the lefthook pre-commit pass on the fresh
+scaffold. Both game packages move fast: install them with `@latest`, never hard-pin. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: the game package ships it since 0.4.0 and it is the
 engine in one page, always matching the installed version. The editor ships `llms.txt` and
 `llms-full.txt` since 0.1.0 (`node_modules/@moku-labs/editor/`).
@@ -16,8 +17,15 @@ engine in one page, always matching the installed version. The editor ships `llm
 
 ```sh
 bun add @moku-labs/game@latest pixi.js
-bun add -d @moku-labs/editor@latest typescript @types/bun vitest
+bun add -d @moku-labs/editor@latest
 ```
+
+Every other dev dependency is init's tooling set. Init writes it into `package.json` at the versions
+`tooling-config.md` pins: TypeScript, `@types/bun`, Vitest, `@vitest/coverage-istanbul`, Biome, ESLint
+and its plugins, `globals`, `jiti`, lefthook. Leave out the package-only `@arethetypeswrong/*`,
+`publint` and `tsdown`. Never add `typescript@latest`. TypeScript 7 has no JS API: ESLint's sonarjs
+plugin crashes on it (`reading 'FunctionType'`), and typescript-eslint accepts only `<6.1`. Never
+add `vitest@latest` either: the coverage plugin must be the same version as Vitest.
 
 ## Font
 
@@ -41,7 +49,8 @@ For another face, build the pair from an OFL `.ttf` with `msdf-bmfont-xml`: BMFo
 ## Layout
 
 ```
-package.json  tsconfig.json  manifest.json*  state.ts  kit.ts  game.ts
+package.json  tsconfig.json  vitest.config.ts  biome.json  lefthook.yml  .github/workflows/ci.yml
+manifest.json*  state.ts  kit.ts  game.ts
 nodes/home.ts  nodes/tap.ts  flows/main.ts
 features/ui/{assets.ts, LICENSE-fonts.txt, assets/font-body.fnt, assets/font-body.png}
 features/hello/{index.ts, view.tsx, scene.ts, strings/en.json}
@@ -50,7 +59,82 @@ web/{index.html, main.ts, dev.ts, serve.ts, build.ts}
 tests/hello.test.ts
 ```
 
-`*` written by `bun run assets:keys`. Commit them; `--check` in CI keeps them honest.
+`*` written by `bun run assets:keys`. Commit them; `build` runs `assets:check`, so CI keeps them honest.
+
+## Tooling a game changes
+
+Init writes the tooling files of `tooling-config.md`. A game has no `src/` and no npm package, so five
+of them change:
+
+| File | For a game |
+|---|---|
+| `package.json`, `tsconfig.json` | The two below. |
+| `vitest.config.ts`, `lefthook.yml` | The two below. |
+| `biome.json` | The tooling file with two edits, below. |
+| `tsconfig.build.json`, `tsdown.config.ts` | Not written. `web/build.ts` builds the game. |
+
+The rest is unchanged: `bunfig.toml`, `.bun-version`, `eslint.config.ts`, `declarations.d.ts`,
+`.editorconfig`, `.gitignore` (with `.planning`), `cspell.json`, `CLAUDE.md`. The CI is
+`examples/app/ci.yml` of `@moku-labs/ci`, without its `build_worker_script` and `migrate_script` lines
+(init Step 4).
+
+`biome.json`: `files.includes` names the game folders instead of `src/**`, and one override more. A JSX
+`<button>` here is a game tag, not an HTML button, so `useButtonType` is off for `.tsx`, as in the
+engine's own repo. `generated/` and `manifest.json` stay out: the asset CLI owns their format.
+
+```json
+"files": { "includes": ["*.ts", "{nodes,flows,rules,features,web,tests}/**"] },
+```
+
+```json
+{ "includes": ["**/*.tsx"], "linter": { "rules": { "a11y": { "useButtonType": "off" } } } }
+```
+
+```ts
+// vitest.config.ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    include: ["tests/**/*.test.ts"],
+    coverage: {
+      provider: "istanbul",
+      include: ["state.ts", "tables.ts", "{nodes,flows,rules,features}/**/*.{ts,tsx}"],
+      exclude: ["**/*.test.ts"],
+      reporter: ["text", "lcov"],
+      thresholds: { lines: 90, functions: 90, branches: 90, statements: 90 }
+    }
+  }
+});
+```
+
+Coverage counts the logic a headless test can reach: state, tables, nodes, flows, rules, features. It
+leaves out `game.ts` and `web/`. Their branches are the canvas and the manifest URL, which only the
+dev page and the e2e station run. `kit.ts` and `generated/` hold no logic. The family's 90% stays.
+
+```yaml
+# lefthook.yml
+pre-commit:
+  skip:
+    - run: test ! -d node_modules
+  jobs:
+    - name: build
+      run: bun run build
+    - name: biome-format
+      glob: "*.{ts,tsx,js,mjs,cjs,json,jsonc}"
+      run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true --colors=off {staged_files}
+      stage_fixed: true
+    - name: eslint-check
+      glob: "*.{ts,tsx,js,mjs,cjs}"
+      run: bunx eslint --no-fix --no-warn-ignored {staged_files}
+    - name: typecheck
+      run: bun run typecheck
+    - name: test
+      run: bun run test
+```
+
+The tooling hook runs `validate`, `test:unit` and `test:integration`. A game has none of them.
+`--no-warn-ignored` keeps the hook quiet on files the ESLint config does not cover.
 
 ## package.json
 
@@ -64,16 +148,25 @@ tests/hello.test.ts
     "serve": "bun web/serve.ts",
     "assets:keys": "moku-game-assets --root .",
     "assets:check": "moku-game-assets --root . --check",
-    "build:web": "bun web/build.ts",
+    "lint": "biome check . && eslint .",
+    "lint:fix": "biome check --write . && eslint --fix .",
+    "format": "biome format --write .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "build": "bun run assets:check && bun run build:web",
+    "build:web": "bun web/build.ts",
+    "deploy": "echo 'No deploy target yet: the release station picks one.'"
   },
   "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" }
 }
 ```
 
-`bun add` fills `dependencies` (`@moku-labs/game`, `pixi.js`) and `devDependencies` (`@moku-labs/editor`,
-`typescript`, `@types/bun`, `vitest`). `@moku-labs/core` and `@moku-labs/common` are peers of both
+`devDependencies` is init's tooling set plus `@moku-labs/editor` and `@moku-labs/ci`; `bun add` fills
+`dependencies` (`@moku-labs/game`, `pixi.js`). The CI runs `lint`, `typecheck`, `test:coverage` and
+`build` on every push and pull request, and `deploy` on every push to `main`. `deploy` is a
+placeholder until the release station picks a target. `build:web` stays its own script: `device.md`
+calls it after packing the art. `@moku-labs/core` and `@moku-labs/common` are peers of both
 packages since game 0.4.3 and editor 0.2.1; Bun installs them on its own. With `--root .` the asset CLI writes `manifest.json` and
 `generated/` at the root; `--manifest` and `--keys` move them.
 
@@ -257,10 +350,24 @@ export const helloScreen = projection({
   layer: "ui",
   from: (player: Player): HelloView => ({ taps: player.taps }),
   view: item => (
-    <screen key="helloScreen" style={{ direction: "column", align: "center", justify: "center", gap: 48 }}>
+    <screen
+      key="helloScreen"
+      style={{ direction: "column", align: "center", justify: "center", gap: 48 }}
+    >
       <text key="greeting" style="body" content={tr("hello.greeting")} />
       <text key="taps" style="body" content={tr("hello.taps", { n: item.taps })} />
-      <button key="tap" intent="tap" style={{ width: 480, height: 120, fill: 0x2f5a3b, radius: 24, align: "center", justify: "center" }}>
+      <button
+        key="tap"
+        intent="tap"
+        style={{
+          width: 480,
+          height: 120,
+          fill: 0x2f5a3b,
+          radius: 24,
+          align: "center",
+          justify: "center"
+        }}
+      >
         <text key="tapLabel" style="body" content={tr("hello.tap")} />
       </button>
     </screen>
@@ -327,7 +434,11 @@ export function createGame(options: GameOptions = {}) {
   return createApp({
     plugins: [...screen, helloFeature],
     pluginConfigs: {
-      model: { initialPlayer: startingPlayer, initialSession: startingSession, seed: options.seed ?? 42 },
+      model: {
+        initialPlayer: startingPlayer,
+        initialSession: startingSession,
+        seed: options.seed ?? 42
+      },
       flow: { mainFlow, safeNode: "home" },
       renderer: options.mount === undefined ? {} : { mount: options.mount },
       assets: options.manifest === undefined ? {} : { manifest: options.manifest }
@@ -510,6 +621,8 @@ it("counts taps headless", async () => {
 bun run assets:keys      # manifest.json, generated/*
 bun run test             # headless, plain Bun
 bun run typecheck
+bun run lint             # biome + eslint
+bun run build            # assets:check, then dist/web
 bun run dev              # Game http://127.0.0.1:3000/  Tools http://127.0.0.1:3000/__editor/
 ```
 

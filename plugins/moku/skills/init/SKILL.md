@@ -130,7 +130,11 @@ bun add -d @moku-labs/ci
 Copy the files byte for byte (`cp`), do not retype them. One edit follows for apps: `examples/app/ci.yml`
 is written for an app with a worker, and names `build_worker_script` and `migrate_script`. Delete each of
 those two lines when `package.json` has no script of that name (a static site has neither), so the first
-push does not fail on a script that does not exist. Change nothing else in the file. The three `release:*` scripts are
+push does not fail on a script that does not exist. Change nothing else in the file. The same file runs
+`lint`, `typecheck`, `test:coverage` and `build` on every push and pull request, and `deploy` on every
+push to `main`, so `package.json` needs all five. A game has no deploy target until the release station
+picks one (web host, stores through `@moku-labs/native`), so the game template ships a `deploy` that
+only says so. The three `release:*` scripts are
 `moku-release setup`, `moku-release doctor` and `moku-release`. The branch ruleset
 (`node_modules/@moku-labs/ci/rulesets/main.json`) is applied later by `release:setup`, not scaffolded
 into the repository. Do not write the YAML from memory: the publish
@@ -148,8 +152,14 @@ not continue to Step 6 while anything is red: the marker means "this project is 
 A game is not ready until the person has seen it. After the checklist is green:
 
 1. Start the dev server in the background: `bun run dev` (the editor's `moku-editor` bin, port 3000).
-2. Open `http://127.0.0.1:3000/__editor/` in the built-in browser pane (`preview_start` with the url).
-3. Take one screenshot, check the hello-world scene drew and the console has no error, and show it.
+2. Open `http://127.0.0.1:3000/__editor/` and take one screenshot. Use the first that works:
+   - the built-in browser pane (`preview_start` with the url, then a screenshot);
+   - a Playwright MCP browser, if one is connected;
+   - `bunx playwright screenshot --wait-for-timeout 3000 http://127.0.0.1:3000/ .planning/hello.png`,
+     then read the PNG;
+   - none of them: give the person the url and ask what they see. Their "it works" counts as the
+     screenshot. Do not stop init to ask for a browser permission.
+3. Check the hello-world scene drew and the console or server log has no error, and show the shot.
 4. Say in one line that the setup works, and leave the server running.
 
 If the page stays blank, read the server log and the browser console, fix the cause, and repeat.
@@ -171,6 +181,18 @@ created: 2026-09-19
 
 `type` is `framework`, `consumer`, `tools` or `game`. `core_version` is the installed `@moku-labs/core`
 version, or empty for a library. Get the date from `date +%F`.
+
+## Step 6.5 — the first commit
+
+The scaffold is the project's first commit. Without it the rails see every file as uncommitted work that
+no change accounts for, and refuse to open the first change.
+
+```bash
+cd "$ABSOLUTE_PROJECT_PATH" && git add -A && git commit -m "chore: scaffold <name>"
+```
+
+The lefthook pre-commit runs here. A red hook is a scaffold bug: fix it and commit again, never with
+`--no-verify`. `.planning/` stays out of the commit; `.gitignore` already holds it.
 
 ## Step 7 — report and hand back
 

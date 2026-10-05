@@ -6,7 +6,8 @@ description: >
   and prompt text out, through the `moku` CLI with a cost estimate, a budget gate and a resumable
   cache. Triggers on: "moku ai", "@moku-labs/ai", "generate assets", "game art", "sprites",
   "sound effects", "sfx", "music for the game", "voiceover", "moku.yaml", "moku.config.ts",
-  "moku run / estimate", "add a provider", "api key for fal/openai/elevenlabs", or producing a
+  "moku run / estimate", "add a provider", "api key for fal/openai/elevenlabs", "спрайты", "звуки",
+  "музыка для игры", "озвучка", "ассеты для игры", "сгенерируй картинки", or producing a
   batch of AI assets for a Moku project.
 ---
 

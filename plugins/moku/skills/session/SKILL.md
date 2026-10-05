@@ -33,7 +33,7 @@ Decide from what you see, and ask only when it is not obvious.
 | The person named a directory | Use it. |
 | The person wants to make a new game | Always confirm, even in an empty directory: "Make the game here, in `<pwd>`?" Offer the current directory first when it is empty, otherwise a new folder named after the game beside it. |
 
-One question, two or three choices, a recommended one first. If the person wants neither, stop here: the rails stay off and nothing was written.
+One question, two or three choices, a recommended one first. Ask it in the person's language: a request in Russian gets a Russian question. If the person wants neither, stop here: the rails stay off and nothing was written.
 
 ## 3. Start the session
 
