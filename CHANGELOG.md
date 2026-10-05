@@ -2,6 +2,38 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.79.0 (2026-10-05)
+
+The soft move from ESLint to oxlint, in four PRs. New projects get Biome + oxlint on TypeScript 7. Old projects
+keep ESLint on TypeScript 6 until the owner says yes. Measured on copies of game and web: `bun run lint` on game
+drops from 24.8 s to about 3 s, `tsc --noEmit` from 4.2 s to 0.54 s.
+
+### Added
+- **Two lint stacks (#58).** `lint-stacks.md` says how to tell them apart: `.oxlintrc.json` is the current stack,
+  `eslint.config.*` is the legacy one. Builders, the build wave, verification, the diagnostician, the validators
+  and `check` run the project's own second linter. A legacy project is not a finding.
+- **Opt-in migration `moku-lint-oxlint` (Stack 4).** `/moku:upgrade` offers it in one line and never applies it
+  by default. It swaps the devDependencies, writes `.oxlintrc.json` and keeps the project's own rules, adds the
+  Biome complexity rule, rewrites scripts and lefthook, deletes `eslint.config.*`, renames disable comments
+  (`jsdoc/` → `jsdoc-js/`, `unicorn/prevent-abbreviations` → `unicorn-js/...`), drops dead sonarjs comments and
+  moves TypeScript 6 → 7 with tsdown 0.23.0. Proved on a copy of web: lint, typecheck, 1000 tests, build,
+  publint and pre-commit pass. Findings with all disable comments off: 146 before, 121 after. The 23 sonarjs
+  findings go on purpose; jsdoc is equal; unicorn differs by 2 (native `consistent-function-scoping`).
+
+### Changed
+- **The current stack is the default (#59).** `tooling-config.md`: oxlint 1.86.0 with `eslint-plugin-jsdoc`
+  65.1.0 and `eslint-plugin-unicorn` 63.0.0 as JS plugins, TypeScript 7.0.2, tsdown 0.23.0 (declarations through
+  the TS 7 binary). Biome `noExcessiveCognitiveComplexity` (max 15) replaces sonarjs. ESLint, typescript-eslint,
+  sonarjs, eslint-config-biome, jiti and globals leave the current stack. The ESLint bodies stay in a legacy
+  section. Why: typescript-eslint needs the TypeScript JS API, and TS 7 has none.
+- **Docs speak about both stacks.** moku-core, moku-release, glossary, skeleton conventions, jsdoc examples, plan
+  and skeleton stages, moku-plugin, moku-readable-code, the moku-web project spec and e2e notes, and moku-game
+  wording no longer present ESLint as the default. Legacy instructions stay where they help an old project.
+- `tsgo-fastcheck` is offered on the legacy stack only. `ts6-core` fires on the legacy stack only.
+
+### Removed
+- Reserved `ts7-native`. TypeScript 7 arrives through `moku-lint-oxlint`.
+
 ## 0.78.3 (2026-10-05)
 
 ### Fixed

@@ -13,7 +13,7 @@ import type { TrackedEvent } from "./types";
 export const shouldSample = (sampleRate: number): boolean => {
   if (sampleRate >= 1) return true;
   if (sampleRate <= 0) return false;
-  // eslint-disable-next-line sonarjs/pseudo-random -- sampling, not security
+  // Sampling, not security: Math.random is fine here.
   return Math.random() < sampleRate;
 };
 

@@ -596,8 +596,8 @@ Save to `.planning/build/skeleton-spec.md`. Use the Skeleton Specification Templ
 **Skeleton Code Block Correctness Constraints:**
 - Plugin `index.ts` files import `createPlugin` from `../../config` (the framework's config.ts), not from `@moku-labs/core`. `@moku-labs/core` only exports `createCoreConfig` and `createCorePlugin`. The `createPlugin` factory comes from destructuring `createCoreConfig`'s return value.
 - The plugin barrel (`src/plugins/index.ts`) uses namespace re-exports: `export * as [PascalCase] from "./[name]/types"`, not `export type *` (causes ambiguous re-export when plugins share type names like Config/State/Api). Consumers access types as `PluginName.Config`, `PluginName.Api`, etc.
-- Use the `@file` tag, not `@fileoverview` (ESLint jsdoc/check-tag-names rejects it). Leave `@module` out of plugin files (flagged as redundant outside ambient context).
-- Common abbreviations (`ctx`, `fn`, `cb`) are allowed — they are whitelisted in the ESLint unicorn config. Unused stub parameters should still have an underscore prefix (e.g., `_ctx`).
+- Use the `@file` tag, not `@fileoverview` (the jsdoc `check-tag-names` rule rejects it, in both lint stacks). Leave `@module` out of plugin files (flagged as redundant outside ambient context).
+- Common abbreviations (`ctx`, `fn`, `cb`) are allowed — they are in the `prevent-abbreviations` allowList of the project lint config (`glossary.md`). Unused stub parameters should still have an underscore prefix (e.g., `_ctx`).
 - Skeleton stub bodies use `throw new Error("not implemented")` for complex return types, not `return {} as X` (violates R6: no inline type assertions).
 - For plugins with `handlers.ts`, the plugin `index.ts` imports `createHandlers` and include a `hooks: createHandlers` field — do not create dead handler files.
 

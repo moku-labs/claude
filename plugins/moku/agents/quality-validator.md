@@ -60,9 +60,9 @@ The project sets `verbatimModuleSyntax: true` and a type-import rule (Biome `use
 
 Per plugin: `createPlugin(name, spec)` infers the name as a literal type; Config comes from the `config` defaults; State from the `createState` return type; API from the `api` factory return; Events from the register callback; Helpers from the `helpers` object, so the result is `PluginInstance<...> & Helpers`; a plugin with helpers stays assignable to `AnyPluginInstance`; destructured helpers keep their signatures (`const { route } = router`). Per framework: `createCoreConfig<Config, Events>(id, opts)` captures Config and Events; `createCore(coreConfig, { plugins })` captures the plugin tuple; `createApp(opts)` returns an `App` whose plugin surfaces come from `BuildPluginApis`; `app.[pluginName]` has the right API type. You verify this through the type-level tests — missing type-level tests are a BLOCKER.
 
-### 7. Strict mode (TypeScript 6 baseline)
+### 7. Strict mode (TypeScript 6 and 7)
 
-`tsconfig.json` carries `"strict": true`, `"exactOptionalPropertyTypes": true`, `"noUncheckedIndexedAccess": true`, `"verbatimModuleSyntax": true`, `"noEmit": true`, and `"types": ["bun"]` (web projects `["vite/client", …]`). TypeScript 6 defaults `types` to `[]`, so a missing or empty `types` breaks the type check — that is a BLOCKER, not a warning. Other missing flags are WARNINGs. Do not flag a missing explicit `"isolatedModules": true` when `"verbatimModuleSyntax": true` and `"module": "Preserve"` are both set — that pairing already enforces it and moku's prescribed tsconfig omits the flag deliberately. Flag it only when neither is present.
+`tsconfig.json` carries `"strict": true`, `"exactOptionalPropertyTypes": true`, `"noUncheckedIndexedAccess": true`, `"verbatimModuleSyntax": true`, `"noEmit": true`, and `"types": ["bun"]` (web projects `["vite/client", …]`). TypeScript 6 and 7 default `types` to `[]`, so a missing or empty `types` breaks the type check — that is a BLOCKER, not a warning. Other missing flags are WARNINGs. Do not flag a missing explicit `"isolatedModules": true` when `"verbatimModuleSyntax": true` and `"module": "Preserve"` are both set — that pairing already enforces it and moku's prescribed tsconfig omits the flag deliberately. Flag it only when neither is present.
 
 ### 8. PluginCtx / EmitFn (Standard+)
 

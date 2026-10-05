@@ -135,7 +135,7 @@ describe("config overrides in createApp", () => {
     // @ts-expect-error -- "invalidKey" is not in Config or a registered plugin name
     const app = createApp({ invalidKey: "boom" });
 
-    // Runtime assertion to satisfy sonarjs/assertions-in-tests
+    // Runtime assertion, so the test asserts something at run time too
     expect(app).toBeDefined();
   });
 

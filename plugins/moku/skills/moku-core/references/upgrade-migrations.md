@@ -5,8 +5,8 @@ current **target stack** (`target-stack.md`). Each migration is a self-contained
 **detect → apply → verify** unit. `/moku:upgrade` runs every migration whose `detect` fires (and
 whose `default` is `on`, unless the user opts into an `off` one), in the order listed here.
 
-This is the **extension point** for all future stack jumps — TypeScript 7, build-tool swaps,
-de-vibecoding, etc. To add one: append an entry below, bump the stack version in `target-stack.md`,
+This is the **extension point** for all future stack jumps — build-tool swaps, de-vibecoding,
+etc. TypeScript 7 arrives through the opt-in `moku-lint-oxlint` (Stack 4). To add one: append an entry below, bump the stack version in `target-stack.md`,
 and (if it changes the scaffold) update `tooling-config.md`.
 
 ## Migration entry schema
@@ -15,7 +15,7 @@ and (if it changes the scaffold) update `tooling-config.md`.
 ### <id>
 - Title:        <human label>
 - Stack:        <stack version this belongs to>
-- Applies to:   framework | app | plugin | web | all
+- Applies to:   framework | package | app | game | plugin | web | all
 - Default:      on | off (opt-in — user is asked at the gate)
 - Depends on:   <other migration ids that must run first, or —>
 - Detect:       <precise condition that means the project still needs this>
@@ -41,7 +41,8 @@ and (if it changes the scaffold) update `tooling-config.md`.
 - **Applies to:** framework, app, plugin, web
 - **Default:** on
 - **Depends on:** —
-- **Detect:** `package.json.devDependencies.typescript` matches `^5`/`5.*`, OR
+- **Detect:** legacy stack only (`eslint.config.*`, no `.oxlintrc.json`; see `lint-stacks.md`), AND:
+  `package.json.devDependencies.typescript` matches `^5`/`5.*`, OR
   `typescript-eslint < 8.58.0`, OR `tsdown < 0.22.1` present, OR `tsconfig.json` has no
   `compilerOptions.types`, OR `tsconfig.build.json` exists without `compilerOptions.rootDir`.
 - **Apply:**
@@ -90,13 +91,16 @@ and (if it changes the scaffold) update `tooling-config.md`.
   is independently skippable at the gate if the user wants TS6 only.
 - **Rollback:** `git checkout -- package.json biome.json .bun-version bun.lock && bun install`.
 
-### tsgo-fastcheck  *(opt-in)*
+### tsgo-fastcheck  *(opt-in, legacy stack only)*
 - **Title:** TypeScript 7 native preview (`tsgo`) as an opt-in fast type-checker, side-by-side with `tsc`
 - **Stack:** 2
 - **Applies to:** framework, app, plugin
 - **Default:** **off** — the user is explicitly asked at the gate; never applied silently.
 - **Depends on:** ts6-core
-- **Detect:** user opted in AND `package.json.devDependencies["@typescript/native-preview"]` is absent.
+- **Detect:** the project is on the legacy stack (`eslint.config.*`, no `.oxlintrc.json`) AND the user
+  opted in AND `package.json.devDependencies["@typescript/native-preview"]` is absent. Never offered
+  on the current stack: there `tsc` already is TypeScript 7. Never offered in the same run as
+  `moku-lint-oxlint`, which removes it.
 - **Apply:**
   1. `package.json.devDependencies`: add `"@typescript/native-preview": "latest"` (ships nightly
      `7.0.0-dev.*` builds; pin to a specific build for reproducible CI if desired).
@@ -146,6 +150,119 @@ and (if it changes the scaffold) update `tooling-config.md`.
   Mitigation: the migration is visible at the gate; drop Node 22 from any CI matrix in the same
   change.
 - **Rollback:** `git checkout -- package.json` (plus `.nvmrc`/`.node-version` if touched).
+
+---
+
+## Stack version 4 migrations (current lint stack: Biome + oxlint · TypeScript 7)
+
+### moku-lint-oxlint  *(opt-in, Stack 4)*
+- **Title:** Move a legacy project from Biome + ESLint on TypeScript 6 to Biome + oxlint on TypeScript 7
+- **Stack:** 4
+- **Applies to:** package, app, game
+- **Default:** **off**. Opt-in: applied only after the owner's explicit yes at the gate. Never a side
+  effect of another migration. A legacy project that says no stays on its legacy target.
+- **Depends on:** ts6-core, tooling-freshness (the project is on the legacy target first)
+- **Detect:** `eslint.config.*` (`.ts`, `.js` or `.mjs`) at the root AND no `.oxlintrc.json`.
+- **Apply:** the migration swaps the linter, not the rule set. The project keeps its own rules.
+  0. **Baseline.** On the clean tree run `bun run lint` and note the Biome and ESLint error and
+     warning counts and the time. For the parity count, take a throwaway copy, neutralise every
+     disable comment and count ESLint findings per plugin:
+     ```sh
+     git ls-files -z '*.ts' '*.tsx' | xargs -0 perl -pi -e 's/eslint-disable/eslint-neutral/g'
+     bunx eslint . -f json -o eslint-parity.json
+     ```
+  1. **devDependencies.** Remove `eslint`, `eslint-config-biome`, `eslint-plugin-sonarjs`,
+     `typescript-eslint`, and `jiti` and `globals` unless project code imports them
+     (`git grep -nE 'from "(jiti|globals)"'`). Set the current-stack pins from `tooling-config.md`
+     (`typescript`, `oxlint`, `eslint-plugin-jsdoc`, `eslint-plugin-unicorn` exact, `tsdown` if present).
+     Remove `@typescript/native-preview` and the `typecheck:fast` script if `tsgo-fastcheck` added
+     them: `tsc` is TypeScript 7 now. Keep `devDependencies` sorted.
+  2. **`.oxlintrc.json`.** Copy the canonical body from `tooling-config.md`. Its `plugins`,
+     `jsPlugins`, `categories`, `env` and top-level `rules` stay as they are. Then translate the
+     project's own `eslint.config.*`:
+     - Global `ignores` → `ignorePatterns`. Drop `node_modules/**` and `bun.lock`; oxlint skips them.
+     - The `unicorn/prevent-abbreviations` `allowList` → the union of the canonical list and the
+       project's.
+     - Each block with `files` → one entry in `overrides`, same order, same `files`, same rule
+       options. A project on the unchanged legacy template ends with the canonical overrides. Where
+       the project's setting differs from the canonical one (for example
+       `ArrowFunctionExpression: true`, or `require-example` on for all of `src/`), the project wins.
+     - A block's own `ignores` → `excludeFiles` in that override.
+     - Rule names: `jsdoc/*` → `jsdoc-js/*`; `unicorn/prevent-abbreviations` →
+       `unicorn-js/prevent-abbreviations`; every other `unicorn/*` stays (native).
+     - Dropped: `sonarjs/*`, `@typescript-eslint/consistent-type-imports` (Biome `useImportType`
+       covers it), `jsdoc/no-types`.
+     - `no-restricted-imports`, `@typescript-eslint/no-restricted-imports` and
+       `no-restricted-syntax` are never copied over as they are. oxlint merges the two import rules
+       into one, so overrides replace each other. It also checks `import()`. Its `regex` is Rust, so a
+       lookahead never matches, and silently. A game takes these rules from step 3. Any other
+       project moves them into a local JS plugin (`lint/<name>.mjs`, listed in `jsPlugins`) that uses
+       JS `RegExp`, one rule per concern.
+     - Never use `@oxlint/migrate` output as it is. It drops a block's `ignores` with only a warning.
+  3. **Game only: engine rules.** Run `npm view @moku-labs/game exports --json`.
+     - It lists `./lint`: add `"@moku-labs/game/lint"` to `jsPlugins` and turn its rules on as the
+       moku-game pack's `references/hello-world.md` shows. Drop the game's own G1–G4 blocks.
+     - It does not (true up to `@moku-labs/game` 0.4.5): keep the local-rules note of the
+       `hello-world.md` template and do what it says. Re-run this step once the entry is published.
+  4. **`biome.json`.** Add `complexity.noExcessiveCognitiveComplexity` (`error`, max 15) under
+     `linter.rules`, as in `tooling-config.md`. It replaces sonarjs cognitive complexity. Biome counts
+     differently: fix a new finding, do not mute it.
+  5. **Scripts, hooks, editor, docs.**
+     - `package.json`: `"lint": "biome check . && oxlint"`, `"lint:fix": "biome check --write . && oxlint --fix"`.
+     - `lefthook.yml`: the `eslint-check` job becomes `oxlint-check` with
+       `run: bunx oxlint --no-error-on-unmatched-pattern {staged_files}`. Keep the job's `glob`.
+     - `.claude/settings.local.json`: `Bash(bunx eslint:*)` → `Bash(bunx oxlint:*)`.
+     - `.vscode/extensions.json`, if present: `dbaeumer.vscode-eslint` → `oxc.oxc-vscode`.
+     - Project `CLAUDE.md` and README lines that name ESLint take the wording of the CLAUDE.md
+       template in `tooling-config.md` ("Biome check + oxlint", `import type` by Biome `useImportType`).
+  6. **Delete** `eslint.config.*` and the `declare module "eslint-config-biome";` line. If
+     `declarations.d.ts` is then empty, delete it and drop it from `include` in `tsconfig.json`.
+  7. **Disable comments.** Rename the moved rules, drop the dead sonarjs ones, then format. Use
+     `git ls-files` and `perl`: `grep -rl` skips a file it thinks is binary (one NUL byte in a string
+     literal is enough), and `sed -i` differs between macOS and Linux.
+     ```sh
+     git ls-files -z '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' | xargs -0 perl -pi -e 'if (/eslint-disable/) { s#\bjsdoc/#jsdoc-js/#g; s#\bunicorn/prevent-abbreviations\b#unicorn-js/prevent-abbreviations#g }'
+     git ls-files -z '*.ts' '*.tsx' '*.js' '*.mjs' '*.cjs' | xargs -0 perl -ni -e 'print unless m{^\s*(//|/\*)\s*eslint-disable(-next-line|-line)?\s+sonarjs/[\w-]+(\s+--.*|\s*\*/)?\s*$}'
+     git grep -nE 'eslint-disable.*(sonarjs/|jsdoc/|unicorn/prevent-|no-restricted-)'
+     bun run format
+     ```
+     The `git grep` must print nothing. A line it prints mixes rules: edit it by hand. When step 2
+     or 3 moved restricted rules into a JS plugin, rename those names to the plugin's rule names
+     (for example `no-restricted-syntax` → `moku/restricted-syntax`). `bun run format` removes the
+     blank first line a deleted file-level comment leaves.
+  8. **Project code that drives ESLint.** `git grep -nE 'from "eslint"|new ESLint\('`. A test that
+     asks ESLint for its config (`calculateConfigForFile`, `isPathIgnored`) moves to
+     `bunx oxlint --format=json <files>` and checks `number_of_files`: oxlint skips an ignored file
+     silently, so the count proves coverage.
+  9. **TypeScript 7 code issues.** TS 7 has no JS API. `git grep -nE 'from "typescript"|require\("typescript"\)'`:
+     - `ts.transpileModule` in a test → `new Bun.Transpiler({ loader: "ts" }).transformSync(source)`.
+     - Any other use of the API: replace it, or use a tool that bundles its own TypeScript.
+     - New TS 7 type errors are real. Fix them locally, for example `hName` on `{}` in a remark plugin
+       → type the node data as mdast `Data`. Never weaken `strict`.
+  10. **`bun install`.** Expected and harmless: `incorrect peer dependency "typescript@7.0.2"` from the
+      `@typescript-eslint/*` helpers inside `eslint-plugin-jsdoc`, and on every build tsdown's
+      `TypeScript 7.0 does not yet have a stable API and is experimental.`
+- **Verify:** each must pass, in order: `bun run lint` → `bun run typecheck` → `bun run test` →
+  `bun run build` → `bun run validate` (packages) → `bunx lefthook run pre-commit` with the change
+  staged. Then compare with the baseline:
+  - `bun run lint`: 0 errors, as before. Report the time before and after.
+  - Parity: neutralise the disable comments in a throwaway copy again and run
+    `bunx oxlint --format=json`. Expected: jsdoc equal, sonarjs gone, unicorn within a few. The native
+    unicorn ports differ (`consistent-function-scoping`, `no-array-callback-reference`,
+    `prefer-export-from`). Fix a new native finding in the code, or disable it on its line with a
+    reason. Never turn a rule off for the whole project.
+  - On failure, route the output to the **moku-error-diagnostician** agent (bounded 3 rounds).
+- **Risk:** (a) oxlint JS plugins are alpha. `eslint-plugin-unicorn` 70+ fails to load, so it stays
+  pinned at `63.0.0`. `jsdoc-js/tag-lines` stays silent when oxlint lints two or more files; the
+  `moku-style-validator` agent covers the blank line before tags. (b) sonarjs findings disappear on
+  purpose. In the measured repos every sonarjs finding was suppressed by hand, and sonarjs was 8 of
+  the 11 seconds of JS-plugin time on game. Cognitive complexity moves to Biome. (c) Type-aware
+  rules stay off (`options.typeAware`). ESLint ran none either: `tseslint.configs.base` sets no
+  `parserOptions.project`. Turning them on is its own step with new findings. (d) TS 7 has no JS
+  API: any tool that imports `typescript` breaks. Step 9 finds it. (e) `rolldown-plugin-dts` accepts
+  `typescript ~7.0.0`: never move TypeScript to 7.1 alone.
+- **Rollback:** the tree was clean before the run: `git checkout HEAD -- . && rm -f .oxlintrc.json`
+  (plus a local `lint/*.mjs` plugin if step 2 or 3 added one) `&& bun install`.
 
 ---
 
@@ -418,11 +535,11 @@ the block below.
 Documented so the extension path is concrete; `/moku:upgrade` ignores these until they are promoted
 to an active stack version in `target-stack.md`.
 
-### ts7-native  *(Stack 4 — when TS7 GAs)*
-- Swap `typescript` → `^7`; make the TS6 deprecation cleanup mandatory (`ignoreDeprecations` is gone
-  in TS7); switch `typecheck:fast`/`tsgo` to the primary path; re-validate `.d.ts` emit against the
-  native emitter; revisit the `isolatedDeclarations` stance. The `tsgo-fastcheck` opt-in is the
-  on-ramp that de-risks this jump.
+### ts7-native  *(retired)*
+- Retired. TypeScript 7 arrives through `moku-lint-oxlint` (Stack 4): typescript-eslint needs the
+  TypeScript JS API, so a project moves to TS 7 together with the linter. The `ignoreDeprecations`
+  cleanup it planned is already done (the canonical tsconfig sets none of the removed options), and
+  declarations come from tsdown `0.23.0` through the TS 7 binary. `isolatedDeclarations` stays off.
 
 ### devibe-*  *(de-vibecoding class)*
 - One migration per repairable anti-pattern from `invariants.md` / `house-style.md`, e.g.:

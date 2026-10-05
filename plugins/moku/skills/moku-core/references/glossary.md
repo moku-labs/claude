@@ -1,19 +1,21 @@
-# Moku Glossary, ESLint allowList & spell-check dictionary
+# Moku Glossary, abbreviation allowList & spell-check dictionary
 
 Shared vocabulary so agents and tools don't "correct" valid domain terms, and so a build never has to
 expand abbreviation/dictionary lists mid-flight (a real build had to). There are **two distinct lists**
 for two different tools — ship BOTH pre-populated (see `tooling-config.md`, scaffolded by `/moku:init`):
 
-1. **ESLint `unicorn/prevent-abbreviations` `allowList`** — governs **code identifiers**. This is the
+1. **`prevent-abbreviations` `allowList`** — governs **code identifiers**. This is the
    one that actually blocks builds.
 2. **cspell / editor dictionary `words`** — governs **prose** in comments, docs, and Markdown.
 
-## 1. ESLint `unicorn/prevent-abbreviations` allowList (code identifiers)
+## 1. `prevent-abbreviations` allowList (code identifiers)
 
-Ship pre-expanded in the default `eslint.config.ts`:
+Ship pre-expanded in the scaffolded lint config: `unicorn-js/prevent-abbreviations` in
+`.oxlintrc.json` (current stack), `unicorn/prevent-abbreviations` in `eslint.config.ts` (legacy stack,
+`lint-stacks.md`). Same list in both:
 
 ```js
-// unicorn/prevent-abbreviations options
+// prevent-abbreviations options
 {
   allowList: {
     ctx: true, fn: true, cb: true, ref: true, args: true, params: true, props: true,
@@ -26,7 +28,7 @@ Ship pre-expanded in the default `eslint.config.ts`:
 }
 ```
 
-Use a scoped `eslint-disable` only for canonical spec **type names** that are abbreviations
+Use a scoped `eslint-disable-next-line` (both stacks read it) only for canonical spec **type names** that are abbreviations
 (e.g. `EnvVarSpec`, `IslandDef`) — do NOT put PascalCase type names in the allowList.
 
 ## 2. cspell / dictionary `words` (prose in comments, docs, Markdown)
@@ -37,7 +39,7 @@ Add as `cspell.json` `words` (flatten the groups below into one array).
 corePlugin, createCorePlugin, pluginConfigs, onInit, onStart, onStop, ctx, micro-kernel, microkernel,
 three-layer, factory-chain, wiring-harness, register-callback, Nano, Micro, VeryComplex, manifest, emit.
 
-**Build / tooling:** bun, bunx, tsdown, rolldown, vite, vitest, biome, eslint, publint, lefthook, tsc,
+**Build / tooling:** bun, bunx, tsdown, rolldown, vite, vitest, biome, oxlint, eslint, publint, lefthook, tsc,
 noEmit, monorepo, devDependency, peerDependency, frontmatter, gitignore, worktree, argv, stdout,
 stderr, cwd, dotenv, cspell.
 
@@ -58,5 +60,5 @@ p-limit, afplay, paplay, osascript.
 **Project-specific:** @moku-labs/web, @moku-labs/core, i18n, l10n, locale, feed.
 
 > **Maintenance rule (part of "done"):** when a build introduces a new dependency or domain term,
-> append it here AND to the project's `cspell.json` / ESLint allowList. This kills the recurring
+> append it here AND to the project's `cspell.json` / lint allowList. This kills the recurring
 > spell-check / abbreviation friction.

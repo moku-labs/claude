@@ -261,9 +261,9 @@ All kernel errors: `[framework-name] <description>.\n  <actionable suggestion>.`
 ## Quality Requirements
 
 - JSDoc on all exported functions, types, and interfaces. API method docs and a scenario `@example` live on the members of the `Api` type in `types.ts`, never on the implementation; no `@example` on functions that take `ctx`; never a signature echo. See `references/jsdoc-examples.md`.
-- `import type` enforced via `@typescript-eslint/consistent-type-imports`
+- `import type` enforced by Biome `useImportType` (legacy stack: `@typescript-eslint/consistent-type-imports`)
 - Biome formatting: 2-space indent, double quotes, semicolons, trailing commas off
-- ESLint: unicorn, sonarjs, jsdoc plugins active
+- Second linter: oxlint with unicorn and jsdoc rules, cognitive complexity in Biome (legacy stack: ESLint with unicorn, sonarjs, jsdoc). See `references/lint-stacks.md`
 - 90% test coverage threshold (lines, functions, branches, statements)
 
 ## References
@@ -282,17 +282,17 @@ For detailed specifications, consult:
 - `references/communication-context.md` — emit, hooks, context tiers, require/has
 - `references/type-system.md` — Type helpers, BuildPluginApis, type flow
 - `references/invariants.md` — Guarantees, error format, anti-patterns
-- `references/tooling-config.md` — Exact Biome, ESLint, TypeScript, Lefthook, Vitest configs (canonical target stack, TS6 baseline)
+- `references/tooling-config.md` — Exact Biome, oxlint, TypeScript, Lefthook, Vitest configs (canonical target stack, TS 7; legacy ESLint stack in its last section)
 - `references/lint-stacks.md` — The two lint stacks (current Biome + oxlint on TS 7, legacy Biome + ESLint on TS 6): how to detect one and the scoped commands for each
 - `references/target-stack.md` — Versioned target-stack manifest (pinned versions, tsconfig deltas, detection signature) `/moku:upgrade` migrates toward
-- `references/upgrade-migrations.md` — Extensible `detect→apply→verify` migration registry for `/moku:upgrade` (TS6 now; TS7/de-vibe reserved)
+- `references/upgrade-migrations.md` — Extensible `detect→apply→verify` migration registry for `/moku:upgrade` (TS6, Node 24, opt-in `moku-lint-oxlint` to oxlint + TS 7; de-vibe reserved)
 - `references/sandbox-index.md` — Coding-style exemplars (real moku code) — open the tier-matching plugin before writing source
 - `references/memory-schema.md` — `.planning/` durable layer + STATE.md Recovery block for fast multi-session resume
 - `references/tool-scoping.md` — Per-stage tool posture: why path-based write gates live in hooks, not `disallowed-tools`
 - `references/skeleton-conventions.md` — Hook-compliant authoring rules (≤30-line index, typed config, structural types, JSDoc) — read before writing skeleton/plugin source
 - `references/jsdoc-examples.md` — Where JSDoc and `@example` go: the contract on the `Api` type member, none on the implementation, no signature echo, every example true — read before writing or reviewing any JSDoc
 - `references/house-style.md` — Approved repo conventions validators do not block (api: createApi, framework test bootstrap, per-event register)
-- `references/glossary.md` — Domain terms + ESLint abbreviation allowList so agents/spell-check don't "correct" valid names
+- `references/glossary.md` — Domain terms + `prevent-abbreviations` allowList so agents/spell-check don't "correct" valid names
 
 ## Advanced References (load when needed)
 
