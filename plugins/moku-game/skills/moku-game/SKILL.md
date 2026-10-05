@@ -13,7 +13,7 @@ description: >
 
 # Moku Game Patterns
 
-> **Synced to `@moku-labs/game@0.4.4`** and **`@moku-labs/editor@0.2.1`** (catalogs from the release tags;
+> **Synced to `@moku-labs/game@0.4.6`** and **`@moku-labs/editor@0.2.1`** (catalogs from the release tags;
 > both take `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` as peers). The 17 game
 > plugins, every API, event and config field are in [`references/plugin-index.md`](references/plugin-index.md).
 > The minimal screen game is [`references/hello-world.md`](references/hello-world.md). How Claude drives
@@ -45,7 +45,7 @@ You `createApp` **from the game**: `createApp`, `createPlugin` and every helper 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | `@moku-labs/game` 0.4.4. Entries: `.` (engine), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
+| Framework | `@moku-labs/game` 0.4.6. Entries: `.` (engine), `./lint` (the oxlint JS plugin `moku-game` with the game lint rules, since 0.4.6), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
 | Built on | `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (peer deps since 0.4.3, Bun installs them: kernel, `ctx.log`, `ctx.env`) |
 | Rendering | `pixi.js ^8` **peer dependency**, loaded lazily with `import()`. WebGPU first, Pixi's WebGL fallback. No DOM, no React: screens are JSX laid out by `yoga-layout` (bundled, lazy) |
 | Dev tools | `@moku-labs/editor` 0.2.1 (dev dep, imported only in a dev build). Agent core on the page, server core in Bun (`bunx moku-editor`, Bun hot reload on), tools page prebuilt |
@@ -258,8 +258,23 @@ tests import; every command body starts with the inline guard
 | L9 | The JSX runtime is reached only through `jsx-runtime.ts` and `jsx-dev-runtime.ts` |
 | L13 | No import of `@moku-labs/system`, `@moku-labs/native` or `@tauri-apps/*` in the engine; the game builds its `PlatformProvider` in its own layer (`platform-bridge.ts`) |
 
-The game's own lint config (`references/hello-world.md`: `.oxlintrc.json`, or `eslint.config.ts` on the
-legacy stack) enforces L2, L3, L4, L5 and L13 on the game folders; `moku-game-validator` checks the rest.
+A game enforces L2, L3, L4, L5 and L13 with oxlint. Since 0.4.6 the engine ships them as the oxlint
+JS plugin `@moku-labs/game/lint` (plugin name `moku-game`). The game's `.oxlintrc.json` lists it in
+`jsPlugins` and turns the six rules on (`references/hello-world.md`):
+
+| Rule id | Engine rule | Reports |
+|---|---|---|
+| `moku-game/lazy-imports` | L2 | A static value import of `pixi.js` or `yoga-layout`. `import type` and `import()` pass; `import { type A }` is reported |
+| `moku-game/native-imports` | L13 | `@moku-labs/system`, `@moku-labs/native`, `@tauri-apps/*` in the logic, `kit.ts`, `game.ts` |
+| `moku-game/dev-imports` | dev only | `@moku-labs/editor` and `@moku-labs/game/control` outside `web/main.ts`, `web/dev*.ts`, `web/editor*.ts`, `*.dev.ts(x)` |
+| `moku-game/no-module-state` | L5 | A module-scope `let` or `var`, a module-scope `new Map/Set/WeakMap/WeakSet` |
+| `moku-game/determinism` | L3 | `Math.random`, `Date.now`, `performance.now`, `new Date()`, `setTimeout`, `setInterval` in the logic. `new Date(now)` passes |
+| `moku-game/rules-siblings` | L4 | An import other than a `./` sibling in `rules/` |
+
+The logic is `**/state.ts`, `**/tables.ts`, `**/{nodes,flows,rules,features}/**`. Tests are skipped.
+Each rule takes `["error", { "files": [...], "ignores": [...] }]`; a key given replaces its default,
+and the defaults match the template layout. A legacy game keeps its `eslint.config.ts` G-blocks until
+the opt-in `moku-lint-oxlint` upgrade. `moku-game-validator` checks what lint cannot see.
 
 JSDoc in a game is always the multi-line form (`/**` on its own line), never `/** one line */`.
 

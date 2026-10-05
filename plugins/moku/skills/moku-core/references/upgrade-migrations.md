@@ -199,11 +199,20 @@ and (if it changes the scaffold) update `tooling-config.md`.
        project moves them into a local JS plugin (`lint/<name>.mjs`, listed in `jsPlugins`) that uses
        JS `RegExp`, one rule per concern.
      - Never use `@oxlint/migrate` output as it is. It drops a block's `ignores` with only a warning.
-  3. **Game only: engine rules.** Run `npm view @moku-labs/game exports --json`.
-     - It lists `./lint`: add `"@moku-labs/game/lint"` to `jsPlugins` and turn its rules on as the
-       moku-game pack's `references/hello-world.md` shows. Drop the game's own G1–G4 blocks.
-     - It does not (true up to `@moku-labs/game` 0.4.5): keep the local-rules note of the
-       `hello-world.md` template and do what it says. Re-run this step once the entry is published.
+  3. **Game only: engine rules.** The engine ships them as `@moku-labs/game/lint` since 0.4.6.
+     - `bun add @moku-labs/game@latest` when the installed game is below 0.4.6.
+     - Add `"@moku-labs/game/lint"` to `jsPlugins` after the two tooling entries. Add the six rules
+       `moku-game/lazy-imports`, `native-imports`, `dev-imports`, `no-module-state`, `determinism`,
+       `rules-siblings`, each `"error"`. The moku-game pack's `references/hello-world.md` has the full
+       game `.oxlintrc.json`: its four edits also set the game's `overrides` files and ignore
+       `generated/**` and `.moku/**`.
+     - Drop the game's G1–G4 blocks. They are not translated: the six rules replace them. Their
+       defaults match the template layout; a game with another layout passes
+       `["error", { "files": [...], "ignores": [...] }]`.
+     - Two findings are new: `import { type A } from "pixi.js"` is reported (write `import type`),
+       and a module-scope `var` is reported. `new Date(now)` passes now.
+     - Disable comments: `no-restricted-syntax`, `no-restricted-properties`, `no-restricted-globals`
+       and `no-restricted-imports` → the matching `moku-game/*` rule id.
   4. **`biome.json`.** Add `complexity.noExcessiveCognitiveComplexity` (`error`, max 15) under
      `linter.rules`, as in `tooling-config.md`. It replaces sonarjs cognitive complexity. Biome counts
      differently: fix a new finding, do not mute it.

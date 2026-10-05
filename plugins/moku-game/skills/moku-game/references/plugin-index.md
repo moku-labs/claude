@@ -1,9 +1,11 @@
 # @moku-labs/game — Plugin & Property Index
 
-**Synced version:** `0.4.4` (catalog from the `v0.4.4` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
-`docs/configuration.md`, `docs/doors.md`, `docs/jsx.md`, `src/plugins/*/README.md`). 0.4.4 adds the
+**Synced version:** `0.4.6` (catalog from the `v0.4.4` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
+`docs/configuration.md`, `docs/doors.md`, `docs/jsx.md`, `src/plugins/*/README.md`, plus the `v0.4.6`
+`llms.txt` section "Lint for games"). 0.4.6 adds the entry `@moku-labs/game/lint`; 0.4.5 and 0.4.6
+change no runtime API. 0.4.4 adds the
 `game.mute` door for the editor's Sound switch: the command `game.mute`, the source `game.audioMuted` and
-`audio.muted(bus)`. Nothing else changes. Since 0.4.3 `@moku-labs/core ^1.7.1` and
+`audio.muted(bus)`. Since 0.4.3 `@moku-labs/core ^1.7.1` and
 `@moku-labs/common ^0.3.4` are **peer** dependencies (Bun installs them on `bun add`). `pixi.js ^8.0.0` is a **peer** dependency; `playwright-core` and `sharp`
 are optional peers. Engines node ≥24, bun ≥1.3.14. ESM only.
 
@@ -108,6 +110,38 @@ flowchart LR
 | `@moku-labs/game/inspect` | anywhere | `read`, `watch`, `defineSource`, `sources`, types `Source`, `InputSchema`, `InputOf` |
 | `@moku-labs/game/control` | dev builds | `run`, `defineCommand`, `controlRefused`, `commands`, types `Command`, `Ran` |
 | `@moku-labs/game/jsx-runtime`, `/jsx-dev-runtime` | anywhere | What `"jsxImportSource": "@moku-labs/game"` resolves to |
+| `@moku-labs/game/lint` | oxlint 1.86.0+ (`jsPlugins`) | Default export: the plugin `moku-game` with six rules. Since 0.4.6. See "Lint rules" below |
+
+### Lint rules (`@moku-labs/game/lint`)
+
+```json
+{
+  "jsPlugins": ["@moku-labs/game/lint"],
+  "rules": {
+    "moku-game/lazy-imports": "error",
+    "moku-game/native-imports": "error",
+    "moku-game/dev-imports": "error",
+    "moku-game/no-module-state": "error",
+    "moku-game/determinism": "error",
+    "moku-game/rules-siblings": "error"
+  }
+}
+```
+
+| Rule | Engine rule | Reports | Default `files` |
+|---|---|---|---|
+| `lazy-imports` | L2 | Static value import of `pixi.js`, `yoga-layout`. `import type`, `import()` pass. `import { type A }` is reported | `**` |
+| `native-imports` | L13 | `@moku-labs/system`, `@moku-labs/native`, `@tauri-apps/*` | the logic, `kit.ts`, `game.ts` |
+| `dev-imports` | dev only | `@moku-labs/editor`, `@moku-labs/game/control` | all but `web/main.ts`, `web/dev*.ts`, `web/editor*.ts`, `*.dev.ts(x)` |
+| `no-module-state` | L5 | Module-scope `let`, `var`, `new Map/Set/WeakMap/WeakSet` | `**` |
+| `determinism` | L3 | `Math.random`, `Date.now`, `performance.now`, `new Date()`, `setTimeout`, `setInterval`. `new Date(now)` passes | the logic |
+| `rules-siblings` | L4 | An import that is not a `./` sibling | `rules/**` |
+
+- The logic = `**/state.ts`, `**/tables.ts`, `**/{nodes,flows,rules,features}/**`.
+- Every rule skips `tests/**`, `**/__tests__/**`, `*.test.ts`.
+- Options per rule: `["error", { "files": [...], "ignores": [...] }]`. Globs are relative to the
+  directory oxlint runs in. A key given replaces the default.
+- Types: `GameLintOptions`, `GameLintPlugin`, `GameLintRuleName` from `@moku-labs/game/lint`.
 
 ## Events
 
