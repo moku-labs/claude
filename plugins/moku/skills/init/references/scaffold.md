@@ -169,9 +169,10 @@ A consumer app inherits `ctx.log` and `ctx.env` from its framework and does not 
 ### Game (Layer 3 on `@moku-labs/game`)
 
 The source tree, `web/` entry, dev server, editor wiring and the first headless test come from the
-`moku-game` pack, `references/hello-world.md`. The tooling files above stay the same, with two
-differences the pack names: `tsconfig.json` gets `"jsx": "react-jsx"` and
-`"jsxImportSource": "@moku-labs/game"`, and `package.json` gets the `dev` and `assets:keys` scripts.
+`moku-game` pack, `references/hello-world.md`. A game changes part of the tooling above: its own
+`vitest.config.ts` (coverage counts the logic only), `biome.json` scope, `lefthook.yml`, JSX settings in
+`tsconfig.json`, the game scripts, and no `tsconfig.build.json` or `tsdown.config.ts`. The pack's section
+"Tooling a game changes" is the list; follow it over this table.
 
 Dependencies: `@moku-labs/game@latest`, `pixi.js`; dev `@moku-labs/editor@latest`. `@moku-labs/core`
 never appears here, as for any consumer app.

@@ -2,6 +2,25 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.78.2 (2026-10-05)
+
+The game route, tested end to end: evals and a live `claude -p` run from an empty folder to a running hello world.
+
+### Fixed
+- **init shows the game without a browser pane.** Step 5.5 falls back to a Playwright MCP browser, then
+  `bunx playwright screenshot`, then the person's own look at the url. It no longer stops on a browser permission.
+- **The scaffold is the first commit.** init Step 6.5 commits it, with the lefthook pre-commit. Before, the rails
+  saw every file as uncommitted work and refused to open the first change.
+- **A new game passes CI and its own pre-commit.** The CI from `@moku-labs/ci` runs `lint`, `typecheck`,
+  `test:coverage`, `build` and, on `main`, `deploy`. The game template now has all five (`deploy` is a placeholder
+  until the release station picks a target), its own `vitest.config.ts` (coverage counts the logic), `biome.json`
+  scope, `lefthook.yml`, and installs the tooling pins instead of `typescript@latest` (TS 7 has no JS API for ESLint).
+- **moku-game shows how to draw a sprite:** the tags list and `<image texture="feature.key" fit="contain" />`.
+- **moku-ai fires on Russian asks:** спрайты, звуки, музыка для игры, озвучка, ассеты для игры.
+
+### Added
+- Evals `moku-game/game-new-route` (start with `/moku:session` and a game) and `moku-game/game-asset-route`.
+
 ## 0.78.1 (2026-10-05)
 
 ### Changed
