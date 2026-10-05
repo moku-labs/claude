@@ -1,15 +1,17 @@
 # @moku-labs/room — Plugin & Property Index
 
-**Synced version:** `0.8.2` (catalog generated from the `v0.8.2` git tag **source** — `src/index.ts`,
-`src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`. Upstream `llms.txt`/`llms-full.txt` were
-updated upstream (last touched in `#12`, 0.8.0) and are **current for the API surface through 0.8.0** (hub-plugin server tier, six
-events, at-least-once intents, `"auto"` ICE, `/api/ice`); their **only stale fact at `v0.8.2`** is the bundled
-dependency line, which still says core `1.5.0` / common `0.2.1`. Per the registry's "source wins" policy the
-tag source is authoritative). Built on `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` as **bundled**
-dependencies + bundled `trystero@~0.25.2` (signaling) and `qrcode@^1.5.4` (join QR).
-**`@moku-labs/worker@^0.15.0` is an OPTIONAL `peerDependency`** (`peerDependenciesMeta.optional`) — needed
-**only** by the `./server` tier (its `hubPlugin` is a `@moku-labs/worker` plugin); pure-client apps install
-nothing extra. Engines node ≥24, bun ≥1.3.14.
+**Synced version:** `0.8.3` (catalog generated from the `v0.8.3` git tag **source** — `src/index.ts`,
+`src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`. `v0.8.2 → v0.8.3` touched only
+`package.json`, `bun.lock` and `.github/dependabot.yml`: **no `src/` change**. Upstream `llms.txt`/`llms-full.txt`
+and the README are current for the API surface through 0.8.0, but their dependency lines are **stale at
+`v0.8.3`**: they still say core `1.5.0` / common `0.2.1` are bundled and the client core has no peer dependency.
+Per the registry's "source wins" policy the tag source is authoritative). Since 0.8.3 `@moku-labs/core@^1.7.1` +
+`@moku-labs/common@^0.3.4` are **`peerDependencies`** (dev-pinned upstream at core `1.7.1` / common `0.3.4`);
+bun and npm install them automatically, so an app still declares neither (I1). Bundled `dependencies` are now
+only `trystero@~0.25.2` (signaling) and `qrcode@^1.5.4` (join QR).
+**`@moku-labs/worker@>=0.15.0 <1.0.0` is an OPTIONAL `peerDependency`** (`peerDependenciesMeta.optional`; dev
+pin `0.20.2`) — needed **only** by the `./server` tier (its `hubPlugin` is a `@moku-labs/worker` plugin);
+pure-client apps install nothing extra. Engines node ≥24, bun ≥1.3.14.
 
 > **New since 0.3.1 (no breaking change, `0.3.2` → `0.8.2`):**
 > - **0.3.2 (`#7`, sync fix)** — a unicast snapshot (`sync.broadcast(peerId)`) is stamped at the CURRENT `sSeq`
@@ -30,6 +32,9 @@ nothing extra. Engines node ≥24, bun ≥1.3.14.
 >   **`"auto"`**; `serverSignaling(url)` exposes a derived `iceEndpoint`; the hub's `handle` serves
 >   **`GET /api/ice`** (short-lived Cloudflare Realtime TURN credentials); new `hub.ice` config block.
 >   The old "no TURN ever" statement is **no longer true** for the `./server` tier (see the D2 note below).
+> - **0.8.3 (`#16`, `#17`, packaging only)** — core + common move from bundled `dependencies` to
+>   `peerDependencies` (`^1.7.1` / `^0.3.4`); the optional worker peer widens from `^0.15.0` to
+>   `>=0.15.0 <1.0.0`, so a worker with `turnPlugin` (≥0.16) no longer warns. No `src/` change, no API change.
 > - **0.8.1 / 0.8.2** — CI moved to `@moku-labs/ci`; `0.8.2` bumps the bundled core to `1.6.0` + common to
 >   `0.3.2` and frees plugin resources from the `onStop` state (kernel 1.6 passes `{ global, config, state }`
 >   to `onStop`) — no public API change.
@@ -80,7 +85,7 @@ accounts, no lobby servers.
 > P2P DataChannels (a hostile-NAT pair may ride a Cloudflare TURN relay, never the DO). A consumer may also
 > inject its own STUN/TURN via `transport.iceServers` (array or provider, 0.6.0).
 
-## 1. Client core API form (v0.8.2)
+## 1. Client core API form (v0.8.3)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **core defaults** — already wired. An app
 adds exactly one role facade and its own game plugin; there are no `roomPlugins` arrays. Select the
@@ -135,7 +140,7 @@ app.controller.intent("move", { dx: 1, dy: 0 });                  // typed input
 bound to Room's `Config`/`Events` (generics infer from the spec — never written explicitly; document each
 export with a directly-preceding JSDoc block, never destructure — see moku-core "Public Export Shape").
 `createApp` accepts `plugins`, `pluginConfigs`, `config`, and `onReady`/`onError`/`onStart`/`onStop`
-lifecycle callbacks. Since 0.8.2 the bundled kernel is `@moku-labs/core@1.6.0`: a custom plugin's `onStop`
+lifecycle callbacks. Since 0.8.2 the kernel is `@moku-labs/core` ≥1.6 (a `^1.7.1` peer since 0.8.3): a custom plugin's `onStop`
 receives `{ global, config, state }`, so free timers/handles from `state` there (Room's own engines do —
 the old `ctx.global`-keyed teardown registry is gone).
 
@@ -156,7 +161,7 @@ plugin (`depends: [stagePlugin]` / `[controllerPlugin]`) then sees the complete 
 edge. They install **no forwarding hooks** (Moku's event bus is global; the engines' `emit("room:*")`
 already reaches every hook regardless of `depends`), delegate API, and own no state.
 
-### Facade API surfaces (re-verified at `v0.8.2` — `StageApi` / `ControllerApi` signatures are unchanged since `v0.2.0`)
+### Facade API surfaces (re-verified at `v0.8.3` — `StageApi` / `ControllerApi` signatures are unchanged since `v0.2.0`)
 
 ```ts
 type StageApi = {
@@ -246,9 +251,8 @@ on public STUN. Real failures are `405` (not GET), `429` (over the mint budget),
 + the `"auto"` default do the fetch. Upstream's hub README says the secrets are provisioned by
 `@moku-labs/worker`'s `turnPlugin` (`pluginConfigs.turn = { relay: { name: "myapp-turn" } }`, worker ≥ 0.16),
 or by hand with `wrangler secret put TURN_KEY_ID` / `TURN_KEY_API_TOKEN`. The `moku-worker` pack
-teaches `turnPlugin` (worker `0.20.2`). ⚠️ Room's optional peer range is still `@moku-labs/worker@^0.15.0`, which
-for a `0.x` version means `>=0.15.0 <0.16.0` and so excludes every worker with `turnPlugin` — expect a
-peer-range warning when both are installed, until upstream widens the range.
+teaches `turnPlugin` (worker `0.20.2`). Since 0.8.3 Room's optional peer range is `@moku-labs/worker@>=0.15.0 <1.0.0`,
+which admits every worker with `turnPlugin` (the old `^0.15.0` meant `<0.16.0` and warned).
 
 ## 5. Events (`room:*` — coarse lifecycle only)
 

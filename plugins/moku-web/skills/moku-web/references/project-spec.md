@@ -23,8 +23,9 @@ to your project type (see the §13 project-type matrix); the skeleton is the sam
 > you like (it consumes data at build via loaders, or in the browser via `dataPlugin`). Within "web
 > frontend," anything from a one-file landing page to an interactive app is in scope.
 
-> **You are building a Layer-3 app.** Depend on **`@moku-labs/web` only** (it pins
-> `@moku-labs/core` itself — never add a direct core dep). You never write core config
+> **You are building a Layer-3 app.** Depend on **`@moku-labs/web` only** (since
+> v2.4.4 it takes `@moku-labs/core` + `@moku-labs/common` as peers, which bun installs for you — never add a
+> direct core dep). You never write core config
 > (`createCoreConfig`/`createCore` belong to the framework, Layer 2); you call `createApp(...)` and
 > supply `pluginConfigs`. You **may** author your own custom plugins via the framework's re-exported
 > `createPlugin` (in `src/plugins/`) for plugin-shaped concerns — see `consumer-plugins.md` in the core

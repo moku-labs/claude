@@ -2,22 +2,28 @@
 name: moku-system
 description: >
   Moku System patterns: the isomorphic system API (@moku-labs/system) — a standalone @moku-labs/core
-  framework that gives one app the same store, notify, clipboard, tray and deep-link API in a browser and
-  in a Tauri 2 shell. A Tauri provider is picked when the shell is detected, a web provider otherwise, and
+  framework that gives one app the same store, notify, clipboard, tray, deep-link, lifecycle, back, haptics
+  and keep-awake API in a browser and in a Tauri 2 shell. A Tauri provider is picked when the shell is detected, a web provider otherwise, and
   every method returns a typed SystemResult instead of throwing. Triggers on: "moku system",
   "@moku-labs/system", "moku store / notify / clipboard / tray / deep-link", "storePlugin", "notifyPlugin",
-  "deepLinkPlugin", "SystemResult", "ctx.runtime", "tauri provider moku", "isomorphic system API",
+  "deepLinkPlugin", "lifecyclePlugin", "backPlugin", "hapticsPlugin", "keepAwakePlugin",
+  "moku pause / resume / android back / haptics / keep screen on", "SystemResult", "ctx.runtime", "tauri provider moku", "isomorphic system API",
   "persistent storage or notifications in a Moku app that runs on web and in Tauri".
 ---
 
 # Moku System Patterns
 
-> **Synced to `@moku-labs/system@0.2.1`** (npm `dist-tags.latest`; catalog from the `v0.2.1` tag source +
-> the root and per-plugin READMEs). Full surface — the 6 plugins (1 core + 5 opt-in capabilities), the six
+> **Synced to `@moku-labs/system@0.3.1`** (npm `dist-tags.latest`; catalog from the `v0.3.1` tag source +
+> the root and per-plugin READMEs). Full surface — the 10 plugins (1 core + 9 opt-in capabilities), the ten
 > entry points, config, the provider seam, `SystemResult`, events, native permissions and the dependency
 > graph — is in [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework
 > registry (`frameworks[system]`): load the `moku:moku-core` skill with the Skill tool and read
 > `references/moku-frameworks.md` under the base directory it prints.
+>
+> **New in 0.3.0:** `lifecycle`, `back`, `haptics`, `keepAwake` capabilities, each on its own subpath. The
+> `@tauri-apps/api` peer floor is `^2.12.0`. **New in 0.3.1 (packaging only):** `@moku-labs/core` +
+> `@moku-labs/common` moved from bundled pins to `peerDependencies` (`^1.7.1` / `^0.3.4`). Bun and npm
+> install peers automatically, so an app still declares neither.
 
 ## Current Project State
 !`test -f package.json && grep -E '"@moku-labs/system"' package.json 2>/dev/null || true`
@@ -25,17 +31,19 @@ description: >
 ## What it is
 
 `@moku-labs/system` is a **standalone Moku framework on `@moku-labs/core`**. It is the seam between app
-code and the shell the app runs in. It ships five opt-in capability plugins — `store`, `notify`,
-`clipboard`, `tray`, `deepLink` — and one core plugin, `runtime`.
+code and the shell the app runs in. It ships nine opt-in capability plugins — `store`, `notify`,
+`clipboard`, `tray`, `deepLink`, `lifecycle`, `back`, `haptics`, `keepAwake` — and one core plugin, `runtime`.
 
 - **Provider choice.** `runtime` detects the shell once, synchronously, when the app is created:
   `kind: "tauri"` when `globalThis.isTauri === true` or `__TAURI_INTERNALS__` is on `globalThis`, else
   `"web"`. `platform` comes from the user agent (`"unknown"` under SSR). The result is `ctx.runtime`.
 - **In a browser:** `store` uses IndexedDB (`idb-keyval`), `notify` the Web Notification API, `clipboard`
-  `navigator.clipboard`, `deepLink` reads a `?deeplink=` / `#deeplink=` page parameter, `tray` answers
-  `unsupported`.
+  `navigator.clipboard`, `deepLink` reads a `?deeplink=` / `#deeplink=` page parameter, `lifecycle`
+  `visibilitychange`, `haptics` `navigator.vibrate`, `keepAwake` `navigator.wakeLock`. `tray` and `back`
+  answer `unsupported`.
 - **In a Tauri shell:** each capability dynamically imports its `@tauri-apps/*` package. `tray` works only
-  on `macos` / `windows` / `linux`.
+  on `macos` / `windows` / `linux`, `back` only on `android`, `haptics` only on `ios` / `android`.
+  `keepAwake` uses `navigator.wakeLock` in the webview, with no Tauri package.
 - **Resolution** starts at `app.start()`, fire-and-forget. A failed load never throws at startup. It
   becomes the next call's `SystemResult` with `reason: "unavailable"`.
 
@@ -45,9 +53,9 @@ It is not a UI framework and not a Tauri wrapper. Packaging the shell is the job
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | `@moku-labs/system` — its own `@moku-labs/core` framework; root entry `.` + five capability subpaths (`./store`, `./tray`, `./notify`, `./clipboard`, `./deep-link`) |
-| Built on | `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` (**bundled**, exact pins — supply the kernel + `ctx.log` / `ctx.env`) + `idb-keyval@6.3.0` (web store provider) |
-| Optional peers | `@tauri-apps/plugin-store@^2.4.0` (store), `@tauri-apps/plugin-notification@^2.3.0` (notify), `@tauri-apps/plugin-clipboard-manager@^2.3.0` (clipboard), `@tauri-apps/plugin-deep-link@^2.4.0` (deepLink), `@tauri-apps/api@^2.11.0` (tray). Needed **only** for the native shell build, one per composed capability |
+| Framework | `@moku-labs/system` — its own `@moku-labs/core` framework; root entry `.` + nine capability subpaths (`./store`, `./tray`, `./notify`, `./clipboard`, `./deep-link`, `./lifecycle`, `./back`, `./haptics`, `./keep-awake`) |
+| Built on | `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` (**peer** deps since 0.3.1, auto-installed by bun — supply the kernel + `ctx.log` / `ctx.env`) + `idb-keyval@6.3.0` (bundled, web store provider) |
+| Optional peers | `@tauri-apps/plugin-store@^2.4.0` (store), `@tauri-apps/plugin-notification@^2.3.0` (notify), `@tauri-apps/plugin-clipboard-manager@^2.3.0` (clipboard), `@tauri-apps/plugin-deep-link@^2.4.0` (deepLink), `@tauri-apps/plugin-haptics@^2.4.0` (haptics), `@tauri-apps/api@^2.12.0` (tray, lifecycle, back). Needed **only** for the native shell build, one per composed capability. `keepAwake` needs none |
 | Package manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
 | Engines | node ≥24, bun ≥1.3.14 |
 
@@ -67,7 +75,8 @@ the `moku-idioms.md` rubric — load the `moku:moku-core` skill with the Skill t
   a plugin reads `ctx.runtime`.
 - **Native permissions.** `@moku-labs/native` generates the Tauri capability file, Cargo dependencies and
   plugin registrations from its `config.system` list. That list uses Tauri plugin names: `store`,
-  `notification`, `clipboard-manager`, `tray`, `deep-link`. Keep it in step with the composed plugins.
+  `notification`, `clipboard-manager`, `tray`, `deep-link`, `back`, `haptics` (the last two need native
+  0.3.0+). `lifecycle` and `keepAwake` have no entry. Keep it in step with the composed plugins.
 - **Web bundling.** The bundler must resolve `@tauri-apps/*` even for a web build. Install the peers or
   mark them external (`external: ["@tauri-apps/*"]` in Bun, `/^@tauri-apps\//` in Rollup).
 
@@ -83,7 +92,7 @@ the `moku-idioms.md` rubric — load the `moku:moku-core` skill with the Skill t
 - Do not expect `notify.show()` to prompt. Call `requestPermission()` yourself, from a user gesture.
 - Do not expect stored data to move between providers. The Tauri store file and IndexedDB are separate.
 
-## Framework API (@moku-labs/system v0.2.1)
+## Framework API (@moku-labs/system v0.3.1)
 
 ```ts
 import { createApp } from "@moku-labs/system";
@@ -125,11 +134,22 @@ if (!shown.ok && shown.reason === "unsupported") {
   `onOpen(cb)` → unsubscribe. Config `{ schemes }`, default `[]` = accept all. The **only event** in the
   framework: `deepLink:open` `{ url }`, visible to plugins that declare `depends: [deepLinkPlugin]`. Web
   has no push deliveries.
+- **`lifecyclePlugin`** → `app.lifecycle`: `onPause(fn)`, `onResume(fn)` → unsubscribe. Local, synchronous,
+  allowed before `start()`. Web: `visibilitychange`. Tauri adds `tauri://suspended` / `tauri://resumed`,
+  deduped to one pause and one resume per trip. No config, no events.
+- **`backPlugin`** → `app.back`: `onPress(fn: () => boolean)` → unsubscribe, `exit()`. Tauri Android only;
+  elsewhere handlers never run and `exit()` → `"unsupported"`. Newest handler first, `true` takes the press;
+  no taker replays `history.back()` or `exit(0)`. The native listener exists only while handlers exist.
+- **`hapticsPlugin`** → `app.haptics`: `impact("light" | "medium" | "heavy")`,
+  `notify("success" | "warning" | "error")`, `selection()`. Tauri iOS / Android, or `navigator.vibrate` on
+  web. iOS Safari and Tauri desktop → `"unsupported"`; web before a user gesture → `"unavailable"`.
+- **`keepAwakePlugin`** → `app.keepAwake` (subpath `/keep-awake`): `set(on)`. `navigator.wakeLock` on both
+  kinds; `set(true)` is a wish, re-acquired when the page is visible again. `NotAllowedError` → `"denied"`.
 - **`runtime`** (core, always present) → `ctx.runtime.kind` / `.platform`. Override in tests with a
   **hoisted** `pluginConfigs` object holding `runtime: { forceKind, forcePlatform }`; it is not a typed key.
 - No capability declares `depends`. `app.stop()` awaits in-flight resolution (at most 5000 ms) and
-  disposes providers. After it, the Tauri providers of `store`, `tray` and `deepLink` answer
-  `unavailable`, `"app stopped"`.
+  disposes providers. After it, the Tauri providers of `store`, `tray` and `deepLink`, plus `back.exit()`
+  and `keepAwake.set(true)`, answer `unavailable`, `"app stopped"`. No `lifecycle` subscriber runs after it.
 
-Full catalog (6 plugins, entry points, every API/config/event, provider seam, native permissions,
+Full catalog (10 plugins, entry points, every API/config/event, provider seam, native permissions,
 dependency graph): **[`references/plugin-index.md`](references/plugin-index.md)**.

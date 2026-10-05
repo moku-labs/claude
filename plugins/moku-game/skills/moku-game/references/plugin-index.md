@@ -1,12 +1,13 @@
 # @moku-labs/game — Plugin & Property Index
 
-**Synced version:** `0.4.2` (catalog from the repo at `main` after PRs #19, #20 and #21, equal to npm `0.4.2`:
-`llms.txt`, `docs/plugins.md`, `docs/events.md`, `docs/configuration.md`, `docs/doors.md`, `docs/jsx.md`,
-`src/plugins/*/README.md`). Built on `@moku-labs/core@1.7.0` +
-`@moku-labs/common@0.3.3` (regular deps). `pixi.js ^8.0.0` is a **peer** dependency; `playwright-core` and
-`sharp` are optional peers. Engines node ≥24, bun ≥1.3.14. ESM only.
+**Synced version:** `0.4.3` (catalog from the `v0.4.3` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
+`docs/configuration.md`, `docs/doors.md`, `docs/jsx.md`, `src/plugins/*/README.md`). 0.4.3 changes no API:
+`@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4` moved from regular deps to **peer** dependencies
+(Bun installs them on `bun add`). `pixi.js ^8.0.0` is a **peer** dependency; `playwright-core` and `sharp`
+are optional peers. Engines node ≥24, bun ≥1.3.14. ESM only.
 
-The second half indexes **`@moku-labs/editor@0.0.2`** (peer `@moku-labs/game >= 0.0.2`).
+The second half indexes **`@moku-labs/editor@0.2.1`** (peer `@moku-labs/game >= 0.0.2`, works with game
+0.1.x and 0.4.x).
 
 > The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). It matches the
 > installed version.
@@ -262,7 +263,7 @@ createApp({ config: { orientation: "portrait", referenceSide: 1080, referenceLon
 | `reducedMotion` | `game.reducedMotion` | `{ on }` | cosmetic | `anim.setReducedMotion` |
 
 The catalogue is data shaped for MCP tools (each descriptor is `{ id, title, input, … }`); an editor or
-an MCP layer lists `Object.values(sources)` and `Object.values(commands)`. No MCP server ships in 0.4.2.
+an MCP layer lists `Object.values(sources)` and `Object.values(commands)`. No MCP server ships in game 0.4.3 or editor 0.2.1.
 
 `run(app, command, input?)` resolves `{ value, state: { path, frame, tainted } }`. Input schema kinds:
 `"string"`, `"number"`, `"boolean"`, `"json"`, with a trailing `?` for optional. A game's own ids are
@@ -270,55 +271,71 @@ camelCase words joined by dots, at least two (`dice.rolls`).
 
 ---
 
+
 # @moku-labs/editor — Plugin Index
 
-**Synced version:** `0.0.2`. Three Moku cores in one package. Deps `@moku-labs/core@1.7.0`,
-`@moku-labs/common@0.3.3`, `preact`, `elkjs`. Bin `moku-editor <game-html> [--port 3000] [--root .]`
-(Bun only). The tools page ships prebuilt in `dist/tools/`.
+**Synced version:** `0.2.1` (catalog from the `v0.2.1` tag: `llms.txt`, `llms-full.txt`, `README.md`,
+`src/plugins/*/README.md`). Three Moku cores in one package. Peers `@moku-labs/core ^1.7.1`,
+`@moku-labs/common ^0.3.4`, `@moku-labs/game >= 0.0.2`; deps `preact`, `elkjs`. Bin
+`moku-editor <game-html> [--port 3000] [--root .] [--no-hmr] [--help]` (Bun only). The tools page ships
+prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-full.txt` since 0.1.0.
 
-> Editor 0.0.2 predates game 0.4.x. Two paths break: `gameView` calibrates from `game.rect` (gone, now
-> `game.locate`), so the element picker fails; `capture` expects `game.capture` to answer a string (now
-> `{ png }`), so `editor.capture`, `editor.series`, Shot and Series fail. The rest works.
+**Works with game 0.1.x and 0.4.x.** Element rects come from `game.locate { key }`, else `game.rect`.
+`game.capture` may answer a data URL (0.1) or `{ png, legend? }` (0.4); `editor.capture`, `editor.series`,
+Shot and Series take both. No game release has `game.mute` yet, so the Sound switch is dimmed.
+
+**Breaking since 0.0.2** (pre-1.0): Notes are gone (`flowView.notes`, the gameView `attach` api, the
+`notesDir` options, the event `workspace:new-note`). Game is the default workspace; ⌘1–⌘6 are Game, Flow,
+Render, State, Files, Console. The bin serves with Bun hot reload on. A pick copies one reference line;
+the full block moves to a card file. `capturesDir` must be `.moku/captures` or a folder under it. The
+Game toolbar lost its Overlay switch (the top bar has it). The default device is the iPhone 18 Pro;
+`DeviceSpec` gains `frame`.
 
 | Entry | Core | Runtime | Default plugins | Opt-in |
 |---|---|---|---|---|
 | `@moku-labs/editor/agent` | `editor-agent` | game page, or headless Bun | `registry`, `channel`, `overlay` | `bridgePlugin`, `capturePlugin` |
 | `@moku-labs/editor/server` | `editor-server` | Bun | `files`, `hub`, `pages` | — |
 | `@moku-labs/editor/tools` | `editor-tools` | tools page | `link`, `workspace`, `panels`, `flowView`, `gameView`, `renderView`, `stateView`, `filesView`, `consoleView` | — |
-| `@moku-labs/editor` | — | anywhere | Runtime-free: wire protocol and `definePanel` | — |
+| `@moku-labs/editor` | — | anywhere | Runtime-free: wire protocol, `definePanel`, `errorCode` (`notInstalled` = -32008) | — |
 
 | Plugin | Core | Tier | Purpose | Key API |
 |---|---|---|---|---|
-| `registry` | agent | Complex | Wraps doors, `.dev` modules and `editor.*` commands into entries; builds the `Manifest` | `manifest`, `source`, `command`, `add`, `envelope`, `clock` |
-| `channel` | agent | Standard | In-process `EditorChannel`, heartbeat | `read`, `watch`, `run`, `status`, `heartbeat`, `onHeartbeat` |
+| `registry` | agent | Complex | Wraps doors, `.dev` modules and `editor.*` commands into entries; builds the `Manifest`; probes every door source once at start. A source that throws is listed `available: false` with a `reason`, and its reads answer -32008 `not_installed` | `manifest`, `source`, `command`, `add`, `envelope`, `clock` |
+| `channel` | agent | Standard | In-process `EditorChannel`, heartbeat `{ frame, paused, at, heap? }` | `read`, `watch`, `run`, `status`, `heartbeat`, `onHeartbeat` |
 | `overlay` | agent | Standard | Preact card over the game; off by default; command `editor.overlay` | `open`, `close`, `isOpen` |
-| `bridge` | agent, opt-in | Complex | Websocket to the hub: hello, requests, throttled values, backoff | `status`, `session` |
+| `bridge` | agent, opt-in | Complex | Websocket to the hub: hello, requests, throttled values, taps, backoff; keeps a `game.bookmark` in `sessionStorage` across Bun's reload | `status`, `session` |
 | `capture` | agent, opt-in | Standard | `editor.capture` → `{ image, frame, device }`, `editor.series({ durationMs, intervalMs })`, `editor.seriesStop`. Never captures on its own | — |
-| `files` | server | Standard | Project-root sandbox: allow/deny globs, atomic write with sha1 version, binary captures under `.moku/captures/` | `list`, `read`, `write`, `writeBinary`, `readBinary`, `resolve`, `root` |
-| `hub` | server | Complex | Websocket switchboard: guard (Host, Origin, token), sessions `s-xxxx`, routing, backpressure; wraps `Bun.serve` | `serve`, `token`, `sessions`, `fetch`, `websocket`, `addRoutes`, `guard`, `path` |
-| `pages` | server | Standard | Serves the prebuilt tools page, boot JSON, `/hello`; home of the bin | `routes` |
-| `link` | tools | Complex | The one connection: boot JSON, socket, session choice, remote channel, files client | `read`, `watch`, `run`, `status`, `manifest`, `onManifest`, `sessions`, `choose`, `retry`, `boot`, `files` |
-| `workspace` | tools | Complex | Shell: top bar, rail, palette, toasts, keys, prefs, the one game iframe (`data-game-frame`), reload with restore | `show`, `gameFrame`, `palette`, `toast`, `keys`, `mount`, `host`, `device`, `setOverlayInGame` |
+| `files` | server | Standard | Project-root sandbox: allow/deny globs, atomic write with sha1 version, image captures under `.moku/captures/` | `list`, `read`, `write`, `writeBinary`, `readBinary`, `resolve`, `root` |
+| `hub` | server | Complex | Websocket switchboard: guard (Host, Origin, token), sessions `s-xxxx`, routing, backpressure, the `hotReload` notification; wraps `Bun.serve` | `serve`, `token`, `sessions`, `fetch`, `websocket`, `addRoutes`, `guard`, `publish`, `path` |
+| `pages` | server | Standard | Serves the prebuilt tools page, boot JSON, `/hello`, `/hmr`; home of the bin | `routes`, `attachServer`, `hotReload`, `setHotReload` |
+| `link` | tools | Complex | The one connection: boot JSON, socket, session choice, remote channel, files client, taps, heap, hot reload state. A -32008 watch is neither logged nor retried | `read`, `watch`, `run`, `status`, `manifest`, `onManifest`, `sessions`, `choose`, `retry`, `boot`, `files`, `onTap`, `heap`, `hotReload`, `setHotReload` |
+| `workspace` | tools | Complex | Shell: top bar (compact with a ⋯ menu below 900 px), rail (Game first), palette, toasts, keys, prefs (theme, density, device, sound), 21 device presets, the one game iframe (`data-game-frame`), Reference mode, D-07 reload and Bun hot reload | `show`, `density`, `setDensity`, `reference`, `setReference`, `device`, `setDevice`, `devices`, `gameFrame`, `palette`, `toast`, `keys`, `mount`, `host`, `badge`, `setOverlayInGame`, `muted`, `setMuted`, `hotReload`, `setHotReload` |
 | `panels` | tools | Standard | Panel host for `definePanel` specs | `register`, `run`, `list`, `mountInto` |
-| `flowView` | tools | VeryComplex | Flow graph canvas with ELK, focus, trail, notes, code and style inspector | `camera`, `focus`, `flows`, `layout`, `notes` |
-| `gameView` | tools | Complex | Device stage, element picker, style card, screenshots, series, contact sheet | `pick`, `inspect`, `scene`, `locate`, `highlight`, `capture`, `series`, `stopSeries`, `openSheet`, `attach` |
-| `renderView` | tools | Standard | Metric tiles, render tree, textures, bundles, pools | `refresh`, `snapshot`, `reveal`, `highlight`, `sortTextures`, `filterBundle` |
-| `stateView` | tools | Standard | Player and session trees, last commit by diffing `game.model` | `lastCommit`, `note`, `onCommit`, `tainted`, `expandAll` |
-| `filesView` | tools | Complex | Tree, tabs, viewer, in-place editor, conflict bar | `open`, `save`, `resolveConflict`, `fileOf`, `usedBy`, `editorUrl` |
+| `flowView` | tools | VeryComplex | Flow graph canvas with ELK, focus, trail, code and style inspector | `camera`, `focus`, `flows`, `layout` |
+| `gameView` | tools | Complex | Device stage, Sound switch, element picker, style card, Code section, Reference proxies, the pick for the chat (bookmark, two PNGs, a card file, one line), screenshots, series, capture card, contact sheet | `pick`, `inspect`, `scene`, `locate`, `highlight`, `capture`, `series`, `stopSeries`, `openSheet`, `copyReference`, `fold`, `bookmarks` |
+| `renderView` | tools | Standard | Metric tiles (JS heap in Chromium, "Effects not installed in this game"), render tree, textures, bundles, pools | `refresh`, `snapshot`, `reveal`, `highlight`, `sortTextures`, `filterBundle` |
+| `stateView` | tools | Standard | Player and session trees, last commit by diffing `game.model` | `lastCommit`, `note`, `onCommit`, `tainted`, `graph`, `expandAll` |
+| `filesView` | tools | Complex | Tree, tabs, viewer, in-place editor, conflict bar, Used by | `open`, `save`, `resolveConflict`, `fileOf`, `usedBy`, `editorUrl` |
 | `consoleView` | tools | Standard | `game.log` as a table, filters, Preserve log | `lines`, `visible`, `counts`, `setFilter`, `clear`, `focusFrame` |
 
 Agent config: `registry { game (required), modules: [], name }`, `channel { heartbeatMs: 1000 }`,
 `overlay { open: false, corner: "top-right", mount }`, `bridge { hello: "/__editor/hello", retryMs: 1000,
 callTimeoutMs: 5000 }`, `capture { maxDurationMs: 20000, minIntervalMs: 16 }`.
-Server config: `files { root: ".", allow, deny }`, `hub { path: "/__editor", allow: [], callTimeoutMs,
-silentAfterMs }`, `pages { title, editorUrl: "vscode://file/{path}:{line}", pageDir, gameUrl: "/" }`.
-Tools config highlights: `workspace { defaultWorkspace: "flow" }`, `gameView { capturesDir: ".moku/captures",
-notesDir: ".moku/notes", manifestPaths: ["manifest.json", "public/manifest.json", "web/manifest.json"] }`.
+Server config: `files { root: ".", allow, deny }`, `hub { path: "/__editor", allow: [], callTimeoutMs: 5000,
+silentAfterMs: 6000 }`, `pages { title, editorUrl: "vscode://file/{path}:{line}", pageDir, gameUrl: "/" }`.
+Tools config highlights: `workspace { defaultWorkspace: "game", reloadTimeoutMs: 15000, hotReloadWaitMs: 1500 }`,
+`gameView { capturesDir: ".moku/captures", manifestPaths: ["manifest.json", "public/manifest.json",
+"web/manifest.json"] }`, `filesView { reloadExtensions: [".ts", ".tsx", ".css", ".json"] }`.
 
 Events: agent `bridge:status`; server `hub:session`, `files:written`; tools `link:status`,
-`workspace:changed`, `workspace:ran`, `workspace:open-file`, `workspace:select-node`, `workspace:focus-frame`,
-`workspace:new-note`, `workspace:reveal`, `workspace:inspect`, `workspace:open-sheet`. `LinkStatus` is
-`connecting · live { frame } · paused { frame } · silent · lost · empty`.
+`workspace:changed`, `workspace:ran`, `workspace:density`, `workspace:reference`, `workspace:open-file`,
+`workspace:select-node`, `workspace:focus-frame`, `workspace:reveal`, `workspace:inspect`,
+`workspace:open-sheet`. `LinkStatus` is `connecting · live { frame } · paused { frame } · silent · lost ·
+empty`.
 
-Wire: JSON-RPC 2.0 over `{path}/ws?token=<t>&kind=agent|tools`; error codes -32600 … -32007, every message
+Wire: JSON-RPC 2.0 over `{path}/ws?token=<t>&kind=agent|tools`; error codes -32600 … -32008, every message
 starts with `[moku-editor] `.
+
+**Production builds.** Import the agent only inside `if (__MOKU_GAME_DEV__) { await import("@moku-labs/editor/agent") }`.
+The package is `"sideEffects": false` and the agent core and plugins are `/* @__PURE__ */`, so a build with
+the flag `false` keeps 0 B of editor code. No MCP server ships in 0.2.1.

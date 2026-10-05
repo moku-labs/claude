@@ -63,7 +63,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "2.3.3",
+      "knownVersion": "2.4.4",
       "pack": "moku-web",
       "skill": "plugins/moku-web/skills/moku-web",
       "pluginIndex": "plugins/moku-web/skills/moku-web/references/plugin-index.md",
@@ -86,7 +86,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.20.2",
+      "knownVersion": "0.20.3",
       "pack": "moku-worker",
       "skill": "plugins/moku-worker/skills/moku-worker",
       "pluginIndex": "plugins/moku-worker/skills/moku-worker/references/plugin-index.md",
@@ -109,7 +109,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../room",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.8.2",
+      "knownVersion": "0.8.3",
       "pack": "moku-room",
       "skill": "plugins/moku-room/skills/moku-room",
       "pluginIndex": "plugins/moku-room/skills/moku-room/references/plugin-index.md",
@@ -132,7 +132,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../common",
       "layer": 2,
       "role": "shared-infra",
-      "knownVersion": "0.3.3",
+      "knownVersion": "0.3.4",
       "pack": "moku-common",
       "skill": "plugins/moku-common/skills/moku-common",
       "pluginIndex": "plugins/moku-common/skills/moku-common/references/plugin-index.md",
@@ -154,7 +154,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../native",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.2.2",
+      "knownVersion": "0.3.2",
       "pack": "moku-native",
       "skill": "plugins/moku-native/skills/moku-native",
       "pluginIndex": "plugins/moku-native/skills/moku-native/references/plugin-index.md",
@@ -177,7 +177,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../system",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.2.1",
+      "knownVersion": "0.3.1",
       "pack": "moku-system",
       "skill": "plugins/moku-system/skills/moku-system",
       "pluginIndex": "plugins/moku-system/skills/moku-system/references/plugin-index.md",
@@ -200,7 +200,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../game",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.4.2",
+      "knownVersion": "0.4.3",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -223,7 +223,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../editor",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.0.2",
+      "knownVersion": "0.2.1",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -246,7 +246,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../ai",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.14.1",
+      "knownVersion": "0.14.2",
       "pack": "moku-ai",
       "skill": "plugins/moku-ai/skills/moku-ai",
       "pluginIndex": "plugins/moku-ai/skills/moku-ai/references/plugin-index.md",
@@ -265,6 +265,34 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
   ]
 }
 ```
+
+> **Family sync 2026-10-04: core and common became peer dependencies.** Every family package released on
+> 2026-10-04 (web 2.4.4, worker 0.20.3, room 0.8.3, native 0.3.2, system 0.3.1, ai 0.14.2, common 0.3.4) moved
+> `@moku-labs/core` and `@moku-labs/common` from exact `dependencies` to `peerDependencies` `^1.7.1` / `^0.3.4`
+> (dev-pinned 1.7.1 / 0.3.4). Bun and npm 7+ install peers by themselves, so a consumer app still declares
+> neither (I1 holds). Order: core 1.7.1 and common 0.3.4 must be reachable before any of these bumps; an app
+> that holds an older core through another package gets a peer conflict. No API break in any of them.
+> - **web 2.3.3 → 2.4.4:** `build.env?: readonly string[]` (2.4.0, env names become `define` constants),
+>   one programmatic navigate under the Navigation API and abort by a later one (2.4.1, 2.4.2),
+>   `NavigateOptions.replace` (2.4.3), peers (2.4.4).
+> - **worker 0.20.2 → 0.20.3, room 0.8.2 → 0.8.3:** packaging only. room's optional `@moku-labs/worker`
+>   peer widened to `>=0.15.0 <1.0.0`.
+> - **common 0.3.3 → 0.3.4:** `createBrandPrompts` shares one readline, piped answers feed every prompt.
+> - **native 0.2.2 → 0.3.2:** `app.orientation`, `app.backgroundColor`, capabilities `back` and `haptics`,
+>   type `Orientation`; first iOS and Android builds fixed; Cargo `tauri 2.12`.
+> - **system 0.2.1 → 0.3.1:** four opt-in plugins `lifecyclePlugin`, `backPlugin`, `hapticsPlugin`,
+>   `keepAwakePlugin` on their own subpaths; `@tauri-apps/api` peer floor `^2.12.0`, new optional
+>   `@tauri-apps/plugin-haptics@^2.4.0`.
+> - **ai 0.14.1 → 0.14.2:** peers only; `pluginConfigs.limits` is typed, no cast.
+> - **game 0.4.2 → 0.4.3:** peers only (`pixi.js ^8` stays a peer).
+> - **editor 0.0.2 → 0.2.1:** works with game 0.1.x and 0.4.x (`game.locate` with a `game.rect` fallback,
+>   `game.capture` `{ png }`); opt-in sources answer not installed (-32008); the agent tree-shakes out of a
+>   production build behind a dev-only dynamic import; Reference mode, pick card `.md`, Copy reference;
+>   Bun hot reload with state kept (`--no-hmr` to turn it off); 21 device presets; Sound switch waiting for a
+>   `game.mute` door. Breaking: Notes removed (`flowView.notes`, `notesDir`, `workspace:new-note`), Game is
+>   the default workspace, `capturesDir` must sit under `.moku/captures`. Ships `llms.txt`. No MCP server yet.
+> Upstream `llms*.txt` and READMEs of web, room, native, system and ai still describe bundled core/common;
+> the source wins.
 
 > **Provenance of the `core` entry (latest sync 2026-10-04):** `@moku-labs/core@1.7.1` (npm `dist-tags.latest`).
 > `1.7.0 → 1.7.1`: `createApp` `pluginConfigs` accepts core-plugin keys such as `limits` (#29, closes #28), no

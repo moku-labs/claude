@@ -13,7 +13,7 @@ description: >
 
 # Moku Native Patterns
 
-> **Synced to `@moku-labs/native@0.2.2`** (npm `dist-tags.latest`; catalog from the `v0.2.2` tag source).
+> **Synced to `@moku-labs/native@0.3.2`** (npm `dist-tags.latest`; catalog from the `v0.3.2` tag source).
 > Full surface — the 5 plugins, every API method, the global config, the 3 events, the build pipeline,
 > the capability registry and the dependency graph — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -40,8 +40,8 @@ codegens the packaging surface from them.
 | Layer | Technology |
 |-------|-----------|
 | Framework | `@moku-labs/native` — its own `@moku-labs/core` framework (you `createApp` from it). One entry point (`.`), ESM + CJS |
-| Built on | `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2` (exact pins, regular dependencies — supply the kernel + `ctx.log` / `ctx.env` + the branded CLI kit) |
-| Native shell | `@tauri-apps/cli@^2` (regular dependency, installed transitively). No peer dependencies |
+| Built on | `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` — **peer dependencies** since 0.3.2 (were exact-pinned regular deps). They supply the kernel + `ctx.log` / `ctx.env` + the branded CLI kit. Install them beside `@moku-labs/native` |
+| Native shell | `@tauri-apps/cli@^2` (regular dependency, installed transitively). Generated `Cargo.toml` pins `tauri = "2.12"` |
 | Runtime | **Node-only.** Scripts run under Bun, but `@tauri-apps/cli` cannot run under Bun: a real `node` binary on `PATH` is a hard prerequisite (`doctor` checks it) |
 | Toolchains | Rust + per-target SDKs (Xcode, `xcodegen`, CocoaPods, Android SDK/NDK/JDK) only for the targets you build |
 | Package manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
@@ -78,7 +78,7 @@ What NOT to do:
 - Mobile is opt-in. The default `targets` is the host's one desktop target. Name `ios` / `android`
   explicitly.
 
-## Framework API (@moku-labs/native v0.2.2)
+## Framework API (@moku-labs/native v0.3.2)
 
 All five plugins are **framework defaults** — already wired. An app passes `config` and nothing else in the
 common case. `createApp` also accepts `plugins`, `pluginConfigs` and `onReady` / `onError` / `onStart` /
@@ -91,7 +91,11 @@ import { systemPlugins } from "./system"; // [{ name: "store" }, { name: "deep-l
 
 export const native = createApp({
   config: {
-    app: { name: "MyApp", identifier: "com.example.myapp", icon: "assets/icon.png" },
+    app: {
+      name: "MyApp", identifier: "com.example.myapp", icon: "assets/icon.png",
+      orientation: "portrait",   // build-time mobile lock: "portrait" | "landscape" | "any"
+      backgroundColor: "#10161d", // window colour; Android status bar icons follow it
+    },
     web: { build: "bun run build", devCommand: "bun run dev", devUrl: "http://localhost:5173", dist: "dist" },
     system: systemPlugins,
     capabilities: { "deep-link": { mode: "scheme", scheme: "myapp" } },
@@ -117,7 +121,10 @@ await native.stop();
 - **`projectPlugin`** → `app.project`: `generate`, `getCompleteness`, `patchMobile`, `clean`,
   `clearMobileBuildOutput`, `ensureIconSource`, `getBundleLayout`, `resolveDerivedPath`, `resolve`,
   `isKnownCapability`, `getRegistryRows`, `getRequiredFiles`. Owns the generated tree **as files; never
-  spawns**. `onInit` validates the global config at `createApp` time.
+  spawns**. `onInit` validates the global config at `createApp` time, including `app.backgroundColor`
+  (`#rrggbb` / `#rrggbbaa`) and `app.orientation`. `patchMobile` is the idempotent post-init pass: Android
+  gets release signing, the main-activity `android:screenOrientation`, the `MainActivity.kt` status-bar
+  style and the `BuildTask.kt` runner rewrite. iOS gets the Xcode entitlements setting and the runner rewrite.
 - **`tauriPlugin`** → `app.tauri`: `icon`, `build`, `mobileInit`, `dev`, `getVersion`, `getRunner`.
   ⚠️ **The only plugin that spawns `@tauri-apps/cli`** (explicit PATH-walked `node` + resolved `tauri.js`).
   Every output line is **secret-scrubbed** before it reaches a log, a callback or an error. One-shot verbs
@@ -128,10 +135,17 @@ await native.stop();
   **`doctor:check`**. Signing checks read env-var **presence and counts, never values**.
 - **Events (3):** global `native:phase`, `native:complete` (hookable without a `depends` edge) and the
   per-plugin `doctor:check` (needs `depends: [doctorPlugin]`).
-- **Capability registry (5 rows):** `store`, `notification`, `clipboard-manager`, `tray`, `deep-link`. An
-  unknown `config.system` name throws at `createApp`. `deep-link` requires
+- **Capability registry (7 rows):** `store`, `notification`, `clipboard-manager`, `tray`, `deep-link`,
+  `back`, `haptics`. An unknown `config.system` name throws at `createApp`. `deep-link` requires
   `capabilities["deep-link"] = { mode: "scheme", scheme }`. `tray` is a cargo feature and is desktop-only.
-- **Other exports:** `createPlugin`, `hostTargets`, `TARGETS`, `PHASE_ORDER`, `TauriError`, and type-only
+  `back` is Android-only core permission `core:app:allow-exit`. `haptics` is `tauri-plugin-haptics`, iOS and
+  Android only.
+- **Mobile presentation (since 0.3.0):** `app.orientation` writes the iOS `Info.ios.plist` orientation keys
+  and the Android `android:screenOrientation`. There is no runtime lock. On iOS the generated `lib.rs`
+  sets the WKWebView scroll view's content-inset adjustment to `.never`, so the page gets the full screen
+  (tauri-apps/tauri#8166). `app.backgroundColor` → `app.windows[0].backgroundColor`.
+- **Other exports:** `createPlugin`, `hostTargets`, `TARGETS`, `PHASE_ORDER`, `TauriError`, the `Orientation`
+  type, and type-only
   namespaces `Project`, `Tauri`, `Build`, `Doctor`, `Cli` (for example `Build.BuildResult`, `Tauri.DevHandle`).
 
 Full catalog (5 plugins, every API/config/event, pipeline phases, capability registry, targets, dependency

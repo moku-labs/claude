@@ -13,7 +13,7 @@ description: >
 
 # Moku Common Patterns
 
-> **Synced to `@moku-labs/common@0.3.3`** (npm `dist-tags.latest`; catalog from the `v0.3.3` tag source +
+> **Synced to `@moku-labs/common@0.3.4`** (npm `dist-tags.latest`; catalog from the `v0.3.4` tag source +
 > the root and per-plugin READMEs; upstream ships no `llms.txt`). Full surface — 2 core plugins, 5 env
 > providers, 3 entry points, every config field, API signature and CLI kit export, the data-flow diagram —
 > is in [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -45,11 +45,11 @@ for consuming it (MC1–MC3) live in the `moku:moku-common-conventions` skill; l
 
 | Layer | Technology |
 |-------|-----------|
-| Package | `@moku-labs/common@0.3.3` — `sideEffects: false`, types included, MIT |
+| Package | `@moku-labs/common@0.3.4` — `sideEffects: false`, types included, MIT |
 | `.` entry | dual ESM + CJS, **Node**: `logPlugin`, `envPlugin`, all five providers, the `Log` / `Env` type namespaces and flat plugin types |
 | `./cli` entry | dual ESM + CJS, **Node only** (reads `process.*`, uses `node:readline`): the branded CLI kit |
 | `./browser` entry | ESM only, **browser-safe**: the same `logPlugin` + `envPlugin`, `browserEnv`, the types; zero `node:*` in its static import graph (CI gate `bun run check:bundle`) |
-| Kernel | `@moku-labs/core@1.7.0` — a regular **dependency**, pinned exactly (not a peer) |
+| Kernel | `@moku-labs/core` `^1.7.1` — a **peer dependency** since 0.3.4 (was an exact `1.7.0` dependency). The framework that bundles common provides core |
 | Engines | node ≥24, bun ≥1.3.14; Bun is the package manager |
 
 ## Idiomatic shape
@@ -79,7 +79,7 @@ for consuming it (MC1–MC3) live in the `moku:moku-common-conventions` skill; l
 - Do not use `console.*` or `process.env` in plugin source. The rules and their exceptions (`// @log-sink`,
   env providers, tests) are in `moku:moku-common-conventions`.
 
-## Package API (@moku-labs/common v0.3.3)
+## Package API (@moku-labs/common v0.3.4)
 
 ```ts
 // src/config.ts of a Layer-2 framework (Node runtime)
@@ -131,7 +131,9 @@ export const { createPlugin, createCore } = coreConfig;
   frameMs = 80)`, `cursorUp`, `CLEAR_LINE`, `CLEAR_BELOW`, `visibleWidth`, `supportsColor`,
   `supportsTruecolor`. Console: `createBrandConsole(options?)` → `lockup`, `heading`, `info`, `warn`, `error`,
   `check`, `line`, `railLine`, `box`, plus `palette`, `color`, `width`. Prompts: `createBrandPrompts(options?)`
-  → `confirm(question)` → `Promise<boolean>`, `select(question, choices)` → `Promise<number>`. Sink:
+  → `confirm(question)` → `Promise<boolean>`, `select(question, choices)` → `Promise<number>`. One shared
+  `readline` per prompts object, so piped answers feed successive prompts; after input ends a prompt takes its
+  default. Sink:
   `brandedSink(minLevel = "debug")` → `LogSink`.
 - **`./browser` entry.** `logPlugin`, `envPlugin`, `browserEnv` and the types only. No Node provider, no CLI kit.
 

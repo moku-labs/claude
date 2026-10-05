@@ -11,8 +11,8 @@ description: >
 
 # Moku Room Patterns
 
-> **Synced to `@moku-labs/room@0.8.2`** (catalog from the `v0.8.2` tag source; bundles `@moku-labs/core@1.6.0`
-> + `@moku-labs/common@0.3.2`). Full surface — the 7 plugins, the client core (`.`) + the opt-in `./server`
+> **Synced to `@moku-labs/room@0.8.3`** (catalog from the `v0.8.3` tag source; peer deps `@moku-labs/core@^1.7.1`
+> + `@moku-labs/common@^0.3.4`, optional peer `@moku-labs/worker@>=0.15.0 <1.0.0`). Full surface — the 7 plugins, the client core (`.`) + the opt-in `./server`
 > tier (a **`hubPlugin` + `Hub` DO** export, **not** a core — compose into your own `@moku-labs/worker` app), the
 > three signaling adapters, config, the six events, and the dependency graph — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -31,6 +31,11 @@ authoritative host) plus up to 8 phone controllers, over **direct WebRTC DataCha
 itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, not from `@moku-labs/web` or
 `@moku-labs/core`.
 
+> **New in 0.8.3 (packaging only, no API change):** `@moku-labs/core` + `@moku-labs/common` moved from bundled
+> `dependencies` to `peerDependencies` (`^1.7.1` / `^0.3.4`). Bun and npm install peers automatically, so an app
+> still declares neither. The optional `@moku-labs/worker` peer widened to `>=0.15.0 <1.0.0`, which now admits
+> `turnPlugin` (worker ≥0.16).
+>
 > **New in 0.3.2 → 0.8.2 (no breaking change):** at-least-once intent delivery + the 6th event
 > `room:intent-undeliverable { name, cSeq }` (0.4.0); automatic sync gap heal + join-baseline retry
 > (0.3.2 / 0.5.0); `transport.iceServers` accepts a lazy provider and defaults to `"auto"`, and the hub serves
@@ -53,7 +58,7 @@ itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, not from `@mok
 | Layer | Technology |
 |-------|-----------|
 | Framework | `@moku-labs/room` — its own `@moku-labs/core` framework (you `createApp` from it); client core `.` + opt-in `./server` tier (a `hubPlugin` + `Hub` DO export — compose into your own `@moku-labs/worker` app, **not** a core) |
-| Built on | `@moku-labs/core` + `@moku-labs/common` (**bundled** deps — supply the kernel + `ctx.log`/`ctx.env`). **`@moku-labs/worker@^0.15.0` is an OPTIONAL peer** — only the `./server` tier needs it |
+| Built on | `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` (**peer** deps since 0.8.3, auto-installed by bun — supply the kernel + `ctx.log`/`ctx.env`). **`@moku-labs/worker@>=0.15.0 <1.0.0` is an OPTIONAL peer** — only the `./server` tier needs it |
 | Networking | WebRTC peer mesh (`trystero`, bundled), QR join (`qrcode`, bundled); opt-in Cloudflare Worker signaling tier (`./server` → `hubPlugin`), which since 0.8.0 also mints TURN credentials at `GET /api/ice` |
 | Package manager | Bun (pinned deps — `bunfig.toml` `exact = true`) |
 | Engines | node ≥24, bun ≥1.3.14 |
@@ -73,7 +78,7 @@ patterns underneath. Shared-screen vs phone roles, the WebRTC peer mesh, and syn
 reach them via `ctx.require(plugin)`. Keep the Cloudflare entry (`cloudflare/worker.ts`) thin: it delegates
 `fetch` to the composed worker app's `server.hub.handle`.
 
-## Framework API (@moku-labs/room v0.8.2)
+## Framework API (@moku-labs/room v0.8.3)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **client-core defaults** — already wired. An
 app adds exactly one role facade (`stagePlugin` host / `controllerPlugin` phone) + its game plugin; there are

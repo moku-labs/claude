@@ -7,10 +7,11 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `2.3.3` · **Layer:** 2 (framework) ·
-**Depends on:** `@moku-labs/core@1.6.0` (exact pin — consumers must NOT add a direct core dep; bumped
-`1.5.0 → 1.6.0` in v2.3.3) + `@moku-labs/common@0.3.2` (exact pin, bumped `0.2.1 → 0.3.2` in v2.3.3;
-**since 1.12.4** — the
+**Framework:** `@moku-labs/web` · **Synced version:** `2.4.4` · **Layer:** 2 (framework) ·
+**Depends on:** `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` as **`peerDependencies`** since
+v2.4.4 (dev-pinned upstream at core `1.7.1` / common `0.3.4`; before that bundled exact pins, core `1.6.0` /
+common `0.3.2` at v2.3.3). Bun and npm install peers automatically, so an app still declares neither and
+never imports core directly. **Since 1.12.4** the
 `log`/`env` core plugins are authored in `@moku-labs/common` and re-exported by `web`; public API
 byte-identical, so consumers use `ctx.log`/`ctx.env` and import the env providers from
 `@moku-labs/web` exactly as before) · **Peer deps (since 1.7.0):** `preact@^10.29.2` +
@@ -20,6 +21,22 @@ points:** `.` (ESM + CJS, full surface, Node SSG) and **`./browser`** (ESM-only,
 construction) · **No `bin`** — the developer CLI ships as the node-only **`cliPlugin`**
 (`app.cli.build/serve/preview/deploy`, driven by thin per-command scripts).
 
+> **What's new in 2.4.x (vs 2.3.3) — additive, no breaking API change, no new events:**
+> - **`build.env` (v2.4.0).** `env?: readonly string[]` lists environment variable names written into the
+>   client bundle. Each name becomes a `Bun.build` `define` under `process.env.<NAME>` and
+>   `import.meta.env.<NAME>`, and the whole `import.meta.env` object is set too (what `browserEnv()` reads).
+>   The value is the build process's variable, or `""` when unset. With `minify`, a branch on an unset flag
+>   is dropped with the dynamic `import()` chunk it guards. Only listed names ship. `onInit` throws
+>   `[web] build.env: must list environment variable names.` unless every entry matches `/^[A-Z_a-z]\w*$/`.
+> - **SPA programmatic navigation fixes (v2.4.1, v2.4.2).** Under the Navigation API an `app.spa.navigate` /
+>   `ctx.navigate` runs once (its own `pushState` event is ignored). A later navigation (link, back/forward,
+>   another `navigate`) now aborts a programmatic one still loading. No API change.
+> - **`NavigateOptions.replace` (v2.4.3).** `navigate(path, { scroll?, replace? })` on `app.spa`, island
+>   `ctx.navigate` and the module-level `navigate` from `./browser`. `replace: true` uses
+>   `history.replaceState`, so Back skips the page navigated from (e.g. the same page in another language).
+> - **Peer deps (v2.4.4).** `@moku-labs/core` and `@moku-labs/common` moved from `dependencies` (exact
+>   `1.6.0` / `0.3.2`) to `peerDependencies` (`^1.7.1` / `^0.3.4`). No `src/` change in 2.4.4.
+>
 > **What's new in 2.3.x (vs 2.2.2) — additive, no breaking change:**
 > - **New `collectionPlugin` — static-data collection provider (v2.3.0).** The collection-keyed sibling of
 >   the page-path-keyed `data` plugin: the Node build persists build-authored JSON shards with
@@ -94,7 +111,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 >   content-identical alias whose canonical points to bare. No config flag.
 > - **Router matcher is native RegExp (v1.4.1)** — `URLPattern` dropped, so client matching works in
 >   Safari < 18.4 / older Firefox. (`engines.node >=24` still applies.)
-> - **`@moku-labs/core` is now `1.6.0`** (exact pin since v2.3.3; was `1.5.0` at 2.0.1–2.3.2, `0.1.4` at 2.0.0, `0.1.3` through 1.12.2, `0.1.1` at 1.6.x).
+> - **`@moku-labs/core` is now a `^1.7.1` peer** (since v2.4.4; exact `1.6.0` at 2.3.3; was `1.5.0` at 2.0.1–2.3.2, `0.1.4` at 2.0.0, `0.1.3` through 1.12.2, `0.1.1` at 1.6.x).
 >   Browser-bundle CI budget is 60 kB gzip (currently ~50 kB).
 > - **v1.7.0 (fix wave, 22 PRs).** `preact` + `preact-render-to-string` moved to
 >   **peerDependencies** (the app must install them); bundle **code splitting ON** (dynamic
@@ -118,12 +135,12 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 > ⚠️ The upstream `llms.txt`/`llms-full.txt` were last re-synced at 1.8.2 (for the v1.8.0 cache
 > feature) and still describe `content` as the plain markdown pipeline — they do NOT mention the
 > v1.9.0–v1.12.0 content directives (`mermaid`/`::embed`/`::gallery`) or `cacheHeaders`/fingerprinted
-> bundle naming, and (re-verified at 2.3.3) they do NOT mention the `collection` plugin either. The
+> bundle naming, and (re-verified at 2.4.4) they do NOT mention the `collection` plugin either. The
 > upstream `src/plugins/collection/README.md` imports `collectionPlugin` from `@moku-labs/web/browser`,
-> but `src/browser.ts` at `v2.3.3` does NOT export it (only `collectionUrl` + `loadCollectionShard` +
+> but `src/browser.ts` at `v2.4.4` does NOT export it (only `collectionUrl` + `loadCollectionShard` +
 > the `Collection` types). This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v2.3.3)
+## 1. Framework API form (v2.4.4)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed
@@ -278,9 +295,9 @@ Core (log, env) load first.
 | `i18nPlugin` | regular · default | Locales + translations w/ default fallback; default locale served at BARE paths (v1.6.0) | — | — | `locales() defaultLocale() isLocale(x) localeName(l) ogLocale(l) t(locale,key)` | `locales, defaultLocale, localeNames?, ogLocaleMap?, translations?` |
 | `routerPlugin` | regular · default | Typed route DSL, RegExp matching, URL gen; routes from config ONLY (no `set()`) | site, i18n | — | `match(pathname) toUrl(name,params) entries() manifest() clientManifest() mode()` | `routes?` — the render mode is GLOBAL `config.mode` (`ssg`\|`spa`\|`hybrid`, default `hybrid`) |
 | `headPlugin` | regular · default | SEO `<head>`: title tmpl, OG, Twitter, canonical, hreflang, JSON-LD; site-level head for bare-path redirects | site, i18n, router | — | `render(resolvedRoute, data) siteHead({url, locale?})` | `titleTemplate?, defaultOgImage?, twitterCard?, twitterHandle?` |
-| `spaPlugin` | regular · default | Client runtime: island hydration + intercepted nav (HTML-over-fetch, or DATA nav when `data` composed); inert on Node | router, head | `spa:navigate`, `spa:navigated`, `spa:island-mount`, `spa:island-unmount` | `register(c) navigate(path,opts?) hardNavigate(url) current() island(name)` — `navigate` commits the address bar (`history.pushState`) since v2.1.1; `hardNavigate` (v2.2.0) does a REAL full-page load across a boundary the SPA can't swap (different layout / auth split). Island ctx also gets always-present `ctx.navigate(path,opts?)` (like `ctx.set`/`ctx.url`). Top-level exports (`./browser` + root): `createIsland(name,hooks)`, the built-in `lazyEmbed` island for `::embed` facades (register it in `islands`), `createChannel<T>(opts)` (v2.1.0 — client realtime WebSocket primitive; v2.2.2 added a `shouldReconnect?(event: CloseEvent): boolean` option — return `false` to suppress the reconnect backoff on a terminal close such as code `4401`, e.g. `shouldReconnect: (e) => e.code !== 4401`; omitted = always reconnect), and module-level `navigate(path,opts?)`/`hardNavigate(url)` (v2.2.0 — bound to the booted app, no-op pre-boot). Per-route directives (router `route(...)`): `.transition("none"\|"crossfade"\|"slide"\|"morph")` + `.scroll("top"\|"preserve")` (v2.1.0; typed first-class, NOT `.meta()` keys) override the app defaults | `swapSelector?` (`"main > section"`), `viewTransitions?` (`boolean \| TransitionMode "none"\|"crossfade"\|"slide"\|"morph"`, default `false`/`"none"`; v2.1.0 widened from `boolean`), `scrollRestoration?` (`"top"\|"preserve"`, default `"top"`; v2.1.0), `progressBar?` (`true`), `islands?` (`[]`). `RenderResult` now also allows `null` (v2.1.0 — render nothing but stay mountable: Preact `render(null, host)`, NOT `innerHTML=""`) |
+| `spaPlugin` | regular · default | Client runtime: island hydration + intercepted nav (HTML-over-fetch, or DATA nav when `data` composed); inert on Node | router, head | `spa:navigate`, `spa:navigated`, `spa:island-mount`, `spa:island-unmount` | `register(c) navigate(path,opts?) hardNavigate(url) current() island(name)` — `navigate` commits the address bar (`history.pushState`, or `replaceState` with `opts.replace`, v2.4.3) since v2.1.1; `hardNavigate` (v2.2.0) does a REAL full-page load across a boundary the SPA can't swap (different layout / auth split). Island ctx also gets always-present `ctx.navigate(path,opts?)` (like `ctx.set`/`ctx.url`). Top-level exports (`./browser` + root): `createIsland(name,hooks)`, the built-in `lazyEmbed` island for `::embed` facades (register it in `islands`), `createChannel<T>(opts)` (v2.1.0 — client realtime WebSocket primitive; v2.2.2 added a `shouldReconnect?(event: CloseEvent): boolean` option — return `false` to suppress the reconnect backoff on a terminal close such as code `4401`, e.g. `shouldReconnect: (e) => e.code !== 4401`; omitted = always reconnect), and module-level `navigate(path,opts?)`/`hardNavigate(url)` (v2.2.0 — bound to the booted app, no-op pre-boot). Per-route directives (router `route(...)`): `.transition("none"\|"crossfade"\|"slide"\|"morph")` + `.scroll("top"\|"preserve")` (v2.1.0; typed first-class, NOT `.meta()` keys) override the app defaults | `swapSelector?` (`"main > section"`), `viewTransitions?` (`boolean \| TransitionMode "none"\|"crossfade"\|"slide"\|"morph"`, default `false`/`"none"`; v2.1.0 widened from `boolean`), `scrollRestoration?` (`"top"\|"preserve"`, default `"top"`; v2.1.0), `progressBar?` (`true`), `islands?` (`[]`). `RenderResult` now also allows `null` (v2.1.0 — render nothing but stay mountable: Preact `render(null, host)`, NOT `innerHTML=""`) |
 | `contentPlugin` | regular · explicit (isomorphic SHELL) | Provider-driven Markdown model: sanitized HTML, frontmatter, reading time, locale fallback, per-build memo; drafts hidden only when global `stage === "production"`; build-time directives (`mermaid`/`::embed`/`::gallery`) on the node provider — see §2.1 | i18n | `content:ready`, `content:invalidated` | `loadAll(opts?) load(slug,locale) renderMarkdown(md) invalidate(paths) articleToCard(a) contentDir()` | `providers: ContentProvider[]` — compose `fileSystemContent({ contentDir, defaultAuthor?, trustedContent?, extraRemarkPlugins?, extraRehypePlugins?, shikiTheme?, mermaid?, embed?, gallery? })` (node; `shikiTheme` = `BundledTheme` name OR custom theme object; `mermaid`/`embed`/`gallery` each `boolean \| options` and each REQUIRE `trustedContent: true` — see §2.1) |
-| `buildPlugin` | regular · node-only | SSG orchestrator: pages, feeds, sitemap, OG images (+ default OG card), co-located article images, custom shell/404; **content-hashed bundle filenames + Cloudflare `_headers` cache rules (v1.8.0)**; persists per-page data when `mode!=="ssg"` + `data` composed; incremental dev rebuilds | site, i18n, content, router, head | `build:phase`, `build:complete` | `run(opts?: {outDir?, skipClean?, overrides?, changed?}) phases()` | `outDir, minify, feeds, sitemap, images, ogImage` (`OgImageConfig \| false`; incl. `fontDir, template?, size?, fonts?, render?, defaultCard?`), `injectAssets?` (`true`), `publicDir?` (`"public"`), `notFound?` (`boolean \| { body?, path? }` — asset placeholders substituted, v1.8.0), `localeRedirects?` (`false`), `clientEntry?, template?` (shell w/ `<!--moku:lang/head/assets/body-->` + split `<!--moku:assets:css/js-->` placeholders), `cacheHeaders?` (`boolean \| { assets?, pages? }`, default `true` — emits `outDir/_headers`) |
+| `buildPlugin` | regular · node-only | SSG orchestrator: pages, feeds, sitemap, OG images (+ default OG card), co-located article images, custom shell/404; **content-hashed bundle filenames + Cloudflare `_headers` cache rules (v1.8.0)**; persists per-page data when `mode!=="ssg"` + `data` composed; incremental dev rebuilds | site, i18n, content, router, head | `build:phase`, `build:complete` | `run(opts?: {outDir?, skipClean?, overrides?, changed?}) phases()` | `outDir, minify, feeds, sitemap, images, ogImage` (`OgImageConfig \| false`; incl. `fontDir, template?, size?, fonts?, render?, defaultCard?`), `injectAssets?` (`true`), `publicDir?` (`"public"`), `notFound?` (`boolean \| { body?, path? }` — asset placeholders substituted, v1.8.0), `localeRedirects?` (`false`), `clientEntry?`, `env?` (`readonly string[]` — names written into the client bundle as constants, v2.4.0), `template?` (shell w/ `<!--moku:lang/head/assets/body-->` + split `<!--moku:assets:css/js-->` placeholders), `cacheHeaders?` (`boolean \| { assets?, pages? }`, default `true` — emits `outDir/_headers`) |
 | `deployPlugin` | regular · node-only | Deploy `outDir` to Cloudflare Pages (wrangler); scaffolds `wrangler.jsonc` (+ optional GH Actions workflow) | site | `deploy:complete` | `run(opts?) getLastDeployment() init(opts?)` | `target` (`"cloudflare-pages"`), `outDir`, `productionBranch?` (`"main"`), `scrubAllowlist`, `compatibilityDate?, ci?` |
 | `cliPlugin` | regular · node-only | Developer CLI: `build`/`serve`/`preview`/`deploy` with boxed Panel TUI + live progress; driven from thin per-command scripts (no argv parser / no `bin`) | build, deploy | — (listens: `build:phase`, `build:complete`, `deploy:complete`) | `build(opts?) serve(opts?) preview(opts?) deploy(opts?)` (`deploy({ guided: true })` = interactive wizard; non-TTY/CI never prompts) | `outDir` (`"dist"`), `port` (`4173`), `watchDirs` (`["content","src"]`), `debounceMs` (`150`), `notFoundFile` (`"404.html"`), `liveReload` (`true`) |
 | `dataPlugin` | regular · optional (isomorphic) | Agnostic data provider: persist per-page JSON (Node `write`) + fetch it for DATA nav (browser `at`) | — (no hard depends) | — | `write(entries,opts?) at(path) urlFor(path) fileFor(path)` | `outputDir?` (`"_data"`), `baseUrl?` (`"/_data/"`) |
@@ -381,7 +398,7 @@ registration (by name). Route `.load`/`.generate` contexts carry the same `requi
 | `app.head.*` | head | `render(resolvedRoute, data): string · siteHead(input: {url, locale?}): string` |
 | `app.content.*` | content | `loadAll(opts?: {reuse?}): Promise<Map<string,Article[]>> · load(slug,locale): Promise<Article> · renderMarkdown(md): Promise<string> · invalidate(paths): void · articleToCard(a): ArticleCard · contentDir(): string` |
 | `app.build.*` | build | `run(opts?: {outDir?, skipClean?, overrides?, changed?}): Promise<{outDir,pageCount,durationMs}> · phases(): PhaseName[]` |
-| `app.spa.*` | spa | `register(c): void · navigate(path, opts?: {scroll?:"top"\|"preserve"}): void · hardNavigate(url): void · current(): string · island<T>(name): T\|undefined` |
+| `app.spa.*` | spa | `register(c): void · navigate(path, opts?: {scroll?:"top"\|"preserve", replace?: boolean}): void · hardNavigate(url): void · current(): string · island<T>(name): T\|undefined` |
 | `app.deploy.*` | deploy | `run(opts?: {branch?,build?}): Promise<DeployResult> · getLastDeployment(): Readonly<DeployResult>\|null · init(opts?: {ci?,check?}): Promise<InitResult>` |
 | `app.cli.*` | cli | `build(opts?: {assertNotFound?}): Promise<BuildSummary> · serve(opts?: {port?, open?, og?, sitemap?, feeds?}): Promise<void> · preview(opts?: {port?}): Promise<void> · deploy(opts?: {branch?, yes?, guided?}): Promise<DeployOutcome>` |
 | `app.data.*` | data | `write(entries: {path,data}[], opts?: {outDir?}): Promise<{fileCount,bytes,files}> · at(path): Promise<unknown\|null> · urlFor(path): string · fileFor(path): string` |
@@ -482,4 +499,5 @@ the llms files and `src/` disagree, **`src/` wins** (verified at 1.6.1: llms sti
 re-verified at 1.12.4: llms last synced 1.8.2, missing the `mermaid`/`::embed`/`::gallery` content
 directives — all read from `src/` here; at 2.3.3: llms untouched since, missing the `collection` plugin,
 and the collection README imports `collectionPlugin` from `./browser`, which `src/browser.ts` does not
-export).
+export; at 2.4.4: llms-full gained `build.env` only, still no `collection`, and llms/README still describe
+only `preact` as a peer, not core/common).

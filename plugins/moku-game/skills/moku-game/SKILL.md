@@ -13,14 +13,14 @@ description: >
 
 # Moku Game Patterns
 
-> **Synced to `@moku-labs/game@0.4.2`** and **`@moku-labs/editor@0.0.2`** (game catalog from the repo at
-> `main` after PRs #19, #20 and #21, equal to npm `0.4.2`; game bundles `@moku-labs/core@1.7.0` + `@moku-labs/common@0.3.3`). The 17 game
+> **Synced to `@moku-labs/game@0.4.3`** and **`@moku-labs/editor@0.2.1`** (catalogs from the release tags;
+> both take `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` as peers). The 17 game
 > plugins, every API, event and config field are in [`references/plugin-index.md`](references/plugin-index.md).
 > The minimal screen game is [`references/hello-world.md`](references/hello-world.md). How Claude drives
 > the editor is [`references/editor.md`](references/editor.md). The simulator and device loop is
 > [`references/device.md`](references/device.md). Both packages change fast: when an API here looks
 > stale, read `node_modules/@moku-labs/game/llms.txt` of the project: the game package ships it since
-> 0.4.0 and it matches the installed version. The editor ships no `llms.txt`; read its `README.md`. Registered in the framework registry (`frameworks[game]`): load the `moku:moku-core`
+> 0.4.0 and it matches the installed version. The editor ships `llms.txt` and `llms-full.txt` since 0.1.0. Registered in the framework registry (`frameworks[game]`): load the `moku:moku-core`
 > skill with the Skill tool and read `references/moku-frameworks.md` under the base directory it prints.
 
 ## Current Project State
@@ -45,10 +45,10 @@ You `createApp` **from the game**: `createApp`, `createPlugin` and every helper 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | `@moku-labs/game` 0.4.2. Entries: `.` (engine), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
-| Built on | `@moku-labs/core@1.7.0` + `@moku-labs/common@0.3.3` (regular deps: kernel, `ctx.log`, `ctx.env`) |
+| Framework | `@moku-labs/game` 0.4.3. Entries: `.` (engine), `./testing` (headless and visual tests, Node and Bun), `./assets` (key scanner, string compiler, packer; Node and Bun), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bin `moku-game-assets` (Bun). Ships `llms.txt` |
+| Built on | `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (peer deps since 0.4.3, Bun installs them: kernel, `ctx.log`, `ctx.env`) |
 | Rendering | `pixi.js ^8` **peer dependency**, loaded lazily with `import()`. WebGPU first, Pixi's WebGL fallback. No DOM, no React: screens are JSX laid out by `yoga-layout` (bundled, lazy) |
-| Dev tools | `@moku-labs/editor` 0.0.2 (dev dep). Agent core on the page, server core in Bun (`bunx moku-editor`), tools page prebuilt |
+| Dev tools | `@moku-labs/editor` 0.2.1 (dev dep, imported only in a dev build). Agent core on the page, server core in Bun (`bunx moku-editor`, Bun hot reload on), tools page prebuilt |
 | Optional peers | `playwright-core` (pixel leg of visual tests), `sharp` (production asset pack) |
 | Native | `@moku-labs/native` packages the web build as a Tauri 2 app; `@moku-labs/system` is the platform bridge. See the `moku-native:moku-native` and `moku-system:moku-system` skills |
 | Package manager | Bun only. ESM only, `"sideEffects": false`, no CJS |
@@ -261,34 +261,41 @@ JSDoc in a game is always the multi-line form (`/**` on its own line), never `/*
 ## Editor wiring
 
 ```ts
-// web/main.ts, after the game's createApp
-import { bridgePlugin, capturePlugin, createApp as createEditor } from "@moku-labs/editor/agent";
+// web/main.ts, after `await app.start()`
+if (__MOKU_GAME_DEV__) {
+  const { bridgePlugin, capturePlugin, createApp } = await import("@moku-labs/editor/agent");
+  const editor = createApp({
+    plugins: [bridgePlugin, capturePlugin],
+    pluginConfigs: { registry: { game: app, modules: [], name: "my-game 0.1.0" } }
+  });
 
-const devPlugins = __MOKU_GAME_DEV__ ? [bridgePlugin, capturePlugin] : [];
-const editor = createEditor({
-  plugins: devPlugins,
-  pluginConfigs: { registry: { game: app, modules: [], name: "my-game 0.1.0" } }
-});
-Reflect.set(globalThis, "editor", editor);
-await editor.start(); // never waits for the editor server
+  Reflect.set(globalThis, "editor", editor);
+  await editor.start(); // never waits for the editor server
+}
 ```
 
-- Default agent plugins are `registry`, `channel`, `overlay`; `bridgePlugin` (websocket to the hub) and
-  `capturePlugin` (`editor.capture`, `editor.series`, `editor.seriesStop`) are opt-in and dev-only.
-  `modules` are the game's `.dev` modules.
+- Import the agent only inside `if (__MOKU_GAME_DEV__)` with a dynamic import: a build with the flag
+  defined `false` keeps 0 B of editor code. Default agent plugins are `registry`, `channel`, `overlay`;
+  `bridgePlugin` (websocket to the hub) and `capturePlugin` (`editor.capture`, `editor.series`,
+  `editor.seriesStop`) are opt-in. `modules` are the game's `.dev` modules.
 - Run the server with the bin: `bunx moku-editor web/index.html --port 3000 --root .` (Bun only). It
   prints `Game http://127.0.0.1:3000/` and `Tools http://127.0.0.1:3000/__editor/` and serves the root's
-  files (manifest, art, sounds) as static; dotfiles and `node_modules` are refused. Or wrap your own
-  `Bun.serve` with `createApp` from `@moku-labs/editor/server` and `editor.hub.serve(...)`.
-- The tools page: six workspaces, keys `1`–`6` (Flow, Game, Render, State, Files, Console), `⌘K`
-  palette, `P` pause / resume, `.` step one frame while paused, `O` overlay in game on / off, `G` preview,
-  `i` or `⌘⇧C` the element picker, `Esc` closes one thing. Captures go to `.moku/captures/`.
+  files (manifest, art, sounds) as static; dotfiles and `node_modules` are refused. Bun hot reload is on;
+  `--no-hmr` turns it off. Or wrap your own `Bun.serve` with `createApp` from `@moku-labs/editor/server`
+  and `editor.hub.serve(...)`.
+- The tools page: six workspaces, ⌘1–⌘6 (Game, Flow, Render, State, Files, Console; Game is the default),
+  `⌘K` palette, `P` pause / resume, `.` step one frame while paused, `O` overlay in game, `G` preview,
+  `R` Reference mode, `H` hot reload state, ⌘⇧C the element picker, `Esc` closes one thing. Captures go
+  to `.moku/captures/`.
+- A pick bookmarks the game and writes a card `.moku/captures/<key>-f<frame>.md` with the element's path,
+  `file:line`, layout, bounds in px and reference units, flow position, the JSX and style snippets, and
+  two PNGs. It also copies one `@moku …` line naming the card.
 - The server binds `127.0.0.1` only and gates every socket with Host, Origin and a per-start token.
-- Saving a style or a node in Files bookmarks the game, reloads the frame and restores the bookmark.
-  The session reads as tainted afterwards.
-- Editor 0.0.2 against game 0.4.x: the element picker (reads the removed `game.rect`) and `editor.capture`,
-  `editor.series`, the Shot and Series buttons (expect a string from `game.capture`, now `{ png }`) fail.
-  Flow, State, Render, Console and the doors by script work. Workarounds are in `references/editor.md`.
+- A save of a game source (Files, or an agent writing the file) reloads the page through Bun and restores
+  the game where it was, in about a second. The session reads as tainted afterwards.
+- Works with game 0.1.x and 0.4.x. A game without `audioPlugin` or `effectsPlugin` shows those sources as
+  "not installed", not as errors. The Sound switch needs `game.mute`, which no game release has yet.
+  Recipes are in `references/editor.md`.
 
 ## Native packaging and the platform bridge
 

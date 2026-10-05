@@ -224,8 +224,8 @@ await app.cli.serve();
 ## Dependencies
 
 The framework brings Preact, the Markdown pipeline, and the build/deploy/cli toolchain transitively
-— a consumer app depends on `@moku-labs/web` alone (it pins `@moku-labs/core` itself; never add a
-direct core dep):
+— a consumer app depends on `@moku-labs/web` alone (since v2.4.4 it takes `@moku-labs/core` +
+`@moku-labs/common` as peers, which bun installs for you; never add a direct core dep):
 
 ```json
 {

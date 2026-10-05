@@ -40,7 +40,7 @@ the root-config inventory, the data-layer strategies, routing patterns, the hard
 | Tests | Vitest (unit/integration, coverage on `lib/`+`i18n/`) + Playwright (e2e + visual, frozen fixture corpus) |
 | Deploy | Cloudflare Pages (`deploy` plugin + `wrangler`); GitHub Actions CI gates deploy |
 
-## Framework API (@moku-labs/web v2.3.3)
+## Framework API (@moku-labs/web v2.4.4)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
@@ -94,9 +94,11 @@ import { createIsland, createUrls, route, createChannel, navigate, hardNavigate 
 const app = createApp({ plugins: [dataPlugin], config: { mode: "hybrid" }, pluginConfigs: { router: { routes } } });
 await app.start();
 // createChannel<T>(opts) — client realtime WebSocket (v2.1.0; v2.2.2 adds a shouldReconnect(event) guard —
-// return false to stop reconnecting on a terminal close, e.g. code 4401); navigate(path, { scroll? }) / hardNavigate(url)
+// return false to stop reconnecting on a terminal close, e.g. code 4401); navigate(path, { scroll?, replace? }) / hardNavigate(url)
 // are module-level (v2.2.0), bound to the booted app (no-op pre-boot). hardNavigate crosses a layout/auth
 // boundary the SPA can't swap. Per-route: route(...).transition("morph") / .scroll("preserve").
+// replace: true (v2.4.3) swaps the current history entry, so Back skips the page you left (e.g. a language switch).
+// A later navigation (link, back, another navigate) aborts a programmatic one still loading (v2.4.2).
 
 // Static-data collections (v2.3.0). Node build app: add collectionPlugin (exported from "@moku-labs/web"
 // ONLY, not from ./browser), then after the build:
@@ -107,6 +109,13 @@ await app.start();
 // `Animal` is the app's own type; the framework does not validate the JSON.
 import { loadCollectionShard } from "@moku-labs/web/browser";
 const animals = await loadCollectionShard<Animal[]>("/", "bank", "en/animals");  // GET /bank/en/animals.json
+
+// Build-time env flags in the client bundle (v2.4.0). The browser has no process.env, so list the names:
+//   pluginConfigs: { build: { env: ["IS_DEVELOPMENT"] } }
+// Each name becomes a constant (process.env.X and import.meta.env.X; "" when unset). Only listed names ship.
+// With minify, a branch on an unset flag is dropped together with the import() chunk it guards.
+// It is a build-time constant, not a runtime env read; runtime values still go through ctx.env (MC3).
+if (import.meta.env.IS_DEVELOPMENT) void import("./cheats");  // IS_DEVELOPMENT=true bun run build ships it
 ```
 
 **Breaking since 0.5.6 (v1.0.0):** route handlers are **ctx-based** — `.load((ctx) => D)` gets
@@ -126,7 +135,8 @@ DATA-driven navigation and runs the same `render`. One switch governs it all: `c
 "spa" | "hybrid"` (default `hybrid`). Engines: **node ≥24, bun ≥1.3.14** (route matching is a native
 RegExp — `URLPattern` was dropped in v1.4.1). Since v1.6.0 the **default locale is served at bare
 paths** for `{lang:?}` routes. Since v1.7.0 **`preact` + `preact-render-to-string` are
-peerDependencies** — the app installs them. Since v1.8.0 **bundle filenames are content-hashed**
+peerDependencies** — the app installs them. Since v2.4.4 `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4`
+are peers too (bun and npm install them automatically; the app still declares neither). Since v1.8.0 **bundle filenames are content-hashed**
 (`assets/main-<hash>.css`) and the build emits Cloudflare `_headers` cache rules
 (`build.cacheHeaders`, default on; immutable per-bundle + revalidate catch-all) — never hardcode a
 bundle URL (a custom 404/shell uses the `<!--moku:assets-->` placeholders, incl. the split

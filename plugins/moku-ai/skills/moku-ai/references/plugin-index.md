@@ -1,8 +1,9 @@
 # @moku-labs/ai — Plugin & Property Index
 
-**Synced version:** `0.14.0` (npm `dist-tags.latest`; catalog from the main branch source:
+**Synced version:** `0.14.2` (npm `dist-tags.latest`; catalog from the `v0.14.2` tag source:
 `src/index.ts`, `src/config.ts`, `src/bin.ts`, `src/plugins/*`, `README.md`, `llms.txt`,
-`llms-full.txt`). Built on `@moku-labs/core@1.6.0` + `@moku-labs/common@0.3.2`. Runtime deps:
+`llms-full.txt`). Peer deps `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (dev-pinned
+1.7.1 / 0.3.4). Runtime deps:
 `better-sqlite3` (Node; Bun uses `bun:sqlite`), `openai`, `sharp` (0.35.5, the sprite pixel step),
 `yaml`, `zod`. Engines node ≥24, bun ≥1.3.14. Bin: `moku` (`dist/bin.mjs`), which loads
 `moku.config.{ts,mts,js,mjs}`.
@@ -157,7 +158,8 @@ defineConfig(config) // returns config; types pluginConfigs, also for the plugin
 ```
 
 The bin: `loadProjectConfig(argv, cwd)` → `createApp(options)` → `start()` → `cli.dispatch(argv)` →
-`stop()`. Core plugin keys (`journal`, `store`, `limits`) are not typed in `pluginConfigs`.
+`stop()`. Core plugin keys (`journal`, `store`, `limits`) are typed in `pluginConfigs` since 0.14.2
+(core 1.7.1). Upstream `llms-full.txt` still says they are not; the types win.
 
 ## 0.13 and 0.14 notes (CHANGELOG "Unreleased" plus PRs #32 to #37)
 
@@ -174,6 +176,14 @@ The bin: `loadProjectConfig(argv, cwd)` → `createApp(options)` → `start()` �
   `params.images: N`, multi-output items exported as `<label>-k.<ext>`, `item:flagged` carries
   `message`.
 
-The CHANGELOG top section still reads "Unreleased" and lacks sfx and sprite; the source
-`package.json` reads `0.1.0`. The published version comes from the release workflow. Treat
-`0.14.0` on npm as the synced surface (it ships `sharp` and both new tasks).
+The CHANGELOG top section still reads "Unreleased" and lacks sfx and sprite. Treat `0.14.2` on npm
+as the synced surface (it ships `sharp` and both new tasks).
+
+## 0.14.1 and 0.14.2 notes
+
+- 0.14.1 (PR #37): docs only. `llms-full.txt` sections for image, video, codex, claude; image and
+  video READMEs. No API change.
+- 0.14.2 (PR #38): `@moku-labs/core` and `@moku-labs/common` move from pinned dependencies
+  (1.6.0 / 0.3.2) to peer dependencies (`^1.7.1` / `^0.3.4`). Bun and npm install them with the
+  package. Core 1.7.1 types the core plugin keys in `pluginConfigs`, so the `limits` cast is gone.
+  No API, plugin, event or CLI change.

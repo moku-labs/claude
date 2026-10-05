@@ -1,6 +1,6 @@
 # Provider setup: keys and logins
 
-Verified against `@moku-labs/ai@0.14.0` source (`src/index.ts`, `src/plugins/<provider>/README.md`,
+Verified against `@moku-labs/ai@0.14.2` source (`src/index.ts`, `src/plugins/<provider>/README.md`,
 `src/plugins/cli/project-config.ts`). 0.13 and 0.14 add no new env var: `sfx` uses
 `ELEVENLABS_API_KEY` or `FAL_KEY`, `sprite` uses `FAL_KEY`.
 

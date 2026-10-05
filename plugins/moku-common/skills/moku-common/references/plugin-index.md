@@ -1,9 +1,10 @@
 # @moku-labs/common — Plugin & Property Index
 
-**Synced version:** `0.3.3` (npm `dist-tags.latest`; catalog generated from the `v0.3.3` git tag **source** +
+**Synced version:** `0.3.4` (npm `dist-tags.latest`; catalog generated from the `v0.3.4` git tag **source** +
 the root `README.md` and the per-module READMEs `src/plugins/log/README.md`, `src/plugins/env/README.md`,
-`src/cli/README.md`). Upstream ships **no `llms.txt`**, so the source is the only authority. One regular
-dependency, pinned exactly: `@moku-labs/core@1.7.0`. No peer dependencies. Engines node ≥24, bun ≥1.3.14.
+`src/cli/README.md`). Upstream ships **no `llms.txt`**, so the source is the only authority. No regular
+dependencies. One peer dependency: `@moku-labs/core` `^1.7.1` (since 0.3.4; through 0.3.3 it was an exact
+`1.7.0` dependency). The framework that bundles common must install core itself. Engines node ≥24, bun ≥1.3.14.
 `sideEffects: false`, ESM + CJS on `.` and `./cli`, ESM only on `./browser`, types included.
 
 ⚠️ The READMEs and JSDoc disagree with the source in four places. The registry's "source wins" policy applies:
@@ -265,7 +266,10 @@ plain ASCII.
 | `confirm(question)` | `→ Promise<boolean>` | `true` only for `y` / `yes` (case-insensitive, trimmed). Styled `◆ question … y / N ›`; plain `question [y/N] ` |
 | `select(question, choices)` | `→ Promise<number>` | Prints choices numbered from 1, resolves the **zero-based** index. Empty or out-of-range → `0`. Plain form `question [1-N] ` |
 
-Each call opens and closes its own `readline` interface.
+One `readline` interface per prompts object, opened on the first question (since 0.3.4; before, each call
+opened its own and a piped input lost every answer after the first). Lines that arrive early are queued and
+feed later questions in order. The interface pauses while idle so the process can exit. Once the input has
+ended, a pending or later question resolves `""`, which is the default (`false` / index `0`).
 
 ### 5.4 `brandedSink(minLevel = "debug") → LogSink` (`log-sink.ts`)
 
@@ -290,7 +294,7 @@ Not exported anywhere: `LogExpectAssertionError`, `consoleSink`, `installDefault
 ## 7. Dependency and data flow
 
 ```
-@moku-labs/core@1.7.0 ── createCorePlugin ──┬─→ logPlugin  ("log")  ─┐
+@moku-labs/core ^1.7.1 ─ createCorePlugin ──┬─→ logPlugin  ("log")  ─┐
                                             └─→ envPlugin  ("env")  ─┤
                                                                      │  a Layer-2 framework's createCoreConfig
 providers (one per runtime) ─── pluginConfigs.env.providers ─────────┤  plugins: [logPlugin, envPlugin]
