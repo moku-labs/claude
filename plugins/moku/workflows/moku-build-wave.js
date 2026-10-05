@@ -81,7 +81,7 @@ const HARD_RULES =
   ' Filesystem safety — sibling builders run concurrently, so a repo-wide command from you corrupts ' +
   'their work. Write only under src/plugins/<this-plugin>/ and its __tests__/; leave src/config.ts, ' +
   'src/plugins/index.ts (the barrel), package.json and sibling plugins alone. Run no repo-wide command ' +
-  '(lint:fix, bun run format, `biome … .`, `eslint .`) and no git mutation ' +
+  '(lint:fix, bun run format, `biome … .`, `eslint .`, `oxlint .`) and no git mutation ' +
   '(checkout/restore/reset/stash/clean/add/commit). Scoped formatting only: ' +
   '`bunx biome format --write src/plugins/<this-plugin>/`. Report lint and format issues as hints; ' +
   'the orchestrator fixes them repo-wide after the wave.'

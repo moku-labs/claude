@@ -231,7 +231,7 @@ it found, README and deployment output, and issues found and fixed. Then update 
 
 - JSDoc on every custom source file, `@example` placement per `jsdoc-examples.md`; `import type` for type-only imports.
 - Import from the framework package, never `@moku-labs/core`.
-- Tests pass; Biome and ESLint pass.
+- Tests pass; `bun run lint` passes (Biome plus the project's oxlint or ESLint).
 - The documented run command boots from a clean state and serves its primary surface (Step 7).
   Passing tests never clear this bar.
 - Custom plugins meet the same standard as framework plugins.

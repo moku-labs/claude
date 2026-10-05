@@ -107,7 +107,7 @@ Then run the integration checks in the target workspace:
 
 1. **Format** — `bun run format`.
 2. **Lint** — `bun run lint`; on errors `bun run lint:fix`, then fix by hand what remains. Builders
-   already ran scoped ESLint, so this pass should be a confirmation. New in-scope findings here mean
+   already ran the scoped second linter (oxlint or ESLint), so this pass should be a confirmation. New in-scope findings here mean
    that builder's PASS was overstated — route the fix and note the gap.
 3. **Types** — `bunx tsc --noEmit`, zero errors.
 4. **Build and bundled types** — `bun run build`. `tsc --noEmit` is not enough: it type-checks source

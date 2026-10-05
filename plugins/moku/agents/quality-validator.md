@@ -54,7 +54,7 @@ Grep `src/plugins/` recursively for `createPlugin<` and `createCorePlugin<`. Ang
 
 ### 5. Import type (R2)
 
-The project sets `verbatimModuleSyntax: true` and `@typescript-eslint/consistent-type-imports`. Flag `import { Foo }` where `Foo` is used only in type positions, a mixed import that should split out `import type { Foo }`, and `export { Foo }` for a type that should be `export type { Foo }`.
+The project sets `verbatimModuleSyntax: true` and a type-import rule (Biome `useImportType`; `@typescript-eslint/consistent-type-imports` in the legacy stack). Flag `import { Foo }` where `Foo` is used only in type positions, a mixed import that should split out `import type { Foo }`, and `export { Foo }` for a type that should be `export type { Foo }`.
 
 ### 6. Inference chain
 

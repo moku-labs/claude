@@ -30,7 +30,7 @@ Every error lands in exactly one.
 | `missing-export` | A referenced export does not exist in the source module | index.ts, barrels |
 | `test-mock` | A mock does not match the real API shape | `__tests__/` |
 | `test-assertion` | The assertion expects the wrong value | `__tests__/` |
-| `lint-format` | Biome or ESLint style violation | any source file |
+| `lint-format` | Biome, oxlint or ESLint style violation | any source file |
 | `dependency` | Missing package, wrong version, unresolved module | package.json, imports |
 | `config-shape` | Config type does not match the spec or its usage | types.ts, config.ts |
 | `lifecycle` | onStart/onStop issue (async, wrong context tier) | plugin index.ts |

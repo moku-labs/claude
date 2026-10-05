@@ -30,7 +30,7 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 - Write only inside `src/plugins/{name}/`. Another plugin's directory belongs to another builder running right now.
 - Leave framework files alone — `src/config.ts`, `src/index.ts`, `src/plugins/index.ts`, `package.json`, build and tsconfig files. The orchestrator wires your plugin in after verification. A new dependency goes in the contract, not in `package.json`.
 - The orchestrator commits after verification, so do not commit and do not run `git add`.
-- Repo-wide commands (`eslint .`, project-wide `tsc`, a test run with no path) disturb the other builders. Scope everything to your directory.
+- Repo-wide commands (`eslint .`, `oxlint .`, project-wide `tsc`, a test run with no path) disturb the other builders. Scope everything to your directory.
 - Obey the Moku Code Rules R1–R9, `skeleton-conventions.md` and `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`.
 - API method docs go on the members of the `Api` type in `types.ts`, with a scenario `@example`; the implementation in `api.ts` carries none. Before writing an `@example`, read the real signature and a test that asserts the result. Never echo the signature (`const api = createApi(ctx);`). API means public: every `Api` member gets a true example, with no `@remarks No example` way out. When the real caller is another plugin, write the example from that plugin's side with `ctx.require`. When no honest example exists, do not invent one: report the member in `blockers` as an API finding — move it off the API into a plain function, or delete it.
 
@@ -53,20 +53,24 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 
 ## Lint as you go
 
-Lint each file or module right after it turns green, not once at the end: `biome check <file>` and `eslint <file>`, and fix what they report before you start the next file. A builder that saves lint for the end can run out of turns first; it then returns no contract and leaves the errors behind. The pass below is a confirmation and should find nothing new.
+Lint each file or module right after it turns green, not once at the end: `biome check <file>` and the project's second linter on it, and fix what they report before you start the next file. A builder that saves lint for the end can run out of turns first; it then returns no contract and leaves the errors behind. The pass below is a confirmation and should find nothing new.
 
 When turns run short, stop adding code. Run the scoped checks on what exists and return the contract with `verdict: FAIL` and the open work in `blockers`. A contract with open blockers is worth more than a finished file without one.
 
 ## Scoped checks before reporting clean
 
+The second linter depends on the project: `.oxlintrc.json` at the root means `oxlint`, an
+`eslint.config.*` means `eslint`, both means run both (the stacks are in `lint-stacks.md` of the core
+skill).
+
 ```bash
 biome check src/plugins/{name}/
-eslint src/plugins/{name}/      # the project's real ESLint, scoped to your dir
+oxlint src/plugins/{name}/      # current stack; legacy stack: eslint src/plugins/{name}/
 bunx vitest run src/plugins/{name}/   # `bun test src/plugins/{name}/` when the project has no vitest
 bunx tsc --noEmit               # when it is cheap; otherwise the orchestrator runs it
 ```
 
-Run eslint as well as biome: biome alone misses the unicorn-style rules (`no-null`, `prevent-abbreviations`, `prefer-structured-clone`, `consistent-function-scoping`, `prefer-regexp-test`), while eslint ignores `.tsx`, which biome covers. Fix what they report inside your scope; otherwise the orchestrator's repo-wide eslint fails on your files later.
+Run the second linter as well as biome: biome alone misses the unicorn-style rules (`no-null`, `prevent-abbreviations`, `prefer-structured-clone`, `consistent-function-scoping`, `prefer-regexp-test`) and the jsdoc rules. Fix what they report inside your scope; otherwise the orchestrator's repo-wide `bun run lint` fails on your files later.
 
 ## Output contract
 
@@ -80,7 +84,7 @@ Prose summary first, then the fenced block as your last message. A run that ends
   "verdict": "PASS | FAIL",
   "files": ["src/plugins/{name}/index.ts", "..."],
   "tests": {"unit": N, "integration": N, "pass": true, "preexistingGreen": true},
-  "lint": {"biome": "clean | N findings", "eslint": "clean | N findings"},
+  "lint": {"biome": "clean | N findings", "second": "oxlint | eslint | none", "secondResult": "clean | N findings"},
   "newDependencies": ["pkg@version", "..."],
   "publicApiChanged": true,
   "blockers": [{"file": "path", "line": N, "message": "...", "fix": "..."}]
