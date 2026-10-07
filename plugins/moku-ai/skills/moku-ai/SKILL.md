@@ -119,7 +119,7 @@ moku validate                        # offline, no key
 moku estimate                        # per task/provider cost + total, no key
 # show the total to the user, wait for a yes
 moku run --max-cost <total * 1.2>    # stops at the ceiling, exit 5
-moku export --out features/ui/assets --flat   # copy done artifacts again, any time
+moku export --out shared/assets --flat   # copy done artifacts again, any time
 ```
 
 1. **Estimate first.** `moku estimate` uses the same math as the budget gate. Print the box to the
@@ -180,7 +180,7 @@ const app = createApp({ pluginConfigs: { fal: { upload: "data-uri" } } });
 await app.start();
 const { totalUsd } = await app.runner.estimate({ files: "assets/*.moku.yaml" });
 const result = await app.runner.run({ files: "assets/*.moku.yaml", maxCostUsd: totalUsd * 1.2 });
-await app.runner.export({ runId: result.runId, outDir: "features/ui/assets" });
+await app.runner.export({ runId: result.runId, outDir: "shared/assets" });
 await app.stop();
 ```
 

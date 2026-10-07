@@ -267,7 +267,7 @@ items:
 
 ```bash
 moku estimate                                   # sfx/acme × 1  $0.0100
-moku run --max-cost 0.05 --flat --out features/ui/assets
+moku run --max-cost 0.05 --flat --out shared/assets
 moku run --config configs/acme.mts --max-cost 0.05   # another config file
 ```
 

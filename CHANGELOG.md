@@ -2,6 +2,24 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.80.1 (2026-10-07)
+
+### Added
+- **Asset folders by kind.** moku-ai `game-assets.md` §Folder layout: a folder of more than about 8 files
+  groups into `fonts/`, `buttons/`, `panels/`, `icons/`, `fx/<animation>/`, `decor/`, `sounds/`, `music/`,
+  `items/`, `backgrounds/`. The file drops the kind prefix: `icons/coin.webp` is `ui.icons.coin`. Animation
+  frames share one folder: `fx/coin-spin/0.webp`. Three files or fewer stay flat. A moved `.fnt` gets its
+  page line fixed; a moved body font is named in `text.fonts.body`. `bun run keys` and the typecheck find
+  every stale key. One before/after tree of a merge game's shared layer.
+- **game-validator §7.** WARNING when an `assets/` folder holds more than about 12 files flat, or its files
+  share a kind prefix (`icon-`, `button-`, `fx-`).
+
+### Changed
+- **Shell paths in the asset examples.** `features/ui/assets/…` becomes `shared/assets/…` in `game-assets.md`,
+  the moku-ai skill and `providers.md`; `ui` is a plugin name, so no feature is called `ui`. Examples use the
+  folder form: `buttons/green{nine=12,12,12,12}`, `sounds/click`.
+- **moku-game skill and hello-world** point to the rule. The template's three files in `shared/assets/` stay flat.
+
 ## 0.80.0 (2026-10-07)
 
 The game template and the game guidance move onto the game shell of `@moku-labs/game` 0.11 and

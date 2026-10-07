@@ -171,6 +171,10 @@ folder. Read the exported functions for `state.x = …` patterns.
 - **INFO**: a file under an `assets/` folder with an extension the scanner leaves out (`.ogg`, `.wav`,
   `.ttf`, `.jpg`, a licence `.txt`). Audio is `.mp3` or `.m4a`. A font licence sits beside `assets/`
   (`shared/LICENSE-fonts.txt`), not inside it.
+- **WARNING**: an `assets/` folder holds more than about 12 files flat, or its files share a kind prefix
+  (`icon-`, `button-`, `panel-`, `fx-`, `sound-`) that should be a folder. Fix: group by kind
+  (`icons/coin.webp`, `fx/coin-spin/0.webp`), fix the page line of a moved `.fnt`, run `bun run keys`
+  and the typecheck. The rule: moku-ai `references/game-assets.md` §Folder layout.
 - **INFO**: `text.fonts.body` set to `"ui.font-body"` in `pluginConfigs`. That is the default; the config
   line can go.
 
@@ -320,6 +324,7 @@ writes into `.moku/`. The reference is the pack's `hello-world.md` and the engin
 - Kit typed from generated/assets.ts: [YES / NO]
 - Plain-string keys not in AssetKey: [none / list]
 - generated/ and manifest.json: [current / missing]
+- Asset folders by kind: [yes / list of flat folders and shared prefixes]
 
 ### Features and kit (§8)
 | Feature | index.ts | Name matches | Kit imports | Status |
