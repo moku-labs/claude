@@ -27,41 +27,100 @@ Files live in `features/<feature>/assets/` of the game folder, or in a layer `co
 ```
 
 `bun run keys` scans the assets, writes `generated/assets.ts` (`AssetKey`, `FontKey`, `AudioKey`) and the
-dev manifest. A subfolder adds a dotted segment: `features/ui/assets/icons/sword.png` is
-`ui.icons.sword`. An older game without `config.ts` runs `moku-game-assets --root .` in an `assets:keys`
+dev manifest. A subfolder adds a dotted segment: `shared/assets/icons/coin.webp` is
+`ui.icons.coin`. How to group files into folders: see "Folder layout" below. An older game without `config.ts` runs `moku-game-assets --root .` in an `assets:keys`
 script; the commands below work the same with that name.
 
 **A `.` in a folder or file stem fails the scan** (`"sword.v2" ... would fake a folder`). So
-moku-ai item ids use `-` and `/` only: `button-green`, never `button.green` or `s01.key`.
+moku-ai item ids use `-` and `/` only: `buttons/green`, never `buttons.green` or `s01.key`.
 moku-ai does not reject the `.`; the game scan does.
 
 A nine-slice texture carries its borders in the file name. The key drops the tag:
 
 | Tag | Borders | Example | Key |
 |---|---|---|---|
-| `{nine=N}` | every side | `panel{nine=48}.png` | `ui.panel` |
-| `{nine=H,V}` | left+right, top+bottom | `bar{nine=24,12}.png` | `ui.bar` |
-| `{nine=L,T,R,B}` | left, top, right, bottom | `button-green{nine=36,40,36,40}.png` | `ui.button-green` |
+| `{nine=N}` | every side | `panels/wood{nine=48}.png` | `ui.panels.wood` |
+| `{nine=H,V}` | left+right, top+bottom | `panels/bar{nine=24,12}.png` | `ui.panels.bar` |
+| `{nine=L,T,R,B}` | left, top, right, bottom | `buttons/green{nine=36,40,36,40}.png` | `ui.buttons.green` |
 
-A moku-ai item id takes only the four-number form: `"button-green{nine=12,12,12,12}"`. Any other
+A moku-ai item id takes only the four-number form: `"buttons/green{nine=12,12,12,12}"`. Any other
 braces in an id fail `moku validate` (exit `2`). Left plus right, and top plus bottom, must stay
 below the image's sides. Borders are pixels of the final file. With a `sprite` `size` the final
 size is known before the run, so the borders can be written into the id up front.
 
+## Folder layout
+
+Verified against `@moku-labs/game` 0.11 `scan/keys.ts`. A folder of more than about 8 files is
+grouped by kind. A folder of 3 files or fewer stays flat.
+
+| Folder | Holds |
+|---|---|
+| `fonts/` | the `.fnt` and its `.png` pages |
+| `buttons/` | buttons |
+| `panels/` | 9-slice frames |
+| `icons/` | icons |
+| `fx/` | effects, one folder per animation |
+| `decor/` | decoration |
+| `sounds/` | sound effects |
+| `music/` | music |
+| `items/` | a family of game objects; name the folder after the family |
+| `backgrounds/` | backgrounds, when there are several |
+
+- The folder names the kind, so the file drops the prefix: `icons/coin.webp` (key
+  `ui.icons.coin`), not `icon-coin.webp`.
+- Animation frames share one folder named after the animation: `fx/coin-spin/0.webp` ...
+  `fx/coin-spin/6.webp` (keys `ui.fx.coin-spin.0` ... `ui.fx.coin-spin.6`).
+- A font's `.fnt` names its page PNG inside (`<page id="0" file="body.png" />`). Rename the PNG,
+  then fix that line. The font licence is not a key. It sits beside `assets/`
+  (`shared/LICENSE-fonts.txt`), as the template does.
+- The text styles read `ui.font-body` and `ui.font-digits` by default. A font moved into `fonts/`
+  is named in the game's `pluginConfigs`: `text: { fonts: { body: "ui.fonts.body" } }`.
+- `ASSETS.md` stays at the root of `assets/`.
+- Moving a file renames its key. Run `bun run keys`, then the typecheck. It finds every stale key.
+
+The shared layer of a merge game, before and after:
+
+```
+# before: 20 files in one folder
+shared/assets/
+  ASSETS.md  font-body.fnt  font-body.png
+  button-green{nine=12,12,12,12}.png  button-red{nine=12,12,12,12}.png
+  panel-wood{nine=48}.png  panel-paper{nine=40}.png
+  icon-coin.webp  icon-gear.webp  icon-star.webp
+  fx-coin-spin-0.webp ... fx-coin-spin-6.webp
+  decor-leaf.webp  decor-vine.webp
+  sound-click.mp3  sound-merge.mp3  music-theme.mp3
+
+# after
+shared/assets/
+  ASSETS.md
+  fonts/      body.fnt  body.png                         ui.fonts.body
+  buttons/    green{nine=12,12,12,12}.png  red{...}.png  ui.buttons.green
+  panels/     wood{nine=48}.png  paper{nine=40}.png      ui.panels.wood
+  icons/      coin.webp  gear.webp  star.webp            ui.icons.coin
+  fx/coin-spin/  0.webp ... 6.webp                       ui.fx.coin-spin.0
+  decor/      leaf.webp  vine.webp                       ui.decor.leaf
+  sounds/     click.mp3  merge.mp3                       ui.sounds.click
+  music/      theme.mp3                                  ui.music.theme
+```
+
+With moku-ai the id carries the folder: `id: icons/coin`, `id: fx/coin-spin/0`. `--flat` keeps it.
+
 ## One build file per feature
 
-Put the build file next to the feature, `features/<f>/assets.moku.yaml`, with `name: <f>`.
-Ids carry no feature prefix: the export lands inside the feature folder.
+Put the build file next to the feature, `features/<f>/assets.moku.yaml`, with `name: <f>`. The
+shared layer of a shell game has `shared/assets.moku.yaml` with `name: ui`. Ids carry no feature
+prefix: the export lands inside the `assets/` folder. Ids carry the kind folder: `buttons/green`.
 
 ```yaml
-# features/ui/assets.moku.yaml
-# yaml-language-server: $schema=../../../.moku/build.schema.json
+# shared/assets.moku.yaml
+# yaml-language-server: $schema=../.moku/build.schema.json
 version: 1
 name: ui
 defaults: { provider: fal }
 items:
   # 1. The raw picture. Under raw/ so it is easy to delete after export.
-  - id: raw/button-green
+  - id: raw/buttons/green
     task: image
     input:
       prompt: >
@@ -69,20 +128,20 @@ items:
         moss green face, dark-brown ink outline, flat cel shading. Designed for 9-slice:
         straight middle edges, plain stretchable center, fixed rounded corners. No text.
       aspect: "1:1"
-      refs: [{ $file: ../../../refs/style-sheet.png }]
+      refs: [{ $file: ../refs/style-sheet.png }]
     params: { background: transparent }          # gpt-image-2.5 only; sends png
 
   # 2. The sprite: trim, resize to the final size, nine-slice borders in the id.
-  - id: "button-green{nine=12,12,12,12}"
+  - id: "buttons/green{nine=12,12,12,12}"
     task: sprite
     input:
-      source: { $ref: raw/button-green }
+      source: { $ref: raw/buttons/green }
       model: none                                # source is already transparent: $0, no call
       size: { width: 128, height: 64 }
       padding: 2
 
   # 3. A sound effect, mp3.
-  - id: click
+  - id: sounds/click
     task: sfx
     provider: elevenlabs
     input: { model: eleven_text_to_sound_v2, prompt: "short wooden UI click, dry, no reverb", durationMs: 600 }
@@ -123,19 +182,19 @@ prices are estimates; see `providers.md`.
 ## Run and land the files
 
 Run one feature per `moku run`. `--flat` drops the `<build name>/` folder, so `--out` can point
-straight at the feature's `assets/`:
+straight at the `assets/` folder:
 
 ```bash
 moku validate "features/*/assets.moku.yaml"
 moku estimate "features/*/assets.moku.yaml"
 # tell the user the total, wait for a yes
-moku run features/ui/assets.moku.yaml --max-cost 0.10 --flat --out features/ui/assets
-rm -rf features/ui/assets/raw        # every done item is exported, the raw images too
+moku run shared/assets.moku.yaml --max-cost 0.10 --flat --out shared/assets
+rm -rf shared/assets/raw        # every done item is exported, the raw images too
 bun run keys
 ```
 
-Result: `features/ui/assets/button-green{nine=12,12,12,12}.png` (key `ui.button-green`) and
-`features/ui/assets/click.mp3` (key `ui.click`). Without `--flat` the export writes
+Result: `shared/assets/buttons/green{nine=12,12,12,12}.png` (key `ui.buttons.green`) and
+`shared/assets/sounds/click.mp3` (key `ui.sounds.click`). Without `--flat` the export writes
 `<out>/ui/...` and the keys gain a `ui.` segment.
 
 Two rules of `--flat`: one glob with several builds into one folder keeps the first file of a
@@ -170,7 +229,7 @@ atlases: generate single sprites, let the game pack them.
 | Gap | Fact | What to do |
 |---|---|---|
 | No "intermediate" flag on an item | Export writes every `done` item, also a raw image that only feeds a `sprite` | Put raw items under `raw/` and `rm -rf <assets>/raw` after export. |
-| No sprite-sheet or animation task | One sprite per item. An ark group (`params.images: N`) is one item; a `$ref` to it is the first output only, so a `sprite` cannot cut frames 2..N | One `image` + one `sprite` item per frame with a shared ref (`coin-spin-0` ... `coin-spin-6`). The game packer builds the atlas. |
+| No sprite-sheet or animation task | One sprite per item. An ark group (`params.images: N`) is one item; a `$ref` to it is the first output only, so a `sprite` cannot cut frames 2..N | One `image` + one `sprite` item per frame with a shared ref (`fx/coin-spin/0` ... `fx/coin-spin/6`). The game packer builds the atlas. |
 | Nine-slice hint is the four-number form only | `buildfile/schema.ts` | Write `{nine=N,N,N,N}`; the game reads it the same as `{nine=N}`. |
 | Ids with `.` break the game scan | `scan/keys.ts`; moku-ai accepts them | Use `-` and `/`. |
 | sfx and `birefnet` prices are estimates | ElevenLabs bills credits, fal bills BiRefNet per second | `priceOverrides` with the plan's real rate. |
@@ -181,7 +240,8 @@ atlases: generate single sprites, let the game pack them.
 
 ## Provenance note
 
-Every feature's `assets/` folder gets an `ASSETS.md` that says where each file came from, as in
+Every `assets/` folder, of a feature or a layer, gets an `ASSETS.md` at its root, never in a kind
+folder. It says where each file came from, as in
 `tests/integration/merge-game/features/ui/assets/ASSETS.md` of the game repository. The shape:
 
 ```markdown
@@ -192,15 +252,15 @@ the file name as `{nine=left,top,right,bottom}` in texture px; the key drops the
 
 ## Art
 
-- Source: @moku-labs/ai 0.14.2, build file `features/ui/assets.moku.yaml`, provider `fal`,
+- Source: @moku-labs/ai 0.14.2, build file `shared/assets.moku.yaml`, provider `fal`,
   model `gpt-image-2.5` with a transparent background, cut by the `sprite` task (`none`),
   run on 2026-10-04.
 - Style reference: `refs/style-sheet.png` (drawn by Astra, 2026-09-22).
 
-### `ui.button-green`
+### `ui.buttons.green`
 
-- File: `features/ui/assets/button-green{nine=12,12,12,12}.png`, 128 × 64 px.
-- Raw image: `raw/button-green`, 1024 × 1024 px, $0.05. Sprite: `none`, padding 2, $0.
+- File: `shared/assets/buttons/green{nine=12,12,12,12}.png`, 128 × 64 px.
+- Raw image: `raw/buttons/green`, 1024 × 1024 px, $0.05. Sprite: `none`, padding 2, $0.
 - Prompt:
 
   > Game UI asset for a cozy forest merge game. One horizontal rounded wooden button ...
@@ -209,8 +269,8 @@ the file name as `{nine=left,top,right,bottom}` in texture px; the key drops the
 
 | Key | File | Source | Licence |
 |---|---|---|---|
-| `ui.click` | `features/ui/assets/click.mp3` | @moku-labs/ai, `sfx` elevenlabs `eleven_text_to_sound_v2`, 600 ms, 2026-10-04 | provider terms |
-| `ui.theme` | `features/ui/assets/theme.mp3` | Kenney, Music Loops, `Farm Frolics.ogg`, CC0 1.0 | CC0 |
+| `ui.sounds.click` | `shared/assets/sounds/click.mp3` | @moku-labs/ai, `sfx` elevenlabs `eleven_text_to_sound_v2`, 600 ms, 2026-10-04 | provider terms |
+| `ui.music.theme` | `shared/assets/music/theme.mp3` | Kenney, Music Loops, `Farm Frolics.ogg`, CC0 1.0 | CC0 |
 ```
 
 For each file: the final path with its size and nine-slice borders, the raw item and its cost, the
@@ -220,8 +280,9 @@ record. The `moku run` box prints each file's cost; copy it.
 
 ## Checklist
 
-1. `features/<f>/assets.moku.yaml` with `name: <f>`, ids without `.` and without the feature
-   prefix, raw images under `raw/`.
+1. `features/<f>/assets.moku.yaml` with `name: <f>` (the shared layer: `shared/assets.moku.yaml`,
+   `name: ui`), ids without `.` and without the feature prefix, ids in kind folders by the
+   "Folder layout" rule, raw images under `raw/`.
 2. Images: `params.background: transparent` on fal `gpt-image-2.5`, then a `sprite` item
    (`none`); other sources go through `sprite` with `birefnet`. Final `size` and the
    `{nine=l,t,r,b}` id hint on the sprite.
@@ -230,5 +291,5 @@ record. The `moku run` box prints each file's cost; copy it.
 5. `moku run <file> --max-cost <n> --flat --out features/<f>/assets`, then
    `rm -rf features/<f>/assets/raw`.
 6. `bun run keys`.
-7. Write or update `features/<f>/assets/ASSETS.md`.
+7. Write or update `ASSETS.md` at the root of the `assets/` folder.
 8. Commit the assets and the note. Not `.moku/`, `out/` or `.env.local`.

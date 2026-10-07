@@ -66,7 +66,9 @@ cp node_modules/@moku-labs/game/fonts/LICENSE.txt shared/LICENSE-fonts.txt
 `config.ts` scans `shared/` as the layer `ui` (`assets.layers: { shared: "ui" }`), so the font's key is
 `ui.font-body`, the default of `text` config `fonts.body`. The built-in style `body` needs no config.
 `ui` is a plugin name, so no feature is called `ui`. The licence sits beside `assets/`, not inside it.
-The `.fnt` names its page `font-body.png`, so keep both file names. No `digits` font ships: a game that
+The `.fnt` names its page `font-body.png`, so keep both file names. Three files stay flat. When
+`shared/assets/` grows past about 8 files, group it by kind: moku-ai `references/game-assets.md`
+§Folder layout. No `digits` font ships: a game that
 uses the style `digits` brings `ui.font-digits` itself. For another face, build the pair from an OFL
 `.ttf` with `msdf-bmfont-xml`: BMFont XML, one 512×512 page.
 

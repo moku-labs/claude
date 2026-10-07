@@ -241,8 +241,12 @@ the agent; `moku-game build` imports none. Every command body starts with the in
 
 ## Assets pipeline
 
-- Files live in `features/<f>/assets/`. The key is `<feature>.<file name without extension>`:
-  `features/ui/assets/icon-gear.webp` is `"ui.icon-gear"`.
+- Files live in `features/<f>/assets/` or a layer's `assets/`. The key is `<feature>.<folders>.<stem>`:
+  `shared/assets/icons/gear.webp` is `"ui.icons.gear"`.
+- Folders by kind: a folder of more than about 8 files groups them into `fonts/`, `buttons/`, `panels/`,
+  `icons/`, `fx/<animation>/`, `decor/`, `sounds/`, `music/`, and drops the kind prefix from the name.
+  Rule and example tree: moku-ai `references/game-assets.md` §Folder layout. The template has three
+  files in `shared/assets/`, so it stays flat.
 - Formats: `.png`, `.webp` (one texture each), `.fnt` with its `.png` pages (one MSDF bitmap font; the
   pages are never keys), `.mp3` (one sound). `.ogg`, `.wav`, `.ttf` are left out with a note.
 - Nine-slice borders go in the file name and the key drops the tag: `panel{nine=48}.png` →
