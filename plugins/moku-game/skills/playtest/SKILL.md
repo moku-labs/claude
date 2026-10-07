@@ -57,27 +57,28 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
 ## Step 0 — guards
 
 1. `package.json` present, else "Not a Moku project — run from the app root." Stop.
-2. **Game check.** `package.json` depends on `@moku-labs/game` and a `createApp` from `@moku-labs/game`
-   exists. If the project is a web app instead (`@moku-labs/web`, `src/routes.tsx`), hand over: say that
+2. **Game check.** `package.json` depends on `@moku-labs/game` and the root `index.ts` default-exports
+   `defineGameApp({ ... })` (an older game: a `createApp` from `@moku-labs/game`). If the project is a web app instead (`@moku-labs/web`, `src/routes.tsx`), hand over: say that
    this project has a web surface and run the `moku-web:e2e` skill with the same arguments. Stop here.
-3. **Dev page check.** `web/index.html` and `web/main.ts` exist, `web/main.ts` sets `globalThis.game`
-   and `globalThis.doors`, and `__MOKU_GAME_DEV__` is set by `web/dev.ts`. Missing pieces: add them from
-   `references/hello-world.md` (they are dev scaffolding, not game logic), say what you added.
-4. `@moku-labs/editor` in `devDependencies` and a `dev` script that runs `moku-editor`. Missing: add
-   `bun add -d @moku-labs/editor@latest` and the script; say so.
+3. **Shell check.** A root `config.ts` exists and `.moku` is in `.gitignore`. The engine writes the dev
+   page; the game has none of its own. A game still on `web/index.html` and `web/main.ts` is the old
+   shape: say so in the report and play it with its own `dev` script, but do not migrate it here.
+4. `@moku-labs/editor` in `devDependencies` and an `editor` script that runs `moku-editor --root .`.
+   Missing: add `bun add --exact -d @moku-labs/editor@0.8.0` and the script; say so.
 
 ## Step 1 — headless proof
 
 ```bash
-bun run assets:keys -- --check    # generated/ and manifest.json are current
+bunx moku-game keys --check       # generated/ and manifest.json are current
 bun run typecheck
 bun run test                       # vitest: scenarios + the headless leg of the visual tests
 ```
 
 Then the gap check: every rest node of FOCUS has at least one `walk` scenario that reaches it and
-leaves it through each outcome a player can trigger. List `nodes/*.ts` with `rest: true`, grep
-`tests/**` for `at: "<path>"`. A missing route is a gap: write the scenario (the `createHeadless` +
-`walk` shape of `hello-world.md`), run the suite again. Red is a real defect or a wrong test; fix the
+leaves it through each outcome a player can trigger. List the node files with `rest: true`
+(`features/*/flow/*.ts`, or `nodes/*.ts` on the flat layout), grep `tests/**` for `at: "<path>"`. A
+missing route is a gap: write the test (`game.headless()` + `createHeadless` + `walk`, the shape of
+`hello-world.md`), run the suite again. Red is a real defect or a wrong test; fix the
 game source for a defect, never widen an expectation to clear red.
 
 ## Step 2 — visual tests
@@ -97,14 +98,17 @@ A pixel difference with the same state is a rendering regression; `screen.actual
 say so and keep the headless leg as the proof.
 
 A changed flow with no visual test gets one: `defineVisualTest` with a `start`, the `/control` steps that
-reach the screen, and a `checkpoint` per state worth a picture. Add it to `tests/visual/tests.ts`.
+reach the screen, and a `checkpoint` per state worth a picture, in a `tests/visual/*.visual.ts` file.
+The runner takes `app: () => game.screen().app` from the root `index.ts`.
 
 ## Step 3 — play it in the editor
 
 Follow `references/editor.md`:
 
-1. Start the dev server in the background (`preview_start` with the `game-editor` launch config, or
-   `bun run dev` in the background) and open `http://127.0.0.1:3000/__editor/` in the pane. Wait for the
+1. Start the editor in the background (`preview_start` with the `game-editor` launch config, or
+   `bun run editor` in the background) and open `http://127.0.0.1:3000/__editor/` in the pane. A flow deep
+   in the game starts faster from a prepared save: `tests/scenarios/<name>.ts` opens with
+   `http://127.0.0.1:3000/?player=<name>`; write one when a FOCUS flow needs many taps to reach. Wait for the
    link pill to say `live`. `Paused` with a hidden pane is the page's own pause; `resume` answers true and
    the game stays paused. Show the pane, then resume. Not a finding.
 2. `resize_window({ width: 480, height: 900 })`; use 720 when a workspace needs the room.
@@ -134,10 +138,10 @@ picture says it better.
 
 ## Step 4 — the device leg (optional)
 
-Run it when DEVICE is set, or when the change touched `platform-bridge.ts`, `native.ts`, audio (also
+Run it when DEVICE is set, or when the change touched `native` or `system` in `config.ts`, audio (also
 `audio.session` and `audio.music: "stream"`), haptics, touch gestures (`Draggable` with `carry`,
 `Swipeable`, `Traceable`) or the safe area. Follow `references/device.md`:
-`bun run native ios --simulator`, `control({ action: "attach" })` first, `launch`, then `screenshot` and
+`bun run native build ios --simulator`, `control({ action: "attach" })` first, `launch`, then `screenshot` and
 `tap` to walk the same flow once. Expect WebGL on the simulator. Save the shots into
 `.planning/e2e/game/sim-<flow>.png`. Android: `adb install -r`, `adb exec-out screencap`.
 

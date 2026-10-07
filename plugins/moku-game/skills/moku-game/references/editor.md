@@ -1,14 +1,22 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.2.1` beside a game on `@moku-labs/game@0.4.4` in the chat pane, reads the live game and takes pictures. The
+How Claude runs `@moku-labs/editor@0.8.0` beside a game on `@moku-labs/game@0.11.0` in the chat pane, reads the live game and takes pictures. Section 1 matches 0.8.0. The tools page sections were written for 0.2.1: when they differ from the installed editor, its `README.md` and `llms.txt` win. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
 ## 1. Start the dev server in the background
 
-The game's `dev` script is the editor bin: `moku-editor web/index.html --port 3000 --root .`. It serves
-the game with Bun hot reload on (`--no-hmr` turns it off) on `/`, the tools page on `/__editor/`, and the project root's files as static (manifest, art,
-sounds; dotfiles and `node_modules` refused). Bun only. It binds `127.0.0.1` only.
+The game's `editor` script is the editor bin: `moku-editor --root .`. A game has no HTML file: the bin asks
+the engine for the dev page (`preparePage` of `@moku-labs/game/cli`) with the page agent
+`@moku-labs/editor/agent/page` on it, and serves it under `.moku/bunfig.toml`. The game is on `/` with
+Bun hot reload on (`--no-hmr` turns it off), the tools page on `/__editor/`, and the game's files as
+static (manifest, art, sounds; dot folders and `node_modules` refused). `--port 0` takes a free port.
+Bun only. It binds `127.0.0.1` only. The game's `dev` script, `moku-game dev`, serves the same page
+without the agent and without the tools page.
+
+The startup lines name the project index: `files:project-on {"files":…}` is good. `files:project-off`
+with `parseConfigFileTextToJson is not a function` means TypeScript 7: the index needs the JS API of
+TypeScript 6 (`hello-world.md` → Install). Without the index a pick has no `file:line`.
 
 Preferred: `.claude/launch.json` plus `mcp__Claude_Browser__preview_start`, which starts the server and
 opens the pane in one step.
@@ -20,7 +28,7 @@ opens the pane in one step.
     {
       "name": "game-editor",
       "runtimeExecutable": "bun",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": ["run", "editor"],
       "port": 3000,
       "url": "http://127.0.0.1:3000"
     }
@@ -30,10 +38,11 @@ opens the pane in one step.
 
 Then `preview_start({ name: "game-editor" })` and `navigate({ url: "http://127.0.0.1:3000/__editor/" })`.
 Read the server output with `preview_logs` when the page does not come up. Without `launch.json`, run
-`bun run dev` with the Bash tool in the background and `preview_start({ url: "http://127.0.0.1:3000/__editor/" })`.
+`bun run editor` with the Bash tool in the background and `preview_start({ url: "http://127.0.0.1:3000/__editor/" })`.
 
 The game page alone (no tools) is `http://127.0.0.1:3000/`. Both are the same origin, so the game iframe
-inside the tools page is reachable from page scripts.
+inside the tools page is reachable from page scripts. `http://127.0.0.1:3000/?player=<name>` opens the
+game on the scenario `tests/scenarios/<name>.ts`, on a fresh memory save.
 
 ## 2. Size the pane
 
@@ -81,7 +90,7 @@ Read tool: it is the whole reference, ready for a fix.
 ```text
 @moku tapLabel · text · main/home · f58
 path: helloScreen/tap/tapLabel
-source: features/hello/view.tsx:22
+source: features/hello/views/hello-screen.tsx:22
 layout: tap < helloScreen (column, gap 48)
 bounds: 182,462 37×15 px · ref 490,1242 100×40
 state: visible
@@ -104,8 +113,8 @@ card it names; `<name>` is the element key for `doors.sources.locate`.
 ## 4. Read and drive the game by script
 
 The tools page exposes **no global**. The game page does: `globalThis.game` (the app), `globalThis.doors`
-(`{ read, watch, sources, run, commands }`) and, when `web/main.ts` sets it, `globalThis.editor` (the
-agent app). Reach them through the one game iframe, `iframe[data-game-frame]`, which is same-origin.
+(`{ read, watch, sources, run, commands }`), `globalThis.system` (the system app, or `undefined`) and,
+under the editor bin, `globalThis.editor` (the agent app). Reach them through the one game iframe, `iframe[data-game-frame]`, which is same-origin.
 Use `mcp__Claude_Browser__javascript_tool` on the tools page:
 
 ```js
@@ -220,14 +229,14 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
 
 ## 6. What the editor can and cannot do yet
 
-- **No MCP server yet.** "MCP doors" in game 0.4.x means the catalogue is shaped for one: every source
-  and command is data `{ id, title, input, effect? }` with a typed input schema, which an MCP layer
-  lists as tools one to one. Neither game 0.4.4 nor editor 0.2.1 ships that server. Claude uses the same
-  catalogue through `javascript_tool`: list it with
+- **MCP.** `moku-editor mcp` is a stdio MCP server: `claude mcp add moku-editor -- bunx moku-editor mcp
+  --port 3000` (no HTML file for a shell game; `bunx moku-editor mcp-config --port 3000` prints the
+  `.mcp.json`). It uses the running bin or starts one, and lists the `moku_*` tools plus one tool per
+  command door. Without it, Claude uses the same catalogue through `javascript_tool`: list it with
   `Object.values(doors.sources).map(s => [s.id, s.input])` and
   `Object.values(doors.commands).map(c => [c.id, c.input, c.effect])`, then call `doors.read` or
-  `doors.run` with the input the schema names. A game's own `.dev` sources and commands appear the same
-  way once `web/main.ts` passes them to `registry.modules`.
+  `doors.run` with the input the schema names. A game's own `.dev.ts` sources and commands appear the
+  same way: the editor's page imports every `**/*.dev.ts` and hands them to the agent.
 - **Not installed is not a failure.** A game without `audioPlugin` or `effectsPlugin` has no
   `game.sounds` / `game.effects`. The registry lists them `available: false`, logs
   `registry:source-unavailable` at level info, and Render says "Effects not installed in this game".
@@ -245,5 +254,5 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
   the game, so step a few frames before a Shot. Not a finding.
 - **Bun dev reload can break.** After many files change at once the game page can show Bun's "Failed to
   load bundled module './main.ts'", and a reload does not fix it. Bun 1.3.14 can also crash the dev
-  server after many hot reloads in a row (known to the editor team). Restart `bun run dev`, then reload the
+  server after many hot reloads in a row (known to the editor team). Restart `bun run editor`, then reload the
   tools page. `navigate` to the same URL with only a new `#hash` does not reload; use `location.reload()`.

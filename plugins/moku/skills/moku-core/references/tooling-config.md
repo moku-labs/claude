@@ -686,7 +686,9 @@ pre-commit:
 
 **App variant.** An app (and a game) is not published and has no `validate`, `test:unit` or
 `test:integration` script, so its hook runs the scripts it has. A game takes its own variant from the
-`moku-game` pack, `references/hello-world.md`.
+`moku-game` pack, `references/hello-world.md`. A game also differs in two pins: no `bunfig.toml` (it pins
+with `bun add --exact`) and `typescript` `6.0.3`, because the editor's project index needs the
+TypeScript JS API that 7 does not have.
 
 ```yaml
 pre-commit:

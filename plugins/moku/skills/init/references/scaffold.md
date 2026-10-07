@@ -30,7 +30,7 @@ Identical for framework, consumer app and library. Copy each body from `tooling-
 
 | # | File | Notes |
 |---|---|---|
-| 1 | `bunfig.toml` | `exact = true`. Write this **before** any `bun install` so pinning applies from the first install. |
+| 1 | `bunfig.toml` | `exact = true`. Write this **before** any `bun install` so pinning applies from the first install. A game writes none: it pins with `bun add --exact`. |
 | 2 | `.bun-version` | `1.3.14` |
 | 3 | `package.json` | `"type": "module"`, `engines`, the script contract, devDependencies at the exact pinned versions. `main`/`module`/`types`/`exports`/`files`/`repository` for packages; an app may omit them. |
 | 4 | `biome.json` | |
@@ -168,14 +168,18 @@ A consumer app inherits `ctx.log` and `ctx.env` from its framework and does not 
 
 ### Game (Layer 3 on `@moku-labs/game`)
 
-The source tree, `web/` entry, dev server, editor wiring and the first headless test come from the
-`moku-game` pack, `references/hello-world.md`. A game changes part of the tooling above: its own
-`vitest.config.ts` (coverage counts the logic only), `biome.json` scope, `lefthook.yml`, JSX settings in
-`tsconfig.json`, the game scripts, and no `tsconfig.build.json` or `tsdown.config.ts`. The pack's section
-"Tooling a game changes" is the list; follow it over this table.
+The game folder (`index.ts`, `config.ts`, `game.ts`, `core/`, `shared/`, `features/`,
+`tests/scenarios/`), the scripts that call `moku-game` and `moku-editor --root .`, and the first headless
+test come from the `moku-game` pack, `references/hello-world.md`. A game writes no page, no `web/`, no
+server and no `bunfig.toml`: the engine bin `moku-game` writes the page into `.moku/`. A game changes part
+of the tooling above: its own `vitest.config.ts` (the layer aliases, coverage of the logic only),
+`biome.json` scope, `.oxlintrc.json` with the engine rules, `lefthook.yml`, `tsconfig.json` (JSX and the
+layer `paths`), `.gitignore` (`.moku`), TypeScript 6.0.3 for the editor's project index, and no
+`tsconfig.build.json` or `tsdown.config.ts`. The pack's section "Tooling a game changes" is the list;
+follow it over this table.
 
-Dependencies: `@moku-labs/game@latest`, `pixi.js`; dev `@moku-labs/editor@latest`. `@moku-labs/core`
-never appears here, as for any consumer app.
+Dependencies, exact, at the versions `hello-world.md` names: `@moku-labs/game`, `pixi.js`,
+`@moku-labs/core`, `@moku-labs/common` (the peers both packages share); dev `@moku-labs/editor`, `sharp`.
 
 ### Tools / library
 
@@ -222,7 +226,7 @@ Run every item. Fix and re-run a failing one before moving on.
 | 4 | Tests | `bun run test` — the placeholder suites pass |
 | 5 | Build | `bun run build` |
 | 6 | Package validation | `bun run validate` (packages only) |
-| 7 | Sources match the type | Framework: `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists. Consumer: `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` is absent from `dependencies` — if present, remove it, re-run `bun install`, re-check. Library: `src/index.ts` exists. Game: `@moku-labs/game` in `dependencies`, `@moku-labs/editor` in `devDependencies`, `bun run assets:keys` exits 0, the headless test walks the first flow. |
+| 7 | Sources match the type | Framework: `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists. Consumer: `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` is absent from `dependencies` — if present, remove it, re-run `bun install`, re-check. Library: `src/index.ts` exists. Game: `index.ts` default-exports `defineGameApp`, `config.ts` exists, `@moku-labs/game` in `dependencies`, `@moku-labs/editor` in `devDependencies`, `bun run keys` and `bun run build` exit 0, the headless test walks the first flow. |
 | 8 | Git | `.git` exists; `bunx lefthook install` succeeded |
 | 8.5 | Game runs | Games only: init Step 5.5 showed the scene in the editor. |
 | 9 | Release plumbing | Packages: `.github/workflows/ci.yml` and `publish.yml` present, all eight scripts in `package.json`. Apps and games: `ci.yml` present; `lint`, `typecheck`, `test`, `test:coverage`, `build`, `deploy` in `package.json`; the app variant of `lefthook.yml`. |

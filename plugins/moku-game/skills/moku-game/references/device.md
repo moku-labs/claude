@@ -1,93 +1,67 @@
 # The device loop: simulator, Android, real iPhone
 
 How a game on `@moku-labs/game` becomes a native app with `@moku-labs/native` (Tauri 2) and how Claude
-sees it. The engine never imports a native package (lint L13); the game adds `platform-bridge.ts` and
-`native.ts` in its own layer. For the packager itself load the `moku-native:moku-native` skill; for the
-bridge, `moku-system:moku-system`.
+sees it. The game imports no native package (lint L13) and writes no bridge: `config.ts` names the app
+and the system plugins, and the engine bin `moku-game` does the rest. For the packager itself load the
+`moku-native:moku-native` skill; for the system plugins, `moku-system:moku-system`.
 
-## The two files a game adds
-
-```ts
-// platform-bridge.ts: four system capabilities become the engine's PlatformProvider
-import type { HapticKind, PlatformProvider } from "@moku-labs/game";
-import type { Back, Haptics, KeepAwake, Lifecycle, SystemResult } from "@moku-labs/system";
-
-export type SystemSlice = {
-  readonly lifecycle: Lifecycle.LifecycleApi;
-  readonly back: Back.BackApi;
-  readonly haptics: Haptics.HapticsApi;
-  readonly keepAwake: KeepAwake.KeepAwakeApi;
-};
-
-/**
- * Builds the engine's provider over the system app. A capability answers a `SystemResult`, never a
- * throw, so an `unsupported` tick on a desktop is not an error of the game.
- *
- * @param system - The system app with lifecycle, back, haptics and keepAwake.
- * @returns The provider for `pluginConfigs.platform.provider`.
- */
-export function fromSystem(system: SystemSlice): PlatformProvider {
-  return {
-    onPause: fn => system.lifecycle.onPause(fn),
-    onResume: fn => system.lifecycle.onResume(fn),
-    onBack: fn => system.back.onPress(fn),
-    haptic: kind => send(() => play(system.haptics, kind)),
-    keepAwake: on => send(() => system.keepAwake.set(on)),
-    exit: () => send(() => system.back.exit())
-  };
-}
-```
-
-`play` maps `light | medium | heavy` → `haptics.impact(kind)`, `success | warning | error` →
-`haptics.notify(kind)`, `selection` → `haptics.selection()`; `send` fires the promise and returns nothing.
-The page composes `createApp({ plugins: [lifecyclePlugin, backPlugin, hapticsPlugin, keepAwakePlugin] })`
-from `@moku-labs/system` (subpaths `/lifecycle`, `/back`, `/haptics`, `/keep-awake`), starts it **before**
-the game, and passes `platform: { provider: fromSystem(system), keepAwake: true }`. In a browser the web
-providers answer honestly: pause follows `visibilitychange`, haptics vibrate on Android only, `exit` is
-`unsupported`.
+## What a game adds
 
 ```ts
-// native.ts: the packager app, a second createApp beside the game
-import path from "node:path";
-import type { Target } from "@moku-labs/native";
-import { createApp, TARGETS } from "@moku-labs/native";
+// config.ts: the native app and the system shell, as plain data
+import type { GameConfig } from "@moku-labs/game/app";
 
-const native = createApp({
-  config: {
-    app: { name: "My Game", identifier: "com.example.mygame", orientation: "portrait", backgroundColor: "#10161d" },
-    web: {
-      cwd: import.meta.dir,
-      build: "bun run assets:keys -- --pack dist/web && bun run build:web",
-      devCommand: "bun web/serve.ts --port 5173",
-      devUrl: "http://localhost:5173",
-      dist: "dist/web"
-    },
-    // lifecycle and keepAwake need no row: the webview's own events and wake lock serve them.
-    system: [{ name: "back" }, { name: "haptics" }],
-    targets: [target],
-    projectDir: path.join(import.meta.dir, "dist/tauri"),
-    outDir: path.join(import.meta.dir, "dist/native")
-  }
-});
-
-await native.start();
-try {
-  await native.cli.build({ target, simulator: process.argv.includes("--simulator") });
-} finally {
-  await native.stop();
-}
+export default {
+  page: { title: "My Game", background: "#10161d", orientation: "portrait" },
+  native: { name: "My Game", identifier: "com.example.mygame", icon: "assets/icon.png" },
+  system: ["lifecycle", "back", "haptics", "keepAwake"],
+  save: "local",
+  assets: { layers: { shared: "ui" } }
+} satisfies GameConfig;
 ```
 
-`target` is one of `TARGETS` (`macos`, `windows`, `linux`, `ios`, `android`). `dist/tauri/` and
-`dist/native/` are build output, never committed. Scripts: `"native": "bun native.ts"`, run as
-`bun run native ios --simulator`. `bun run native doctor` is the `moku-native` doctor; a real `node` on
-`PATH` is required because `@tauri-apps/cli` does not run under Bun.
+```sh
+bun add --exact @moku-labs/system@0.3.1        # system names a plugin, or save is "store"
+bun add --exact -d @moku-labs/native@0.3.2     # moku-game native
+```
+
+| `system` name | The engine gets |
+|---|---|
+| `lifecycle` | Pause and resume, the `"background"` reason of `lifecycle` |
+| `back` | The hardware Back press and `exit()` |
+| `haptics` | The `haptic` effect |
+| `keepAwake` | The screen wake lock while the game runs |
+| `store` | The store save (`save: "store"`): idb on the web, the Tauri store in the app |
+
+The page `moku-game` writes imports `systemShellOf` from `@moku-labs/game/app/system` with one `import()`
+per named plugin, in the order above, builds the system app before the game and passes its provider to
+`platform`. A game that names no plugin and keeps a memory or local save bundles no system code. In a
+browser the web providers answer honestly: pause follows `visibilitychange`, haptics vibrate on Android
+only, `exit` is `unsupported`. A Leave button: a node asks with `fx({ kind: "exit" })`, the game's exit
+plugin answers with `ctx.require(platformPlugin).exit()`.
+
+`moku-game native <verb> [<target>]` maps `config.ts` to the config of `@moku-labs/native`:
+
+| Native config | From |
+|---|---|
+| `app.name`, `app.identifier`, `app.icon` | `native.name`, `native.identifier`, `native.icon` |
+| `app.orientation`, `app.backgroundColor` | `page.orientation`, `page.background` |
+| `web.build`, `web.dist` | `moku-game build`, `dist/web` |
+| `web.devCommand`, `web.devUrl` | `moku-game dev --port 5173`, `http://127.0.0.1:5173` |
+| `system` | One row per name that needs a Tauri capability: `back`, `haptics`, `store` |
+| `targets` | `native.targets`, else the target of the command |
+| `projectDir`, `outDir` | `.moku/tauri`, `dist-native` |
+
+With the template's `"native": "moku-game native"` script: `bun run native build ios --simulator`,
+`bun run native build android`, `bun run native dev ios`, `bun run native doctor`, `bun run native clean`.
+Without a `native` section it stops with `[game] config.ts has no native section.` `.moku/tauri/` and
+`dist-native/` are build output, never committed. A real `node` on `PATH` is required because
+`@tauri-apps/cli` does not run under Bun.
 
 ## iOS simulator
 
-1. Build the simulator slice: `bun run native ios --simulator` → `native.cli.build({ target: "ios",
-   simulator: true })`. Unsigned; the doctor's `signing-ios` warning is legal here. The cli prints the
-   `.app` path under `outDir` (`dist/native/ios/…`).
+1. Build the simulator slice: `bun run native build ios --simulator`. Unsigned; the doctor's
+   `signing-ios` warning is legal here. Native prints the `.app` path under `dist-native/ios/`.
 2. Open the live panel first so the user watches: `mcp__Claude_Code_iOS_Simulator__control({ action:
    "attach" })`. It errors harmlessly when no simulator is booted; boot one (`xcrun simctl boot "iPhone 17
    Pro"`) or let `launch` do it.
@@ -121,14 +95,14 @@ Facts to expect on the simulator (spike P13, iOS 26 simulator):
 
 ## Android
 
-1. Build: `bun run native android` → an installable `.apk` under `dist/native/android/` (the `aab` option
-   builds a bundle for the store). Needs Android SDK, NDK, JDK; `bun run native doctor` lists what is
-   missing.
+1. Build: `bun run native build android` → an installable `.apk` under `dist-native/android/`. Needs
+   Android SDK, NDK, JDK; `bun run native doctor android` lists what is missing.
 2. Install on the running emulator or the plugged device: `adb install -r <apk>`. Launch from the
    launcher or `adb shell monkey -p com.example.mygame 1`.
 3. Dev page on the device: `adb reverse tcp:3000 tcp:3000` makes the device's `127.0.0.1:3000` reach the
-   host's dev server, so a dev build pointed at `http://127.0.0.1:3000` loads the live page. Tauri's own
-   `native.cli.dev({ target: "android" })` uses `web.devUrl` and handles the address itself.
+   host's dev server, so a dev build pointed at `http://127.0.0.1:3000` loads the live page.
+   `bun run native dev android` runs the shell on `moku-game dev --port 5173` and handles the address
+   itself.
 4. Screenshots: `adb exec-out screencap -p > .planning/e2e/game/android-home.png`. Taps: `adb shell input
    tap <x> <y>`; a text field: `adb shell input text "…"`.
 5. Expect haptics on cheap phones to do nothing while still answering `ok` (spike P14). An old system
@@ -139,12 +113,12 @@ Facts to expect on the simulator (spike P13, iOS 26 simulator):
 A device build needs Apple signing. Claude never enters Apple credentials: it guides, the user signs in.
 
 1. The user opens Xcode → Settings → Accounts and signs in with their Apple ID; the team appears.
-2. `native.ts` gets `signing: { apple: { teamId: "ABCDE12345", exportMethod: … } }` (ids and env-var
-   **names** only, never secrets; the `moku-native:moku-native` skill lists the `exportMethod` values and
-   the env vars the doctor checks).
-3. `bun run native ios` builds the device archive; the first run may need the user to accept the
-   provisioning prompt in Xcode, or to open the generated Xcode project under `projectDir` once and run
-   on the device from Xcode.
+2. `config.ts` carries no signing in game 0.11. The user picks the team in the generated Xcode project
+   under `.moku/tauri/` (Signing & Capabilities) and runs on the device from Xcode. The
+   `moku-native:moku-native` skill lists the env vars its doctor checks; never write a secret into the
+   game.
+3. `bun run native build ios` builds the device archive; the first run may need the user to accept the
+   provisioning prompt in Xcode.
 4. The simulator panel does not show a physical device. Proof comes from the user's description or a
    photo; ask for one specific screen.
 5. WebGPU on a physical iPhone with iOS 26 is still an open question (P13): one run on a device answers

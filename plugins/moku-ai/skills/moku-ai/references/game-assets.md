@@ -16,18 +16,20 @@ game repository.
 
 `click.mp3` next to `click.m4a` is one key from two files: the scan fails and names both.
 
-Files live in `<root>/features/<feature>/assets/`. The game's script runs the package bin
-`moku-game-assets` with `--root src`, so the paths below start with `src/`:
+Files live in `features/<feature>/assets/` of the game folder, or in a layer `config.ts` names
+(`assets: { layers: { shared: "ui" } }` keys `shared/assets/*` as `ui.*`). A game on the shell of
+`@moku-labs/game` 0.10 and later runs the engine bin, which reads its paths and layers from `config.ts`:
 
 ```jsonc
 // game package.json
-"assets:keys": "moku-game-assets --root src --manifest public/assets/manifest.json --keys src/generated/assets.ts",
-"assets:pack": "moku-game-assets --root src --keys src/generated/assets.ts --pack dist/assets"
+"keys": "moku-game keys",
+"pack": "moku-game pack"
 ```
 
-`bun run assets:keys` scans the assets, writes `generated/assets.ts` (`AssetKey`, `FontKey`,
-`AudioKey`) and the dev manifest. A subfolder adds a dotted segment:
-`src/features/ui/assets/icons/sword.png` is `ui.icons.sword`.
+`bun run keys` scans the assets, writes `generated/assets.ts` (`AssetKey`, `FontKey`, `AudioKey`) and the
+dev manifest. A subfolder adds a dotted segment: `features/ui/assets/icons/sword.png` is
+`ui.icons.sword`. An older game without `config.ts` runs `moku-game-assets --root .` in an `assets:keys`
+script; the commands below work the same with that name.
 
 **A `.` in a folder or file stem fails the scan** (`"sword.v2" ... would fake a folder`). So
 moku-ai item ids use `-` and `/` only: `button-green`, never `button.green` or `s01.key`.
@@ -48,11 +50,11 @@ size is known before the run, so the borders can be written into the id up front
 
 ## One build file per feature
 
-Put the build file next to the feature, `src/features/<f>/assets.moku.yaml`, with `name: <f>`.
+Put the build file next to the feature, `features/<f>/assets.moku.yaml`, with `name: <f>`.
 Ids carry no feature prefix: the export lands inside the feature folder.
 
 ```yaml
-# src/features/ui/assets.moku.yaml
+# features/ui/assets.moku.yaml
 # yaml-language-server: $schema=../../../.moku/build.schema.json
 version: 1
 name: ui
@@ -124,16 +126,16 @@ Run one feature per `moku run`. `--flat` drops the `<build name>/` folder, so `-
 straight at the feature's `assets/`:
 
 ```bash
-moku validate "src/features/*/assets.moku.yaml"
-moku estimate "src/features/*/assets.moku.yaml"
+moku validate "features/*/assets.moku.yaml"
+moku estimate "features/*/assets.moku.yaml"
 # tell the user the total, wait for a yes
-moku run src/features/ui/assets.moku.yaml --max-cost 0.10 --flat --out src/features/ui/assets
-rm -rf src/features/ui/assets/raw        # every done item is exported, the raw images too
-bun run assets:keys
+moku run features/ui/assets.moku.yaml --max-cost 0.10 --flat --out features/ui/assets
+rm -rf features/ui/assets/raw        # every done item is exported, the raw images too
+bun run keys
 ```
 
-Result: `src/features/ui/assets/button-green{nine=12,12,12,12}.png` (key `ui.button-green`) and
-`src/features/ui/assets/click.mp3` (key `ui.click`). Without `--flat` the export writes
+Result: `features/ui/assets/button-green{nine=12,12,12,12}.png` (key `ui.button-green`) and
+`features/ui/assets/click.mp3` (key `ui.click`). Without `--flat` the export writes
 `<out>/ui/...` and the keys gain a `ui.` segment.
 
 Two rules of `--flat`: one glob with several builds into one folder keeps the first file of a
@@ -153,9 +155,9 @@ or resize step is needed.
 ### Register and pack
 
 ```bash
-bun run assets:keys           # scan src/features/*/assets, write generated/assets.ts + dev manifest
-bun run assets:keys --check   # CI: fails when outputs are stale
-bun run assets:pack           # production: atlas pages via --pack <dir>
+bun run keys                  # scan features/*/assets and the layers, write generated/assets.ts + dev manifest
+bun run keys --check          # CI: fails when outputs are stale
+bun run pack                  # production: atlas pages in dist/assets (moku-game build packs too)
 ```
 
 The dev pipeline serves loose files. The production packer (`--pack <dir>`, needs `sharp` as a dev
@@ -190,14 +192,14 @@ the file name as `{nine=left,top,right,bottom}` in texture px; the key drops the
 
 ## Art
 
-- Source: @moku-labs/ai 0.14.2, build file `src/features/ui/assets.moku.yaml`, provider `fal`,
+- Source: @moku-labs/ai 0.14.2, build file `features/ui/assets.moku.yaml`, provider `fal`,
   model `gpt-image-2.5` with a transparent background, cut by the `sprite` task (`none`),
   run on 2026-10-04.
 - Style reference: `refs/style-sheet.png` (drawn by Astra, 2026-09-22).
 
 ### `ui.button-green`
 
-- File: `src/features/ui/assets/button-green{nine=12,12,12,12}.png`, 128 × 64 px.
+- File: `features/ui/assets/button-green{nine=12,12,12,12}.png`, 128 × 64 px.
 - Raw image: `raw/button-green`, 1024 × 1024 px, $0.05. Sprite: `none`, padding 2, $0.
 - Prompt:
 
@@ -207,8 +209,8 @@ the file name as `{nine=left,top,right,bottom}` in texture px; the key drops the
 
 | Key | File | Source | Licence |
 |---|---|---|---|
-| `ui.click` | `src/features/ui/assets/click.mp3` | @moku-labs/ai, `sfx` elevenlabs `eleven_text_to_sound_v2`, 600 ms, 2026-10-04 | provider terms |
-| `ui.theme` | `src/features/ui/assets/theme.mp3` | Kenney, Music Loops, `Farm Frolics.ogg`, CC0 1.0 | CC0 |
+| `ui.click` | `features/ui/assets/click.mp3` | @moku-labs/ai, `sfx` elevenlabs `eleven_text_to_sound_v2`, 600 ms, 2026-10-04 | provider terms |
+| `ui.theme` | `features/ui/assets/theme.mp3` | Kenney, Music Loops, `Farm Frolics.ogg`, CC0 1.0 | CC0 |
 ```
 
 For each file: the final path with its size and nine-slice borders, the raw item and its cost, the
@@ -218,15 +220,15 @@ record. The `moku run` box prints each file's cost; copy it.
 
 ## Checklist
 
-1. `src/features/<f>/assets.moku.yaml` with `name: <f>`, ids without `.` and without the feature
+1. `features/<f>/assets.moku.yaml` with `name: <f>`, ids without `.` and without the feature
    prefix, raw images under `raw/`.
 2. Images: `params.background: transparent` on fal `gpt-image-2.5`, then a `sprite` item
    (`none`); other sources go through `sprite` with `birefnet`. Final `size` and the
    `{nine=l,t,r,b}` id hint on the sprite.
 3. Sounds: `sfx` items with `durationMs`; music on fal; everything lands as mp3.
 4. `moku validate`, `moku estimate`, tell the total, wait for a yes.
-5. `moku run <file> --max-cost <n> --flat --out src/features/<f>/assets`, then
-   `rm -rf src/features/<f>/assets/raw`.
-6. `bun run assets:keys`.
-7. Write or update `src/features/<f>/assets/ASSETS.md`.
+5. `moku run <file> --max-cost <n> --flat --out features/<f>/assets`, then
+   `rm -rf features/<f>/assets/raw`.
+6. `bun run keys`.
+7. Write or update `features/<f>/assets/ASSETS.md`.
 8. Commit the assets and the note. Not `.moku/`, `out/` or `.env.local`.
