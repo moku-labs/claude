@@ -2,6 +2,35 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.80.0 (2026-10-07)
+
+The game template and the game guidance move onto the game shell of `@moku-labs/game` 0.11 and
+`@moku-labs/editor` 0.8. A game is a folder: `index.ts` (`defineGameApp`), `config.ts` (plain data) and
+what the bin `moku-game` writes into `.moku/`. Verified on a fresh scaffold: install, `keys`, typecheck,
+lint with the ten engine rules, tests at 100% coverage, `build`, `moku-game dev`, `moku-editor --root .`
+with the project index on, and the lefthook pre-commit.
+
+### Changed
+- **The hello-world template is a shell game.** `index.ts`, `config.ts`, `game.ts` (the root flow only),
+  `core/{state,kit}.ts`, `shared/` (the body font, scanned as the layer `ui`), `features/hello/`,
+  `tests/scenarios/ready.ts`, `tests/integration/hello.test.ts`. Scripts call `moku-game dev|build|keys|pack|native`
+  and `moku-editor --root .`. Gone: `web/`, `createGame`, the hand-written dev server and build. Exact pins:
+  game 0.11.0, editor 0.8.0, pixi.js 8.22.0, core 1.7.1, common 0.3.4, sharp 0.34.5. tsconfig and vitest
+  carry the layer aliases; `.oxlintrc.json` turns on all ten `moku-game/*` rules.
+- **A game pins TypeScript 6.0.3 and writes no `bunfig.toml`.** The editor's project index needs the
+  TypeScript JS API; on 7.0.2 it logs `files:project-off`. The shell names no `bunfig.toml` in a game, so
+  it pins with `bun add --exact`.
+- **moku-game skill.** The layout, `defineGameApp` shape, `config.ts`, the `moku-game` commands, the ten
+  lint rules, the editor start without HTML, and the native and system shell from `config.ts`.
+  `plugin-index.md` gains the shell entries and `PlatformApi.exit()`; its plugin tables keep the 0.4.6 sync.
+- **editor.md, device.md, playtest.** `bun run editor`, `?player=<scenario>`, `moku-editor mcp`;
+  `bun run native build ios --simulator` over `config.ts` instead of `native.ts` and `platform-bridge.ts`.
+- **game-validator.** Lint-first knows the ten rules. New §11 checks the shell: `index.ts` and `config.ts`,
+  no `createApp` or `flow.run()` in the game, no shell-owned `pluginConfigs` key, no old-shape files.
+- **init, scaffold, structural conformance, tooling, migrations.** The game branch follows the shell;
+  native and system skills say a game names them in `config.ts`; moku-ai's game asset route runs
+  `moku-game keys`.
+
 ## 0.79.0 (2026-10-05)
 
 The soft move from ESLint to oxlint, in four PRs. New projects get Biome + oxlint on TypeScript 7. Old projects
