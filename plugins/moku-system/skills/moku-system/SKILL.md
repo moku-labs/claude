@@ -79,6 +79,12 @@ the `moku-idioms.md` rubric — load the `moku:moku-core` skill with the Skill t
   0.3.0+). `lifecycle` and `keepAwake` have no entry. Keep it in step with the composed plugins.
 - **Web bundling.** The bundler must resolve `@tauri-apps/*` even for a web build. Install the peers or
   mark them external (`external: ["@tauri-apps/*"]` in Bun, `/^@tauri-apps\//` in Rollup).
+- **A game on `@moku-labs/game` (0.10 and later) composes no system app.** Its `config.ts` names
+  `system: ["lifecycle", "back", "haptics", "keepAwake", "store"]` (any subset) and `save`. The page
+  `moku-game` writes imports `systemShellOf` from `@moku-labs/game/app/system` with one `import()` per
+  named plugin, builds the system app and hands its provider to the engine's `platform`. The game adds
+  `@moku-labs/system` as a dependency and imports nothing of it (lint `moku-game/native-imports`). See the
+  `moku-game:moku-game` skill, `references/device.md`.
 
 ⚠️ What not to do:
 

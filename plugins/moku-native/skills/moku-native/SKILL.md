@@ -78,6 +78,14 @@ What NOT to do:
 - Mobile is opt-in. The default `targets` is the host's one desktop target. Name `ios` / `android`
   explicitly.
 
+**A game on `@moku-labs/game` (0.10 and later) writes none of the files above.** Its `config.ts` names
+`native: { name, identifier, icon?, targets? }` and `system`, and the engine bin runs this framework:
+`moku-game native build ios --simulator`, `native dev <target>`, `native doctor`, `native clean`. The
+engine maps `config.ts` to the native config (`web.build` is `moku-game build`, `projectDir` is
+`.moku/tauri`, `outDir` is `dist-native`, a system row per `back`, `haptics`, `store`). The game adds
+`@moku-labs/native` as a dev dependency and imports nothing of it. See the `moku-game:moku-game` skill,
+`references/device.md`.
+
 ## Framework API (@moku-labs/native v0.3.2)
 
 All five plugins are **framework defaults** — already wired. An app passes `config` and nothing else in the

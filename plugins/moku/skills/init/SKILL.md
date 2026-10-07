@@ -95,10 +95,10 @@ procedure, the per-type source templates, and the verification checklist. In sho
 5. `bun install`, `bunx lefthook install`, `bun run format`.
 
 A game takes its sources from the `moku-game` pack: load the `moku-game:moku-game` skill and follow
-`references/hello-world.md` under the base directory it prints. The packages change fast, so a game
-installs `@moku-labs/game@latest`, `pixi.js` and `-d @moku-labs/editor@latest`, never a remembered
-version. Without the `moku-game` pack, stop and say the pack is missing: a game scaffold from memory
-drifts from the engine.
+`references/hello-world.md` under the base directory it prints. A game installs the exact versions that
+file names and was verified with (`@moku-labs/game`, `@moku-labs/editor` and their peers), never a
+remembered version. Without the `moku-game` pack, stop and say the pack is missing: a game scaffold from
+memory drifts from the engine.
 ## Step 4 — release plumbing, from the first commit
 
 A project carries its release path from commit one, so the first release is not an archaeology
@@ -152,7 +152,8 @@ not continue to Step 6 while anything is red: the marker means "this project is 
 
 A game is not ready until the person has seen it. After the checklist is green:
 
-1. Start the dev server in the background: `bun run dev` (the editor's `moku-editor` bin, port 3000).
+1. Start the editor in the background: `bun run editor` (`moku-editor --root .`, port 3000). It takes the
+   page from the engine; the game has no HTML file.
 2. Open `http://127.0.0.1:3000/__editor/` and take one screenshot. Use the first that works:
    - the built-in browser pane (`preview_start` with the url, then a screenshot);
    - a Playwright MCP browser, if one is connected;

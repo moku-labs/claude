@@ -203,7 +203,8 @@ and (if it changes the scaffold) update `tooling-config.md`.
      - `bun add @moku-labs/game@latest` when the installed game is below 0.4.6.
      - Add `"@moku-labs/game/lint"` to `jsPlugins` after the two tooling entries. Add the six rules
        `moku-game/lazy-imports`, `native-imports`, `dev-imports`, `no-module-state`, `determinism`,
-       `rules-siblings`, each `"error"`. The moku-game pack's `references/hello-world.md` has the full
+       `rules-siblings`, each `"error"`; on game 0.11 and later also `static-keys`, `layer-imports`,
+       `feature-door`, `test-suffix`. The moku-game pack's `references/hello-world.md` has the full
        game `.oxlintrc.json`: its four edits also set the game's `overrides` files and ignore
        `generated/**` and `.moku/**`.
      - Drop the game's G1–G4 blocks. They are not translated: the six rules replace them. Their
@@ -481,7 +482,7 @@ the block below.
   1. Read `frameworks[game].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/game` dependency to that version (preserve the range operator
      the project already uses — `^`/`~`/exact; default to exact if none).
-  3. Do NOT add a direct `@moku-labs/core` dependency. Bump `@moku-labs/editor` in the same step (moku-editor-version): the editor follows the engine's door catalogue. Re-run `bun run assets:keys` after the install.
+  3. Do NOT add a direct `@moku-labs/core` dependency. Bump `@moku-labs/editor` in the same step (moku-editor-version): the editor follows the engine's door catalogue. Re-run the key scan after the install (`bun run keys` on a shell game, `bun run assets:keys` on an older one). Crossing 0.10 moves a game onto the shell (`index.ts` + `config.ts`, no `web/`, `native.ts`, `platform-bridge.ts`); that is not a version bump: follow the pack's `hello-world.md` by hand.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
   **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
