@@ -57,6 +57,23 @@ describe("build waves", () => {
     assert.equal(nextWave(readWaves(after).waves)?.wave, 2);
   });
 
+  it("reads a wave table as plans write it in the wild: a status with a commit, a name with a note", () => {
+    const wild = `## Cycle 2 Wave Table
+| Wave | Plugins | Status |
+|------|---------|--------|
+| 1 | contracts §1.3 (persistent + envelopes) | done (01288d1) |
+| 2 | transport (serverSignaling, guard, inMemory sim), session (codeLength) | done (53cc8a7) — 3/3 green |
+| 3 | roomHub | Verified |
+| 4 | lobby, chat (history) | building |
+`;
+    const { waves, problems } = readWaves(wild);
+
+    assert.deepEqual(problems, []);
+    assert.deepEqual(waves.map((wave) => wave.plugins.map((plugin) => plugin.name)), [["contracts §1.3"], ["transport", "session"], ["roomHub"], ["lobby", "chat"]]);
+    assert.deepEqual(waves.map(isDone), [true, true, true, false]);
+    assert.equal(nextWave(waves)?.wave, 4);
+  });
+
   it("refuses a plan whose plugin waits for a plugin of the same or a later wave", () => {
     const wrong = STATE.replace("| 1 | router, site | not started |\n| 2 | auth | not started |", "| 1 | router, auth | not started |\n| 2 | site | not started |");
 

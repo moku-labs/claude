@@ -12,8 +12,11 @@
 /** @typedef {{ name: string, wave: number, tier: string, dependencies: string[], spec: string, status: string }} PlannedPlugin */
 /** @typedef {{ wave: number, status: string, plugins: PlannedPlugin[], framework?: string }} Wave */
 
-/** A wave or a plugin in one of these states is finished and can be built on. */
-const DONE = new Set(["verified", "done", "committed"]);
+/**
+ * A wave or a plugin whose status starts with one of these words is finished and can be built on. Plans in
+ * the wild add to the word: `done (01288d1)`, `verified, 3/3 green`.
+ */
+const DONE = /^(verified|done|committed)\b/;
 
 /**
  * Read the plugins and the waves of a STATE.md.
@@ -59,7 +62,7 @@ export function readWaves(state) {
       continue;
     }
 
-    for (const name of (cell ?? "").split(",").map((entry) => entry.trim()).filter(Boolean)) {
+    for (const name of pluginNames(cell ?? "")) {
       if (seen.has(name)) problems.push(`Plugin "${name}" is in two waves.`);
       seen.add(name);
 
@@ -86,6 +89,35 @@ export function readWaves(state) {
 }
 
 /**
+ * The plugin names of a wave table cell. A plan may explain a name in brackets, with commas inside:
+ * `transport (signaling, guard), session (codeLength)` names `transport` and `session`.
+ *
+ * @param {string} cell the Plugins cell of a wave row
+ * @returns {string[]} the names, in order
+ */
+function pluginNames(cell) {
+  const names = [];
+  let depth = 0;
+  let current = "";
+
+  for (const char of `${cell},`) {
+    if (char === "(") depth += 1;
+    if (char === ")") depth = Math.max(0, depth - 1);
+
+    // A comma outside brackets ends a name
+    if (char === "," && depth === 0) {
+      const name = current.replace(/\s*\(.*$/s, "").trim();
+      if (name) names.push(name);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+
+  return names;
+}
+
+/**
  * The wave to build next: the first one that is not finished.
  *
  * @param {Wave[]} waves in order
@@ -102,9 +134,9 @@ export function nextWave(waves) {
  * @returns {boolean} whether the wave is finished: its own status says so, or every plugin of it does
  */
 export function isDone(wave) {
-  if (DONE.has(wave.status)) return true;
+  if (DONE.test(wave.status)) return true;
 
-  return wave.plugins.length > 0 && wave.plugins.every((plugin) => DONE.has(plugin.status));
+  return wave.plugins.length > 0 && wave.plugins.every((plugin) => DONE.test(plugin.status));
 }
 
 /**

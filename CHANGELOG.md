@@ -9,7 +9,7 @@ at once and checks them one time at the end. The game guidance is synced to `@mo
 `@moku-labs/editor` 0.9, plugin tables included, and moku-ai to `@moku-labs/ai` 0.16.1. A question in a
 directory that is not on the rails is answered again, instead of being turned into a new project.
 
-Rails and hooks: 199 tests pass, 36 of them new. Evals on Opus 5.5 with the plugin, all 21 cases of the core and the packs: 59 of 63 runs on the last full
+Rails and hooks: 200 tests pass, 37 of them new. Evals on Opus 5.5 with the plugin, all 21 cases of the core and the packs: 59 of 63 runs on the last full
 pass. Before the fixes below the same suite stood at 44 of 60. The four runs that failed: `waves-next-wave`
 three times: the answers were right, read from the plan by eye, and its grader demanded a command call.
 The next wave now comes with the rails status of every turn, the grader was dropped, and the case then
