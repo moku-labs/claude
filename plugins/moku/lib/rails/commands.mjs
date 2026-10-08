@@ -49,6 +49,18 @@ export function status({ root }) {
   const agents = runningAgents(root);
   if (agents.length > 0) lines.push(`Agents: ${describeAgents(agents)}.`);
 
+  // A plan with waves: the next one is named here, so nobody has to work it out from the tables by eye
+  const stateFile = resolve(root, ".planning", "STATE.md");
+  if (existsSync(stateFile)) {
+    const read = readWaves(readFileSync(stateFile, "utf8"));
+    const next = nextWave(read.waves);
+    const hasTable = read.waves.length > 0;
+
+    if (hasTable && read.problems.length > 0) lines.push(`Waves: the plan's wave table cannot be built from. ${read.problems.join(" ")}`);
+    else if (hasTable && next?.framework) lines.push(`Waves: next is wave ${next.wave}, framework work (${next.framework}), done by hand with no builder.`);
+    else if (hasTable && next) lines.push(`Waves: next is wave ${next.wave} (${next.plugins.map((plugin) => plugin.name).join(", ")})${next.plugins.length > 1 ? `, ${next.plugins.length} plugins that may be built in parallel` : ""}. \`moku-rails waves\` lists every wave.`);
+  }
+
   // Work in the other checkouts of this project is theirs: named, so nobody opens it twice, and never a debt here
   const elsewhere = (ledger.elsewhere ?? []).filter((change) => change.status === "open");
   for (const change of elsewhere) {

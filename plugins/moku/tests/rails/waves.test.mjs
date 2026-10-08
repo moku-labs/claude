@@ -105,6 +105,22 @@ describe("moku-rails waves", () => {
     assert.match(waves(root, "--done", "3").text, /Every wave is done\./);
   });
 
+  it("status names the next wave, so every turn starts with it", () => {
+    const root = planned();
+    const status = () => spawnSync("node", [CLI, "status", "--root", root], { encoding: "utf8" }).stdout;
+
+    assert.match(status(), /Waves: next is wave 1 \(router, site\), 2 plugins that may be built in parallel\. `moku-rails waves` lists every wave\./);
+
+    waves(root, "--done", "1");
+    assert.match(status(), /Waves: next is wave 2 \(auth\)\. `moku-rails waves`/);
+
+    waves(root, "--done", "2");
+    assert.match(status(), /Waves: next is wave 3, framework work/);
+
+    waves(root, "--done", "3");
+    assert.doesNotMatch(status(), /Waves:/);
+  });
+
   it("is refused without a plan, and with a plan that breaks the order", () => {
     const empty = mkdtempSync(join(tmpdir(), "moku-waves-"));
     spawnSync("node", [CLI, "session", "start", "--root", empty]);

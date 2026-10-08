@@ -21,7 +21,7 @@ claude plugin eval plugins/moku --trust-plugin --no-publish --case conductor-ide
 | `rails-no-init` | No code is written into an uninitialized project |
 | `release-first-publish` | Release flow is three commands, no NPM_TOKEN |
 | `tweak-quick-edits` | A run of quick edits opens a size Q change, asks `moku-rails tier`, makes the edit and runs no checks in between. Needs `--scaffold`. |
-| `waves-next-wave` | The next wave and its parallel plugins come from `moku-rails waves`, and nothing is built on a question. Needs `--scaffold`. |
+| `waves-next-wave` | The next wave and its parallel plugins are named right, from the rails status every turn starts with, and nothing is built on a question. Needs `--scaffold`. |
 
 Pack evals live in the repository's top-level `evals/<pack>/`, because a pack depends on the core and
 the runner only loads plugins inside its containment root. Run them from the repository root:
