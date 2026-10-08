@@ -75,6 +75,30 @@ export function headCommit(root) {
 }
 
 /**
+ * The tree the tests ran on, as one key: the HEAD commit, and only while nothing is uncommitted. An
+ * untracked file that git does not ignore counts as uncommitted, because a new source or test file changes
+ * what the tests see. Two places are left out: `.planning/`, which the rails write on every command, and
+ * `.claude/worktrees/`, which holds other checkouts. Undefined outside a repository, before the first
+ * commit and on a dirty tree: then nothing names the tree, and nothing may be remembered about it.
+ *
+ * @param {string} root
+ * @returns {string | undefined}
+ * @example
+ * cleanHead(process.cwd()); // "3f2a9c1..." on a clean tree, undefined after an edit
+ */
+export function cleanHead(root) {
+  const head = headCommit(root);
+  if (!head) return undefined;
+
+  try {
+    const output = execFileSync("git", ["status", "--porcelain", "--untracked-files=all", "--", ":/", ":(exclude).planning", ":(exclude).claude/worktrees"], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] });
+    return output.trim() === "" ? head : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * Uncommitted paths according to git, or none outside a repository.
  *
  * @param {string} root

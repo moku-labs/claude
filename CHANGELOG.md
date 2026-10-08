@@ -2,6 +2,26 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.81.1 (2026-10-08)
+
+### Fixed
+- **`moku-rails check tests` ran the test script for every change.** `close` needs the `tests` item per
+  change, and nothing remembered where the tests were already green. Closing 24 built changes on one
+  unchanged tree of an app with 8421 tests started 24 full runs, about 26 minutes of CPU.
+  - **One green run per tree.** A tree is its HEAD commit with nothing uncommitted. After a green run the
+    ledger keeps that commit in `testsGreenAt`. A check on the same tree confirms the item without a run and
+    says so: `Checklist "tests" confirmed for <id> (green on <short sha>, not run again).`
+  - **Anything else runs the script.** A new commit, an edited tracked file, an untracked file that git does
+    not ignore, a directory without git. `.planning/` and `.claude/worktrees/` do not count as edits: the
+    rails write the first on every command, and the second holds other checkouts.
+  - **A red run clears the commit.** Nothing is stored, and the next check runs again.
+  - **Each worktree keeps its own commit**, in `testsGreenAtIn`, beside the per-lane `turns`.
+  - No flag skips the tests and nothing forces a close.
+- **Conductor skill.** "Close every change the same way" now says: commit first, then check and close the
+  changes one after another, and never start one run per change on a tree that did not change.
+
+Rails and hooks: 209 tests pass, 8 of them new.
+
 ## 0.81.0 (2026-10-08)
 
 Four things. Git worktrees of one project no longer stop each other. A new quick route makes small edits

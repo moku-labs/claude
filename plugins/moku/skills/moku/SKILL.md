@@ -135,11 +135,13 @@ A skill from a pack that is not installed is not a dead end. Say which pack is m
 ## Close every change the same way
 
 ```bash
-moku-rails check tests     # runs the test script; refused while it is red
+moku-rails check tests     # one green run of the test script per tree; refused while it is red
 moku-rails check verify    # verify passed for the touched scope
 moku-rails check docs      # spec and README reflect the change
 moku-rails close
 ```
+
+One green test run confirms `tests` for every change closed on the same tree. The tree is the HEAD commit with nothing uncommitted. So when several changes close together, commit first, then check and close them one after another: the script runs once, and each later check answers `green on <sha>, not run again`. A new commit or any uncommitted file is a new tree, and the script runs again. Never start one test run per change on a tree that did not change.
 
 Then move `.planning/changes/<id>/` to `.planning/archive/changes/<id>/` with a short `outcome.md`: what changed, what was decided and why. History is annotated, never deleted.
 

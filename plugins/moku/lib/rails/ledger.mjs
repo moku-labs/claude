@@ -43,8 +43,9 @@ import { basename, dirname, join, resolve } from "node:path";
 /**
  * The file on disk: every lane's changes in one list, and one last request per lane. The main checkout's
  * request stays in `turn`, where it always was, so a ledger written before lanes existed reads the same.
+ * The commit the tests last passed on is kept the same way: `testsGreenAt` and `testsGreenAtIn`.
  *
- * @typedef {{ version: 1, changes: Change[], ideas: string[], activatedAt?: string, turn?: Turn, turns?: Record<string, Turn> }} LedgerFile
+ * @typedef {{ version: 1, changes: Change[], ideas: string[], activatedAt?: string, turn?: Turn, turns?: Record<string, Turn>, testsGreenAt?: string, testsGreenAtIn?: Record<string, string> }} LedgerFile
  */
 
 /** The lane of the main checkout. */
@@ -77,6 +78,7 @@ export function loadLedger(root) {
     ideas: file.ideas,
     ...(file.activatedAt ? { activatedAt: file.activatedAt } : {}),
     ...(turnOf(file, lane) ? { turn: turnOf(file, lane) } : {}),
+    ...(greenOf(file, lane) ? { testsGreenAt: greenOf(file, lane) } : {}),
     elsewhere: file.changes.filter((change) => !inLane(change, lane)),
   };
 }
@@ -159,6 +161,15 @@ function turnOf(file, lane) {
   return lane === MAIN_LANE ? file.turn : file.turns?.[lane];
 }
 
+/**
+ * @param {LedgerFile} file
+ * @param {string} lane
+ * @returns {string | undefined} the commit this lane's tests last passed on
+ */
+function greenOf(file, lane) {
+  return lane === MAIN_LANE ? file.testsGreenAt : file.testsGreenAtIn?.[lane];
+}
+
 /** @returns {Ledger} */
 function emptyLedger() {
   return { version: 1, changes: [], ideas: [] };
@@ -221,6 +232,13 @@ export function saveLedger(root, ledger) {
       if (ledger.turn) merged.turn = ledger.turn;
     } else if (ledger.turn) {
       merged.turns = { ...disk.turns, [lane]: ledger.turn };
+    }
+
+    // The green commit is set and cleared by the caller: a red run must take it away
+    if (lane === MAIN_LANE) {
+      merged.testsGreenAt = ledger.testsGreenAt;
+    } else {
+      merged.testsGreenAtIn = { ...disk.testsGreenAtIn, [lane]: ledger.testsGreenAt };
     }
 
     const temp = `${file}.${process.pid}.tmp`;
