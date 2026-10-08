@@ -95,6 +95,18 @@ Nothing to build and nothing recognizable: tell the user to run `/moku:plan` fir
 `.planning/STATE.md` is the record of the build: phase, verb, target, skeleton status, plugin table,
 wave progress and the git checkpoint. Wave progress lives there and nowhere else.
 
+**Which wave is next** is read by the rails, not by eye:
+
+```bash
+moku-rails waves              # every wave with its status, then "Next: wave N, K plugin(s) in parallel."
+moku-rails waves --json       # data.next: the plugins of that wave with tier and spec, for the builders
+moku-rails waves --done 1     # wave 1 passed: mark it and its plugins verified
+```
+
+It refuses a plan where a plugin sits in two waves, or depends on a plugin of the same or a later wave.
+Relay the refusal and fix the plan; do not build around it. A person who wants the rest of the plan built
+without a stop between waves gets the workflow `moku-build-wave` with `{all: true}`, on their word.
+
 **Reading it.** No STATE.md and a `.planning/build/skeleton-spec.md` on disk: write a fresh STATE.md
 with `## Skeleton: not-started` and continue. Missing or malformed `## Phase:`, `## Target:` or
 `## Next Action:`: offer to regenerate it from the spec files, inferring the target, and say the values
