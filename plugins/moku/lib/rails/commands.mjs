@@ -12,7 +12,7 @@ import { relative, resolve } from "node:path";
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, saveLedger, setInitializing } from "./ledger.mjs";
-import { headCommit, reconcile } from "./reconcile.mjs";
+import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
 import { isDone, markWave, nextWave, readWaves } from "./waves.mjs";
@@ -187,6 +187,10 @@ export function skip({ root, positional, flags }) {
  * Confirm one closing-checklist item. `tests` runs the project's test script and is refused while it is red;
  * `verify` and `docs` record the verdict of the verify station and of the orchestrating session.
  *
+ * One green run confirms `tests` for every change closed on the same tree. The tree is named by its HEAD
+ * commit while nothing is uncommitted; the ledger keeps the commit of the last green run, and a check on
+ * that commit does not run the script again. A commit or an edit names another tree, so the script runs.
+ *
  * @param {Args} args positional: tests | verify | docs
  * @returns {Result}
  * @example
@@ -200,15 +204,41 @@ export function check({ root, positional, flags }) {
   const change = findChange(ledger, optional(flags.change));
 
   // "tests" is a fact, not a claim: the project's own test script decides
-  if (item === "tests") {
-    const red = runTests(root);
-    if (red) return refused(red);
+  if (item !== "tests") return confirm(root, ledger, change, item);
+
+  // The script already passed on this very tree: one green run is enough for every change closed on it
+  const tree = cleanHead(root);
+  if (tree !== undefined && ledger.testsGreenAt === tree) return confirm(root, ledger, change, item, ` (green on ${tree.slice(0, 7)}, not run again)`);
+
+  // A red run confirms nothing, and what an earlier run proved is no longer trusted
+  const red = runTests(root);
+  if (red) {
+    ledger.testsGreenAt = undefined;
+    saveLedger(root, ledger);
+    return refused(red);
   }
 
+  // Remember the tree only when it is still the one the run started on
+  ledger.testsGreenAt = cleanHead(root) === tree ? tree : undefined;
+
+  return confirm(root, ledger, change, item);
+}
+
+/**
+ * Record a confirmed checklist item.
+ *
+ * @param {string} root
+ * @param {import("./ledger.mjs").Ledger} ledger
+ * @param {import("./ledger.mjs").Change} change
+ * @param {string} item
+ * @param {string} [how] what the confirmation rests on, when it is not a fresh run
+ * @returns {Result}
+ */
+function confirm(root, ledger, change, item, how = "") {
   change.checklist[item] = true;
   saveLedger(root, ledger);
 
-  return ok(`Checklist "${item}" confirmed for ${change.id}.`);
+  return ok(`Checklist "${item}" confirmed for ${change.id}${how}.`);
 }
 
 /**
