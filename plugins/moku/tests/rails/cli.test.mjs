@@ -320,6 +320,14 @@ describe("moku-rails: a session of quick edits", () => {
     assert.equal(rails(root, "open", "2026-10-08-other", "--size", "S", "--type", "fix", "--title", "Other").code, 0);
   });
 
+  it("is reported as waiting for the next edit, not as a station somebody abandoned", () => {
+    const root = tweaking();
+
+    const status = rails(root, "status").text;
+    assert.match(status, /Paused: 2026-10-08-hud-tweaks \(Q, tweak\) is taking quick edits inside station "tweak"\. Send the next edit/);
+    assert.doesNotMatch(status, /stuck-station/);
+  });
+
   it("names the fast agent or the builder from the files of the edit", () => {
     const root = tweaking();
 

@@ -9,12 +9,17 @@ at once and checks them one time at the end. The game guidance is synced to `@mo
 `@moku-labs/editor` 0.9, plugin tables included, and moku-ai to `@moku-labs/ai` 0.16.1. A question in a
 directory that is not on the rails is answered again, instead of being turned into a new project.
 
-Rails and hooks: 200 tests pass, 37 of them new. Evals on Opus 5.5 with the plugin, all 21 cases of the core and the packs: 59 of 63 runs on the last full
+Rails and hooks: 201 tests pass, 38 of them new. Evals on Opus 5.5 with the plugin, all 21 cases of the core and the packs: 59 of 63 runs on the last full
 pass. Before the fixes below the same suite stood at 44 of 60. The four runs that failed: `waves-next-wave`
 three times: the answers were right, read from the plan by eye, and its grader demanded a command call.
 The next wave now comes with the rails status of every turn, the grader was dropped, and the case then
 passed 3 of 3. `design-api-mode` once on a split
 judge vote over a correct answer; it passed 3 of 3 on the next run.
+Worktrees were also tried live: one project, three Claude Code sessions at the same time. The main checkout
+took quick edits and left `tweak` open, and two git worktrees each fixed a bug in another plugin. Every
+session opened its own change in its own lane, no session met a refusal, and the tests passed in all three
+checkouts.
+
 The game sync was verified on a fresh scaffold: install, `keys`, typecheck, lint with the ten engine rules,
 tests at 100% coverage, `build`, `moku-game dev`, `moku-editor --root .` with the project index on,
 `moku-game-index --check`, the headless leg of `moku-game visual`, and the lefthook pre-commit. Not run: the
@@ -115,7 +120,8 @@ pixel leg, `moku-game native`, `moku-editor mcp` and `e2e`.
   its draft, and without `ark.groupId` a process reuses the asset group of that name. The names were
   typechecked against the published package, and `moku validate` and `moku estimate` ran on an Ark edit
   item and an asset item with `groupName`. No provider was called.
-- **A station left open in `tweak` is not a debt.** It does not block the turn's end or another `open`.
+- **A station left open in `tweak` is not a debt.** It does not block the turn's end or another `open`, and
+  `status` reports it as waiting for the next edit. The live test showed it as a stuck station.
 
 ## 0.80.1 (2026-10-07)
 
