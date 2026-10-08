@@ -64,14 +64,15 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
    page; the game has none of its own. A game still on `web/index.html` and `web/main.ts` is the old
    shape: say so in the report and play it with its own `dev` script, but do not migrate it here.
 4. `@moku-labs/editor` in `devDependencies` and an `editor` script that runs `moku-editor --root .`.
-   Missing: add `bun add --exact -d @moku-labs/editor@0.8.0` and the script; say so.
+   Missing: add `bun add --exact -d @moku-labs/editor@0.9.0` and the script; say so.
 
 ## Step 1 — headless proof
 
 ```bash
 bunx moku-game keys --check       # generated/ and manifest.json are current
 bun run typecheck
-bun run test                       # vitest: scenarios + the headless leg of the visual tests
+bun run test                       # vitest: the headless scenarios
+bun run test:visual                # the headless leg of the visual tests, when the script exists
 ```
 
 Then the gap check: every rest node of FOCUS has at least one `walk` scenario that reaches it and
@@ -83,14 +84,18 @@ game source for a defect, never widen an expectation to clear red.
 
 ## Step 2 — visual tests
 
-If `tests/visual/` exists: start the dev server (Step 3 does it; order the steps so the server is up),
-then
+If `tests/visual/index.ts` exists, the engine bin runs it (game 0.12 and later). It serves its own page
+from `.moku/visual/` on a free port, so it needs no dev server and runs while the editor is up.
 
 ```bash
-bun tests/visual/run.ts --url http://127.0.0.1:3000/            # both legs, compare with the baselines
-bun tests/visual/run.ts --url http://127.0.0.1:3000/ --update   # only with UPDATE_BASELINES
-bun tests/visual/run.ts --only <name> --no-pixels               # one test, headless leg only
+bunx moku-game visual                          # the headless leg, and the pixel leg on a Mac
+bunx moku-game visual --update                 # only with UPDATE_BASELINES
+bunx moku-game visual --only <name> --no-pixels   # one test, headless leg only
+bunx moku-game visual --url http://127.0.0.1:3000/   # the pixel leg on a page that is served already
 ```
+
+Exit 1 means a checkpoint differs or a test failed. A game below 0.12, or one with a runner of its own,
+runs its script instead (`bun tests/visual/run.ts`, the same flags).
 
 A `state.json` or `describe.json` difference is a logic change: real or intended, decide and say which.
 A pixel difference with the same state is a rendering regression; `screen.actual.webp` and
@@ -98,8 +103,11 @@ A pixel difference with the same state is a rendering regression; `screen.actual
 say so and keep the headless leg as the proof.
 
 A changed flow with no visual test gets one: `defineVisualTest` with a `start`, the `/control` steps that
-reach the screen, and a `checkpoint` per state worth a picture, in a `tests/visual/*.visual.ts` file.
-The runner takes `app: () => game.screen().app` from the root `index.ts`.
+reach the screen, and a `checkpoint` per state worth a picture, in a `tests/visual/*.visual.ts` file,
+listed in `tests/visual/index.ts`: `export default { app: { app: () => game.screen().app }, tests: [...] }`.
+The baselines land in `tests/visual/baselines/<test>/<checkpoint>/`; commit them. A game with no
+`tests/visual/` yet gets the folder, the `index.ts` and the script `"test:visual": "moku-game visual
+--no-pixels"` (`hello-world.md` → tests/visual/).
 
 ## Step 3 — play it in the editor
 
@@ -117,13 +125,13 @@ Follow `references/editor.md`:
    each step read `doors.sources.position` and the State workspace; the path and the committed state are
    the proof, the picture is the evidence.
 4. Take one screenshot per screen or popup of FOCUS with the Shot button of the Game workspace
-   (`find("Take a screenshot")`, then click it). It writes `.moku/captures/<stamp>-<flow>.png`; flatten
-   it on the page colour before you look at it. For every animation the change touched record a series
+   (`find("Take a screenshot")`, then click it). It writes `.moku/captures/<yyyy-mm-dd>/<hhmm>-<flow>.jpg`.
+   For every animation the change touched record a series
    (palette → "Record a series…", or `editor.channel.run("editor.series", …)` through the game frame); the
-   palette writes the frames and `index.json` under `.moku/captures/series-<stamp>/` and opens the contact
-   sheet. When a finding needs to point at an element, pick it (⌘⇧C, then click) and cite the card
+   palette writes the PNG frames and `index.json` under `.moku/captures/<yyyy-mm-dd>/series-<hhmm>/` and
+   opens the contact sheet; flatten a PNG on the page colour before you look at it. When a finding needs to point at an element, pick it (⌘⇧C, then click) and cite the card
    `<key>-f<frame>.md` the pick writes; `capture { legend: true }` gives the rects of every keyed view as
-   data. Copy what the report cites into `.planning/e2e/game/` (`<flow>-<node>.png`,
+   data. Copy what the report cites into `.planning/e2e/game/` (`<flow>-<node>.jpg`,
    `<animation>-sheet.png`, or `<animation>.mp4` from a series via the ffmpeg line of `editor.md`).
 5. Read Console at level `warn` after the playthrough (`doors.sources.log`). A warning the change
    introduced is a finding. Two are not: `gameView: copy reference failed` (the pane has no clipboard

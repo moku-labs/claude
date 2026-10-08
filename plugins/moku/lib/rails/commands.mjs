@@ -6,14 +6,14 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
-import { activate, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, saveLedger, setInitializing } from "./ledger.mjs";
+import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, saveLedger, setInitializing } from "./ledger.mjs";
 import { headCommit, reconcile } from "./reconcile.mjs";
-import { OPTIONAL_STATIONS, WRITING_STATIONS, routeFor } from "./routes.mjs";
+import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
 
 /** @typedef {{ code: 0 | 1 | 2, lines: string[], data?: unknown }} Result */
@@ -48,13 +48,21 @@ export function status({ root }) {
   const agents = runningAgents(root);
   if (agents.length > 0) lines.push(`Agents: ${describeAgents(agents)}.`);
 
-  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas, agents } };
+  // Work in the other checkouts of this project is theirs: named, so nobody opens it twice, and never a debt here
+  const elsewhere = (ledger.elsewhere ?? []).filter((change) => change.status === "open");
+  for (const change of elsewhere) {
+    const where = change.worktree ?? "the main checkout";
+    const gone = change.worktree && !existsSync(change.worktree) ? " That worktree is gone: move the change here with `moku-rails adopt " + change.id + "`." : "";
+    lines.push(`Elsewhere: ${change.id} is open in ${where}${change.station ? `, inside "${change.station}"` : ""}.${gone}`);
+  }
+
+  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas, agents, elsewhere } };
 }
 
 /**
  * Open a change. Refused while another change is stuck inside a station.
  *
- * @param {Args} args flags: --size S|M|L, --type, --title
+ * @param {Args} args flags: --size Q|S|M|L, --type, --title
  * @returns {Result}
  * @example
  * open({ root, positional: ["2026-09-26-streak-midnight"], flags: { size: "S", type: "fix", title: "Streak breaks at midnight" } });
@@ -62,16 +70,18 @@ export function status({ root }) {
 export function open({ root, positional, flags }) {
   const [id] = positional;
   const size = String(flags.size ?? "");
-  if (!id || !size) return usage("moku-rails open <id> --size S|M|L --type <type> --title <title>");
+  if (!id || !size) return usage("moku-rails open <id> --size Q|S|M|L --type <type> --title <title>");
 
   routeFor(/** @type {"S"} */ (size));
   if (!isOnRails(root)) return offRails();
 
   const ledger = loadLedger(root);
   if (ledger.changes.some((change) => change.id === id)) return fail(`Change "${id}" already exists.`);
+  const taken = ledger.elsewhere?.find((change) => change.id === id);
+  if (taken) return fail(`Change "${id}" already exists in ${taken.worktree ?? "the main checkout"}. Pick another id.`);
 
   // A change abandoned mid-station must be finished or parked first
-  const stuck = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused);
+  const stuck = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused && !LOOP_STATIONS.has(change.station));
   if (stuck) return refused(`Change "${stuck.id}" is still inside station "${stuck.station}". Finish it, or park it with a reason, before opening "${id}".`);
 
   const change = newChange({ id, size: /** @type {"S"} */ (size), type: String(flags.type ?? "feature"), title: String(flags.title ?? id) });
@@ -285,6 +295,40 @@ export function resume({ root, positional }) {
 }
 
 /**
+ * Move a change from another worktree into this checkout: the worktree was removed, or the work is handed over.
+ *
+ * @param {Args} args positional: id
+ * @returns {Result}
+ * @example
+ * adopt({ root, positional: ["2026-09-26-streak-midnight"], flags: {} });
+ */
+export function adopt({ root, positional }) {
+  const [id] = positional;
+  if (!id) return usage("moku-rails adopt <id>");
+  if (!isOnRails(root)) return offRails();
+
+  const change = adoptChange(root, id);
+  if (!change) return refused(`No other checkout holds a change "${id}". \`moku-rails status\` lists them under "Elsewhere".`);
+
+  return ok(`Adopted ${id} into this checkout${change.station ? `, inside "${change.station}"` : ""}. Done so far: ${change.done.join(", ") || "nothing"}.`);
+}
+
+/**
+ * Say who makes a quick edit: the fast agent or the builder. Counted from the files the edit touches.
+ *
+ * @param {Args} args positional: project-relative files; flags: --misses <n>
+ * @returns {Result} one line: `fast`, or `deep: <reasons>`
+ * @example
+ * tier({ root, positional: ["src/plugins/hud/view.ts"], flags: {} }); // lines: ["fast"]
+ */
+export function tier({ root, positional, flags }) {
+  const misses = Number(optional(flags.misses) ?? 0);
+  const verdict = tweakTier(positional, { exists: (path) => existsSync(resolve(root, path)), misses: Number.isFinite(misses) ? misses : 0 });
+
+  return { code: 0, lines: [verdict.tier === "fast" ? "fast" : `deep: ${verdict.reasons.join("; ")}`], data: verdict };
+}
+
+/**
  * Keep an idea for later so it is not lost and does not derail the current change.
  *
  * @param {Args} args positional: the idea text
@@ -458,7 +502,7 @@ export function init({ root, positional }) {
  */
 export function mayStop({ root }) {
   const ledger = loadLedger(root);
-  const active = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused);
+  const active = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused && !LOOP_STATIONS.has(change.station));
   if (!active) return ok("allow");
   if (runningAgents(root).length > 0) return ok("allow: agents are running inside the station, the turn ends to wait for them");
 

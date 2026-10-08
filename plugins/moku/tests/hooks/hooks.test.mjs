@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, writeFileSync } from "node:fs";
+import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -263,12 +263,73 @@ describe("git worktree", () => {
     return { main, tree };
   }
 
-  it("links to the main checkout's .planning/ and keeps the link out of git", () => {
+  it("links to its own lane folder in the main checkout's .planning/ and keeps the link out of git", () => {
     const { main, tree } = worktree({ initialized: true });
 
     assert.match(hook("session-rails.mjs", { cwd: tree }).out, /Project: initialized/);
-    assert.equal(readlinkSync(join(tree, ".planning")), join(main, ".planning"));
+    assert.equal(readlinkSync(join(tree, ".planning")), join(main, ".planning", "lanes", "w1"));
+    assert.equal(readFileSync(join(main, ".planning", "lanes", "w1", ".worktree"), "utf8").trim(), tree);
     assert.equal(git(tree, "status", "--porcelain"), "");
+  });
+
+  it("shares the project's files and keeps the working state of each checkout apart", () => {
+    const { main, tree } = worktree({ initialized: true });
+    mkdirSync(join(main, ".planning", "specs"));
+    writeFileSync(join(main, ".planning", "specs", "01-router.md"), "# router\n");
+    writeFileSync(join(main, ".planning", "STATE.md"), "## Phase: build\n| 1 | router | building |\n");
+    hook("session-rails.mjs", { cwd: tree });
+
+    // The marker, the specs and a file written later are the project's
+    assert.equal(readFileSync(join(tree, ".planning", "moku.md"), "utf8"), "type: framework\nname: demo\n");
+    assert.equal(readFileSync(join(tree, ".planning", "specs", "01-router.md"), "utf8"), "# router\n");
+    writeFileSync(join(tree, ".planning", "decisions.md"), "D1\n");
+    assert.equal(readFileSync(join(main, ".planning", "decisions.md"), "utf8"), "D1\n");
+
+    // The wave table and the build folder are the checkout's own
+    assert.equal(existsSync(join(tree, ".planning", "STATE.md")), false);
+    writeFileSync(join(tree, ".planning", "STATE.md"), "## Phase: plan\n");
+    assert.match(readFileSync(join(main, ".planning", "STATE.md"), "utf8"), /building/);
+  });
+
+  it("a wave left active in the main checkout does not stop a turn in the worktree", () => {
+    const { main, tree } = worktree({ initialized: true });
+    writeFileSync(join(main, ".planning", "STATE.md"), "| 1 | router | building |\n");
+    hook("session-rails.mjs", { cwd: tree });
+    for (const [root, id] of [[main, "main-change"], [tree, "w1-change"]]) {
+      spawnSync("node", [join(PLUGIN, "bin", "moku-rails"), "open", id, "--size", "M", "--type", "feature", "--title", id, "--root", root]);
+    }
+
+    assert.match(hook("on-stop.mjs", { cwd: main }).out, /build wave is still active/);
+    assert.equal(hook("on-stop.mjs", { cwd: tree }).out, "");
+  });
+
+  it("moves a worktree that has the old link to the whole .planning/ into a lane", () => {
+    const { main, tree } = worktree({ initialized: true });
+    symlinkSync(join(main, ".planning"), join(tree, ".planning"), "dir");
+
+    hook("session-rails.mjs", { cwd: tree });
+
+    assert.equal(readlinkSync(join(tree, ".planning")), join(main, ".planning", "lanes", "w1"));
+    assert.equal(existsSync(join(main, ".planning", "moku.md")), true);
+  });
+
+  it("a ledger save from the worktree lands in the main checkout's file and keeps the link", () => {
+    const { main, tree } = worktree({ initialized: true });
+    hook("session-rails.mjs", { cwd: tree });
+
+    spawnSync("node", [join(PLUGIN, "bin", "moku-rails"), "open", "w1-change", "--size", "S", "--type", "fix", "--title", "x", "--root", tree]);
+
+    assert.equal(lstatSync(join(tree, ".planning", "state.json")).isSymbolicLink(), true);
+    assert.equal(JSON.parse(readFileSync(join(main, ".planning", "state.json"), "utf8")).changes[0].worktree, tree);
+  });
+
+  it("leaves a worktree alone that has a real .planning/ of its own", () => {
+    const { tree } = worktree({ initialized: true });
+    mkdirSync(join(tree, ".planning"));
+
+    hook("session-rails.mjs", { cwd: tree });
+
+    assert.equal(lstatSync(join(tree, ".planning")).isSymbolicLink(), false);
   });
 
   it("gets no link when the main checkout is not on the rails", () => {

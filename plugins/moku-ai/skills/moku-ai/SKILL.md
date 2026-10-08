@@ -13,7 +13,9 @@ description: >
 
 # Moku AI Patterns
 
-> **Synced to `@moku-labs/ai@0.14.2`** (npm `dist-tags.latest`; catalog from the `v0.14.2` tag source).
+> **Synced to `@moku-labs/ai@0.16.1`** (npm `dist-tags.latest`; catalog from the `v0.16.1` tag source).
+> 0.15 and 0.16 change only `ark`, `fal` and `asset`: the Ark asset library, `groupName`, `fal.upload`,
+> `omni_reference_task_type`, the draft record. No task, CLI flag or build-file key of game art changed.
 > Peers: `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`.
 > Full surface — the 24 plugins, every API, config key and event — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Provider keys:
@@ -149,7 +151,9 @@ from the price table estimates as $0: add `priceOverrides` for custom models.
 - Ctrl-C once drains to a clean pause (exit `4`). `moku run` again resumes the same run. A video
   job id is journaled before the wait, so a resumed run polls the same job instead of paying twice.
 - Failures: 5xx, 429, timeout and network errors retry with backoff (`runner.maxAttempts`, default 3).
-  Other 4xx is a terminal `failed`. A content-policy refusal is `flagged` and never retried.
+  Other 4xx is a terminal `failed`. A content-policy refusal is `flagged` and never retried. On ark the
+  message names what was refused: an `Output…` code means Ark refused its own result and a new take may
+  pass; an `InputText…` code means the prompt.
 
 ## Output layout
 
@@ -183,6 +187,18 @@ const result = await app.runner.run({ files: "assets/*.moku.yaml", maxCostUsd: t
 await app.runner.export({ runId: result.runId, outDir: "shared/assets" });
 await app.stop();
 ```
+
+Provider plugins carry a few direct calls beside the tasks (0.15 and 0.16):
+
+```ts
+const { url } = await app.fal.upload({ path: "refs/mira.png", mimeType: "image/png" }); // a public https URL
+const groups = await app.ark.listAssetGroups();              // the Ark asset library, all pages
+const assets = await app.ark.listAssets({ groupId: groups[0]?.groupId });
+const draft = app.ark.draftRecord(draftSha256);              // { taskId, model, seed, createdAt, withVideoInput } | undefined
+```
+
+`app.ark.deleteAsset(assetId)` and `app.ark.deleteAssetGroup(groupId)` delete for good; a group goes
+with its assets. Ask before either.
 
 The `moku` bin loads `moku.config.ts` (or `.mts`, `.js`, `.mjs`) from the working directory and
 passes its default export to `createApp`. `--config <path>` on any command picks another file.

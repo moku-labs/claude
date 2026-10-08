@@ -91,8 +91,8 @@ now"), per `agent-preamble.md` → "For the orchestrator"; a second silence is `
 and the wave goes on with what is on disk.
 
 All builders of a wave run in the one working tree. Do not spawn them with `isolation: "worktree"`: a
-git worktree has no `node_modules` and no `.planning/` (both are gitignored), so the builder would get
-no tooling and no spec. Three rules are the isolation instead. Each builder writes only inside its own
+git worktree has no `node_modules` (it is gitignored), and its `.planning/` is a lane of its own with its
+own `STATE.md` and `build/`, so the builder would get no tooling and would not see this wave. Three rules are the isolation instead. Each builder writes only inside its own
 `src/plugins/{name}/`; one builder per plugin at a time, never two on the same directory (two builders on
 the same files overwrote each other in a real build, and a fresh builder that found another writer there
 refused, which is the right behaviour: keep it); and the prompt bans repo-wide commands and git mutations

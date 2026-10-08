@@ -110,7 +110,7 @@ that is precisely why `@moku-labs/worker`'s `deploy` and `cli` go into the one a
 **Group B (parallel):**
 - `moku-quality-validator` — `tsc`, tests and lint as facts, then test quality
 - `moku-web-validator` (web apps) — `components/`, `islands/`, `styles/`, `index.html`
-- `moku-game-validator` (games, `moku-game` pack) — `features/`, `nodes/`, `flows/`, `web/`
+- `moku-game-validator` (games, `moku-game` pack) — `index.ts`, `config.ts`, `game.ts`, `core/`, `shared/`, `features/`, `plugins/`, `tests/`
 
 Findings from these Sonnet validators go through `moku-skeptic` before they count. Blockers enter gap
 closure; warnings go into the report.

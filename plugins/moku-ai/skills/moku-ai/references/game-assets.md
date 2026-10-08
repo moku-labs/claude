@@ -1,9 +1,9 @@
 # Pipeline: moku-ai assets into a @moku-labs/game project
 
-Verified against `@moku-labs/ai@0.14.2` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
-`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.4.0` (`src/plugins/assets/README.md`,
-`scan/keys.ts`, `scan/scan.ts`), plus the worked fixture `tests/integration/merge-game/` in the
-game repository.
+Verified against `@moku-labs/ai@0.16.1` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
+`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.12.0` (`src/plugins/assets/README.md`,
+`scan/keys.ts`, `scan/scan.ts`, `scan/pack/groups.ts`, `docs/shell.md`). The worked game is the merge
+game in moku-labs/demos; it left the engine repository in game 0.8.
 
 ## What the game accepts
 
@@ -50,8 +50,8 @@ size is known before the run, so the borders can be written into the id up front
 
 ## Folder layout
 
-Verified against `@moku-labs/game` 0.11 `scan/keys.ts`. A folder of more than about 8 files is
-grouped by kind. A folder of 3 files or fewer stays flat.
+Verified against `@moku-labs/game` 0.12 `scan/keys.ts` and `scan/pack/groups.ts`. A folder of more
+than about 8 files is grouped by kind. A folder of 3 files or fewer stays flat.
 
 | Folder | Holds |
 |---|---|
@@ -70,6 +70,10 @@ grouped by kind. A folder of 3 files or fewer stays flat.
   `ui.icons.coin`), not `icon-coin.webp`.
 - Animation frames share one folder named after the animation: `fx/coin-spin/0.webp` ...
   `fx/coin-spin/6.webp` (keys `ui.fx.coin-spin.0` ... `ui.fx.coin-spin.6`).
+- The `fx/` folder needs game 0.12 or later. The packer puts the textures a particle emitter uses
+  on one atlas page, the group `fx`. Before 0.12 only a file stem that starts with `fx-` went there,
+  so on game 0.11 and older keep `fx-spark.webp` flat. From 0.12 everything under an `fx` folder
+  goes there too, whatever its size, the frames of `fx/coin-spin/` included.
 - A font's `.fnt` names its page PNG inside (`<page id="0" file="body.png" />`). Rename the PNG,
   then fix that line. The font licence is not a key. It sits beside `assets/`
   (`shared/LICENSE-fonts.txt`), as the template does.
@@ -221,8 +225,8 @@ bun run pack                  # production: atlas pages in dist/assets (moku-gam
 
 The dev pipeline serves loose files. The production packer (`--pack <dir>`, needs `sharp` as a dev
 dependency of the game) puts the same textures into atlas pages and keeps keys and nine-slice
-borders unchanged. A texture with a side above 512 px stays loose. Nothing to do in moku-ai for
-atlases: generate single sprites, let the game pack them.
+borders unchanged. A texture with a side above 512 px stays loose, unless it is in the `fx` group.
+Nothing to do in moku-ai for atlases: generate single sprites, let the game pack them.
 
 ## Gaps in @moku-labs/ai for game art, and what to do
 
@@ -252,7 +256,7 @@ the file name as `{nine=left,top,right,bottom}` in texture px; the key drops the
 
 ## Art
 
-- Source: @moku-labs/ai 0.14.2, build file `shared/assets.moku.yaml`, provider `fal`,
+- Source: @moku-labs/ai 0.16.1, build file `shared/assets.moku.yaml`, provider `fal`,
   model `gpt-image-2.5` with a transparent background, cut by the `sprite` task (`none`),
   run on 2026-10-04.
 - Style reference: `refs/style-sheet.png` (drawn by Astra, 2026-09-22).

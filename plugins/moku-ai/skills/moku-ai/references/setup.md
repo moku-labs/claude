@@ -1,6 +1,6 @@
 # Provider setup: keys and logins
 
-Verified against `@moku-labs/ai@0.14.2` source (`src/index.ts`, `src/plugins/<provider>/README.md`,
+Verified against `@moku-labs/ai@0.16.1` source (`src/index.ts`, `src/plugins/<provider>/README.md`,
 `src/plugins/cli/project-config.ts`). 0.13 and 0.14 add no new env var: `sfx` uses
 `ELEVENLABS_API_KEY` or `FAL_KEY`, `sprite` uses `FAL_KEY`.
 
@@ -91,6 +91,12 @@ Video providers for Seedance. apimodels resells Seedance 2.5 and 2.0 and accepts
 ByteDance direct; a real face must be registered as an `asset` item first (needs the access and
 secret key pair). Both are optional for game art.
 
+Ark keeps registered faces in asset groups, at most 50 per account. Since 0.15 a process finds its group
+by name (`ark.groupName`, default `moku-ai`, or the item's `groupName`) and creates one only when none
+exists. `ark.groupId` pins the group of `ark.groupName` only. `app.ark.listAssetGroups()` and
+`app.ark.listAssets({ groupId })` show what is registered; `deleteAsset` and `deleteAssetGroup` remove
+it for good.
+
 ### codex and claude (local CLIs)
 
 No key. The provider spawns the CLI (`codex exec`, `claude -p`). Check that both binaries are on
@@ -120,6 +126,8 @@ Then `moku run --max-cost <estimate * 1.2>` for the real batch.
 | Exit 5 at once | `--max-cost` below the first item | Raise the ceiling to the estimate |
 | Item `failed`, 401 or 403 | Wrong or expired key | Replace the value in `.env.local`; the next run adopts the same job |
 | Item `flagged` | Content policy at the provider | Change the prompt; flagged items are never retried |
+| `[ai] ark refused the <audio\|video\|picture> it generated: <code>.` | Ark made the clip and refused its own result (0.15.1). The inputs are fine | Run a new take with the same request; Ark did not charge this one. Bump `params.generation` to get a new key |
+| `[ai] ark seconds -1 is for a video edit only.` | `seconds: -1` without `params.omni_reference_task_type: edit` | Add the param, or set a length |
 | `[ai] No price for codex model "<m>".` | Unknown model | Use the default `gpt-6-astra` or add `priceOverrides` |
 | `[ai] No price for ElevenLabs sfx model "<m>".` | sfx model is not `eleven_text_to_sound_v2` | Use that model, or add `sfx:<m>#second` and `#auto` to `elevenlabs.priceOverrides` |
 | `[ai] Could not load <path>.`, exit 3 | `moku.config.*` throws, has no object default export, or imports a local file without its extension | Fix the file; write `./plugins/x.ts`, or run `bunx --bun moku` |

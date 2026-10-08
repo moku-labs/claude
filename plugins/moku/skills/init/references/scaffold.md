@@ -169,8 +169,8 @@ A consumer app inherits `ctx.log` and `ctx.env` from its framework and does not 
 ### Game (Layer 3 on `@moku-labs/game`)
 
 The game folder (`index.ts`, `config.ts`, `game.ts`, `core/`, `shared/`, `features/`,
-`tests/scenarios/`), the scripts that call `moku-game` and `moku-editor --root .`, and the first headless
-test come from the `moku-game` pack, `references/hello-world.md`. A game writes no page, no `web/`, no
+`tests/scenarios/`, `tests/visual/`), the scripts that call `moku-game` and `moku-editor --root .`, the
+first headless test and the first visual test come from the `moku-game` pack, `references/hello-world.md`. A game writes no page, no `web/`, no
 server and no `bunfig.toml`: the engine bin `moku-game` writes the page into `.moku/`. A game changes part
 of the tooling above: its own `vitest.config.ts` (the layer aliases, coverage of the logic only),
 `biome.json` scope, `.oxlintrc.json` with the engine rules, `lefthook.yml`, `tsconfig.json` (JSX and the
@@ -180,6 +180,12 @@ follow it over this table.
 
 Dependencies, exact, at the versions `hello-world.md` names: `@moku-labs/game`, `pixi.js`,
 `@moku-labs/core`, `@moku-labs/common` (the peers both packages share); dev `@moku-labs/editor`, `sharp`.
+
+The order of a game init, after the tooling files: copy the body font into `shared/assets/`, write the
+sources, then `bun run keys` before the first typecheck. `generated/` and `manifest.json` do not exist
+until it ran, and the kit imports its types from them. Then `bun run test:visual` twice: the first run
+writes `tests/visual/baselines/`, the second must say `same`. The baselines are committed with the
+scaffold.
 
 ### Tools / library
 
@@ -226,9 +232,9 @@ Run every item. Fix and re-run a failing one before moving on.
 | 4 | Tests | `bun run test` — the placeholder suites pass |
 | 5 | Build | `bun run build` |
 | 6 | Package validation | `bun run validate` (packages only) |
-| 7 | Sources match the type | Framework: `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists. Consumer: `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` is absent from `dependencies` — if present, remove it, re-run `bun install`, re-check. Library: `src/index.ts` exists. Game: `index.ts` default-exports `defineGameApp`, `config.ts` exists, `@moku-labs/game` in `dependencies`, `@moku-labs/editor` in `devDependencies`, `bun run keys` and `bun run build` exit 0, the headless test walks the first flow. |
+| 7 | Sources match the type | Framework: `src/config.ts` exports `{ createPlugin, createCore }`, `src/index.ts` exports `{ createApp, createPlugin }`, `src/plugins/` exists. Consumer: `src/index.ts` imports `createApp` from the framework package, and `@moku-labs/core` is absent from `dependencies` — if present, remove it, re-run `bun install`, re-check. Library: `src/index.ts` exists. Game: `index.ts` default-exports `defineGameApp`, `config.ts` exists, `@moku-labs/game` in `dependencies`, `@moku-labs/editor` in `devDependencies`, `bun run keys` and `bun run build` exit 0 (`build` runs `moku-game keys --check` first), `.moku` is in `.gitignore`, no `bunfig.toml`, the headless test walks the first flow, `tests/visual/index.ts` exists and a second `bun run test:visual` prints `state same · describe same` for every checkpoint and exits 0. |
 | 8 | Git | `.git` exists; `bunx lefthook install` succeeded |
-| 8.5 | Game runs | Games only: init Step 5.5 showed the scene in the editor. |
-| 9 | Release plumbing | Packages: `.github/workflows/ci.yml` and `publish.yml` present, all eight scripts in `package.json`. Apps and games: `ci.yml` present; `lint`, `typecheck`, `test`, `test:coverage`, `build`, `deploy` in `package.json`; the app variant of `lefthook.yml`. |
+| 8.5 | Game runs | Games only: init Step 5.5 showed the scene in the editor, and the editor's start log says `files:project-on`. |
+| 9 | Release plumbing | Packages: `.github/workflows/ci.yml` and `publish.yml` present, all eight scripts in `package.json`. Apps and games: `ci.yml` present; `lint`, `typecheck`, `test`, `test:coverage`, `build`, `deploy` in `package.json`; the app variant of `lefthook.yml`. A game also has `test:visual` and the `visual` job in its `lefthook.yml`. |
 
 Only after all of these are green does `init` write `.planning/moku.md`.

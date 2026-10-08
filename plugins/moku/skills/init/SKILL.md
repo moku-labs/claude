@@ -153,7 +153,8 @@ not continue to Step 6 while anything is red: the marker means "this project is 
 A game is not ready until the person has seen it. After the checklist is green:
 
 1. Start the editor in the background: `bun run editor` (`moku-editor --root .`, port 3000). It takes the
-   page from the engine; the game has no HTML file.
+   page from the engine; the game has no HTML file. Its start log must say `files:project-on`.
+   `files:project-off` means TypeScript 7 got installed: pin `typescript` `6.0.3`.
 2. Open `http://127.0.0.1:3000/__editor/` and take one screenshot. Use the first that works:
    - the built-in browser pane (`preview_start` with the url, then a screenshot);
    - a Playwright MCP browser, if one is connected;

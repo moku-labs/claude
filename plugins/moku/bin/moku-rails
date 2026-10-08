@@ -7,6 +7,7 @@
  */
 
 import * as commands from "../lib/rails/commands.mjs";
+import { withLedger } from "../lib/rails/ledger.mjs";
 
 const HANDLERS = {
   session: commands.session,
@@ -20,14 +21,22 @@ const HANDLERS = {
   pause: commands.pause,
   park: commands.park,
   resume: commands.resume,
+  adopt: commands.adopt,
   continue: commands.proceed,
   scope: commands.scope,
   idea: commands.idea,
+  tier: commands.tier,
   init: commands.init,
   guard: commands.guard,
   "guard-bash": commands.guardBash,
   "may-stop": commands.mayStop,
 };
+
+/**
+ * Commands that read the ledger, change it and save it. Each runs as one edit, so two sessions never save
+ * over each other. `check` is not here: it runs the project's tests, and nobody waits for a test run.
+ */
+const EDITS = new Set(["open", "enter", "done", "skip", "close", "pause", "park", "resume", "adopt", "continue", "scope", "idea"]);
 
 const [name, ...rest] = process.argv.slice(2);
 const handler = HANDLERS[name];
@@ -42,7 +51,7 @@ if (!handler) {
 const args = parse(rest);
 let result;
 try {
-  result = handler(args);
+  result = EDITS.has(name) ? withLedger(args.root, () => handler(args)) : handler(args);
 } catch (error) {
   result = { code: 1, lines: [error instanceof Error ? error.message : String(error)] };
 }

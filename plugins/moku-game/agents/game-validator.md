@@ -46,9 +46,9 @@ runs `bun run lint`, so do not report what lint reports.
 Read `.oxlintrc.json` once. The game is **lint-covered** when `jsPlugins` lists `"@moku-labs/game/lint"`
 and `rules` sets the `moku-game/*` rules to `"error"`: the six of game 0.4.6 (`lazy-imports`,
 `native-imports`, `dev-imports`, `no-module-state`, `determinism`, `rules-siblings`), and on game 0.11
-also `static-keys`, `layer-imports`, `feature-door`, `test-suffix`. Then skip every check marked
+and later also `static-keys`, `layer-imports`, `feature-door`, `test-suffix`. Then skip every check marked
 **[lint: `<rule id>`]** below. Otherwise (a legacy `eslint.config.ts`, or game below 0.4.6) check them by
-reading, as written. A game on 0.11 with only the six rules on: **WARNING**, turn the other four on
+reading, as written. A game on 0.11 or later with only the six rules on: **WARNING**, turn the other four on
 (`hello-world.md`).
 
 | Check | Rule id |
@@ -148,7 +148,7 @@ folder. Read the exported functions for `state.x = …` patterns.
 - **WARNING**: `typescript` 7 in `devDependencies` with `@moku-labs/editor` installed. The editor's project
   index needs the TypeScript JS API; on 7 it runs with `files:project-off`. Fix: `typescript` `6.0.3`.
 - **INFO**: `@moku-labs/editor` below 0.8 with `@moku-labs/game` 0.10 or later, or the reverse. Editor 0.8
-  peers on game `>=0.10.0`.
+  and later peer on game `>=0.10.0`. The pair the pack was verified on is game 0.12.0 with editor 0.9.0.
 
 **How to check:** Grep `@moku-labs/editor` over the source; read `package.json` scripts and versions.
 
@@ -174,7 +174,8 @@ folder. Read the exported functions for `state.x = …` patterns.
 - **WARNING**: an `assets/` folder holds more than about 12 files flat, or its files share a kind prefix
   (`icon-`, `button-`, `panel-`, `fx-`, `sound-`) that should be a folder. Fix: group by kind
   (`icons/coin.webp`, `fx/coin-spin/0.webp`), fix the page line of a moved `.fnt`, run `bun run keys`
-  and the typecheck. The rule: moku-ai `references/game-assets.md` §Folder layout.
+  and the typecheck. The rule: moku-ai `references/game-assets.md` §Folder layout. On game below 0.12 do
+  not ask for an `fx/` folder: only an `fx-` stem reaches the `fx` atlas group there.
 - **INFO**: `text.fonts.body` set to `"ui.font-body"` in `pluginConfigs`. That is the default; the config
   line can go.
 
@@ -268,9 +269,19 @@ writes into `.moku/`. The reference is the pack's `hello-world.md` and the engin
 - **WARNING**: `.moku` missing from `.gitignore`. `moku-game dev` warns about it.
 - **WARNING**: a `tests/scenarios/*.ts` file without a default export of a `Scenario`, or with a name the
   e2e or visual tests do not use and no comment.
+- **WARNING** (game 0.12 and later): no `tests/visual/index.ts`, or one whose default export is not
+  `{ app: { app: () => … }, tests: [...] }`. `moku-game visual` reads that module; a bare app factory is
+  refused. The template ships it with one test. Fix: `hello-world.md` → tests/visual/.
+- **WARNING** (game 0.12 and later): a `*.visual.ts` file that `tests/visual/index.ts` does not list, no
+  `tests/visual/baselines/` in git, or no `test:visual` script. An unlisted test never runs; without
+  committed baselines every run only writes.
+- **INFO** (game 0.12 and later): a `test:visual` script that runs a runner of the game's own
+  (`bun tests/visual/run.ts`) while `tests/visual/index.ts` would do. `moku-game visual` serves its own
+  page from `.moku/visual/` and needs no dev server.
 
 **How to check:** Read `index.ts`, `config.ts`, `game.ts`, `.gitignore`, `package.json`. Glob `web/**`,
-`platform-bridge.ts`, `native.ts`, `game.config.ts`, `bunfig.toml`, `tests/scenarios/*.ts`. Grep
+`platform-bridge.ts`, `native.ts`, `game.config.ts`, `bunfig.toml`, `tests/scenarios/*.ts`,
+`tests/visual/*`, `tests/visual/baselines/**`. Grep
 `createApp\(`, `flow\.run\(`, `createGame`, `createScreenGame` outside `tests/`.
 
 ## Severity Levels

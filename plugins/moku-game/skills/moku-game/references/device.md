@@ -113,7 +113,7 @@ Facts to expect on the simulator (spike P13, iOS 26 simulator):
 A device build needs Apple signing. Claude never enters Apple credentials: it guides, the user signs in.
 
 1. The user opens Xcode → Settings → Accounts and signs in with their Apple ID; the team appears.
-2. `config.ts` carries no signing in game 0.11. The user picks the team in the generated Xcode project
+2. `config.ts` carries no signing in game 0.12. The user picks the team in the generated Xcode project
    under `.moku/tauri/` (Signing & Capabilities) and runs on the device from Xcode. The
    `moku-native:moku-native` skill lists the env vars its doctor checks; never write a secret into the
    game.

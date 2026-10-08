@@ -5,7 +5,7 @@
  * so the catastrophic case (code before init) is impossible, not just discouraged.
  */
 
-import { WRITING_STATIONS } from "./routes.mjs";
+import { LOOP_STATIONS, WRITING_STATIONS } from "./routes.mjs";
 import { shellWriteTargets } from "./shell.mjs";
 
 /** @typedef {{ allow: true } | { allow: false, reason: string }} GuardVerdict */
@@ -54,7 +54,7 @@ export function guardWrite(filePath, facts) {
   // Source changes travel inside an open change that reached a writing station
   const writing = facts.changes.some((change) => change.status === "open" && WRITING_STATIONS.has(change.station ?? ""));
   if (!writing) {
-    return deny("No open change is at a writing station (build, verify, e2e). Open a change with `moku-rails open` and enter its build station first, so the work is tracked and closed properly.");
+    return deny("No open change is at a writing station (tweak, build, verify, e2e). Open a change with `moku-rails open` and enter its build station first, so the work is tracked and closed properly.");
   }
 
   // An open change is not a free pass: every new request of the person is placed on the route before code
@@ -62,7 +62,9 @@ export function guardWrite(filePath, facts) {
   // a message that arrives while it runs must not stop it mid-file. The harness marks a subagent's hook
   // payload with `agent_id`; should that marker ever be missing, the agents the station recorded as running
   // are the second witness, so a builder is never refused by the flag.
-  if (facts.routed === false && !facts.subagent && !facts.agentsRunning) {
+  // Inside a loop station (tweak) the person sends one edit after another: each is that station's work.
+  const looping = facts.changes.some((change) => change.status === "open" && LOOP_STATIONS.has(change.station ?? ""));
+  if (facts.routed === false && !facts.subagent && !facts.agentsRunning && !looping) {
     return deny("The person's last request has not been routed yet. Load the `moku:moku` skill and place the request: `moku-rails continue` when it finishes work of the current station, `moku-rails scope \"<what is new>\"` when it adds something the plan does not cover, or `moku-rails open` for a separate change.");
   }
 

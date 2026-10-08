@@ -200,7 +200,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../game",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.4.4",
+      "knownVersion": "0.12.0",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -223,7 +223,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../editor",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.2.1",
+      "knownVersion": "0.9.0",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -246,7 +246,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../ai",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.14.2",
+      "knownVersion": "0.16.1",
       "pack": "moku-ai",
       "skill": "plugins/moku-ai/skills/moku-ai",
       "pluginIndex": "plugins/moku-ai/skills/moku-ai/references/plugin-index.md",
@@ -265,6 +265,39 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
   ]
 }
 ```
+
+> **Game and editor sync 2026-10-08: `@moku-labs/game@0.12.0`, `@moku-labs/editor@0.9.0`** (npm
+> `dist-tags.latest`; catalogs from the `v0.12.0` and `v0.9.0` tag source, `llms.txt`, `docs/*.md`,
+> `llms-full.txt`). Both peer on `@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4`; the editor peers
+> on `@moku-labs/game >=0.10.0` and `typescript >=5.5`. The hello-world template was re-scaffolded and
+> run on this pair. Crossings a game project meets on the way up from 0.4.4:
+> - **game 0.5.0:** dev hot swap (`@moku-labs/game/hot`), `scenes.expect`, the bookmark `scene`, the
+>   global event `ui:hot-swap`.
+> - **game 0.6.0, 0.7.x:** the project index (`@moku-labs/game/project`, bin `moku-game-index`); the lint
+>   rule `static-keys`.
+> - **game 0.8.0 (breaking):** the visual tests move from `@moku-labs/game/testing` to
+>   `@moku-labs/game/visual`; `/testing` has no `node:` import; the merge game leaves the engine for
+>   moku-labs/demos.
+> - **game 0.9.0:** the layered layout (`core/`, `shared/`, `features/`, `plugins/`), `--layer`, the lint
+>   rules `layer-imports`, `feature-door`, `test-suffix`, the `AnimPlayer` resource.
+> - **game 0.10.0 (a new project shape, not a version bump):** the game shell: `defineGameApp`,
+>   `config.ts`, the bin `moku-game`. A game writes no `web/`, no `bunfig.toml`, no `createApp`.
+> - **game 0.11.0:** `PlatformApi.exit()`; the page bundles only the system plugins `config.ts` names.
+> - **game 0.12.0:** `moku-game visual`; `test-suffix` passes a kind folder's `index.ts`; a texture in an
+>   `fx/` folder packs into the `fx` atlas group; root exports `messageArgument`, `messageDuration`
+>   (run `bun run keys` after the bump: the generated strings modules import them).
+> - **editor 0.3.0 → 0.5.x:** `moku-editor mcp`, MCP door tools, every code location from the project
+>   index (the configs `flowView.stylesFile`, `gameView.manifestPaths`, `gameView.sourceSearch`,
+>   `renderView.manifestPaths` are gone; `typescript` becomes a peer, 6.x for its JS API).
+> - **editor 0.8.0:** `moku-editor --root .` serves a moku-game folder through the engine's
+>   `preparePage`; peer game `>=0.10.0`. **editor 0.9.0:** `moku-editor e2e`.
+> - **ai 0.14.2 → 0.16.1 (synced 2026-10-08, `v0.16.1` tag source):** only `ark`, `fal` and `asset`
+>   change. 0.15.0 `AssetRequest.groupName`, `app.ark.listAssetGroups` / `listAssets` / `deleteAsset` /
+>   `deleteAssetGroup`, `app.fal.upload`, the Ark group found by name instead of created per process;
+>   0.15.1 ark refusal messages by code; 0.15.2 `params.omni_reference_task_type` and `seconds: -1` for
+>   an edit; 0.16.0 a final from a draft priced by its draft (`withVideoInput`); 0.16.1
+>   `app.ark.draftRecord(hash)`. No break, no new task, event or CLI flag. The headings of the upstream
+>   `CHANGELOG.md` do not match the tags (0.15.3, 0.16.0, 0.17.0); the tags and releases win.
 
 > **Family sync 2026-10-04: core and common became peer dependencies.** Every family package released on
 > 2026-10-04 (web 2.4.4, worker 0.20.3, room 0.8.3, native 0.3.2, system 0.3.1, ai 0.14.2, common 0.3.4) moved

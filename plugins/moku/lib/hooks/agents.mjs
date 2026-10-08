@@ -10,6 +10,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { laneOf } from "../rails/ledger.mjs";
+
 const AGENTS_DIR = join(".planning", "agents");
 const PLUGIN_ROOT = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -31,7 +33,7 @@ export const RESUME_INSTRUCTION = 'A missing report is a failure, not a delay. R
  */
 export function registerAgent(root, agent) {
   mkdirSync(join(root, AGENTS_DIR), { recursive: true });
-  writeFileSync(agentFile(root, agent.id), `${JSON.stringify({ ...agent, startedAt: new Date().toISOString() })}\n`);
+  writeFileSync(agentFile(root, agent.id), `${JSON.stringify({ ...agent, lane: laneOf(root), startedAt: new Date().toISOString() })}\n`);
 }
 
 /**
@@ -68,7 +70,10 @@ export function runningAgents(root) {
     }
   }
 
-  return agents.sort((a, b) => a.startedAt.localeCompare(b.startedAt));
+  // Every worktree shares the folder: an agent counts only in the checkout that started it
+  const lane = laneOf(root);
+
+  return agents.filter((agent) => (agent.lane ?? "") === lane).sort((a, b) => a.startedAt.localeCompare(b.startedAt));
 }
 
 /**

@@ -1,10 +1,11 @@
 # Hello world — the minimal screen game
 
 The exact files `moku:init` scaffolds for `type: game`. One rest node, one transit node, one feature with a
-screen that shows "Hello, world" and a tappable button that counts taps. It runs headless in Bun, on the
-engine's dev page, in the editor, and is the smallest game the playtest station can drive.
+screen that shows "Hello, world" and a tappable button that counts taps, one headless test and one
+visual test. It runs headless in Bun, on the engine's dev page, in the editor, and is the smallest game
+the playtest station can drive.
 
-The game is a folder on the **game shell** of `@moku-labs/game` 0.11: `index.ts` is the game as one data
+The game is a folder on the **game shell** of `@moku-labs/game` 0.12: `index.ts` is the game as one data
 object (`defineGameApp`), `config.ts` is the page as plain data, and the engine bin `moku-game` writes
 the page, serves it, builds it and packs the art. A game writes no page, no server, no `web/`, no
 `native.ts`, no `platform-bridge.ts` and no `bunfig.toml`. The layout is the engine's layered one:
@@ -13,9 +14,11 @@ the page, serves it, builds it and packs the art. A game writes no page, no serv
 Derived from the engine's fixture `tests/fixtures/mini-game/`, its `docs/shell.md` and `llms.txt`, and
 the reference game `merge-game` in moku-labs/demos. Verified end to end (install, `keys`, typecheck,
 lint with the ten engine rules, tests with coverage, `keys --check`, `build`, `moku-game dev`,
-`moku-editor --root .` with the project index on, lefthook pre-commit) against `@moku-labs/game@0.11.0`,
-`@moku-labs/editor@0.8.0`, `pixi.js@8.22.0`, Bun 1.3.14 and the init tooling stack (`oxlint@1.86.0`,
-`vitest@4.0.18`, `typescript@6.0.3`). When something here does not compile, read
+`moku-editor --root .` with the project index on, `moku-game-index --check`, `bun run test:visual` twice
+(written, then same), lefthook pre-commit) against `@moku-labs/game@0.12.0`, `@moku-labs/editor@0.9.0`,
+`pixi.js@8.22.0`, Bun 1.3.14 and the init tooling stack (`oxlint@1.86.0`, `vitest@4.0.18`,
+`typescript@6.0.3`). Not run: the pixel leg of `moku-game visual` (it needs `playwright-core` and a
+browser) and `moku-game native`. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: it is the engine in one page and always matches the
 installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_modules/@moku-labs/editor/`).
 
@@ -24,13 +27,13 @@ installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_module
 Pin exact versions. A game has no `bunfig.toml`, so pass `--exact`.
 
 ```sh
-bun add --exact @moku-labs/game@0.11.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.4
-bun add --exact -d @moku-labs/editor@0.8.0 sharp@0.34.5
+bun add --exact @moku-labs/game@0.12.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.4
+bun add --exact -d @moku-labs/editor@0.9.0 sharp@0.34.5
 ```
 
 `@moku-labs/core` and `@moku-labs/common` are peers of both packages; pin them so the game and the
 editor share one copy. `pixi.js` (`^8`) is a peer of the engine. `sharp` is an optional peer: `moku-game
-build` and `pack` need it for the asset pack. `@moku-labs/editor@0.8.0` peers on `@moku-labs/game
+build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.0` peers on `@moku-labs/game
 >=0.10.0` and `typescript >=5.5`.
 
 Every other dev dependency is init's tooling set of the current lint stack, at the versions
@@ -85,10 +88,28 @@ features/hello/{index.ts, flow/home.ts, flow/tap.ts, views/scene.ts, views/hello
 generated/{assets.ts, strings.ts, strings.en.ts, strings.en-XA.ts}*
 tests/scenarios/ready.ts
 tests/integration/hello.test.ts
+tests/visual/{index.ts, home.visual.ts}
+tests/visual/baselines/home/{rest,tapped}/{state.json, describe.json}**
 ```
 
+`**` written by the first `bun run test:visual`. Commit them: they are what the next run compares with.
+
 `*` written by `bun run keys`. Commit them; `build` runs `moku-game keys --check` first, so CI keeps them
-honest. `.moku/` (the dev page, the editor's captures, the Tauri project) and `dist/` are git-ignored.
+honest. `.moku/` (the dev page, the page of `moku-game visual`, the editor's captures, the Tauri project)
+and `dist/` are git-ignored.
+
+Folders a game grows into, none of them in the hello world:
+
+| Path | Holds |
+|---|---|
+| `core/tables.ts` | Balance data as plain objects |
+| `shared/{rules,views,styles,strings}/` | What two features need: pure rules, shared components, styles, strings |
+| `features/<f>/{rules,styles,motion,world,assets}/` | Pure rules; `defineStyle` and text styles; animations and motions; ECS components, systems, projections and layout; the feature's art |
+| `plugins/<p>/` with `plugins/index.ts` | The game's own plugins, listed in `plugins` of `index.ts` |
+| `tests/visual/*.visual.ts` | One more file per screen worth a picture, listed in `tests/visual/index.ts` |
+| `tests/e2e/`, `tests/editor/`, `tests/helpers/` | `*.e2e.ts`, `*.editor.ts`, and helpers of any name |
+| `features/<f>/__tests__/` | Tests of one feature: `*.test.ts`, `isolated/*.isolated.ts` |
+| `<name>.dev.ts` | The game's own doors, next to what they drive |
 
 | Path | Layer | Imports |
 |---|---|---|
@@ -189,7 +210,7 @@ here. The full table is in `docs/lint.md` of the engine and in `plugin-index.md`
 | `moku-game/static-keys` | A JSX `key` the project index cannot follow: `a ?? b`, `item.name`, a table lookup. Pass the key in as `props.id` or `props.<name>Key`. |
 | `moku-game/layer-imports` | An import that reaches a layer above its own: `@features/home` from `shared/`. |
 | `moku-game/feature-door` | A deep import of another feature, `@features` below `game.ts`, a relative import that leaves a feature. |
-| `moku-game/test-suffix` | A file in `tests/e2e/`, `tests/visual/`, `tests/editor/` or `__tests__/` without the folder's suffix (`.e2e.ts`, `.visual.ts`, `.editor.ts`, `.test.ts`). `tests/integration/` and `tests/scenarios/` are not checked. |
+| `moku-game/test-suffix` | A file in `tests/e2e/`, `tests/visual/`, `tests/editor/` or `__tests__/` without the folder's suffix (`.e2e.ts`, `.visual.ts`, `.editor.ts`, `.test.ts`). The folder's `index.ts` passes since 0.12. `tests/integration/`, `tests/scenarios/` and `tests/helpers/` are not checked. |
 
 The logic is the root `index.ts`, `**/state.ts`, `**/tables.ts`, `**/game.ts` and
 `**/{core,nodes,flows,rules,features,shared}/**`. Every rule but `test-suffix` skips the tests. Every
@@ -254,11 +275,14 @@ pre-commit:
       run: bun run typecheck
     - name: test
       run: bun run test
+    - name: visual
+      run: bun run test:visual
 ```
 
 This is the app variant of the tooling hook. The package hook runs `validate`, `test:unit` and
 `test:integration`; a game has none of them. `--no-error-on-unmatched-pattern` keeps the hook quiet
-when every staged file is ignored, for example `generated/`.
+when every staged file is ignored, for example `generated/`. The `visual` job is the headless leg: it
+needs no browser and takes under a second here.
 
 ## package.json
 
@@ -280,18 +304,19 @@ when every staged file is ignored, for example `generated/`.
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:visual": "moku-game visual --no-pixels",
     "deploy": "echo 'No deploy target yet: the release station picks one.'"
   },
   "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" },
   "dependencies": {
     "@moku-labs/common": "0.3.4",
     "@moku-labs/core": "1.7.1",
-    "@moku-labs/game": "0.11.0",
+    "@moku-labs/game": "0.12.0",
     "pixi.js": "8.22.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@moku-labs/editor": "0.8.0",
+    "@moku-labs/editor": "0.9.0",
     "@types/bun": "1.3.14",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",
@@ -315,11 +340,14 @@ Init Step 4 adds `@moku-labs/ci` to `devDependencies`.
 | `pack` | The production pack in `dist/assets` (WebP atlas pages, content-hashed names; needs `sharp`) |
 | `build` | `keys --check`, then the pack and the production page in `dist/web`, `__MOKU_GAME_DEV__` defined `false` |
 | `native` | One verb of `@moku-labs/native` over `config.ts`: `bun run native build ios --simulator`. Needs `native` in `config.ts` |
+| `test:visual` | The headless leg of the visual tests: `tests/visual/index.ts` against `tests/visual/baselines/`. `bun run test:visual --pixels` adds the pixel leg (the last of `--pixels` and `--no-pixels` wins) |
 
 The CI runs `lint`, `typecheck`, `test:coverage` and `build` on every push and pull request, and
 `deploy` on every push to `main`. `deploy` is a placeholder until the release station picks a target.
 Every `moku-game` command takes `--root <dir>` (default `.`), `--preload <path>` and `--serve-plugin
-<path>`; `dev` takes `--port <n>` (`0` for a free port) and `--packed`.
+<path>`; `dev` takes `--port <n>` (`0` for a free port) and `--packed`. One more command has no script
+in the template: `bunx moku-game-index --root . where <key>` prints the `file:line` of a flow, node,
+scene, projection or JSX key.
 
 ## tsconfig.json
 
@@ -730,6 +758,62 @@ it("starts from the scenario ready", async () => {
 `game.screen()` runs in plain Bun too: without a `renderer.mount` the renderer is inert. A test passes
 `{ manifest, io }` when it needs the assets.
 
+## tests/visual/
+
+Since game 0.12 the bin runs the visual tests, so a game writes no runner.
+
+```ts
+// tests/visual/home.visual.ts
+/**
+ * @file Visual test: Home at rest with the counter at 3, then one tap.
+ */
+
+import { startingSession } from "@core/state";
+import { startMoment } from "@moku-labs/game/app";
+import { defineVisualTest } from "@moku-labs/game/visual";
+import ready from "../scenarios/ready";
+
+export const home = defineVisualTest("home", {
+  start: { player: ready(startMoment).player, session: startingSession, checkpoint: "home" },
+  steps: [{ checkpoint: "rest" }, { tap: { key: "tap" } }, { checkpoint: "tapped" }]
+});
+```
+
+```ts
+// tests/visual/index.ts
+/**
+ * @file The visual tests as `moku-game visual` reads them: the app of the headless leg and the tests.
+ */
+import game from "../../index";
+import { home } from "./home.visual";
+
+export default { app: { app: () => game.screen().app }, tests: [home] };
+```
+
+```sh
+bun run test:visual                      # the headless leg: state.json and describe.json per checkpoint
+bun run test:visual --pixels             # also the pixel leg: screen.webp, in Chrome
+bun run test:visual --update --only home # rewrite the baselines of one test, for an intended change
+```
+
+- The first run writes `tests/visual/baselines/home/{rest,tapped}/state.json` and `describe.json`, and
+  prints `✓ home/rest: state written · describe written · pixels skipped`. The next run compares:
+  `state same · describe same`. Exit 1 when a checkpoint differs. Init runs it twice and commits the
+  baselines.
+- `start` takes the `session` too. Without it the tap node adds to `undefined`.
+- The default export is `{ app: { app }, tests }`. A bare app factory is refused.
+- `index.ts` passes `moku-game/test-suffix`; a helper of another name goes to `tests/helpers/`.
+- The script passes `--no-pixels`, so it is green on any machine. Plain `moku-game visual` on a Mac runs
+  the pixel leg too and stops without the optional peer: `[game] The pixel leg needs playwright-core.`
+  For pixels: `bun add --exact -d playwright-core`, a browser (`bunx playwright-core install chromium`,
+  or the system Chrome), then `bun run test:visual --pixels`. The command writes its own page into
+  `.moku/visual/` and serves it on a free port, so it runs while `bun run editor` is up. No CI job runs
+  pixels.
+- `game.screen()` with no seam measures text at 0.6 em and warns `text: the font is not loaded`, so
+  `describe.json` is stable but not the page's layout. A game that needs the real numbers passes the
+  parsed `manifest.json` and a file seam: `game.screen({ manifest, io })`. The engine's own fixture
+  builds that seam in `tests/integration/mini-helpers.ts`; it is not in the npm package.
+
 ## Run it
 
 ```sh
@@ -737,9 +821,11 @@ bun run keys             # manifest.json, generated/*
 bun run test             # headless, plain Bun
 bun run typecheck
 bun run lint             # biome + oxlint, the ten engine rules included
+bun run test:visual      # twice at init: "written", then "same"; commit tests/visual/baselines/
 bun run build            # keys --check, the pack and dist/web
 bun run dev              # the game alone: http://127.0.0.1:3000/
 bun run editor           # Game http://127.0.0.1:3000/  Tools http://127.0.0.1:3000/__editor/
+bunx moku-game-index --root . --check    # 14 files, 12 keys: 0 broken, 0 in conflict, 0 unresolved
 ```
 
 `moku-game dev` writes the dev page into `.moku/` (`index.html`, `dev.ts`, `main.ts`, `bunfig.toml`),
@@ -750,8 +836,11 @@ runs Bun again under that bunfig and prints the bound URL on its own line. `/` i
 On the page, tap the button: the counter text changes on the next commit, and with `save: "local"` it
 survives a reload. In the tools page, State shows `player.taps`, Flow shows `home → tap → home`,
 Console shows the log. Save a view file (for example the button `fill` in `hello-screen.tsx`): the
-engine's hot plugin swaps it in the running page, same state, same node. `bun run build` keeps no
-editor, scenario, `.dev` module or `/control` code in `dist/web`. See `editor.md`.
+engine's hot plugin swaps it in the running page, same state, same node. A save of a node, of
+`core/state.ts` or of a feature `index.ts` reloads the page instead, and the editor restores the state.
+`bun run build` keeps no editor, scenario, `.dev` module or `/control` code in `dist/web`. The editor
+prints `files:project-on {"files":14,"keys":12,…}` at the start; `files:project-off` means TypeScript 7.
+See `editor.md`.
 
 ## Next steps a real game adds
 
@@ -766,6 +855,9 @@ editor, scenario, `.dev` module or `/control` code in `dist/web`. See `editor.md
   node's `fx({ kind: "exit" })` with `ctx.require(platformPlugin).exit()`.
 - Native and the phone: `native` and `system` in `config.ts`, then `bun run native build ios --simulator`
   (see `device.md`). No `platform-bridge.ts`, no `native.ts`: the engine page builds the shell.
-- `tests/visual/*.visual.ts` with `defineVisualTest`, run with `runVisualTests({ app: () => game.screen().app, … })`.
+- One `tests/visual/<screen>.visual.ts` per screen or popup worth a picture, listed in `tests/visual/index.ts`.
+- Particle textures in `shared/assets/fx/` or `features/<f>/assets/fx/`: the packer puts everything under
+  an `fx` folder on one atlas page (game 0.12). A system that plays an animation uses
+  `res(AnimPlayer).play(animation, slots)`.
 - A `.dev.ts` module with `defineSource` / `defineCommand` for the game's own cheats. The editor's page
   imports every `**/*.dev.ts` on its own; `moku-game build` imports none.
