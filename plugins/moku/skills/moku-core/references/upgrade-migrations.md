@@ -433,7 +433,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/native` AND its
-  resolved/declared version `< frameworks[native].knownVersion` in `moku-frameworks.md` (currently `0.3.2`).
+  resolved/declared version `< frameworks[native].knownVersion` in `moku-frameworks.md` (currently `0.3.3`).
 - **Apply:**
   1. Read `frameworks[native].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/native` dependency to that version (preserve the range operator
@@ -477,7 +477,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/game` AND its
-  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.12.0`).
+  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.13.0`).
 - **Apply:**
   1. Read `frameworks[game].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/game` dependency to that version (preserve the range operator
@@ -500,7 +500,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/editor` AND its
-  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.9.0`).
+  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.9.1`).
 - **Apply:**
   1. Read `frameworks[editor].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/editor` dependency to that version (preserve the range operator

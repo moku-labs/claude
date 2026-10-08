@@ -1,6 +1,6 @@
 # @moku-labs/game — Plugin & Property Index
 
-**Synced version:** `0.12.0` (catalog from the `v0.12.0` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
+**Synced version:** `0.13.0` (catalog from the `v0.13.0` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
 `docs/configuration.md`, `docs/doors.md`, `docs/shell.md`, `docs/lint.md`, `docs/testing.md`,
 `docs/hot-swap.md`, `docs/project-index.md`, `src/plugins/*/README.md`, and the export lists of
 `src/index.ts`, `src/app.ts`, `src/cli.ts`, `src/testing.ts`, `src/visual.ts`, `src/project.ts`).
@@ -10,7 +10,7 @@ visual tests), `sharp` (the asset pack), `typescript >=5.5` (the project index),
 (the system shell, the store save), `@moku-labs/native ^0.3.2` (`moku-game native`). Engines node ≥24,
 bun ≥1.3.14. ESM only.
 
-The second half indexes **`@moku-labs/editor@0.9.0`** (peers `@moku-labs/game >=0.10.0` and
+The second half indexes **`@moku-labs/editor@0.9.1`** (peers `@moku-labs/game >=0.10.0` and
 `typescript >=5.5`).
 
 > The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). It matches the
@@ -18,6 +18,7 @@ The second half indexes **`@moku-labs/editor@0.9.0`** (peers `@moku-labs/game >=
 
 | Version | What changed for a game |
 |---|---|
+| 0.13.0 | `moku-game keys` writes the dev manifest to `generated/manifest.json`, not `<root>/manifest.json`. `dev` serves it on `/manifest.json`, so the page still fetches `manifest.json` next to itself. The project index reads it by default. The build output is unchanged: `dist/assets/manifest.json`. `moku-game-assets` keeps its own `--manifest` default |
 | 0.12.0 | `moku-game visual` runs `tests/visual/index.ts` against `tests/visual/baselines/`. `test-suffix` passes the `index.ts` of a test kind folder. A texture in an `fx/` folder packs into the `fx` atlas group. Root exports `messageArgument`, `messageDuration` (a generated strings module imports them). `parseVisualArgv` reads `--pixels` |
 | 0.11.0 | `PlatformApi.exit()`. The page bundles only the system plugins `config.ts` names |
 | 0.10.0 | The game shell: `defineGameApp`, `config.ts` (`GameConfig`), the bin `moku-game`, `startPage`, `preparePage` |
@@ -252,7 +253,8 @@ export default { app: { app: () => game.screen().app }, tests: [home] };
   channel, a checkpoint above 0.1 % of pixels). It needs the optional peer `playwright-core`. A pixel
   difference writes `screen.actual.webp` and `screen.diff.webp` beside the baseline.
 - `--webgl` runs only the tests with `webgl: true` and writes `screen.webgl.webp`.
-- Without `manifest.json` a run that serves the page stops: `[game] visual: no manifest.json in "<game>".`
+- Without `generated/manifest.json` a run that serves the page stops: `[game] visual: no generated/manifest.json in "<game>".`
+  with `Run "moku-game keys" first.`
 - An app made with `game.screen()` and no `{ manifest, io }` seam measures text at 0.6 em and warns
   `text: the font is not loaded`. A game that wants the page's layout in `describe.json` passes the
   parsed manifest and a file seam of its own; the engine's fixture does it in
@@ -296,7 +298,8 @@ bunx moku-game-index --root . --check                 # exit 1 on a broken file 
 bunx moku-game-index --root . --json                  # the whole index
 ```
 
-- `--root` is required. `--manifest <path>` and `--tsconfig <path>` are root-relative.
+- `--root` is required. `--manifest <path>` and `--tsconfig <path>` are root-relative. The manifest defaults to
+  `generated/manifest.json` (since 0.13.0).
 - A non-literal id goes to `index.unresolved` with the reason, never guessed. `moku-game/static-keys`
   keeps JSX keys followable.
 - `typescript` (`>=5.5`) is an optional peer: without it `openProject` rejects with `[game] The project
@@ -492,6 +495,7 @@ page ships prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-ful
 
 | Version | What changed |
 |---|---|
+| 0.9.1 | `/manifest.json` answers from `generated/manifest.json` (game 0.13), else from the game root |
 | 0.9.0 | `moku-editor e2e -c <playwright config>`: one Playwright run per project, each on its own `PORT` |
 | 0.8.0 | The engine page: `moku-editor --root .` in a moku-game folder calls `preparePage`; the entry `@moku-labs/editor/agent/page`; peer game `>=0.10.0`. The bin catches SIGINT and SIGTERM from the start |
 | 0.7.0 | The layered layout: a module in a `styles/` folder is a style write (game 0.9) |

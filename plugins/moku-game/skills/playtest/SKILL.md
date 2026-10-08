@@ -64,12 +64,12 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
    page; the game has none of its own. A game still on `web/index.html` and `web/main.ts` is the old
    shape: say so in the report and play it with its own `dev` script, but do not migrate it here.
 4. `@moku-labs/editor` in `devDependencies` and an `editor` script that runs `moku-editor --root .`.
-   Missing: add `bun add --exact -d @moku-labs/editor@0.9.0` and the script; say so.
+   Missing: add `bun add --exact -d @moku-labs/editor@0.9.1` and the script; say so.
 
 ## Step 1 — headless proof
 
 ```bash
-bunx moku-game keys --check       # generated/ and manifest.json are current
+bunx moku-game keys --check       # generated/, generated/manifest.json included, is current
 bun run typecheck
 bun run test                       # vitest: the headless scenarios
 bun run test:visual                # the headless leg of the visual tests, when the script exists

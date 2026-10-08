@@ -15,7 +15,7 @@ Derived from the engine's fixture `tests/fixtures/mini-game/`, its `docs/shell.m
 the reference game `merge-game` in moku-labs/demos. Verified end to end (install, `keys`, typecheck,
 lint with the ten engine rules, tests with coverage, `keys --check`, `build`, `moku-game dev`,
 `moku-editor --root .` with the project index on, `moku-game-index --check`, `bun run test:visual` twice
-(written, then same), lefthook pre-commit) against `@moku-labs/game@0.12.0`, `@moku-labs/editor@0.9.0`,
+(written, then same), lefthook pre-commit) against `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.1`,
 `pixi.js@8.22.0`, Bun 1.3.14 and the init tooling stack (`oxlint@1.86.0`, `vitest@4.0.18`,
 `typescript@6.0.3`). Not run: the pixel leg of `moku-game visual` (it needs `playwright-core` and a
 browser) and `moku-game native`. When something here does not compile, read
@@ -27,13 +27,13 @@ installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_module
 Pin exact versions. A game has no `bunfig.toml`, so pass `--exact`.
 
 ```sh
-bun add --exact @moku-labs/game@0.12.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.4
-bun add --exact -d @moku-labs/editor@0.9.0 sharp@0.34.5
+bun add --exact @moku-labs/game@0.13.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.4
+bun add --exact -d @moku-labs/editor@0.9.1 sharp@0.34.5
 ```
 
 `@moku-labs/core` and `@moku-labs/common` are peers of both packages; pin them so the game and the
 editor share one copy. `pixi.js` (`^8`) is a peer of the engine. `sharp` is an optional peer: `moku-game
-build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.0` peers on `@moku-labs/game
+build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.1` peers on `@moku-labs/game
 >=0.10.0` and `typescript >=5.5`.
 
 Every other dev dependency is init's tooling set of the current lint stack, at the versions
@@ -51,7 +51,7 @@ Never add `vitest@latest`: the coverage plugin must be the same version as Vites
 rules need no package of their own: they ship in `@moku-labs/game` as `@moku-labs/game/lint`.
 
 A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.1` when
-`config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.2`
+`config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.3`
 for `moku-game native`. See `device.md`. The hello world installs neither.
 
 ## Font
@@ -80,12 +80,12 @@ uses the style `digits` brings `ui.font-digits` itself. For another face, build 
 ```
 package.json  tsconfig.json  vitest.config.ts  biome.json  .oxlintrc.json  lefthook.yml  .gitignore
 .github/workflows/ci.yml
-index.ts  config.ts  game.ts  manifest.json*
+index.ts  config.ts  game.ts
 core/{state.ts, kit.ts}
 shared/{index.ts, assets.ts, LICENSE-fonts.txt, assets/font-body.fnt, assets/font-body.png}
 features/index.ts
 features/hello/{index.ts, flow/home.ts, flow/tap.ts, views/scene.ts, views/hello-screen.tsx, strings/en.json}
-generated/{assets.ts, strings.ts, strings.en.ts, strings.en-XA.ts}*
+generated/{assets.ts, strings.ts, strings.en.ts, strings.en-XA.ts, manifest.json}*
 tests/scenarios/ready.ts
 tests/integration/hello.test.ts
 tests/visual/{index.ts, home.visual.ts}
@@ -141,7 +141,7 @@ and no `declarations.d.ts`. The CI is `examples/app/ci.yml` of `@moku-labs/ci`, 
 
 `biome.json`: `files.includes` names the game folders instead of `src/**`, the `src/**/__tests__/**`
 override goes, and one override comes. A JSX `<button>` here is a game tag, not an HTML button, so
-`useButtonType` is off for `.tsx`, as in the engine's own repo. `generated/`, `manifest.json` and `.moku/`
+`useButtonType` is off for `.tsx`, as in the engine's own repo. `generated/` and `.moku/`
 stay out: their writers own the format.
 
 ```json
@@ -311,12 +311,12 @@ needs no browser and takes under a second here.
   "dependencies": {
     "@moku-labs/common": "0.3.4",
     "@moku-labs/core": "1.7.1",
-    "@moku-labs/game": "0.12.0",
+    "@moku-labs/game": "0.13.0",
     "pixi.js": "8.22.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@moku-labs/editor": "0.9.0",
+    "@moku-labs/editor": "0.9.1",
     "@types/bun": "1.3.14",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",
@@ -336,7 +336,7 @@ Init Step 4 adds `@moku-labs/ci` to `devDependencies`.
 |---|---|
 | `dev` | `moku-game dev`: the game page with hot reload on `http://127.0.0.1:3000/`, no tools |
 | `editor` | `moku-editor --root .`: the same page with the editor's agent, plus the tools page on `/__editor/` |
-| `keys` | `generated/assets.ts`, the compiled strings and `manifest.json`, with the layers of `config.ts` |
+| `keys` | `generated/assets.ts`, the compiled strings and `generated/manifest.json`, with the layers of `config.ts` |
 | `pack` | The production pack in `dist/assets` (WebP atlas pages, content-hashed names; needs `sharp`) |
 | `build` | `keys --check`, then the pack and the production page in `dist/web`, `__MOKU_GAME_DEV__` defined `false` |
 | `native` | One verb of `@moku-labs/native` over `config.ts`: `bun run native build ios --simulator`. Needs `native` in `config.ts` |
@@ -632,7 +632,7 @@ export const helloFeature = defineFeature("hello", {
 export { helloFeature, home, tap } from "./hello";
 ```
 
-Run `bun run keys` now. It writes `manifest.json` (bundle `ui`, key `ui.font-body`),
+Run `bun run keys` now. It writes `generated/manifest.json` (bundle `ui`, key `ui.font-body`),
 `generated/assets.ts` (`AssetKey = "ui.font-body"`, `FontKey`, `BundleKey = "ui"`, `nineSlice`),
 `generated/strings.ts` (`Strings = { "hello.greeting": Record<string, never>; "hello.tap":
 Record<string, never>; "hello.taps": { n: number } }`), `generated/strings.en.ts` and the pseudo-locale
@@ -811,13 +811,13 @@ bun run test:visual --update --only home # rewrite the baselines of one test, fo
   pixels.
 - `game.screen()` with no seam measures text at 0.6 em and warns `text: the font is not loaded`, so
   `describe.json` is stable but not the page's layout. A game that needs the real numbers passes the
-  parsed `manifest.json` and a file seam: `game.screen({ manifest, io })`. The engine's own fixture
+  parsed `generated/manifest.json` and a file seam: `game.screen({ manifest, io })`. The engine's own fixture
   builds that seam in `tests/integration/mini-helpers.ts`; it is not in the npm package.
 
 ## Run it
 
 ```sh
-bun run keys             # manifest.json, generated/*
+bun run keys             # generated/*, the dev manifest included
 bun run test             # headless, plain Bun
 bun run typecheck
 bun run lint             # biome + oxlint, the ten engine rules included
@@ -830,7 +830,7 @@ bunx moku-game-index --root . --check    # 14 files, 12 keys: 0 broken, 0 in con
 
 `moku-game dev` writes the dev page into `.moku/` (`index.html`, `dev.ts`, `main.ts`, `bunfig.toml`),
 runs Bun again under that bunfig and prints the bound URL on its own line. `/` is the page,
-`/manifest.json` the manifest, any other path a file of the game; dot folders and `node_modules` answer
+`/manifest.json` the dev manifest `generated/manifest.json`, any other path a file of the game; dot folders and `node_modules` answer
 404. The page sets `globalThis.game`, `globalThis.doors` and, under the editor, `globalThis.editor`.
 
 On the page, tap the button: the counter text changes on the next commit, and with `save: "local"` it

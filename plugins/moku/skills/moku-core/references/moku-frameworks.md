@@ -154,7 +154,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../native",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.3.2",
+      "knownVersion": "0.3.3",
       "pack": "moku-native",
       "skill": "plugins/moku-native/skills/moku-native",
       "pluginIndex": "plugins/moku-native/skills/moku-native/references/plugin-index.md",
@@ -200,7 +200,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../game",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.12.0",
+      "knownVersion": "0.13.0",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -223,7 +223,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../editor",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.9.0",
+      "knownVersion": "0.9.1",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -266,8 +266,8 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 }
 ```
 
-> **Game and editor sync 2026-10-08: `@moku-labs/game@0.12.0`, `@moku-labs/editor@0.9.0`** (npm
-> `dist-tags.latest`; catalogs from the `v0.12.0` and `v0.9.0` tag source, `llms.txt`, `docs/*.md`,
+> **Game and editor sync 2026-10-08: `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.1`, `@moku-labs/native@0.3.3`** (npm
+> `dist-tags.latest`; catalogs from the `v0.13.0` and `v0.9.0` tag source, `llms.txt`, `docs/*.md`,
 > `llms-full.txt`). Both peer on `@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4`; the editor peers
 > on `@moku-labs/game >=0.10.0` and `typescript >=5.5`. The hello-world template was re-scaffolded and
 > run on this pair. Crossings a game project meets on the way up from 0.4.4:
@@ -286,11 +286,16 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > - **game 0.12.0:** `moku-game visual`; `test-suffix` passes a kind folder's `index.ts`; a texture in an
 >   `fx/` folder packs into the `fx` atlas group; root exports `messageArgument`, `messageDuration`
 >   (run `bun run keys` after the bump: the generated strings modules import them).
+> - **game 0.13.0:** `moku-game keys` writes the dev manifest to `generated/manifest.json`; `dev` serves it
+>   on `/manifest.json`; the project index defaults to it; `dist/assets/manifest.json` is unchanged. After the
+>   bump: delete the root `manifest.json`, run `bun run keys`, point test code at `generated/manifest.json`.
+> - **native 0.3.3:** `doctor` `web-script` checks only `<pm> run <script>` and `<pm> <script>`; a direct
+>   command, such as the `bun` + `moku-game` call the game passes, is not checked.
 > - **editor 0.3.0 → 0.5.x:** `moku-editor mcp`, MCP door tools, every code location from the project
 >   index (the configs `flowView.stylesFile`, `gameView.manifestPaths`, `gameView.sourceSearch`,
 >   `renderView.manifestPaths` are gone; `typescript` becomes a peer, 6.x for its JS API).
 > - **editor 0.8.0:** `moku-editor --root .` serves a moku-game folder through the engine's
->   `preparePage`; peer game `>=0.10.0`. **editor 0.9.0:** `moku-editor e2e`.
+>   `preparePage`; peer game `>=0.10.0`. **editor 0.9.0:** `moku-editor e2e`. **editor 0.9.1:** `/manifest.json` from `generated/manifest.json`.
 > - **ai 0.14.2 → 0.16.1 (synced 2026-10-08, `v0.16.1` tag source):** only `ark`, `fal` and `asset`
 >   change. 0.15.0 `AssetRequest.groupName`, `app.ark.listAssetGroups` / `listAssets` / `deleteAsset` /
 >   `deleteAssetGroup`, `app.fal.upload`, the Ark group found by name instead of created per process;

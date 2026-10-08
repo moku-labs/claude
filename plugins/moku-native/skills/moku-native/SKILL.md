@@ -13,7 +13,7 @@ description: >
 
 # Moku Native Patterns
 
-> **Synced to `@moku-labs/native@0.3.2`** (npm `dist-tags.latest`; catalog from the `v0.3.2` tag source).
+> **Synced to `@moku-labs/native@0.3.3`** (npm `dist-tags.latest`; catalog from the `v0.3.3` tag source).
 > Full surface — the 5 plugins, every API method, the global config, the 3 events, the build pipeline,
 > the capability registry and the dependency graph — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -86,7 +86,7 @@ engine maps `config.ts` to the native config (`web.build` is `moku-game build`, 
 `@moku-labs/native` as a dev dependency and imports nothing of it. See the `moku-game:moku-game` skill,
 `references/device.md`.
 
-## Framework API (@moku-labs/native v0.3.2)
+## Framework API (@moku-labs/native v0.3.3)
 
 All five plugins are **framework defaults** — already wired. An app passes `config` and nothing else in the
 common case. `createApp` also accepts `plugins`, `pluginConfigs` and `onReady` / `onError` / `onStart` /

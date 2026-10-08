@@ -1,7 +1,7 @@
 # Pipeline: moku-ai assets into a @moku-labs/game project
 
 Verified against `@moku-labs/ai@0.16.1` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
-`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.12.0` (`src/plugins/assets/README.md`,
+`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.13.0` (`src/plugins/assets/README.md`,
 `scan/keys.ts`, `scan/scan.ts`, `scan/pack/groups.ts`, `docs/shell.md`). The worked game is the merge
 game in moku-labs/demos; it left the engine repository in game 0.8.
 
@@ -27,7 +27,7 @@ Files live in `features/<feature>/assets/` of the game folder, or in a layer `co
 ```
 
 `bun run keys` scans the assets, writes `generated/assets.ts` (`AssetKey`, `FontKey`, `AudioKey`) and the
-dev manifest. A subfolder adds a dotted segment: `shared/assets/icons/coin.webp` is
+dev manifest `generated/manifest.json`. A subfolder adds a dotted segment: `shared/assets/icons/coin.webp` is
 `ui.icons.coin`. How to group files into folders: see "Folder layout" below. An older game without `config.ts` runs `moku-game-assets --root .` in an `assets:keys`
 script; the commands below work the same with that name.
 
@@ -218,7 +218,7 @@ or resize step is needed.
 ### Register and pack
 
 ```bash
-bun run keys                  # scan features/*/assets and the layers, write generated/assets.ts + dev manifest
+bun run keys                  # scan features/*/assets and the layers, write generated/assets.ts + generated/manifest.json
 bun run keys --check          # CI: fails when outputs are stale
 bun run pack                  # production: atlas pages in dist/assets (moku-game build packs too)
 ```
