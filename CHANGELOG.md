@@ -11,8 +11,9 @@ directory that is not on the rails is answered again, instead of being turned in
 
 Rails and hooks: 199 tests pass, 36 of them new. Evals on Opus 5.5 with the plugin, all 21 cases of the core and the packs: 59 of 63 runs on the last full
 pass. Before the fixes below the same suite stood at 44 of 60. The four runs that failed: `waves-next-wave`
-three times, because its grader demanded a command call where the answer was already right from the
-status line; the grader was dropped and the case then passed 3 of 3. `design-api-mode` once on a split
+three times: the answers were right, read from the plan by eye, and its grader demanded a command call.
+The next wave now comes with the rails status of every turn, the grader was dropped, and the case then
+passed 3 of 3. `design-api-mode` once on a split
 judge vote over a correct answer; it passed 3 of 3 on the next run.
 The game sync was verified on a fresh scaffold: install, `keys`, typecheck, lint with the ten engine rules,
 tests at 100% coverage, `build`, `moku-game dev`, `moku-editor --root .` with the project index on,
