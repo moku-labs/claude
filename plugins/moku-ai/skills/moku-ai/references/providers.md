@@ -1,6 +1,6 @@
 # Providers, tasks, models, and custom plugins
 
-Verified against `@moku-labs/ai@0.14.2` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
+Verified against `@moku-labs/ai@0.16.1` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
 `src/plugins/<provider>/README.md`, `src/plugins/cli/project-config.ts`. Prices are the bundled
 tables; `priceOverrides` replaces them.
 
@@ -37,14 +37,16 @@ The runner hands a handler `{ ...input, params }`. Field names below are the con
 | `voiceover` | `text`, `voice`, `language?`, `model?`, `format?` (`mp3` \| `wav` \| `ogg`) | ElevenLabs `voice` is a voice id; OpenAI `voice` is `alloy` and friends |
 | `translate` | `text`, `targetLang`, `sourceLang?`, `model?` | |
 | `prompt-gen` | `prompt`, `system?`, `model?`, `temperature?`, `messages?`, `tools?`, `toolChoice?`, `cacheSystem?` | `messages`/`tools` only on `fal` |
-| `asset` | `image: { $file }`, `url?`, `group?` | ark needs a public https `url` of the same bytes |
+| `asset` | `image: { $file }`, `url?`, `group?`, `groupName?` | ark needs a public https `url` of the same bytes; `app.fal.upload(file)` gives one. `groupName` (0.15, 1 to 64 characters) picks the Ark asset group; absent uses `ark.groupName` |
 
 `params` is free per provider and part of the cache key. Common ones: `params.output_format`
 (fal gpt image: `png` \| `jpeg` \| `webp`), `params.background` (fal `gpt-image-2.5` only: `auto` \|
 `transparent` \| `opaque`; `transparent` sends png, and with `output_format: jpeg` it is a terminal
 400; other models never send it), `params.quality` (fal gpt image), `params.resolution`
 (fal image: `1K` \| `2K` \| `4K` \| `1080`), `params.images: N` (ark Seedream group, 1 to 15),
-`params.draft: true` (ark 2.5 480p draft), `params.model` and `params.operating_resolution`
+`params.draft: true` (ark 2.5 480p draft), `params.omni_reference_task_type` (ark, 0.15.2: `auto` \|
+`reference` \| `edit` \| `extend`; pins the Seedance 2.5 omni reference task; refused on a final from a
+draft), `params.model` and `params.operating_resolution`
 (fal sprite `birefnet`), `params.output_format` (elevenlabs sfx, `mp3_*` only),
 `params.reasoning` (codex, claude, fal prompt-gen),
 `params.responseSchema` (prompt-gen JSON answer), `params.generation` (any value; changes the key to
@@ -104,6 +106,21 @@ from its credit table; set the plan's real rate with `elevenlabs.priceOverrides`
 `dreamina-seedance-2-0-mini-260615`, `dreamina-seedance-2-5-260628` (per 1M output tokens; the
 estimate converts). `ark` cn: `doubao-seedance-2-0-260128`, `doubao-seedance-2-5-260628`.
 
+ark video since 0.15.2 and 0.16:
+
+- A 2.5 request with references is a reference clip, an edit or an extension. Ark picks from the inputs
+  and the prompt wording. Pin it with `params.omni_reference_task_type` when a prompt with "replace" or
+  "extend" must stay a reference clip: `reference`.
+- An edit keeps the source length: `aspect: adaptive`, `seconds: -1` and `omni_reference_task_type: edit`.
+  `seconds: -1` without `edit` fails before any call. The estimate prices an edit at the model's longest
+  clip; the real cost comes from the billed tokens.
+- A final from a draft is priced by its draft: the "with video input" 1080p rate when the draft had a
+  reference video ($7.0 against $11.7 per 1M tokens on `dreamina-seedance-2-5-260628`). A draft record
+  written before 0.16.0 has no such field: the final keeps the base price and logs
+  `ark:cost:draft-input-unknown`.
+- `InvalidParameter.TaskTypeConstraint` and `InvalidParameter.TaskTypeMismatch` are terminal and carry
+  the reason on a second line.
+
 ### music (fal)
 
 | Model id | Length | Price |
@@ -158,7 +175,7 @@ type Handler = {
 ```
 
 Errors steer the retry class: throw with `status` (http code), or `kind: "timeout" | "network"`
-(retried), `kind: "content-policy"` (flagged, never retried), `kind: "invalid-request" |
+(retried), `kind: "content-policy"` (flagged, never retried; ark words the message by its code since 0.15.1), `kind: "invalid-request" |
 "local-failure"` (failed after one attempt). An error with no hint fails after one attempt. Set
 `publicMessage` to a text that is safe to show.
 

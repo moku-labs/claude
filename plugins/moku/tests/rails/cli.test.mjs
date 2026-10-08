@@ -290,3 +290,70 @@ describe("moku-rails: sessions, scope and recorded skips", () => {
     assert.equal(rails(project({ initialized: true }), "continue").code, 2);
   });
 });
+
+describe("moku-rails: a session of quick edits", () => {
+  /** An initialized project with a size Q change inside the tweak station. */
+  function tweaking() {
+    const root = project({ initialized: true });
+    mkdirSync(join(root, "src", "plugins", "hud"), { recursive: true });
+    writeFileSync(join(root, "src", "plugins", "hud", "view.ts"), "export const x = 1;\n");
+    writeFileSync(join(root, "src", "plugins", "hud", "index.ts"), "export * from './view';\n");
+    rails(root, "open", "2026-10-08-hud-tweaks", "--size", "Q", "--type", "tweak", "--title", "HUD tweaks");
+    assert.equal(rails(root, "enter", "tweak").code, 0);
+    return root;
+  }
+
+  it("lets every new request write at once, with no routing in between", async () => {
+    const root = tweaking();
+    const { markPrompt } = await import("../../lib/rails/ledger.mjs");
+
+    for (let edit = 0; edit < 3; edit += 1) {
+      markPrompt(root);
+      assert.equal(rails(root, "guard", "src/plugins/hud/view.ts").code, 0, `edit ${edit}`);
+    }
+  });
+
+  it("lets the turn end after an edit, and lets another change open beside it", () => {
+    const root = tweaking();
+
+    assert.equal(rails(root, "may-stop").code, 0);
+    assert.equal(rails(root, "open", "2026-10-08-other", "--size", "S", "--type", "fix", "--title", "Other").code, 0);
+  });
+
+  it("is reported as waiting for the next edit, not as a station somebody abandoned", () => {
+    const root = tweaking();
+
+    const status = rails(root, "status").text;
+    assert.match(status, /Paused: 2026-10-08-hud-tweaks \(Q, tweak\) is taking quick edits inside station "tweak"\. Send the next edit/);
+    assert.doesNotMatch(status, /stuck-station/);
+  });
+
+  it("names the fast agent or the builder from the files of the edit", () => {
+    const root = tweaking();
+
+    assert.equal(rails(root, "tier", "src/plugins/hud/view.ts").text.trim(), "fast");
+    assert.match(rails(root, "tier", "src/plugins/hud/index.ts").text, /^deep: src\/plugins\/hud\/index\.ts: it is a plugin's public surface/);
+    assert.match(rails(root, "tier", "src/plugins/hud/view.ts", "--misses", "2").text, /^deep: the fast agent missed/);
+    assert.match(rails(root, "tier", "src/plugins/hud/brand-new.ts").text, /a new file/);
+  });
+
+  it("checks once at the end: verify after tweak, then the usual close", () => {
+    const root = tweaking();
+
+    assert.equal(rails(root, "enter", "verify").code, 2, "the person has not ended the edits");
+    assert.equal(rails(root, "done", "tweak").code, 0);
+    assert.equal(rails(root, "enter", "verify").code, 0);
+    assert.equal(rails(root, "close").code, 2, "nothing is confirmed yet");
+  });
+
+  it("keeps the routing rule outside the tweak station", async () => {
+    const root = tweaking();
+    const { markPrompt } = await import("../../lib/rails/ledger.mjs");
+    rails(root, "done", "tweak");
+    rails(root, "enter", "verify");
+
+    markPrompt(root);
+
+    assert.match(rails(root, "guard", "src/plugins/hud/view.ts").text, /has not been routed yet/);
+  });
+});

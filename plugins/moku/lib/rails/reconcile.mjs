@@ -6,6 +6,8 @@
 
 import { execFileSync } from "node:child_process";
 
+import { LOOP_STATIONS } from "./routes.mjs";
+
 /** @typedef {{ kind: "open-change" | "stuck-station" | "paused" | "dirty-tree" | "parked", detail: string }} Debt */
 
 /**
@@ -28,6 +30,12 @@ export function reconcile(root, ledger) {
     // A change paused for the person waits on purpose; it is not an abandoned station
     if (change.paused) {
       debts.push({ kind: "paused", detail: `${change.id} (${change.size}, ${change.type}) waits for the person ${where}: ${change.pauseReason ?? "no reason recorded"}.` });
+      continue;
+    }
+
+    // Quick edits wait for the person's next edit between turns: that is the station working, not a debt
+    if (LOOP_STATIONS.has(change.station ?? "")) {
+      debts.push({ kind: "paused", detail: `${change.id} (${change.size}, ${change.type}) is taking quick edits ${where}. Send the next edit, or say the edits are right to run verify.` });
       continue;
     }
 

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { requiredBefore, routeFor } from "../../lib/rails/routes.mjs";
+import { requiredBefore, routeFor, tweakTier } from "../../lib/rails/routes.mjs";
 import { canClose, canEnter } from "../../lib/rails/transitions.mjs";
 
 const ready = { initialized: true };
@@ -87,5 +87,54 @@ describe("canClose", () => {
 
   it("closes a finished change", () => {
     assert.equal(canClose({ ...built, checklist: { tests: true, verify: true, docs: true } }).ok, true);
+  });
+});
+
+describe("the quick route", () => {
+  it("goes from intake through tweak to verify, with no plan and no build", () => {
+    assert.deepEqual(routeFor("Q"), ["intake", "tweak", "verify", "close"]);
+    assert.equal(canEnter(ready, { size: "Q", done: ["intake"] }, "tweak").ok, true);
+    assert.equal(canEnter(ready, { size: "Q", done: ["intake"] }, "build").ok, false);
+  });
+
+  it("does not reach verify before the person ended the edits", () => {
+    const verdict = canEnter(ready, { size: "Q", done: ["intake"] }, "verify");
+
+    assert.equal(verdict.ok, false);
+    assert.equal(verdict.missing, "tweak");
+  });
+
+  it("still closes only with tests, verify and docs confirmed", () => {
+    const change = { size: "Q", done: ["intake", "tweak", "verify"], checklist: { tests: true, verify: false, docs: true } };
+
+    assert.equal(canClose(change).ok, false);
+  });
+});
+
+describe("who makes a quick edit", () => {
+  const exists = (path) => path !== "src/plugins/hud/new.ts";
+
+  it("the fast agent takes one or two existing files that are nobody's public surface", () => {
+    assert.deepEqual(tweakTier(["src/plugins/hud/view.ts"], { exists }), { tier: "fast", reasons: [] });
+    assert.equal(tweakTier(["src/plugins/hud/view.ts", "src/plugins/hud/styles.css"], { exists }).tier, "fast");
+  });
+
+  it("the builder takes a third file, a new file, a public surface, root wiring, core and configuration", () => {
+    const deep = (paths) => tweakTier(paths, { exists });
+
+    assert.match(deep(["a.ts", "b.ts", "c.ts"].map((name) => `src/plugins/hud/${name}`)).reasons[0], /3 files, more than 2/);
+    assert.match(deep(["src/plugins/hud/new.ts"]).reasons[0], /a new file/);
+    assert.match(deep(["src/plugins/hud/index.ts"]).reasons[0], /public surface/);
+    assert.match(deep(["src/plugins/hud/types.ts"]).reasons[0], /public surface/);
+    assert.match(deep(["src/index.ts"]).reasons[0], /root wiring/);
+    assert.match(deep(["src/core/kit.ts"]).reasons[0], /shared core/);
+    assert.match(deep(["package.json"]).reasons[0], /tooling or configuration/);
+    assert.match(deep(["vite.config.ts"]).reasons[0], /tooling or configuration/);
+    assert.equal(deep([]).tier, "deep");
+  });
+
+  it("the builder takes an edit the fast agent missed twice", () => {
+    assert.equal(tweakTier(["src/plugins/hud/view.ts"], { exists, misses: 1 }).tier, "fast");
+    assert.match(tweakTier(["src/plugins/hud/view.ts"], { exists, misses: 2 }).reasons[0], /missed this edit 2 times/);
   });
 });

@@ -9,7 +9,8 @@ Group the plugin specs into dependency-ordered waves:
 3. Parse each regular spec's Dependencies section into a graph.
 4. Wave 1 is the plugins with no dependencies; wave N is the plugins whose dependencies all sit in
    earlier waves. Plugins in one wave build in parallel.
-5. If `/moku:plan` already assigned waves, use its assignment instead of recomputing.
+5. If `/moku:plan` already assigned waves, use its assignment instead of recomputing. `moku-rails waves`
+   prints it, checks that every dependency sits in an earlier wave, and names the next wave to build.
 
 Present the plan as a short list with the dependency reason:
 
@@ -91,8 +92,8 @@ now"), per `agent-preamble.md` → "For the orchestrator"; a second silence is `
 and the wave goes on with what is on disk.
 
 All builders of a wave run in the one working tree. Do not spawn them with `isolation: "worktree"`: a
-git worktree has no `node_modules` and no `.planning/` (both are gitignored), so the builder would get
-no tooling and no spec. Three rules are the isolation instead. Each builder writes only inside its own
+git worktree has no `node_modules` (it is gitignored), and its `.planning/` is a lane of its own with its
+own `STATE.md` and `build/`, so the builder would get no tooling and would not see this wave. Three rules are the isolation instead. Each builder writes only inside its own
 `src/plugins/{name}/`; one builder per plugin at a time, never two on the same directory (two builders on
 the same files overwrote each other in a real build, and a fresh builder that found another writer there
 refused, which is the right behaviour: keep it); and the prompt bans repo-wide commands and git mutations

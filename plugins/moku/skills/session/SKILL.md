@@ -51,6 +51,21 @@ From here on: every request is routed before code follows it, source files are r
 
 Tell the person in one or two sentences where the work happens and that the project is on the rails. Then load the `moku:moku` skill with the Skill tool and let the conductor take the request they came with. Do not answer that request yourself.
 
+## Several features at once
+
+Work on two things at the same time in two git worktrees of the project, one session in each. The first
+session start in a worktree links it to the project: its `.planning` points at
+`.planning/lanes/<worktree>/` of the main checkout.
+
+| Shared by every checkout | One per worktree |
+| --- | --- |
+| The ledger `state.json`, `moku.md`, `decisions.md`, `steering.md`, `memory.md`, `learnings.md`, `app-spec.md`, `specs/`, `design/` | The open change, the last request, `STATE.md`, `build/`, `changes/`, brainstorm and context files, `e2e/`, the running agents |
+
+Nothing in one worktree stops another: not a station left open, not a wave marked active, not a new
+message. `moku-rails status` names the other checkouts' work under "Elsewhere". When a worktree is
+removed, its lane folder and its change stay: `moku-rails adopt <id>` moves the change to the checkout
+where the work goes on. A fresh worktree needs `bun install` before its first build.
+
 ## Turning it off
 
 A person who wants the rails off for one project sets the plugin option `rails` to `off`, or deletes `.planning/state.json` in a project that was never initialized. Say this only when asked.

@@ -10,7 +10,7 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 
 | Plugin | Skills | Agents | Hooks | Bins | Default |
 |---|---:|---:|---:|---:|---|
-| `moku` | 17 | 13 | 16 scripts / 7 events | 2 | enabled |
+| `moku` | 18 | 14 | 16 scripts / 7 events | 2 | enabled |
 | `moku-web` | 2 | 4 | — | — | enabled |
 | `moku-design` | 2 | 1 | — | 1 | enabled |
 | `moku-worker` | 1 | — | — | — | enabled |
@@ -24,7 +24,7 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 
 ## `moku` — the core
 
-### Lifecycle skills (11)
+### Lifecycle skills (12)
 
 Invoked as `/moku:<name>`, and by the conductor. Each one enters and leaves a station through
 `bin/moku-rails`.
@@ -36,6 +36,7 @@ Invoked as `/moku:<name>`, and by the conductor. Each one enters and leaves a st
 | `brainstorm` | fable / high | Present → Challenge → Decide debate loop into a position and a context file. |
 | `plan` | fable / high | Plan stages and specs; supports a delta spec for M changes. |
 | `build` | fable / medium | Gated build waves; an S route reproduces with a failing test, fixes, then verifies in scope. |
+| `tweak` | sonnet / low | The quick-edit station of a size Q change: one edit at a time, fast agent or builder by `moku-rails tier`, checks once at the end. |
 | `verify` | fable / medium | Fans validators out directly, runs the cited-refute skeptic pass, auto-fixes in a bounded loop. |
 | `moku-release` | fable / medium | The release model: three commands from `@moku-labs/ci`, two thin CI workflows, no `NPM_TOKEN`. |
 | `status` | fable / low | Phase and wave state from `.planning/STATE.md`. |
@@ -70,6 +71,7 @@ Only the orchestrating session spawns agents; no agent lists `Agent` in `tools`.
 | `brainstorm-challenger` | fable / high | Stress-tests brainstorm positions |
 | `moku-builder` | opus / high | Builds one plugin from spec + skeleton: TDD, filesystem isolation, JSON contract |
 | `moku-builder-deep` | opus / xhigh | Same instructions, for Complex/VeryComplex tiers and retries |
+| `moku-tweaker` | sonnet / low | One quick edit in one or two existing files, from a brief that names them; reports `ESCALATE` for anything larger |
 | `moku-error-diagnostician` | opus / high | Classifies build failures, proposes targeted fixes |
 | `moku-error-diagnostician-deep` | opus / xhigh | Same instructions, the retry variant |
 | `moku-code-reviewer` | opus / high | Post-wave diff review |

@@ -15,7 +15,7 @@ import { runningAgents } from "../lib/hooks/agents.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
 import { loadLedger } from "../lib/rails/ledger.mjs";
-import { WRITING_STATIONS } from "../lib/rails/routes.mjs";
+import { LOOP_STATIONS, WRITING_STATIONS } from "../lib/rails/routes.mjs";
 
 const { payload } = readHookInput();
 const root = rootForSession(payload);
@@ -30,7 +30,8 @@ if (payload.stop_hook_active === true) process.exit(0);
 if (waitingForAgents(root, payload)) process.exit(0);
 
 // A change abandoned inside build, verify or e2e
-const active = loadLedger(root).changes.find((change) => change.status === "open" && !change.paused && WRITING_STATIONS.has(change.station ?? ""));
+// A loop station (tweak) hands the turn back after every edit: that is how it works, not an abandoned station
+const active = loadLedger(root).changes.find((change) => change.status === "open" && !change.paused && WRITING_STATIONS.has(change.station ?? "") && !LOOP_STATIONS.has(change.station ?? ""));
 if (active) block(`Change ${active.id} is inside station "${active.station}". Finish the station, or run \`moku-rails pause --reason "<why>"\` if you are waiting for the user.`);
 
 // A build wave still marked active in the human-readable state

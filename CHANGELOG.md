@@ -2,6 +2,127 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.81.0 (2026-10-08)
+
+Four things. Git worktrees of one project no longer stop each other. A new quick route makes small edits
+at once and checks them one time at the end. The game guidance is synced to `@moku-labs/game` 0.12 and
+`@moku-labs/editor` 0.9, plugin tables included, and moku-ai to `@moku-labs/ai` 0.16.1. A question in a
+directory that is not on the rails is answered again, instead of being turned into a new project.
+
+Rails and hooks: 201 tests pass, 38 of them new. Evals on Opus 5.5 with the plugin, all 21 cases of the core and the packs: 59 of 63 runs on the last full
+pass. Before the fixes below the same suite stood at 44 of 60. The four runs that failed: `waves-next-wave`
+three times: the answers were right, read from the plan by eye, and its grader demanded a command call.
+The next wave now comes with the rails status of every turn, the grader was dropped, and the case then
+passed 3 of 3. `design-api-mode` once on a split
+judge vote over a correct answer; it passed 3 of 3 on the next run.
+Worktrees were also tried live: one project, three Claude Code sessions at the same time. The main checkout
+took quick edits and left `tweak` open, and two git worktrees each fixed a bug in another plugin. Every
+session opened its own change in its own lane, no session met a refusal, and the tests passed in all three
+checkouts.
+
+The game sync was verified on a fresh scaffold: install, `keys`, typecheck, lint with the ten engine rules,
+tests at 100% coverage, `build`, `moku-game dev`, `moku-editor --root .` with the project index on,
+`moku-game-index --check`, the headless leg of `moku-game visual`, and the lefthook pre-commit. Not run: the
+pixel leg, `moku-game native`, `moku-editor mcp` and `e2e`.
+
+### Fixed
+- **Worktrees stalled each other.** Every worktree had a link to the one `.planning/`, so all sessions
+  shared one rails state and one `STATE.md`. A change inside a station in one worktree refused `open` in
+  another. A new message in one worktree closed the write gate of the others ("has not been routed yet").
+  A wave marked active in one `STATE.md` stopped the commit and the turn everywhere. A change at `build` in
+  one worktree opened source writes in all of them.
+  - **Each worktree is a lane.** A change records the worktree it was opened in. A checkout sees its own
+    changes, its own last request and its own running agents. `status` lists the rest under "Elsewhere".
+  - **Each worktree has its own working folder.** `.planning` of a worktree now points at
+    `.planning/lanes/<worktree>/` in the main checkout. Shared by link: `state.json`, `moku.md`,
+    `decisions.md`, `steering.md`, `memory.md`, `learnings.md`, `app-spec.md`, `specs/`, `design/`,
+    `memory/`. One per lane: `STATE.md`, `build/`, `changes/`, brainstorm and context files, `e2e/`,
+    `agents/`. A worktree with the old link is moved to a lane on its next session start.
+  - **Saves no longer overwrite each other.** A save merges this lane into the file under a lock, every
+    editing command runs as one locked edit, and the ledger is written to the real file, never over a link.
+  - **`moku-rails adopt <id>`** moves a change into the current checkout, for a worktree that was removed.
+- **A question was turned into a project.** In a directory that is not on the rails, the prompt reminder
+  sent every message that names moku to `moku:session`. "Show me an island" or "how do I set up CI" in an
+  empty directory started a session and asked where the project is. The reminder now says: a question, a
+  "how do I" and a request for an example are answered from the skill that owns the topic, and a session
+  starts only when the person asks for the work to be done here. `web-island-attrs` went from 0 of 3 to 3
+  of 3.
+- **Evals.** Without a `moku-rails` on `PATH` the conductor cases stalled on "command not found", and the
+  pack command allowed no `Write` or `Edit`: the README and `npm run evals` put the repository's own `bin`
+  first and name the full tool list. Three graders were stale. `game-hello-world` failed an answer that
+  pins `@moku-labs/core`, a peer since 0.78.0. `thin-root` accepted only a knowledge skill and failed on
+  `main` since the session gate. `design-api-mode` and `e2e-ux-gate-fallback` demanded a `Skill` call for
+  prompts that ask how a station would run; they now check that the answer comes from the skill.
+- **`fx/` folders need game 0.12.** 0.80.1 told every game to move `fx-*` files into `fx/`. Before 0.12 only
+  an `fx-` stem reached the `fx` atlas group. moku-ai `game-assets.md` and game-validator §7 say so.
+- **Lint rule versions.** `static-keys` ships since game 0.7 and the three layout rules since 0.9, not 0.11.
+
+### Added
+- **Size Q, the quick route:** `intake → tweak → verify → close`. For a run of small edits the person
+  steers one by one. Inside `tweak` a new message needs no routing and the turn may end after each edit.
+  No plan, no validator and no test run in between: `verify` runs once, when the person says the edits
+  are right, and the change still closes only with tests, verify and docs confirmed.
+  - **`moku:tweak`** (sonnet, low): the station skill. One line back per edit, a row in `tweaks.md`.
+  - **`moku-rails tier <files>`** says who makes the edit, counted from the files: `fast` for one or two
+    existing files that are nobody's public surface, `deep` for a third file, a new file, a plugin's
+    `index.ts`/`types.ts`/`api.ts`/`state.ts`/`events.ts`, root wiring, `src/core/`, configuration, or an
+    edit the fast agent missed twice (`--misses 2`).
+  - **`moku-tweaker`** (sonnet, low, 40 turns): the fast agent. It reports `ESCALATE` for anything larger.
+  - Eval `tweak-quick-edits`, with a fixture project.
+- **`moku-rails waves`.** Reads the plan's `## Plugins` table and wave table from `STATE.md`, prints the
+  waves and names the next one with its plugins, tiers and specs. It refuses a plan where a plugin sits in
+  two waves or depends on a plugin of the same or a later wave. `--done <n>` marks a wave and its plugins
+  `verified`. `moku-rails status`, which every turn starts with, names the next wave and says when its
+  plugins may be built in parallel.
+- **The build workflow builds the whole plan.** `moku-build-wave` takes the next wave from `moku-rails
+  waves`, where an agent used to pick it by reading `STATE.md`. With `{all: true}` it builds every
+  remaining wave: plugins of a wave in parallel, each verified as it finishes, the wave marked `verified`,
+  then the next. It stops at the first wave that fails, at a disposition other than `continue`, and at a
+  framework wave. Not run on a real project yet.
+- **What goes where.** moku-game skill: one table from "a field of the save" to "a prepared save", and the
+  list of files a game never writes. "From zero to a running game": eight steps, `bun run keys` before the
+  first typecheck.
+- **`moku-game visual` (game 0.12).** The bin runs `tests/visual/index.ts` against
+  `tests/visual/baselines/`; a game writes no runner. playtest Step 2 uses it and needs no dev server.
+- **The hello-world template has a visual test.** `tests/visual/index.ts`, `tests/visual/home.visual.ts`
+  (Home at rest, then one tap), the script `"test:visual": "moku-game visual --no-pixels"` and a `visual`
+  job in `lefthook.yml`. Init runs it twice and commits `tests/visual/baselines/`. `bun run test:visual
+  --pixels` adds the pixel leg. The init checklist, structural conformance and game-validator §11 expect
+  the folder, the script and the committed baselines. Verified on a second fresh scaffold: install,
+  `keys`, typecheck, lint, tests at 100% coverage, `test:visual` twice (written, then same), `build`,
+  lefthook pre-commit with the `visual` job.
+- **moku-ai: the Ark asset library and the draft record (ai 0.15, 0.16).** `app.ark.listAssetGroups`,
+  `listAssets`, `deleteAsset`, `deleteAssetGroup`, `app.ark.draftRecord(hash)`, `app.fal.upload(file)`,
+  `groupName` on an `asset` item, `params.omni_reference_task_type` and `seconds: -1` for an Ark edit.
+- **Hot swap and the project index.** Which files swap, which reload, which are refused. The bin
+  `moku-game-index` and its keys (`node:`, `flow:`, `jsx:` ...).
+- **`moku-editor e2e` (editor 0.9).** One Playwright run per project, each on its own `PORT`.
+- **game-validator §11.** On game 0.12 and later: WARNING for no `tests/visual/index.ts`, for a
+  `*.visual.ts` the index does not list, for baselines that are not in git, and for no `test:visual`
+  script. INFO for a runner of the game's own.
+
+### Changed
+- **`plugin-index.md` is regenerated.** The engine half moves from 0.4.6 to 0.12.0: `projection.replace`,
+  `anim.replace`, `i18n.replace`, `text.replaceStyles`, `scenes.expect`, the `AnimPlayer` resource,
+  `messageArgument`, `messageDuration`, the global event `ui:hot-swap`, the entries `/hot`, `/project`,
+  `/visual`, every `moku-game` flag. The editor half moves from 0.2.1 to 0.9.0: the bin, 17 plugins with
+  their APIs, config, events, the MCP tools, the project index.
+- **Pins.** The template, the skill, editor.md and playtest name game 0.12.0 and editor 0.9.0.
+- **Registry.** `knownVersion` of game 0.4.4 → 0.12.0 and of editor 0.2.1 → 0.9.0, with every crossing on
+  the way. `moku-game-version` and `moku-editor-version` name the 0.8 and 0.12 steps.
+- **editor.md.** Captures are JPEG in `.moku/captures/<yyyy-mm-dd>/`; an area drag writes `area-f<frame>.md`;
+  the Hot reload switch restarts the server; MCP tool names.
+- **init, scaffold, structural conformance, build-app.** The game row names `tests/visual/` and the ignored
+  output; init checks `files:project-on`; the game validator scope is the shell layout.
+- **moku-ai is synced to `@moku-labs/ai` 0.16.1** (was 0.14.2): the skill, `plugin-index.md`,
+  `providers.md`, `setup.md`, `game-assets.md`, the registry `knownVersion` and `moku-ai-version`. Only
+  `ark`, `fal` and `asset` changed upstream; no task, event or CLI flag. A final from a draft is priced by
+  its draft, and without `ark.groupId` a process reuses the asset group of that name. The names were
+  typechecked against the published package, and `moku validate` and `moku estimate` ran on an Ark edit
+  item and an asset item with `groupName`. No provider was called.
+- **A station left open in `tweak` is not a debt.** It does not block the turn's end or another `open`, and
+  `status` reports it as waiting for the next edit. The live test showed it as a stuck station.
+
 ## 0.80.1 (2026-10-07)
 
 ### Added

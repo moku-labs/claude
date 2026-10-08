@@ -6,15 +6,16 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
-import { activate, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, saveLedger, setInitializing } from "./ledger.mjs";
+import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, saveLedger, setInitializing } from "./ledger.mjs";
 import { headCommit, reconcile } from "./reconcile.mjs";
-import { OPTIONAL_STATIONS, WRITING_STATIONS, routeFor } from "./routes.mjs";
+import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
+import { isDone, markWave, nextWave, readWaves } from "./waves.mjs";
 
 /** @typedef {{ code: 0 | 1 | 2, lines: string[], data?: unknown }} Result */
 /** @typedef {{ root: string, positional: string[], flags: Record<string, string | true> }} Args */
@@ -48,13 +49,33 @@ export function status({ root }) {
   const agents = runningAgents(root);
   if (agents.length > 0) lines.push(`Agents: ${describeAgents(agents)}.`);
 
-  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas, agents } };
+  // A plan with waves: the next one is named here, so nobody has to work it out from the tables by eye
+  const stateFile = resolve(root, ".planning", "STATE.md");
+  if (existsSync(stateFile)) {
+    const read = readWaves(readFileSync(stateFile, "utf8"));
+    const next = nextWave(read.waves);
+    const hasTable = read.waves.length > 0;
+
+    if (hasTable && read.problems.length > 0) lines.push(`Waves: the plan's wave table cannot be built from. ${read.problems.join(" ")}`);
+    else if (hasTable && next?.framework) lines.push(`Waves: next is wave ${next.wave}, framework work (${next.framework}), done by hand with no builder.`);
+    else if (hasTable && next) lines.push(`Waves: next is wave ${next.wave} (${next.plugins.map((plugin) => plugin.name).join(", ")})${next.plugins.length > 1 ? `, ${next.plugins.length} plugins that may be built in parallel` : ""}. \`moku-rails waves\` lists every wave.`);
+  }
+
+  // Work in the other checkouts of this project is theirs: named, so nobody opens it twice, and never a debt here
+  const elsewhere = (ledger.elsewhere ?? []).filter((change) => change.status === "open");
+  for (const change of elsewhere) {
+    const where = change.worktree ?? "the main checkout";
+    const gone = change.worktree && !existsSync(change.worktree) ? " That worktree is gone: move the change here with `moku-rails adopt " + change.id + "`." : "";
+    lines.push(`Elsewhere: ${change.id} is open in ${where}${change.station ? `, inside "${change.station}"` : ""}.${gone}`);
+  }
+
+  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas, agents, elsewhere } };
 }
 
 /**
  * Open a change. Refused while another change is stuck inside a station.
  *
- * @param {Args} args flags: --size S|M|L, --type, --title
+ * @param {Args} args flags: --size Q|S|M|L, --type, --title
  * @returns {Result}
  * @example
  * open({ root, positional: ["2026-09-26-streak-midnight"], flags: { size: "S", type: "fix", title: "Streak breaks at midnight" } });
@@ -62,16 +83,18 @@ export function status({ root }) {
 export function open({ root, positional, flags }) {
   const [id] = positional;
   const size = String(flags.size ?? "");
-  if (!id || !size) return usage("moku-rails open <id> --size S|M|L --type <type> --title <title>");
+  if (!id || !size) return usage("moku-rails open <id> --size Q|S|M|L --type <type> --title <title>");
 
   routeFor(/** @type {"S"} */ (size));
   if (!isOnRails(root)) return offRails();
 
   const ledger = loadLedger(root);
   if (ledger.changes.some((change) => change.id === id)) return fail(`Change "${id}" already exists.`);
+  const taken = ledger.elsewhere?.find((change) => change.id === id);
+  if (taken) return fail(`Change "${id}" already exists in ${taken.worktree ?? "the main checkout"}. Pick another id.`);
 
   // A change abandoned mid-station must be finished or parked first
-  const stuck = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused);
+  const stuck = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused && !LOOP_STATIONS.has(change.station));
   if (stuck) return refused(`Change "${stuck.id}" is still inside station "${stuck.station}". Finish it, or park it with a reason, before opening "${id}".`);
 
   const change = newChange({ id, size: /** @type {"S"} */ (size), type: String(flags.type ?? "feature"), title: String(flags.title ?? id) });
@@ -285,6 +308,76 @@ export function resume({ root, positional }) {
 }
 
 /**
+ * Move a change from another worktree into this checkout: the worktree was removed, or the work is handed over.
+ *
+ * @param {Args} args positional: id
+ * @returns {Result}
+ * @example
+ * adopt({ root, positional: ["2026-09-26-streak-midnight"], flags: {} });
+ */
+export function adopt({ root, positional }) {
+  const [id] = positional;
+  if (!id) return usage("moku-rails adopt <id>");
+  if (!isOnRails(root)) return offRails();
+
+  const change = adoptChange(root, id);
+  if (!change) return refused(`No other checkout holds a change "${id}". \`moku-rails status\` lists them under "Elsewhere".`);
+
+  return ok(`Adopted ${id} into this checkout${change.station ? `, inside "${change.station}"` : ""}. Done so far: ${change.done.join(", ") || "nothing"}.`);
+}
+
+/**
+ * The build waves of this checkout's plan, read from `.planning/STATE.md`, and the wave to build next.
+ * The plugins of one wave live in their own folders and wait for nothing still open, so they are built at
+ * the same time.
+ *
+ * @param {Args} args flags: --done <n> marks wave n and its plugins `verified` first
+ * @returns {Result} one line per wave, then the next one; `data.next` holds its plugins with tier and spec
+ * @example
+ * waves({ root, positional: [], flags: {} }); // lines: ["Wave 0: log, env (verified)", "Wave 1: router, site (not started)", "Next: wave 1, 2 plugins in parallel."]
+ */
+export function waves({ root, flags }) {
+  if (!isOnRails(root)) return offRails();
+
+  const file = resolve(root, ".planning", "STATE.md");
+  if (!existsSync(file)) return refused("No .planning/STATE.md here: this checkout has no plan yet. The plan station writes it.");
+
+  // `--done <n>`: the wave passed its checks, so the next call names the wave after it
+  const finished = optional(flags.done);
+  if (finished !== undefined) {
+    if (!/^\d+$/.test(finished)) return usage("moku-rails waves [--done <wave number>]");
+    writeFileSync(file, markWave(readFileSync(file, "utf8"), Number(finished), "verified"));
+  }
+
+  const read = readWaves(readFileSync(file, "utf8"));
+  if (read.problems.length > 0) return refused(read.problems.join(" "));
+
+  const lines = read.waves.map((wave) => `Wave ${wave.wave}: ${wave.framework ? `framework work (${wave.framework})` : wave.plugins.map((plugin) => plugin.name).join(", ")} (${isDone(wave) ? "done" : wave.status || "not started"})`);
+  const next = nextWave(read.waves);
+
+  if (!next) lines.push("Every wave is done.");
+  else if (next.framework) lines.push(`Next: wave ${next.wave} is framework work with no plugin folder. The orchestrator does it by hand, no builder runs.`);
+  else lines.push(`Next: wave ${next.wave}, ${next.plugins.length} plugin(s)${next.plugins.length > 1 ? " in parallel" : ""}.`);
+
+  return { code: 0, lines, data: { waves: read.waves, next: next ?? null } };
+}
+
+/**
+ * Say who makes a quick edit: the fast agent or the builder. Counted from the files the edit touches.
+ *
+ * @param {Args} args positional: project-relative files; flags: --misses <n>
+ * @returns {Result} one line: `fast`, or `deep: <reasons>`
+ * @example
+ * tier({ root, positional: ["src/plugins/hud/view.ts"], flags: {} }); // lines: ["fast"]
+ */
+export function tier({ root, positional, flags }) {
+  const misses = Number(optional(flags.misses) ?? 0);
+  const verdict = tweakTier(positional, { exists: (path) => existsSync(resolve(root, path)), misses: Number.isFinite(misses) ? misses : 0 });
+
+  return { code: 0, lines: [verdict.tier === "fast" ? "fast" : `deep: ${verdict.reasons.join("; ")}`], data: verdict };
+}
+
+/**
  * Keep an idea for later so it is not lost and does not derail the current change.
  *
  * @param {Args} args positional: the idea text
@@ -458,7 +551,7 @@ export function init({ root, positional }) {
  */
 export function mayStop({ root }) {
   const ledger = loadLedger(root);
-  const active = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused);
+  const active = ledger.changes.find((change) => change.status === "open" && change.station !== null && !change.paused && !LOOP_STATIONS.has(change.station));
   if (!active) return ok("allow");
   if (runningAgents(root).length > 0) return ok("allow: agents are running inside the station, the turn ends to wait for them");
 

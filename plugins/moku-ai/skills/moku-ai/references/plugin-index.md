@@ -1,6 +1,6 @@
 # @moku-labs/ai — Plugin & Property Index
 
-**Synced version:** `0.14.2` (npm `dist-tags.latest`; catalog from the `v0.14.2` tag source:
+**Synced version:** `0.16.1` (npm `dist-tags.latest`; catalog from the `v0.16.1` tag source:
 `src/index.ts`, `src/config.ts`, `src/bin.ts`, `src/plugins/*`, `README.md`, `llms.txt`,
 `llms-full.txt`). Peer deps `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (dev-pinned
 1.7.1 / 0.3.4). Runtime deps:
@@ -62,14 +62,14 @@ Lane name: `"{task}/{provider}/default"`. Precedence: exact lane → `"{task}/{p
 | `music` | Standard | registry | same three | `defaultProvider` (`fal`), `pollIntervalMs` (5000) |
 | `sfx` | Standard | registry | same three; `execute` only, always mp3 | `defaultProvider` (`elevenlabs`) |
 | `sprite` | Standard | registry | same three; `execute` only, always RGBA png | `defaultProvider` (`fal`) |
-| `asset` | Standard | registry | `register(request, opts)`, `estimate`, `providers()` | `defaultProvider` (`ark`), `pollIntervalMs` (3000) |
+| `asset` | Standard | registry | `register(request, opts)` (`AssetRequest.groupName?` since 0.15: 1 to 64 characters, default the provider's group name), `estimate`, `providers()` | `defaultProvider` (`ark`), `pollIntervalMs` (3000) |
 | `elevenlabs` | Complex | registry | `info()`; registers `("voiceover","elevenlabs")`, `("sfx","elevenlabs")` | `apiKeyEnv` (`ELEVENLABS_API_KEY`), `baseUrl`, `defaultModel` (`eleven_multilingual_v2`), `timeoutMs` (60000), `priceOverrides` (voice model ids; `sfx:<model>#second`, `sfx:<model>#auto`) |
 | `openai` | Complex | registry | `info()`; registers voiceover, translate, prompt-gen | `apiKeyEnv` (`OPENAI_API_KEY`), `baseUrl`, `models` (`{ tts: gpt-4o-mini-tts, chat: gpt-4o-mini }`), `timeoutMs`, `priceOverrides` |
 | `codex` | Complex | registry | `info()`; registers image, prompt-gen over `codex exec` | `bin` (`codex`), `model` (`gpt-6-astra`), `reasoningEffort` (`low`), `timeoutMs` (600000), `workDir` (`.moku/tmp`), `priceOverrides`, `textModel`, `modelMap` |
 | `claude` | Complex | registry | `info()`; registers prompt-gen over `claude -p` | `bin` (`claude`), `textModel`, `modelMap`, `timeoutMs` (600000), `workDir` |
-| `fal` | Complex | registry | `info()`, `models(task)`; registers video, image, prompt-gen, music, sfx, sprite | `apiKeyEnv` (`FAL_KEY`), `queueUrl`, `uploadUrl`, `upload` (`storage`), `timeoutMs`, `priceOverrides` (video `<alias>`; `image:`, `music:`, `sfx:`, `sprite:<alias>`; `llm:<id>#in`/`#out`), `runUrl`, `imageDefaultModel` (`gpt-image-2.5`), `llmDefaultModel` (`anthropic/claude-opus-5.5`), `pollIntervalMs` (2000), `jobTimeoutMs` (900000), `requestLog` |
+| `fal` | Complex | registry | `info()`, `models(task)`, `upload(file: { path, mimeType }, opts?: { signal? }): Promise<{ url }>` (since 0.15: fal storage, also when `upload` is `"data-uri"`; a failure throws, no data-URI fallback); registers video, image, prompt-gen, music, sfx, sprite | `apiKeyEnv` (`FAL_KEY`), `queueUrl`, `uploadUrl`, `upload` (`storage`), `timeoutMs`, `priceOverrides` (video `<alias>`; `image:`, `music:`, `sfx:`, `sprite:<alias>`; `llm:<id>#in`/`#out`), `runUrl`, `imageDefaultModel` (`gpt-image-2.5`), `llmDefaultModel` (`anthropic/claude-opus-5.5`), `pollIntervalMs` (2000), `jobTimeoutMs` (900000), `requestLog` |
 | `apimodels` | Complex | registry | `info()`; registers video | `apiKeyEnv` (`APIMODELS_API_KEY`), `baseUrl`, `assetGroup` (`moku-ai`), `timeoutMs`, `priceOverrides` |
-| `ark` | Complex | registry | `info()`; registers video, image, asset | `region` (`intl`), `apiKeyEnv`, `accessKeyEnv`, `secretKeyEnv`, `baseUrl`, `controlUrl`, `groupId`, `groupName` (`moku-ai`), `timeoutMs`, `downloadTimeoutMs` (300000), `priceOverrides`, `cnyPerUsd` (7.1) |
+| `ark` | Complex | registry | `info()`, `draftRecord(hash): ArkDraftRecord \| undefined` (0.16.1; sync, no network, never throws), `listAssetGroups(opts?)`, `listAssets(filter?: { groupId? }, opts?)`, `deleteAsset(assetId, opts?)`, `deleteAssetGroup(groupId, opts?)` (0.15; the signed asset API, all pages); registers video, image, asset | `region` (`intl`), `apiKeyEnv`, `accessKeyEnv`, `secretKeyEnv`, `baseUrl`, `controlUrl`, `groupId`, `groupName` (`moku-ai`), `timeoutMs`, `downloadTimeoutMs` (300000), `priceOverrides`, `cnyPerUsd` (7.1) |
 | `compose` | Standard | buildfile, promptGen | `compose({ prompt, emit, name?, signal? })` → `{ spec, text, costUsd }` | `provider` (`openai`), `maxRepairAttempts` (2) |
 | `cli` | Complex | runner, buildfile, compose | `dispatch(argv)` → exit code, `commands()`; `Cli.EXIT_CODES` | `plain` (false; auto when not a TTY or `NO_COLOR`) |
 
@@ -159,7 +159,7 @@ defineConfig(config) // returns config; types pluginConfigs, also for the plugin
 
 The bin: `loadProjectConfig(argv, cwd)` → `createApp(options)` → `start()` → `cli.dispatch(argv)` →
 `stop()`. Core plugin keys (`journal`, `store`, `limits`) are typed in `pluginConfigs` since 0.14.2
-(core 1.7.1). Upstream `llms-full.txt` still says they are not; the types win.
+(core 1.7.1).
 
 ## 0.13 and 0.14 notes (CHANGELOG "Unreleased" plus PRs #32 to #37)
 
@@ -176,8 +176,36 @@ The bin: `loadProjectConfig(argv, cwd)` → `createApp(options)` → `start()` �
   `params.images: N`, multi-output items exported as `<label>-k.<ext>`, `item:flagged` carries
   `message`.
 
-The CHANGELOG top section still reads "Unreleased" and lacks sfx and sprite. Treat `0.14.2` on npm
-as the synced surface (it ships `sharp` and both new tasks).
+At 0.14.2 the CHANGELOG top section read "Unreleased" and lacked sfx and sprite; npm `0.14.2` ships
+`sharp` and both tasks.
+
+## 0.15 and 0.16 notes (PRs #41, #42, #44, #46, #47)
+
+Only `ark`, `fal` and `asset` change. No new plugin, task, event or CLI flag.
+
+| Version | Change |
+|---|---|
+| 0.15.0 | **asset** `AssetRequest.groupName`, also in the runner item's `input`; it is part of the artifact key. **ark** `listAssetGroups`, `listAssets`, `deleteAsset`, `deleteAssetGroup`; types `Ark.ArkAsset` `{ assetId, name, groupId, status, createTime?, updateTime?, lastInferenceTime? }` and `Ark.ArkAssetGroup` `{ groupId, name, createTime? }`. **ark** group lookup: without `groupId`, `ListAssetGroups` finds the oldest exact name match before `CreateAssetGroup`, so a process no longer creates a group on every start; `groupId` applies only to `config.groupName`. **fal** `upload(file, opts?)` |
+| 0.15.1 | **ark** the refusal message follows Ark's code: `Output…` (the generated audio, video or picture was refused; a new take may pass; not charged), `InputText…` (the prompt), `Input…Image…` with a plain local image (a face). Class and `kind` unchanged |
+| 0.15.2 | **ark** `params.omni_reference_task_type`: `auto`, `reference`, `edit`, `extend` (Seedance 2.5 omni reference tasks), sent only when given, refused on a final from a draft. `seconds: -1` (the source length) passes only with `omni_reference_task_type: edit`; the estimate prices it at the model's longest clip. `InvalidParameter.TaskTypeConstraint` and `InvalidParameter.TaskTypeMismatch` get a second line with the reason |
+| 0.16.0 | **ark** a final from a draft is priced by its draft: the "with video input" 1080p rate when the draft had a reference video. The draft record keeps `withVideoInput`; an older record keeps the base (higher) price and logs `ark:cost:draft-input-unknown`. The estimate of a final checks `seconds` |
+| 0.16.1 | **ark** `draftRecord(hash)`: the record of a draft clip by its sha256, type `Ark.ArkDraftRecord` `{ taskId, model, seed, createdAt, withVideoInput }`. Undefined when the key is not set, before `app.start()`, without a record, or for a damaged one. It does not check the 7-day age: compare `createdAt` |
+
+Errors, each a plain two-line `[ai] …` before any call: `ark seconds -1 is for a video edit only.`,
+`ark params.omni_reference_task_type "<value>" is not supported.`, `ark asset groupName must be 1 to 64
+characters.`, `ark asset assetId must not be empty.`, `ark asset groupId must not be empty.`, and from
+`fal.upload` `fal returned an unreadable upload target.`
+
+The headings of the upstream `CHANGELOG.md` do not match the published versions: it files the 0.15.2
+changes under "0.16.0", the 0.16.0 fix under "0.15.3" and `draftRecord` under "0.17.0". The table above
+follows the tags and the GitHub releases. The `ArkDraftRecord` doc comment says "before 0.15.3" for the
+same reason; the published version is 0.16.0.
+
+Checked on the published 0.16.1 without a key: the names above typecheck (`Ark.ArkDraftRecord`,
+`Ark.ArkAsset`, `Ark.ArkAssetGroup`, `Asset.AssetRequest["groupName"]`, `app.fal.upload`, the five `app.ark`
+methods), `draftRecord` answers `undefined`, `moku validate` and `moku estimate` take an ark edit item
+(`seconds: -1` with `omni_reference_task_type: edit`) and an asset item with `groupName`, and `seconds: -1`
+without `edit` fails the estimate. No provider was called.
 
 ## 0.14.1 and 0.14.2 notes
 

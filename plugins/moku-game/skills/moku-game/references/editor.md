@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.8.0` beside a game on `@moku-labs/game@0.11.0` in the chat pane, reads the live game and takes pictures. Section 1 matches 0.8.0. The tools page sections were written for 0.2.1: when they differ from the installed editor, its `README.md` and `llms.txt` win. The
+How Claude runs `@moku-labs/editor@0.9.0` beside a game on `@moku-labs/game@0.12.0` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`; the start in section 1 was run on a fresh scaffold. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
@@ -67,7 +67,7 @@ The game iframe follows the device of the Game workspace: 21 presets, the iPhone
 | `O` | Overlay in game on / off |
 | `G` | Show / hide the preview of the current workspace |
 | `R` | Reference mode on / off |
-| `H` | Hot reload switch (it only shows the state; see section 4) |
+| `H` | Hot reload switch: restarts the bin's server with hot reload flipped (see section 4) |
 | `M` | Sound, in Game. Runs `game.mute`: works with game ≥0.4.4, dimmed on an older game |
 | ⌘⇧C | Element picker (Game workspace) |
 | ← → `b` | Previous / next shot, mark a bug, while the contact sheet is open |
@@ -83,9 +83,10 @@ State, Console and the Element tab: they are plain DOM.
 
 **Pick an element.** Click "Select element" (or ⌘⇧C), then click the element on the stage. The Element tab
 shows its path, bounds, style, the Code section (JSX and `defineStyle` block with `file:line`) and the
-reference block. The pick also bookmarks the game and writes three files to `.moku/captures/`: the crop
-`<key>-f<frame>.png`, the frame `f<frame>.png` and the card `<key>-f<frame>.md`. Read the card with the
-Read tool: it is the whole reference, ready for a fix.
+reference block. The pick also bookmarks the game and writes three files to today's folder
+`.moku/captures/<yyyy-mm-dd>/`: the crop `<key>-f<frame>-crop.jpg` (the element plus 8 px), the frame
+`f<frame>-full.jpg` and the card `<key>-f<frame>.md`. Read the card with the Read tool: it is the whole
+reference, ready for a fix. Older captures sit flat in `.moku/captures/`; they stay.
 
 ```text
 @moku tapLabel · text · main/home · f58
@@ -98,7 +99,7 @@ flow: home
 game: hello-game 0.1.0 · s-185e · f58 · 23:52:56 · live · clean
 device: iPhone 18 Pro 402×874 portrait · dpr 3 · safe 62/0/34/0
 restore: bookmark tapLabel-f57
-shot: .moku/captures/tapLabel-f58.png · frame: .moku/captures/f58.png
+shot: .moku/captures/2026-10-08/tapLabel-f58-crop.jpg · frame: .moku/captures/2026-10-08/f58-full.jpg
 ```
 
 The pick also copies one line for the chat,
@@ -108,7 +109,9 @@ finding: the card file and the Element tab hold the same text. When the user pas
 card it names; `<name>` is the element key for `doors.sources.locate`.
 
 **Reference mode** (`R`) lays invisible `data-moku-*` proxies over the game elements, so `read_page` and
-`find` see them by name. A click on a proxy is a pick. The game gets no input while it is on.
+`find` see them by name. A click on a proxy is a pick. A drag of 4 px or more picks an area and writes
+`area-f<frame>.md`: the elements inside it, each with its child tree, text and bounds. The game gets no
+input while it is on.
 
 ## 4. Read and drive the game by script
 
@@ -173,8 +176,9 @@ A `diff` capture restores a bookmark and journals itself as a raw write, so it t
 
 **A picture on disk.** A data URL is too big for a tool result. Let the tools page write it: click the
 Shot button (`find("Take a screenshot")`, then `computer` `left_click` on its ref). It runs
-`editor.capture` and writes `.moku/captures/<yyyy-mm-dd-hhmm>-<flow>.png` (`-2`, `-3` … when taken)
-through the server's `files` sandbox; the capture card names the path. Flatten it, then Read it.
+`editor.capture` and writes `.moku/captures/<yyyy-mm-dd>/<hhmm>-<flow>.jpg` (`-2`, `-3` … when taken)
+through the server's `files` sandbox; the capture card names the path. Read it. `editor.capture` answers
+a JPEG at quality 0.8 by default; `{ format: "png" }` asks for the lossless picture.
 For `legend`, `layers`, `sheet` or `diff`, call `doors.commands.capture` and keep only lengths and
 `legend` in the tool result.
 
@@ -182,7 +186,9 @@ When the page set `globalThis.editor`, the agent's in-process channel runs the e
 
 ```js
 const { editor } = w;
-(await editor.channel.run("editor.capture")).value;        // { image: "data:image/png;base64,…", frame, device: { w, h, orientation } }
+(await editor.channel.run("editor.capture")).value;        // { image: "data:image/jpeg;base64,…", frame, device: { w, h, orientation } }
+(await editor.channel.run("editor.capture", { key: "tap", maxWidth: 540 })).value; // one element plus 8 px, shrunk in the page
+(await editor.channel.run("editor.sheet", { frames: 6, everyMs: 100 })).value;     // a contact sheet from one game.capture
 (await editor.channel.run("editor.series", { durationMs: 2000, intervalMs: 100 })).value.shots.length; // 20
 await editor.channel.run("editor.seriesStop");
 editor.channel.status();                                   // LinkStatus
@@ -195,33 +201,47 @@ by Claude's Edit tool, makes Bun reload the game page. The bridge keeps a `game.
 restored". The game comes back where it was, with a new session id, frame counting from 0 and
 `tainted: true`. It takes about a second. With `--no-hmr` (or a game's own server) a save in Files still
 keeps the state: the editor bookmarks, reloads the frame and restores (D-07). The Hot reload switch (`H`)
-only shows the state; Bun cannot change it on a running server, so restart the bin with or without
-`--no-hmr`. From a script, `w.location.reload()` reloads the game page without the restore. Wait for the
-pill to say `live` again after any reload.
+turns it off and on while the bin runs: Bun cannot change it on a running server, so the bin restarts its
+server on the same port, every socket drops for about a second, and the game frame reloads with its
+checkpoint. A failed switch says to restart the bin with or without `--no-hmr`. From a script,
+`w.location.reload()` reloads the game page without the restore. Wait for the pill to say `live` again
+after any reload.
+
+**Hot swap.** A save of a view file does not reload at all: the engine's hot plugin swaps the module in
+the running page, the session stays the same, and the tools page toasts "Game updated". View files are
+`.tsx`, `styles.ts`, `view.ts`, `animations.ts`, `effects.ts`, the generated strings, and any `.ts`
+directly in `styles/`, `motion/`, `effects/`, `views/`, `world/projections/` or `world/layout/`. A logic
+file (a node, a rule, `state.ts`, a feature `index.ts`) still reloads and restores. The editor's
+`llms.txt` gives its own numbers on the merge game: about 30 ms from save to the updated frame for a
+swap, about 0.8 s for a reload with restore.
 
 ## 5. Captures on disk
 
 Only a user action, a pick, a palette item or a `gameView` api call writes a picture; nothing captures on
 its own.
 
-- The Shot button of the Game workspace, or palette → "Take a screenshot": one PNG at
-  `.moku/captures/<yyyy-mm-dd-hhmm>-<flow>.png`, written through the server's `files` sandbox (only
-  `.moku/captures/` takes binary writes).
-- A pick: `<key>-f<frame>.png` (the element plus 8 px), `f<frame>.png` and the card `<key>-f<frame>.md`.
+Every capture goes to today's folder, `.moku/captures/<yyyy-mm-dd>/` (local date).
+
+- The Shot button of the Game workspace, or palette → "Take a screenshot": one JPEG at
+  `<day>/<hhmm>-<flow>.jpg`, written through the server's `files` sandbox (only `.moku/captures/` takes
+  binary writes).
+- A pick: `<day>/<key>-f<frame>-crop.jpg` (the element plus 8 px), `<day>/f<frame>-full.jpg` and the card
+  `<day>/<key>-f<frame>.md`. An area drag in Reference mode writes `<day>/area-f<frame>.md`.
 - Palette → "Record a series…": pick a duration (1 s … 20 s) and an interval (16 … 1000 ms). The result is
-  `.moku/captures/series-<stamp>/NNN.png` plus `index.json` (`{ label, durationMs, intervalMs, fromFrame,
+  `<day>/series-<hhmm>/` with numbered PNGs plus `index.json` (`{ label, durationMs, intervalMs, fromFrame,
   shots: [{ file, frame, atMs, bug }], device, stoppedEarly }`), and the contact sheet opens.
 - Claude's own `computer({ action: "screenshot" })` of the pane is the quickest proof for a report; it
   shows the tools page, not the raw canvas.
 
-The capture is a PNG with a transparent background: the page colour is CSS, not canvas. Flatten it
-before you look at it, for example `magick shot.png -background '#10161d' -flatten shot-flat.png`.
-A `diff` capture restores a bookmark and journals itself as a raw write, so it taints the session.
+A PNG of the canvas (a `game.capture`, a series frame) has a transparent background: the page colour is
+CSS, not canvas. Flatten it before you look at it, for example `magick shot.png -background '#10161d'
+-flatten shot-flat.png`. A `diff` capture restores a bookmark and journals itself as a raw write, so it
+taints the session.
 
 Turn a series into a video with ffmpeg (frame rate = 1000 / intervalMs):
 
 ```sh
-ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.png' \
+ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/<yyyy-mm-dd>/series-<hhmm>/*.png' \
   -c:v libx264 -pix_fmt yuv420p -vf 'scale=trunc(iw/2)*2:trunc(ih/2)*2' .planning/e2e/game/<name>.mp4
 ```
 
@@ -231,12 +251,19 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/series-<stamp>/*.p
 
 - **MCP.** `moku-editor mcp` is a stdio MCP server: `claude mcp add moku-editor -- bunx moku-editor mcp
   --port 3000` (no HTML file for a shell game; `bunx moku-editor mcp-config --port 3000` prints the
-  `.mcp.json`). It uses the running bin or starts one, and lists the `moku_*` tools plus one tool per
-  command door. Without it, Claude uses the same catalogue through `javascript_tool`: list it with
+  `.mcp.json`). It uses the running bin or starts one, and lists 17 `moku_*` tools (`moku_status`,
+  `moku_read`, `moku_run`, `moku_wait`, `moku_screenshot`, `moku_series`, `moku_reference`,
+  `moku_selection`, `moku_select`, `moku_files_read`, `moku_files_write`, `moku_reload` and the rest)
+  plus one tool per command door (`game_tap`, `cheat_…`, `raw_game_restore`). Pictures need the game
+  page visible: a paused or hidden game answers `isError`. Without it, Claude uses the same catalogue through `javascript_tool`: list it with
   `Object.values(doors.sources).map(s => [s.id, s.input])` and
   `Object.values(doors.commands).map(c => [c.id, c.input, c.effect])`, then call `doors.read` or
   `doors.run` with the input the schema names. A game's own `.dev.ts` sources and commands appear the
   same way: the editor's page imports every `**/*.dev.ts` and hands them to the agent.
+- **Editor specs of a game.** `moku-editor e2e -c <playwright config> [playwright args…]` (0.9) runs a
+  game's Playwright specs against the editor: one Playwright process, so one fresh editor bin, per
+  project, each on its own `PORT` (`PORT`, else 4417, plus the project's index). It exists because of the
+  Bun crash in the last bullet. An explicit `--project` or `--list` runs once as given.
 - **Not installed is not a failure.** A game without `audioPlugin` or `effectsPlugin` has no
   `game.sounds` / `game.effects`. The registry lists them `available: false`, logs
   `registry:source-unavailable` at level info, and Render says "Effects not installed in this game".

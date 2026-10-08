@@ -203,8 +203,8 @@ and (if it changes the scaffold) update `tooling-config.md`.
      - `bun add @moku-labs/game@latest` when the installed game is below 0.4.6.
      - Add `"@moku-labs/game/lint"` to `jsPlugins` after the two tooling entries. Add the six rules
        `moku-game/lazy-imports`, `native-imports`, `dev-imports`, `no-module-state`, `determinism`,
-       `rules-siblings`, each `"error"`; on game 0.11 and later also `static-keys`, `layer-imports`,
-       `feature-door`, `test-suffix`. The moku-game pack's `references/hello-world.md` has the full
+       `rules-siblings`, each `"error"`; also `static-keys` (game 0.7 and later) and `layer-imports`,
+       `feature-door`, `test-suffix` (game 0.9 and later). The moku-game pack's `references/hello-world.md` has the full
        game `.oxlintrc.json`: its four edits also set the game's `overrides` files and ignore
        `generated/**` and `.moku/**`.
      - Drop the game's G1–G4 blocks. They are not translated: the six rules replace them. Their
@@ -477,12 +477,12 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/game` AND its
-  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.4.4`).
+  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.12.0`).
 - **Apply:**
   1. Read `frameworks[game].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/game` dependency to that version (preserve the range operator
      the project already uses — `^`/`~`/exact; default to exact if none).
-  3. Do NOT add a direct `@moku-labs/core` dependency. Bump `@moku-labs/editor` in the same step (moku-editor-version): the editor follows the engine's door catalogue. Re-run the key scan after the install (`bun run keys` on a shell game, `bun run assets:keys` on an older one). Crossing 0.10 moves a game onto the shell (`index.ts` + `config.ts`, no `web/`, `native.ts`, `platform-bridge.ts`); that is not a version bump: follow the pack's `hello-world.md` by hand.
+  3. Do NOT add a direct `@moku-labs/core` dependency. Bump `@moku-labs/editor` in the same step (moku-editor-version): the editor follows the engine's door catalogue. Re-run the key scan after the install (`bun run keys` on a shell game, `bun run assets:keys` on an older one). Crossing 0.10 moves a game onto the shell (`index.ts` + `config.ts`, no `web/`, `native.ts`, `platform-bridge.ts`); that is not a version bump: follow the pack's `hello-world.md` by hand. Crossing 0.8: import `defineVisualTest`, `runVisualTests` and `parseVisualArgv` from `@moku-labs/game/visual`, not `/testing`. Reaching 0.12: the generated strings modules import `messageArgument` and `messageDuration` from the engine, so the key scan must run before the typecheck; a game with `tests/visual/` may drop its own runner for `moku-game visual` (it needs `tests/visual/index.ts`); `fx-` textures may move into an `fx/` folder.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
   **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
@@ -500,17 +500,17 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/editor` AND its
-  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.2.1`).
+  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.9.0`).
 - **Apply:**
   1. Read `frameworks[editor].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/editor` dependency to that version (preserve the range operator
      the project already uses — `^`/`~`/exact; default to exact if none).
-  3. Keep it a devDependency. It peers on `@moku-labs/game`; apply moku-game-version first.
+  3. Keep it a devDependency. It peers on `@moku-labs/game >=0.10.0` and `typescript >=5.5` since 0.8; apply moku-game-version first. A shell game's script is `moku-editor --root .`, with no HTML file. Keep TypeScript on 6.x in a game: the project index needs the JS API.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
   **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
   `skills/moku-game/references/plugin-index.md`, never weaken types.
-- **Risk:** 0.0.x → 0.1+ removes Notes (`flowView.notes`, `notesDir`, `workspace:new-note`) and moves the game page to a dev-only dynamic import of the agent (see the pack's `hello-world.md`). pre-1.0, minors may break. Read the release notes (`frameworks[editor].releaseSource`) and the
+- **Risk:** 0.0.x → 0.1+ removes Notes (`flowView.notes`, `notesDir`, `workspace:new-note`) and moves the game page to a dev-only dynamic import of the agent (see the pack's `hello-world.md`). 0.5 removes the configs `flowView.stylesFile`, `gameView.manifestPaths`, `gameView.sourceSearch` and `renderView.manifestPaths`: code locations come from the project index. 0.8 needs game 0.10 or later. Captures land in day folders `.moku/captures/<yyyy-mm-dd>/` as JPEG. pre-1.0, minors may break. Read the release notes (`frameworks[editor].releaseSource`) and the
   installed `llms.txt` / README before applying; `moku-sync editor` records breaking crossings here.
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.
 
@@ -523,7 +523,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/ai` AND its
-  resolved/declared version `< frameworks[ai].knownVersion` in `moku-frameworks.md` (currently `0.14.2`).
+  resolved/declared version `< frameworks[ai].knownVersion` in `moku-frameworks.md` (currently `0.16.1`).
 - **Apply:**
   1. Read `frameworks[ai].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/ai` dependency to that version (preserve the range operator
@@ -535,6 +535,10 @@ the block below.
   `skills/moku-ai/references/plugin-index.md`, never weaken types.
 - **Risk:** pre-1.0, minors may break. Read the release notes (`frameworks[ai].releaseSource`) and the
   installed `llms.txt` / README before applying; `moku-sync ai` records breaking crossings here.
+  0.14.2 → 0.16.1 breaks nothing. Two things move for a project that uses `ark`: without `ark.groupId` a
+  process now reuses the oldest asset group of that name instead of creating one (0.15), and the recorded
+  cost of a final from a draft with a reference video drops to the "with video input" rate (0.16.0), so
+  an estimate can change with no edit to the build file.
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.
 
 ---

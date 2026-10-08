@@ -51,11 +51,13 @@ Stations run through their skills, with the Skill tool. You do not write source 
 | An idea for later | `moku-rails idea "<text>"`, confirm it is kept, carry on. |
 | Work on a project that does not exist yet | A short intake: two to four questions that decide the project type. Then propose creating the project and wait for a yes. Init comes before brainstorm and design, so everything after it lands in a real project. Then open the first change (type `project`). |
 | A fix, tweak, feature or refactor | Look at the code briefly, pick type and size, open a change. |
+| A run of small edits they want to see at once ("move this", "recolor that", "make it like the reference", a list of nudges) | Open a size Q change and run the `moku:tweak` skill. Each edit is made at once, and the checks run one time at the end. |
 
 **Size decides the route.** Pick it after a short look at the code, tell the person, and let them raise it. They cannot lower it below the rails.
 
 | Size | Sign | Route |
 |---|---|---|
+| Q | Quick edits the person steers one by one: one or two files each, no API change | intake → tweak → verify → close |
 | S | One plugin, public API unchanged | intake → build → verify → close |
 | M | New plugin, or an existing API changes | intake → design → plan → build → verify → e2e → release → close |
 | L | Several plugins, a new framework, an architecture shift | intake → brainstorm → design → plan → build → verify → e2e → release → close |
@@ -148,6 +150,7 @@ Then move `.planning/changes/<id>/` to `.planning/archive/changes/<id>/` with a 
 | Order and depth of the conversation | No source files before init |
 | Whether to brainstorm or design | No plugin code without a plan (M, L) or an open change (S) |
 | The person's language and pace | No close with red tests, no verify, or stale docs |
+| When the checks run for quick edits: once, at the end | That they run: a size Q change still passes verify before it closes |
 | Parking work, keeping ideas for later | No new change while another sits abandoned inside a station |
 
 ## Gotchas
@@ -156,6 +159,9 @@ Then move `.planning/changes/<id>/` to `.planning/archive/changes/<id>/` with a 
 - A person who says "just write the code" still gets the plan station. Make it small and fast, and say why: builders working without a spec drift apart.
 - When the rails refuse, offer the missing step. Do not offer to turn the rails off or to work without moku unless the person asks how; a bypass offered next to the real step gets picked.
 - `moku-rails` prints the reason for every refusal. Relay it in the person's language instead of paraphrasing from memory.
-- Several open changes are allowed only when the others are paused or parked. Pass `--change <id>` when more than one is open.
+- Several open changes in one checkout are allowed only when the others are paused or parked. Pass `--change <id>` when more than one is open.
+- Each git worktree is a lane of its own. It has its own open change, its own last request, its own `STATE.md` and `build/`, and it never waits for another worktree. The project's files are shared: the ledger, `moku.md`, decisions, steering, memory, `specs/`. `moku-rails status` lists the other checkouts' work under "Elsewhere". A change whose worktree was removed is taken over with `moku-rails adopt <id>`.
+- A fresh worktree has no `node_modules`: install there before the first build (`bun install`).
+- Inside `tweak` a new message needs no routing and the turn may end after every edit. The fast agent or the builder is named by `moku-rails tier <files>`, never by a guess.
 - A directory without a session has no ledger. `status` reports "Rails: off" and names the `moku:session` skill as the next step.
 - The write hook answers "has not been routed" when code is attempted before the request was placed. Route it with the table above; do not retry the write.
