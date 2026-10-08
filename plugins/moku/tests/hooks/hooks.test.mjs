@@ -323,6 +323,51 @@ describe("git worktree", () => {
     assert.equal(JSON.parse(readFileSync(join(main, ".planning", "state.json"), "utf8")).changes[0].worktree, tree);
   });
 
+  it("approves a planning file written through the lane link, so the person is not asked", () => {
+    const { tree } = worktree({ initialized: true });
+    hook("session-rails.mjs", { cwd: tree });
+
+    const result = hook("pre-write.mjs", write(tree, ".planning/brainstorm-x-analysis.md", "# analysis\n"));
+
+    assert.equal(result.code, 0);
+    assert.equal(JSON.parse(result.out).hookSpecificOutput.permissionDecision, "allow");
+  });
+
+  it("approves a shared planning file too, which the lane links on to the main checkout", () => {
+    const { tree } = worktree({ initialized: true });
+    hook("session-rails.mjs", { cwd: tree });
+
+    assert.match(hook("pre-write.mjs", write(tree, ".planning/decisions.md", "# decisions\n")).out, /"permissionDecision":"allow"/);
+  });
+
+  it("approves nothing outside .planning/, and nothing the rails refuse", () => {
+    const { tree } = worktree({ initialized: true });
+    hook("session-rails.mjs", { cwd: tree });
+
+    assert.equal(hook("pre-write.mjs", write(tree, "README.md", "# demo\n")).out, "");
+
+    const refused = hook("pre-write.mjs", write(tree, "src/plugins/streak/index.ts"));
+    assert.equal(refused.code, 2);
+    assert.equal(refused.out, "");
+  });
+
+  it("approves nothing in a checkout whose .planning/ is a real folder", () => {
+    const { main, tree } = worktree({ initialized: true });
+    mkdirSync(join(tree, ".planning"));
+    writeFileSync(join(tree, ".planning", "moku.md"), "type: framework\nname: demo\n");
+
+    assert.equal(hook("pre-write.mjs", write(main, ".planning/notes.md", "# notes\n")).out, "");
+    assert.equal(hook("pre-write.mjs", write(tree, ".planning/notes.md", "# notes\n")).out, "");
+  });
+
+  it("approves nothing behind a .planning link that leads out of the project", () => {
+    const { tree } = worktree({ initialized: true });
+    symlinkSync(realpathSync(mkdtempSync(join(tmpdir(), "moku-elsewhere-"))), join(tree, ".planning"), "dir");
+    rails(tree, "session", "start");
+
+    assert.equal(hook("pre-write.mjs", write(tree, ".planning/notes.md", "# notes\n")).out, "");
+  });
+
   it("leaves a worktree alone that has a real .planning/ of its own", () => {
     const { tree } = worktree({ initialized: true });
     mkdirSync(join(tree, ".planning"));

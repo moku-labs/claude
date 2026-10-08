@@ -2,6 +2,25 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.81.2 (2026-10-08)
+
+### Fixed
+- **Every planning file written in a git worktree asked the person for permission.** Since 0.81.0 a worktree's
+  `.planning` is a link to its lane folder in the main checkout. Claude Code follows the link, sees a path
+  outside the worktree and asks: "resolves through a symlink to …, which is outside the allowed working
+  directories". One question per brainstorm, context, spec and state file.
+  - **The write hook approves it.** `pre-write.mjs` answers `permissionDecision: "allow"` for a file under
+    `.planning/` when that `.planning` is the lane link: into the `.planning/` of a checkout on the rails, or
+    into `.planning/lanes/<name>/` of it.
+  - **Only after every check.** The rails guard and the content checks run first. A refused write is still
+    refused, with exit 2 and no approval.
+  - **Nothing else is approved.** Not a file outside `.planning/`, not a checkout with a real `.planning/`
+    folder, not a `.planning` link that leads anywhere else.
+  - Checked on Claude Code 2.1.280 in a real worktree: with the hook as in 0.81.1 the write is denied in
+    `claude -p`, with this hook it is written with no question.
+
+Rails and hooks: 214 tests pass, 5 of them new.
+
 ## 0.81.1 (2026-10-08)
 
 ### Fixed

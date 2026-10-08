@@ -15,7 +15,7 @@
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 
 import { isOnRails } from "../rails/ledger.mjs";
 
@@ -77,6 +77,26 @@ export function linkPlanning(cwd) {
   if (!git(top, "check-ignore", ".planning")) excludeFromGit(top);
 
   return true;
+}
+
+/**
+ * True when a checkout's `.planning` is the link `linkPlanning` makes: into the `.planning/` of a checkout
+ * on the rails, or into a lane folder of it. A write through that link lands outside the worktree, where
+ * Claude Code asks the person every time, so the write hook approves it.
+ *
+ * @param {string} root project root
+ * @returns {boolean}
+ * @example
+ * isLaneLink("/work/site/.claude/worktrees/fix-streak"); // true
+ */
+export function isLaneLink(root) {
+  const target = linkTarget(join(root, ".planning"));
+  if (target === undefined) return false;
+
+  // A lane folder is `.planning/lanes/<name>` of the main checkout
+  const shared = basename(dirname(target)) === LANES_DIR ? dirname(dirname(target)) : target;
+
+  return basename(shared) === ".planning" && isOnRails(dirname(shared));
 }
 
 /**
