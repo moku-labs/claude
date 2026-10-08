@@ -500,7 +500,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/editor` AND its
-  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.9.0`).
+  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.9.1`).
 - **Apply:**
   1. Read `frameworks[editor].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/editor` dependency to that version (preserve the range operator

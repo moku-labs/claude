@@ -10,7 +10,7 @@ visual tests), `sharp` (the asset pack), `typescript >=5.5` (the project index),
 (the system shell, the store save), `@moku-labs/native ^0.3.2` (`moku-game native`). Engines node ≥24,
 bun ≥1.3.14. ESM only.
 
-The second half indexes **`@moku-labs/editor@0.9.0`** (peers `@moku-labs/game >=0.10.0` and
+The second half indexes **`@moku-labs/editor@0.9.1`** (peers `@moku-labs/game >=0.10.0` and
 `typescript >=5.5`).
 
 > The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). It matches the
@@ -495,6 +495,7 @@ page ships prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-ful
 
 | Version | What changed |
 |---|---|
+| 0.9.1 | `/manifest.json` answers from `generated/manifest.json` (game 0.13), else from the game root |
 | 0.9.0 | `moku-editor e2e -c <playwright config>`: one Playwright run per project, each on its own `PORT` |
 | 0.8.0 | The engine page: `moku-editor --root .` in a moku-game folder calls `preparePage`; the entry `@moku-labs/editor/agent/page`; peer game `>=0.10.0`. The bin catches SIGINT and SIGTERM from the start |
 | 0.7.0 | The layered layout: a module in a `styles/` folder is a style write (game 0.9) |

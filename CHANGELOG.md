@@ -18,15 +18,10 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   - **Pins and sync lines.** game `0.12.0` → `0.13.0`, native `0.3.2` → `0.3.3`, in the packs, the
     `knownVersion` rows and the upgrade migrations. The native pack notes the 0.3.3 fix: `doctor`
     `web-script` checks only a package script, not the direct `bun` + `moku-game` command.
-  - The hello world was scaffolded fresh and run on game 0.13.0 with editor 0.9.0: `keys` writes
+  - The hello world was scaffolded fresh and run on game 0.13.0 with editor 0.9.1: `keys` writes
     `generated/manifest.json`, then typecheck, lint, test, `test:visual`, `moku-game-index --check` and
     build pass. `moku-game dev` answers 200 on `/` and `/manifest.json`. `moku-editor --root .` answers 200
-    on `/__editor/` and logs `files:project-on`, and the index names `generated/manifest.json`.
-
-### Known
-- **Under `moku-editor --root .` 0.9.0, `/manifest.json` answers 404 on a game on 0.13.0.** The editor
-  serves the game folder as it is and has no root `manifest.json` to serve. The page then has no assets.
-  This needs an editor release; the packs say nothing new about it yet.
+    on `/__editor/` and, since 0.9.1, `/manifest.json` from `generated/`; it logs `files:project-on`, and the index names `generated/manifest.json`.
 
 ## 0.81.2 (2026-10-08)
 

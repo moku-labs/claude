@@ -15,7 +15,7 @@ Derived from the engine's fixture `tests/fixtures/mini-game/`, its `docs/shell.m
 the reference game `merge-game` in moku-labs/demos. Verified end to end (install, `keys`, typecheck,
 lint with the ten engine rules, tests with coverage, `keys --check`, `build`, `moku-game dev`,
 `moku-editor --root .` with the project index on, `moku-game-index --check`, `bun run test:visual` twice
-(written, then same), lefthook pre-commit) against `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.0`,
+(written, then same), lefthook pre-commit) against `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.1`,
 `pixi.js@8.22.0`, Bun 1.3.14 and the init tooling stack (`oxlint@1.86.0`, `vitest@4.0.18`,
 `typescript@6.0.3`). Not run: the pixel leg of `moku-game visual` (it needs `playwright-core` and a
 browser) and `moku-game native`. When something here does not compile, read
@@ -28,12 +28,12 @@ Pin exact versions. A game has no `bunfig.toml`, so pass `--exact`.
 
 ```sh
 bun add --exact @moku-labs/game@0.13.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.4
-bun add --exact -d @moku-labs/editor@0.9.0 sharp@0.34.5
+bun add --exact -d @moku-labs/editor@0.9.1 sharp@0.34.5
 ```
 
 `@moku-labs/core` and `@moku-labs/common` are peers of both packages; pin them so the game and the
 editor share one copy. `pixi.js` (`^8`) is a peer of the engine. `sharp` is an optional peer: `moku-game
-build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.0` peers on `@moku-labs/game
+build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.1` peers on `@moku-labs/game
 >=0.10.0` and `typescript >=5.5`.
 
 Every other dev dependency is init's tooling set of the current lint stack, at the versions
@@ -316,7 +316,7 @@ needs no browser and takes under a second here.
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@moku-labs/editor": "0.9.0",
+    "@moku-labs/editor": "0.9.1",
     "@types/bun": "1.3.14",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",

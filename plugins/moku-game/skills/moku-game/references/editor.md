@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.9.0` beside a game on `@moku-labs/game@0.13.0` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`; the start in section 1 was run on a fresh scaffold. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
+How Claude runs `@moku-labs/editor@0.9.1` beside a game on `@moku-labs/game@0.13.0` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`; the start in section 1 was run on a fresh scaffold. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
