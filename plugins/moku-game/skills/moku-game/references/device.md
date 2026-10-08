@@ -22,7 +22,7 @@ export default {
 
 ```sh
 bun add --exact @moku-labs/system@0.3.1        # system names a plugin, or save is "store"
-bun add --exact -d @moku-labs/native@0.3.2     # moku-game native
+bun add --exact -d @moku-labs/native@0.3.3     # moku-game native
 ```
 
 | `system` name | The engine gets |

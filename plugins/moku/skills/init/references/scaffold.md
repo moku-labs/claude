@@ -182,8 +182,8 @@ Dependencies, exact, at the versions `hello-world.md` names: `@moku-labs/game`, 
 `@moku-labs/core`, `@moku-labs/common` (the peers both packages share); dev `@moku-labs/editor`, `sharp`.
 
 The order of a game init, after the tooling files: copy the body font into `shared/assets/`, write the
-sources, then `bun run keys` before the first typecheck. `generated/` and `manifest.json` do not exist
-until it ran, and the kit imports its types from them. Then `bun run test:visual` twice: the first run
+sources, then `bun run keys` before the first typecheck. `generated/` and `generated/manifest.json` do not
+exist until it ran, and the kit imports its types from them. Then `bun run test:visual` twice: the first run
 writes `tests/visual/baselines/`, the second must say `same`. The baselines are committed with the
 scaffold.
 

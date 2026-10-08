@@ -69,7 +69,7 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
 ## Step 1 — headless proof
 
 ```bash
-bunx moku-game keys --check       # generated/ and manifest.json are current
+bunx moku-game keys --check       # generated/, generated/manifest.json included, is current
 bun run typecheck
 bun run test                       # vitest: the headless scenarios
 bun run test:visual                # the headless leg of the visual tests, when the script exists

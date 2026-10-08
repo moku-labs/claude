@@ -148,7 +148,7 @@ folder. Read the exported functions for `state.x = …` patterns.
 - **WARNING**: `typescript` 7 in `devDependencies` with `@moku-labs/editor` installed. The editor's project
   index needs the TypeScript JS API; on 7 it runs with `files:project-off`. Fix: `typescript` `6.0.3`.
 - **INFO**: `@moku-labs/editor` below 0.8 with `@moku-labs/game` 0.10 or later, or the reverse. Editor 0.8
-  and later peer on game `>=0.10.0`. The pair the pack was verified on is game 0.12.0 with editor 0.9.0.
+  and later peer on game `>=0.10.0`. The pair the pack was verified on is game 0.13.0 with editor 0.9.0.
 
 **How to check:** Grep `@moku-labs/editor` over the source; read `package.json` scripts and versions.
 
@@ -165,7 +165,9 @@ folder. Read the exported functions for `state.x = …` patterns.
   `{nine=…}` tag, or the reverse. The tag in the file name is the single source; `nineSlice` in
   `generated/assets.ts` carries it.
 - **WARNING**: `generated/` missing while `features/*/assets`, `features/*/strings` or a layer's assets
-  exist, or `manifest.json` missing. Fix: `bun run keys` (`moku-game keys`).
+  exist, or `generated/manifest.json` missing. Fix: `bun run keys` (`moku-game keys`).
+- **WARNING** (game 0.13 and later): a `manifest.json` at the game root. `moku-game keys` writes
+  `generated/manifest.json` and `dev` serves only that one. Fix: delete the root file, run `bun run keys`.
 - **WARNING**: `shared/assets/` holds files but `config.ts` has no `assets.layers` entry for `shared`.
   `moku-game keys` does not scan a layer `config.ts` does not name. The template uses `{ shared: "ui" }`.
 - **INFO**: a file under an `assets/` folder with an extension the scanner leaves out (`.ogg`, `.wav`,
@@ -334,7 +336,7 @@ writes into `.moku/`. The reference is the pack's `hello-world.md` and the engin
 ### Asset keys (§7)
 - Kit typed from generated/assets.ts: [YES / NO]
 - Plain-string keys not in AssetKey: [none / list]
-- generated/ and manifest.json: [current / missing]
+- generated/ and generated/manifest.json: [current / missing]
 - Asset folders by kind: [yes / list of flat folders and shared prefixes]
 
 ### Features and kit (§8)
