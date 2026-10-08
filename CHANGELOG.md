@@ -9,7 +9,7 @@ at once and checks them one time at the end. The game guidance is synced to `@mo
 `@moku-labs/editor` 0.9, plugin tables included, and moku-ai to `@moku-labs/ai` 0.16.1. A question in a
 directory that is not on the rails is answered again, instead of being turned into a new project.
 
-Rails and hooks: 190 tests pass, 27 of them new. Evals on Opus 5.5 with the plugin, all 20 cases of the
+Rails and hooks: 198 tests pass, 35 of them new. Evals on Opus 5.5 with the plugin, all 20 cases of the
 core and the packs: 58 of 60 runs on the final full pass. Before the fixes below the same suite stood at
 44 of 60. The two runs that failed: `conductor-idea` once on a split judge vote, and
 `release-first-publish` once, where a "how do I" question still started a session; the reminder was
@@ -63,6 +63,15 @@ pixel leg, `moku-game native`, `moku-editor mcp` and `e2e`.
     edit the fast agent missed twice (`--misses 2`).
   - **`moku-tweaker`** (sonnet, low, 40 turns): the fast agent. It reports `ESCALATE` for anything larger.
   - Eval `tweak-quick-edits`, with a fixture project.
+- **`moku-rails waves`.** Reads the plan's `## Plugins` table and wave table from `STATE.md`, prints the
+  waves and names the next one with its plugins, tiers and specs. It refuses a plan where a plugin sits in
+  two waves or depends on a plugin of the same or a later wave. `--done <n>` marks a wave and its plugins
+  `verified`.
+- **The build workflow builds the whole plan.** `moku-build-wave` takes the next wave from `moku-rails
+  waves`, where an agent used to pick it by reading `STATE.md`. With `{all: true}` it builds every
+  remaining wave: plugins of a wave in parallel, each verified as it finishes, the wave marked `verified`,
+  then the next. It stops at the first wave that fails, at a disposition other than `continue`, and at a
+  framework wave. Not run on a real project yet.
 - **What goes where.** moku-game skill: one table from "a field of the save" to "a prepared save", and the
   list of files a game never writes. "From zero to a running game": eight steps, `bun run keys` before the
   first typecheck.

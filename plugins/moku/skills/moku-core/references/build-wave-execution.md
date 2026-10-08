@@ -9,7 +9,8 @@ Group the plugin specs into dependency-ordered waves:
 3. Parse each regular spec's Dependencies section into a graph.
 4. Wave 1 is the plugins with no dependencies; wave N is the plugins whose dependencies all sit in
    earlier waves. Plugins in one wave build in parallel.
-5. If `/moku:plan` already assigned waves, use its assignment instead of recomputing.
+5. If `/moku:plan` already assigned waves, use its assignment instead of recomputing. `moku-rails waves`
+   prints it, checks that every dependency sits in an earlier wave, and names the next wave to build.
 
 Present the plan as a short list with the dependency reason:
 

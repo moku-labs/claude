@@ -26,6 +26,7 @@ const HANDLERS = {
   scope: commands.scope,
   idea: commands.idea,
   tier: commands.tier,
+  waves: commands.waves,
   init: commands.init,
   guard: commands.guard,
   "guard-bash": commands.guardBash,

@@ -6,7 +6,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdirSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
@@ -15,6 +15,7 @@ import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnR
 import { headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
+import { isDone, markWave, nextWave, readWaves } from "./waves.mjs";
 
 /** @typedef {{ code: 0 | 1 | 2, lines: string[], data?: unknown }} Result */
 /** @typedef {{ root: string, positional: string[], flags: Record<string, string | true> }} Args */
@@ -311,6 +312,42 @@ export function adopt({ root, positional }) {
   if (!change) return refused(`No other checkout holds a change "${id}". \`moku-rails status\` lists them under "Elsewhere".`);
 
   return ok(`Adopted ${id} into this checkout${change.station ? `, inside "${change.station}"` : ""}. Done so far: ${change.done.join(", ") || "nothing"}.`);
+}
+
+/**
+ * The build waves of this checkout's plan, read from `.planning/STATE.md`, and the wave to build next.
+ * The plugins of one wave live in their own folders and wait for nothing still open, so they are built at
+ * the same time.
+ *
+ * @param {Args} args flags: --done <n> marks wave n and its plugins `verified` first
+ * @returns {Result} one line per wave, then the next one; `data.next` holds its plugins with tier and spec
+ * @example
+ * waves({ root, positional: [], flags: {} }); // lines: ["Wave 0: log, env (verified)", "Wave 1: router, site (not started)", "Next: wave 1, 2 plugins in parallel."]
+ */
+export function waves({ root, flags }) {
+  if (!isOnRails(root)) return offRails();
+
+  const file = resolve(root, ".planning", "STATE.md");
+  if (!existsSync(file)) return refused("No .planning/STATE.md here: this checkout has no plan yet. The plan station writes it.");
+
+  // `--done <n>`: the wave passed its checks, so the next call names the wave after it
+  const finished = optional(flags.done);
+  if (finished !== undefined) {
+    if (!/^\d+$/.test(finished)) return usage("moku-rails waves [--done <wave number>]");
+    writeFileSync(file, markWave(readFileSync(file, "utf8"), Number(finished), "verified"));
+  }
+
+  const read = readWaves(readFileSync(file, "utf8"));
+  if (read.problems.length > 0) return refused(read.problems.join(" "));
+
+  const lines = read.waves.map((wave) => `Wave ${wave.wave}: ${wave.framework ? `framework work (${wave.framework})` : wave.plugins.map((plugin) => plugin.name).join(", ")} (${isDone(wave) ? "done" : wave.status || "not started"})`);
+  const next = nextWave(read.waves);
+
+  if (!next) lines.push("Every wave is done.");
+  else if (next.framework) lines.push(`Next: wave ${next.wave} is framework work with no plugin folder. The orchestrator does it by hand, no builder runs.`);
+  else lines.push(`Next: wave ${next.wave}, ${next.plugins.length} plugin(s)${next.plugins.length > 1 ? " in parallel" : ""}.`);
+
+  return { code: 0, lines, data: { waves: read.waves, next: next ?? null } };
 }
 
 /**

@@ -1,7 +1,7 @@
 export const meta = {
   name: 'moku-build-wave',
   description: 'Build one Moku wave non-interactively: builders in parallel (disjoint plugin dirs), each verified as it completes (pipeline), then a wave disposition',
-  whenToUse: 'OPT-IN, non-interactive fan-out for a single build wave. The gated moku:build skill (per-wave user checkpoint) is still the default; use this when you explicitly want a wave built end-to-end without stopping. Pass {plugins:[{name,tier,spec}]} to define the wave, or omit to auto-detect the next wave from STATE.md.',
+  whenToUse: 'OPT-IN, non-interactive fan-out for a single build wave. The gated moku:build skill (per-wave user checkpoint) is still the default; use this when you explicitly want a wave built end-to-end without stopping. Pass {plugins:[{name,tier,spec}]} to name a wave, or {all:true} to build every remaining wave and stop at the first that does not pass. Pass {plugins:[{name,tier,spec}]} to define the wave, or omit to auto-detect the next wave from STATE.md.',
   phases: [
     { title: 'Plan', detail: 'determine the wave plugin set' },
     { title: 'Build+Verify', detail: 'build each plugin, verify as it completes' },
@@ -36,38 +36,63 @@ const STYLE = `Follow the moku-plugin skill. Ground every decision in ` +
   `the tier-matching exemplar in sandbox-index.md (file split, <name>Plugin export, JSDoc, tests).`
 
 // --- Plan: determine the wave -------------------------------------------
-phase('Plan')
-let plugins = (args && Array.isArray(args.plugins) && args.plugins) || null
-if (!plugins) {
-  const PLAN = {
-    type: 'object',
-    required: ['plugins'],
-    properties: {
-      waveIndex: { type: 'number' },
-      plugins: {
-        type: 'array',
-        items: {
-          type: 'object',
-          required: ['name'],
-          properties: { name: { type: 'string' }, tier: { type: 'string' }, spec: { type: 'string' } },
-        },
+// The next wave comes from `moku-rails waves`, which reads the plan's tables and checks that every
+// dependency sits in an earlier wave. An agent that picked the wave by reading STATE.md picked one whose
+// dependency was not built yet once in a while.
+const NEXT = {
+  type: 'object',
+  required: ['plugins'],
+  properties: {
+    wave: { type: 'number' },
+    refused: { type: 'string' },
+    framework: { type: 'string' },
+    plugins: {
+      type: 'array',
+      items: {
+        type: 'object',
+        required: ['name'],
+        properties: { name: { type: 'string' }, tier: { type: 'string' }, spec: { type: 'string' } },
       },
     },
-  }
-  const plan = await agent(
-    `Read .planning/STATE.md and the plugin table. Identify the NEXT wave to build (plugins whose ` +
-      `dependencies are already built/verified and that are not yet complete). For each, return its ` +
-      `name, complexity tier, and the path to its spec (.planning/specs/0N-*.md). If the skeleton is ` +
-      `not committed yet, return an empty plugins list with a note — the skeleton must be built first.`,
-    { label: 'plan-wave', phase: 'Plan', schema: PLAN },
+  },
+}
+const readNext = (done) =>
+  agent(
+    `Run \`moku-rails waves ${done === undefined ? '' : `--done ${done} `}--json\` with Bash and return what it printed: from \`data.next\` the ` +
+      `wave number, its \`framework\` label when it has one, and its plugins with name, tier and spec. ` +
+      `No \`data.next\` means every wave is done: return an empty plugins list. If the command is refused, ` +
+      `return its reason in \`refused\` and an empty plugins list. Do not read STATE.md yourself and change nothing.`,
+    { label: done === undefined ? 'next-wave' : `next-wave-after-${done}`, phase: 'Plan', schema: NEXT },
   )
+
+// `{all: true}` builds every remaining wave, one after another, and stops at the first that does not pass.
+const ALL = !!(args && args.all === true)
+const built = []
+let given = (args && Array.isArray(args.plugins) && args.plugins) || null
+let finished
+
+while (true) {
+phase('Plan')
+let plugins = given
+let waveNumber
+if (!plugins) {
+  const plan = await readNext(finished)
+  if (plan?.refused) {
+    log(`moku-rails waves refused: ${plan.refused}`)
+    return { built: built.length, note: 'refused', reason: plan.refused, waves: built }
+  }
+  if (plan?.framework) {
+    log(`Wave ${plan.wave} is framework work (${plan.framework}): the orchestrator does it by hand.`)
+    return { built: built.length, note: 'framework-wave', wave: plan.wave, waves: built }
+  }
   plugins = plan?.plugins ?? []
+  waveNumber = plan?.wave
 }
 if (plugins.length === 0) {
-  log('No buildable wave found (skeleton not committed, or all plugins complete).')
-  return { built: 0, note: 'no-wave' }
+  log(built.length > 0 ? 'Every wave is done.' : 'No buildable wave found (no plan, or all plugins complete).')
+  return { built: built.length, note: built.length > 0 ? 'all-done' : 'no-wave', verdict: 'PASS', waves: built }
 }
-log(`Wave: ${plugins.map((p) => p.name).join(', ')} (${plugins.length} plugins)`)
+log(`Wave${waveNumber === undefined ? '' : ` ${waveNumber}`}: ${plugins.map((p) => p.name).join(', ')} (${plugins.length} plugins)`)
 
 // --- Build + Verify (pipeline: verify each plugin as soon as it is built) ---
 // Builders touch disjoint dirs (src/plugins/<name>/) in the one working tree. A git worktree per builder
@@ -133,11 +158,22 @@ const judgment = await agent(
   { label: 'wave-disposition', phase: 'Disposition', schema: DISPOSITION },
 )
 
-return {
+const outcome = {
   wave: plugins.map((p) => p.name),
+  number: waveNumber,
   built: done.length,
   failed: failed.map((r) => r.plugin),
   verdict: failed.length === 0 ? 'PASS' : 'FAIL',
   disposition: judgment,
   results: done,
+}
+built.push(outcome)
+
+// One wave was asked for, a wave failed, or the disposition says a person should look: stop here
+const goOn = ALL && given === null && waveNumber !== undefined && outcome.verdict === 'PASS' && judgment?.decision === 'continue'
+if (!goOn) return ALL ? { built: built.length, verdict: outcome.verdict, stoppedAt: waveNumber, waves: built } : outcome
+
+// The wave is good to build on: the next read marks it verified and names the wave after it
+finished = waveNumber
+given = null
 }
