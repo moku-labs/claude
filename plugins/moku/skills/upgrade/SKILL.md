@@ -47,6 +47,8 @@ and stops.
 1. **Project detection** (same logic as `/moku:check`):
    - `src/config.ts` with `createCoreConfig` → **Framework** (Layer 2).
    - `createApp` import from a framework package → **Consumer App** (Layer 3).
+   - `@moku-labs/game` in `dependencies` → **Game** (Layer 3). Its migrations are the ones whose
+     `Applies to` names `game` or `all`. Its TypeScript target is `6.0.3`, not 7 (`target-stack.md`).
    - `jsx`/`preact` + `vite` config → **Web** project.
    - `package.json` only → **Generic** Node/Moku project.
    - If there is no `package.json` and no `src/config.ts` and no `createApp` import, stop:
@@ -142,7 +144,7 @@ Local-only state (never committed — `.planning/` is gitignored). Mirrors the `
 ```markdown
 # Moku Upgrade State
 
-## Project: <name> (<Framework|App|Plugin|Web>)
+## Project: <name> (<Framework|App|Game|Plugin|Web>)
 ## Stack From: <N>
 ## Stack To: <M>
 ## Status: in-progress | complete | blocked

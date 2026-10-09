@@ -356,6 +356,38 @@ describe("moku-rails: a session of quick edits", () => {
     assert.match(rails(root, "tier", "src/plugins/hud/brand-new.ts").text, /a new file/);
   });
 
+  /**
+   * A project with the root files and one feature of a game on disk.
+   *
+   * @param {string} type what the marker says the project is
+   * @returns {string} the project root
+   * @example
+   * withGameFiles("game");
+   */
+  function withGameFiles(type) {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "moku.md"), `# Moku Project\n\ntype: ${type}\nname: hello-game\n`);
+    mkdirSync(join(root, "features", "hello", "views"), { recursive: true });
+
+    for (const file of ["index.ts", "game.ts", "config.ts", "features/hello/index.ts", "features/hello/views/scene.ts"]) {
+      writeFileSync(join(root, file), "export {};\n");
+    }
+
+    return root;
+  }
+
+  it("names the builder for a game's root wiring once the marker says type: game, and only then", () => {
+    const game = withGameFiles("game");
+    const app = withGameFiles("consumer");
+
+    assert.equal(rails(game, "tier", "index.ts", "game.ts").text.trim(), "deep: index.ts: it is the game's root wiring; game.ts: it is the game's root wiring");
+    assert.equal(rails(game, "tier", "./config.ts").text.trim(), "deep: config.ts: it is the game's root wiring");
+    assert.match(rails(game, "tier", "features/hello/index.ts").text, /^deep: features\/hello\/index\.ts: it is the door of a layer or a feature/);
+    assert.equal(rails(game, "tier", "features/hello/views/scene.ts").text.trim(), "fast");
+    assert.equal(rails(app, "tier", "index.ts", "game.ts").text.trim(), "fast", "not a game: the name means nothing");
+    assert.equal(rails(app, "tier", "features/hello/index.ts").text.trim(), "fast");
+  });
+
   it("checks once at the end: verify after tweak, then the usual close", () => {
     const root = tweaking();
 

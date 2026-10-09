@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.9.1` beside a game on `@moku-labs/game@0.13.0` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`; the start in section 1 was run on a fresh scaffold. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
+How Claude runs `@moku-labs/editor@0.9.3` beside a game on `@moku-labs/game@0.13.0` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`, and to the changes of 0.9.1 to 0.9.3; the start in section 1 was run on a fresh scaffold with editor 0.9.1. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
@@ -262,8 +262,9 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/<yyyy-mm-dd>/serie
   same way: the editor's page imports every `**/*.dev.ts` and hands them to the agent.
 - **Editor specs of a game.** `moku-editor e2e -c <playwright config> [playwright args…]` (0.9) runs a
   game's Playwright specs against the editor: one Playwright process, so one fresh editor bin, per
-  project, each on its own `PORT` (`PORT`, else 4417, plus the project's index). It exists because of the
-  Bun crash in the last bullet. An explicit `--project` or `--list` runs once as given.
+  project and spec file (since 0.9.2; per project in 0.9.0), each on its own `PORT` (`PORT`, else 4417,
+  plus the run's index). It prints one line per run and a summary, and holds `.moku/e2e.lock`, so two
+  runs never overlap. It exists because of the Bun crash in the last bullet. An explicit `--project` or `--list` runs once as given.
 - **Not installed is not a failure.** A game without `audioPlugin` or `effectsPlugin` has no
   `game.sounds` / `game.effects`. The registry lists them `available: false`, logs
   `registry:source-unavailable` at level info, and Render says "Effects not installed in this game".

@@ -2,6 +2,57 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.82.1 (2026-10-09)
+
+### Fixed
+- **A game that names system plugins did not build.** The docs installed `@moku-labs/system` alone. Its
+  Tauri packages are optional peers, so Bun leaves them out, and `moku-game build` stopped with
+  `Could not resolve: "@tauri-apps/api/app"`.
+  - `device.md` installs `@tauri-apps/api` and `@tauri-apps/plugin-haptics` with the package, and
+    `@tauri-apps/plugin-store` for the store save. A table names the peer of each system plugin.
+  - `hello-world.md` and the game skill point at it.
+- **Verify raised a BLOCKER on the game template.** Rule I1 says a Layer-3 app declares no direct
+  `@moku-labs/core` dependency. The game template pins core and common, because they are peers of the
+  engine and of the editor.
+  - The structure validator, the plan checker, `moku-idioms.md` and `structural-conformance.md` carry a
+    game exception for the dependency check. The source half of I1 holds in a game.
+  - Every other project type reads as before.
+- **Verify did not look at game code.** The validators searched `src/`, and a game has none.
+  - Verify lists Game among the project kinds and names the game's roots as the scope of the structure
+    and style validators: `index.ts`, `game.ts`, `config.ts`, `core/`, `shared/`, `features/`, `plugins/`.
+  - Status reads `features/` and `plugins/` as what was built. No rule is added.
+- **Playtest Step 2 failed on a Mac.** Plain `bunx moku-game visual` starts the pixel leg and exits 1
+  without `playwright-core`, which the template does not install. The step passes `--no-pixels` for the
+  proof and `--pixels` only when the peer is installed.
+- **The tweak tier called a game's root wiring a quick edit.** `moku-rails tier index.ts game.ts` answered
+  `fast` in a game.
+  - With `type: game` in `.planning/moku.md` the tier is `deep` for `index.ts`, `game.ts` and `config.ts`,
+    for the `index.ts` of a layer or a feature, for the public surface of the game's own plugins, and for
+    `core/state.ts` and `core/kit.ts`.
+  - Any other project type answers as before. A root `index.ts` or `plugins/` folder there means nothing.
+- **Check and upgrade treated a game as below the target stack.** A game pins TypeScript 6.0.3, because
+  the editor's project index needs the TypeScript JS API, and it has no `tsdown`.
+  - `target-stack.md` and check carry the game exception on these two pins.
+  - Upgrade detects a Game project. The native and system version bumps apply to a game too.
+- **The CLAUDE.md of a game described a package.** `hello-world.md` has a game variant with the game's
+  scripts, TypeScript 6 and the layered layout. The scaffold table points at it.
+
+### Added
+- **A release path for a game.** `moku-release` has a section "A game". The web target replaces the
+  template's placeholder `deploy` with an upload of `dist/web`. The store target runs
+  `bun run native build ios` or `android`. It says what is done by hand: signing in the generated Tauri
+  project, the Play bundle, the upload and the web deploy command. The conductor's release line names
+  the game.
+
+### Changed
+- **The game template pins editor 0.9.3, common 0.3.5 and system 0.3.2.** They were 0.9.1, 0.3.4 and
+  0.3.1. A fresh scaffold written from `hello-world.md` is green on the new set: install, `keys`,
+  typecheck, lint, tests, `test:visual` twice and `build`. The editor server of 0.9.3 was not started.
+  game 0.13.0, ai 0.16.1 and native 0.3.3 are still the latest.
+- `editor.md` describes `moku-editor e2e` as of 0.9.2: one run per project and spec file, with
+  `.moku/e2e.lock`.
+- `docs/SKILL-INVENTORY.md`: the hook facts after 0.82.0. 21 scripts, 15 of them wired to 10 events.
+
 ## 0.82.0 (2026-10-09)
 
 ### Added

@@ -689,9 +689,11 @@ installed. Every message starts with `[moku-editor] `.
 ## Compatibility with the engine
 
 - Editor 0.9 peers on game `>=0.10.0`: the engine page needs `preparePage` of `@moku-labs/game/cli`.
-  Verified together: editor 0.9.1 with game 0.13.0 (`files:project-on` on a fresh scaffold, TypeScript
-  6.0.3). Editor 0.9.2 and 0.9.3 keep the peer range and change only `moku-editor e2e` and the series
-  shot count; they were not run on a scaffold.
+  Verified together, on a fresh scaffold with TypeScript 6.0.3: editor 0.9.3 with game 0.13.0 for the
+  install, `keys`, typecheck, lint, tests, `test:visual`, `build` and `moku-editor --help`; editor 0.9.1
+  with game 0.13.0 for the running editor (`files:project-on`). Editor 0.9.2 and 0.9.3 keep the peer
+  range and change only `moku-editor e2e` and the series shot count. The editor server of 0.9.3 was not
+  started on a scaffold.
 - Element rects come from `game.locate { key }` when the manifest lists it, else `game.rect`.
   `game.capture` may answer a data URL or `{ png, legend? }`; capture takes both.
 - The Sound switch runs `game.mute` when the manifest lists it. The registry does not probe commands, so in

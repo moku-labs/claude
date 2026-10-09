@@ -89,6 +89,7 @@ After the hello world runs, the route is the usual one, with game material in it
 - **plan** and **build** follow the game layout, not the app layout: one spec and one unit of work per feature folder, no `src/`, no `createApp`. The steps are the "Game" section of `moku-core/references/build-app.md`. The layout is the `moku-game` skill. A game cannot be planned or built without the `moku-game` pack: when it is missing, say so and ask the person to install it.
 - **verify** as for any app. Delta specs for later changes.
 - **e2e** runs as playtest (`moku-game:playtest`): headless walks, visual tests, play in the editor, and the phone when the change needs it.
+- **release** is the person's call. A game ships as a web build on a host, or to the stores through `@moku-labs/native`. The steps, and what is still done by hand, are the "A game" section of `moku:moku-release`.
 - **assets**: when the person asks for art, music, sound or voice in bulk, use the `moku-ai` pack. Keys, providers and costs are its job. Always show the cost estimate and wait for a yes before a paid run.
 
 The editor in the browser pane is the shared screen. You screenshot it, record PNG series and turn them into video, and read the `@moku …` reference lines the person pastes from it.
@@ -129,7 +130,7 @@ The person never needs a station name or a command. Do not hand them one ("say `
 | build | `moku:build` | For S: reproduce the bug with a failing test first when practical. |
 | verify | `moku:verify` | Scope it to what the change touched. |
 | e2e | `moku-web:e2e`, or `moku-game:playtest` for a game | Only when the change has UI. A game always has. |
-| release | `moku:moku-release` | Packages only. First cycle of a package needs a green `release:doctor`. |
+| release | `moku:moku-release` | Packages, and a game that ships. First cycle of a package needs a green `release:doctor`. A game picks a target, web or stores: the "A game" section of the skill. |
 
 A skill from a pack that is not installed is not a dead end. Say which pack is missing, and offer to continue without that optional station.
 

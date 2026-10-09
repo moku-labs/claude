@@ -51,7 +51,8 @@ The app-shape rules are guardrails I1–I6 in
 rules in `skeleton-conventions.md`. The canonical root layouts for a web or worker project live in
 their packs: load the `moku-web:moku-web` or `moku-worker:moku-worker` skill with the `Skill` tool,
 which prints its base directory, and read the layout reference it points to. Do not reach for a pack
-file by path — `${CLAUDE_PLUGIN_ROOT}` resolves per plugin. The detection, fix and loop protocol is
+file by path — `${CLAUDE_PLUGIN_ROOT}` resolves per plugin. The layout of a game is the
+`moku-game:moku-game` skill, loaded the same way. The detection, fix and loop protocol is
 `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/structural-conformance.md` — read it and follow
 it. Every validator ends with the JSON output contract in `agent-preamble.md`.
 
@@ -63,7 +64,7 @@ it. Every validator ends with the JSON output contract in `agent-preamble.md`.
 1. A `package.json` must be present. Without one: "Not a Moku project — run from the project root."
    Stop.
 2. Detect the project kind as `structural-conformance.md §"Step 0"` describes: Framework (L2), Web
-   app (L3), Worker app (L3), Full-stack (L3).
+   app (L3), Worker app (L3), Game (L3), Full-stack (L3).
 3. Parse the arguments. `$ARGUMENTS` may be plain language; resolve it per `nl-args.md` and echo one
    `Interpreting as: …` line when you interpreted something.
 
@@ -84,9 +85,15 @@ base with the default branch). Say which scope you picked in one line. Widen to 
 only when the user asks. The root files are always gap-checked, whatever the scope.
 
 4. Discover the plugin list with `Glob src/plugins/*/`. An empty list means a root-only run.
+5. A game has no `src/`. When the kind is Game, its source roots are `index.ts`, `game.ts`,
+   `config.ts`, `core/`, `shared/`, `features/` and `plugins/`. The units are the feature folders,
+   `Glob features/*/`, and the game's own plugins, `Glob plugins/*/`. Name these roots as the scope
+   in the spawn prompt of the structure validator and of the style validator. Without them both look
+   in `src/` and find nothing to check. `generated/`, `tests/` and `.moku/` are not source. The rules
+   are the same as for any project: only the paths differ.
 
 A request that is really about building, planning or e2e testing belongs to `moku:build`,
-`moku:plan` or `moku-web:e2e`. Say so and stop.
+`moku:plan`, `moku-web:e2e` or, in a game, `moku-game:playtest`. Say so and stop.
 
 ## The validator fan-out
 

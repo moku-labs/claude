@@ -41,6 +41,10 @@ everything else: no source before init, no edit outside an open change.
    An edit is `deep` when it touches more than two files, creates a file, or touches a plugin's public
    surface, the root wiring, shared core code or configuration. Pass `--misses 2` when the fast agent
    already got this edit wrong twice: the third try is the builder's.
+
+   A game has no `src/`. The rails read `type: game` from `.planning/moku.md` and count the same kinds
+   of file at the game's own paths: `moku-rails tier game.ts` answers
+   `deep: game.ts: it is the game's root wiring`. Pass paths relative to the project root.
 3. **Give the agent a brief it cannot misread:** the files, the edit in the person's words, and the
    reference when there is one (a file to copy the pattern from, a screenshot, a value).
 4. **Write it down.** Append one row to `.planning/changes/<id>/tweaks.md`:

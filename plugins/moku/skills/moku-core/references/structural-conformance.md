@@ -57,7 +57,9 @@ Run these in order; the first block is the user's top pain and the reason this c
 - **I1 (BLOCKER):** a Layer-3 app must `createApp` from a *framework* package and must **not** call
   `createCoreConfig`/`createCore` or declare a direct `@moku-labs/core` dependency. **Detect:**
   `@moku-labs/core` in app `package.json`; `createCoreConfig`/`createCore` / `createPlugin` imported from
-  `@moku-labs/core` in app source.
+  `@moku-labs/core` in app source. **Game exception:** in a `type: game` project, `@moku-labs/core` and
+  `@moku-labs/common` pinned in `dependencies` are the peers of `@moku-labs/game` and are not a finding.
+  The source checks hold in a game.
 - **I2 (WARNING for fusing; BLOCKER for a facade/duplicate same-runtime app):** **one `createApp` per
   framework/runtime.** Count `createApp` calls and the framework PACKAGE each imports from. The legit split
   is `app.ts` (web build) + `spa.tsx` (web browser) + `server.ts` (worker) — **bless it.** Flag: (a)

@@ -1,6 +1,6 @@
 ---
 name: moku-release
-description: Sets up and runs CI, versioning and npm publishing for moku packages, and CI plus Cloudflare deploy for moku apps, the same way in every project. Use when someone asks how to publish, release, version, set up GitHub Actions or CI, fix a failed release, or when the conductor reaches the release station.
+description: Sets up and runs CI, versioning and npm publishing for moku packages, and CI plus Cloudflare deploy for moku apps, the same way in every project. Also orders the steps for shipping a moku game: the web build or a store build. Use when someone asks how to publish, release, version, ship a game, set up GitHub Actions or CI, fix a failed release, or when the conductor reaches the release station.
 when_to_use: First publish of a package, any later release, a release or CI that fails, migrating a project off a hand-written workflow, or the release station of a change.
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, AskUserQuestion
 model: fable
@@ -105,6 +105,51 @@ bun add https://pkg.pr.new/@moku-labs/core@42
 and `release:doctor` both refuse it, so switch the dependency back to a real version before merging.
 The pkg.pr.new GitHub App has to be installed on the organization once, and the package repository
 has to be public.
+
+## A game
+
+A game is not a package. Nothing goes to npm, and the three `release:*` commands do not apply. At this
+station the person picks a target: the web, the stores, or both. The scripts and the `config.ts` of a
+game belong to the `moku-game` skill (`references/hello-world.md`, `references/device.md`), and the
+packager to the `moku-native` skill. Load them for the details. This section only orders the steps.
+
+**Web.** `bun run build` writes the production page and the packed assets to `dist/web`. A game got
+the app caller at init, `examples/app/ci.yml`. It runs `lint`, `typecheck`, `test:coverage` and `build`
+on every pull request, and the `deploy` script on every push to `main`. The template's `deploy` only
+prints that no target is picked. To ship the web build, replace that script with the command that
+uploads `dist/web` to the host the person names. The workflow passes the two Cloudflare secrets, as
+for an app.
+
+**Stores.** The game needs a `native` section in `config.ts` and `@moku-labs/native` as a dev
+dependency. The builds run on the person's machine:
+
+```bash
+bun run native doctor ios        # what the machine lacks for the target; a warning does not fail it
+bun run native build ios         # the device build: the .ipa lands in dist-native/ios/
+bun run native build android     # the release .apk lands in dist-native/android/
+```
+
+`bun run native build ios --simulator` builds the unsigned `.app` for the simulator. That is a check
+for the e2e station, not a release.
+
+Not automated. Say so before the person expects it:
+
+- **Signing.** The `config.ts` of a game has no signing field. For iOS the person signs in to Xcode
+  and picks the team by hand in the generated Xcode project under `.moku/tauri/`, Signing &
+  Capabilities, before the device build. That folder is generated and git-ignored, so the choice is
+  not in the repository. Never enter Apple or Google credentials yourself, and never write a secret
+  into the game.
+- **The Play bundle.** `moku-game native build android` builds an `.apk`. `@moku-labs/native` can
+  build an `.aab` and sign an Android release from a keystore, but the `config.ts` of a game reaches
+  neither.
+- **The upload.** No command here sends a build to App Store Connect or Google Play. The person does
+  that with the store's own tools.
+- **The web deploy command.** No pack ships one for a game, and none was run. Agree on it with the
+  person, and run it once by hand before `main` runs it.
+- **CI.** The game's `ci.yml` builds the web page only. It builds no native app.
+
+The rails are the same as for any project: `moku-rails enter release` first, `moku-rails done release`
+last. A game has no `release:doctor`, so the station stays optional for it in every cycle.
 
 ## Walking someone through it
 

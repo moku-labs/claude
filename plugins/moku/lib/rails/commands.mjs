@@ -429,15 +429,21 @@ export function waves({ root, flags }) {
 
 /**
  * Say who makes a quick edit: the fast agent or the builder. Counted from the files the edit touches.
+ * In a game the root wiring, the doors and the state sit outside `src/`, so the project type is one of the facts.
  *
  * @param {Args} args positional: project-relative files; flags: --misses <n>
  * @returns {Result} one line: `fast`, or `deep: <reasons>`
  * @example
  * tier({ root, positional: ["src/plugins/hud/view.ts"], flags: {} }); // lines: ["fast"]
+ * tier({ root: gameRoot, positional: ["game.ts"], flags: {} }); // lines: ["deep: game.ts: it is the game's root wiring"]
  */
 export function tier({ root, positional, flags }) {
   const misses = Number(optional(flags.misses) ?? 0);
-  const verdict = tweakTier(positional, { exists: (path) => existsSync(resolve(root, path)), misses: Number.isFinite(misses) ? misses : 0 });
+  const game = projectType(root) === "game";
+
+  // A game's sensitive paths are anchored at the project root: "./game.ts" must read as "game.ts"
+  const paths = game ? positional.map((path) => relative(root, resolve(root, path))) : positional;
+  const verdict = tweakTier(paths, { exists: (path) => existsSync(resolve(root, path)), misses: Number.isFinite(misses) ? misses : 0, game });
 
   return { code: 0, lines: [verdict.tier === "fast" ? "fast" : `deep: ${verdict.reasons.join("; ")}`], data: verdict };
 }

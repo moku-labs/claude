@@ -28,6 +28,11 @@ There are two lint stacks. The root file says which one a project is on.
 A legacy project is not "below target" because of its linter. It stays on TypeScript 6, because
 typescript-eslint needs the TypeScript JS API, which TS 7 does not have.
 
+A game is on the current stack and stays on TypeScript `6.0.3` for the same reason: the project index
+of `@moku-labs/editor` reads the code through the TypeScript JS API. A game also has no `tsdown` and
+no `tsconfig.build.json`, because `moku-game build` builds it. Its tooling is the game template of the
+`moku-game` pack, `references/hello-world.md`.
+
 ### Pinned tool versions, current stack (devDependencies)
 
 | Package | Version | Notes |
@@ -90,6 +95,10 @@ Detect the lint stack first (`lint-stacks.md`). A project is **below** its targe
 
 - Current stack (`.oxlintrc.json`): `devDependencies.typescript` below `7.0.2`, `tsdown` below `0.23.0`,
   `oxlint` below `1.86.0`, or `eslint-plugin-unicorn` not exactly `63.0.0`.
+  A game is the exception on two pins. A game is a project with `@moku-labs/game` in `dependencies`, or
+  `type: game` in `.planning/moku.md`. Its `typescript` target is `6.0.3`: only a version below that is a
+  gap. It has no `tsdown` and no `tsconfig.build.json`, and their absence is not a gap. The `oxlint` and
+  `eslint-plugin-unicorn` pins hold for a game too.
 - Legacy stack (`eslint.config.*`): `devDependencies.typescript` matches `^5` or `5.*` (not `^6`/`6.*`),
   `typescript-eslint` `< 8.58.0`, or `tsdown` `< 0.22.1`. TypeScript 6 is the legacy target, not a gap.
 - `tsconfig.json` → `compilerOptions.types` is absent (TS6 needs it explicit).

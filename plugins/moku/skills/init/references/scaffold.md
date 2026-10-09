@@ -45,7 +45,7 @@ Identical for framework, consumer app and library. Copy each body from `tooling-
 | 13 | `.gitignore` | Includes `.claude` and `.planning`. |
 | 14 | `cspell.json` | Seed `words` from `../../moku-core/references/glossary.md`. |
 | 15 | `.claude/settings.local.json` | The safe default permission allow-list. |
-| 16 | `CLAUDE.md` | From the template in `tooling-config.md`, with the real name and description. Frameworks show the three-layer model, consumers show `createApp` usage, libraries drop the architecture section. |
+| 16 | `CLAUDE.md` | From the template in `tooling-config.md`, with the real name and description. Frameworks show the three-layer model, consumers show `createApp` usage, libraries drop the architecture section. A game takes the game variant of the `moku-game` pack, `references/hello-world.md` section "CLAUDE.md": its scripts, TypeScript 6 and layout differ. |
 
 `.gitignore` is the one file to merge rather than overwrite. When one already exists, keep it and
 append whichever of `.claude/` and `.planning/` is missing, under a short comment. `.planning/` is

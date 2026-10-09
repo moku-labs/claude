@@ -51,6 +51,10 @@ and the duplicate/facade subcase of **I2**; **I3–I5** are WARNING/guidance —
   `@moku-labs/core` dependency, to "set up its own framework". That is Layer-2 work.
 - **Detect:** `@moku-labs/core` in an app's `package.json` dependencies; `createCoreConfig`/`createCore`
   in app source.
+- **Game exception:** in a project whose `.planning/moku.md` says `type: game`, `@moku-labs/core` and
+  `@moku-labs/common` pinned in `dependencies` are the peers of `@moku-labs/game`. The game template of
+  the `moku-game` skill pins them, and they are not an I1 finding. The source half holds in a game: no
+  `createCoreConfig`/`createCore`, no import of `@moku-labs/core`.
 - **Fix:** `createApp` from the framework package; author plugin-shaped concerns via the framework's
   re-exported `createPlugin`.
 - **Severity:** **BLOCKER.** (This is the one structural rule that genuinely holds for every app —

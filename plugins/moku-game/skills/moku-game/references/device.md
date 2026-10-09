@@ -21,17 +21,24 @@ export default {
 ```
 
 ```sh
-bun add --exact @moku-labs/system@0.3.1        # system names a plugin, or save is "store"
-bun add --exact -d @moku-labs/native@0.3.3     # moku-game native
+# system names a plugin, or save is "store": the package and the Tauri peers of the list above
+bun add --exact @moku-labs/system@0.3.2 @tauri-apps/api@2.12.2 @tauri-apps/plugin-haptics@2.4.1
+bun add --exact @tauri-apps/plugin-store@2.5.0   # only with "store" in system, or save: "store"
+bun add --exact -d @moku-labs/native@0.3.3       # moku-game native
 ```
 
-| `system` name | The engine gets |
-|---|---|
-| `lifecycle` | Pause and resume, the `"background"` reason of `lifecycle` |
-| `back` | The hardware Back press and `exit()` |
-| `haptics` | The `haptic` effect |
-| `keepAwake` | The screen wake lock while the game runs |
-| `store` | The store save (`save: "store"`): idb on the web, the Tauri store in the app |
+`@moku-labs/system` declares its Tauri packages as optional peers, so Bun does not install them. The
+page bundles the Tauri provider of every named plugin, in the web build too. Without the peer
+`moku-game build` stops: `Could not resolve: "@tauri-apps/api/app"`. Install the peer of each name in
+`system`, and no other.
+
+| `system` name | The engine gets | Tauri peer |
+|---|---|---|
+| `lifecycle` | Pause and resume, the `"background"` reason of `lifecycle` | `@tauri-apps/api`. The build passes without it; the app then follows `visibilitychange` alone |
+| `back` | The hardware Back press and `exit()` | `@tauri-apps/api` |
+| `haptics` | The `haptic` effect | `@tauri-apps/plugin-haptics` |
+| `keepAwake` | The screen wake lock while the game runs | none |
+| `store` | The store save (`save: "store"`): idb on the web, the Tauri store in the app | `@tauri-apps/plugin-store` |
 
 The page `moku-game` writes imports `systemShellOf` from `@moku-labs/game/app/system` with one `import()`
 per named plugin, in the order above, builds the system app before the game and passes its provider to
