@@ -11,7 +11,8 @@ trusting a wave:
    `verify-failed` and route to gap closure.
 2. Every path in the builder's `filesCreated` exists on disk. A missing file is `verify-failed`.
 3. Run `bunx tsc --noEmit`, `bun run lint` and `bun run test` yourself. Where a builder's counts
-   disagree with the tools, the tools win.
+   disagree with the tools, the tools win. This is the wave's one run of the whole test script: keep
+   its output in a file and read the file, as `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md` says.
 4. Builders do not commit. A wave commit in `git log` from a builder is a flag.
 
 Only plugins that survive reconciliation reach Step 4a. Record the results in
@@ -128,7 +129,9 @@ New framework wiring can break plugins that passed in earlier waves, so re-test 
 **When.** Skip for Wave 0 (nothing earlier exists). Run from Wave 1 on. Skip a previously verified
 plugin only when its own hash is unchanged, none of its dependencies changed this wave, and no
 framework file (`src/config.ts`, `src/plugins/index.ts`, `src/index.ts`) changed. If a framework file
-changed, re-test everything.
+changed, re-test everything. Skip the whole step when the whole test script was already green on this
+exact tree: Step 4a0's run with no file edited since, or a commit through a hook that runs the script.
+That run included these plugins, and the Bash hook says so when the command starts.
 
 **How.**
 

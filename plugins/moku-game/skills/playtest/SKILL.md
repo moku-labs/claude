@@ -75,6 +75,10 @@ bun run test                       # vitest: the headless scenarios
 bun run test:visual                # the headless leg of the visual tests, when the script exists
 ```
 
+Each of these runs once per tree. Keep the output in a file and read the file; a run on files nobody
+edited is not started again, also not in the fix loop of Step 6. This is the moku test-run rule;
+`moku-rails tests` prints the path of the file that holds it, and the runs that were repeated.
+
 Then the gap check: every rest node of FOCUS has at least one `walk` scenario that reaches it and
 leaves it through each outcome a player can trigger. List the node files with `rest: true`
 (`features/*/flow/*.ts`, or `nodes/*.ts` on the flat layout), grep `tests/**` for `at: "<path>"`. A

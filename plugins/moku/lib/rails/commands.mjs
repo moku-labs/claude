@@ -10,10 +10,14 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
+import { commitHook } from "./commit-hook.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
+import { parseTestOutput, readings } from "./test-output.mjs";
+import { reportLines, slowOffer, statusLine } from "./test-report.mjs";
+import { appendRun, earlierRun, fullKey, readRuns, saveOutput, slowThreshold, summarize, treeKey } from "./test-runs.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
 import { isDone, markWave, nextWave, readWaves } from "./waves.mjs";
 
@@ -22,6 +26,9 @@ import { isDone, markWave, nextWave, readWaves } from "./waves.mjs";
 
 /** Exit code for "the rails refuse this move". Distinct from 1, a usage or runtime error. */
 const REFUSED = 2;
+
+/** `status` speaks of the test runs of the last day; `tests` has the whole log. */
+const RECENT_TESTS_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Where the project stands: initialized or not, open changes, debts.
@@ -48,6 +55,11 @@ export function status({ root }) {
   if (ledger.ideas.length > 0) lines.push(`Backlog: ${ledger.ideas.length} idea(s) parked for later.`);
   const agents = runningAgents(root);
   if (agents.length > 0) lines.push(`Agents: ${describeAgents(agents)}.`);
+
+  // Test runs repeated in the last day, and slow tests: one line, so the next plan of test runs starts from it
+  const lately = readRuns(root).filter((run) => Date.now() - Date.parse(run.at) < RECENT_TESTS_MS);
+  const testing = statusLine(summarize(lately, slowThreshold(root)));
+  if (testing) lines.push(testing);
 
   // A plan with waves: the next one is named here, so nobody has to work it out from the tables by eye
   const stateFile = resolve(root, ".planning", "STATE.md");
@@ -190,6 +202,8 @@ export function skip({ root, positional, flags }) {
  * One green run confirms `tests` for every change closed on the same tree. The tree is named by its HEAD
  * commit while nothing is uncommitted; the ledger keeps the commit of the last green run, and a check on
  * that commit does not run the script again. A commit or an edit names another tree, so the script runs.
+ * The Bash hook writes the same record after a commit whose pre-commit hook ran the whole test script
+ * (commit-hook.mjs): that commit is the green run. No other run from a shell confirms anything here.
  *
  * @param {Args} args positional: tests | verify | docs
  * @returns {Result}
@@ -260,7 +274,28 @@ export function close({ root, flags }) {
   if (!change.done.includes("close")) change.done.push("close");
   saveLedger(root, ledger);
 
-  return ok(`Closed ${change.id}.`);
+  // Slow tests are offered to the person here, as a follow-up; the close itself never waits for them
+  const offer = slowOffer(summarize(readRuns(root), slowThreshold(root)));
+
+  return { code: 0, lines: [`Closed ${change.id}.`, ...(offer ? [offer] : [])] };
+}
+
+/**
+ * The test runs of this checkout as numbers: how many ran and who ran them, how many repeated a run on
+ * an unchanged tree and what that cost, what the commit hook proves, and the slow tests. Read-only.
+ *
+ * @param {Args} args
+ * @returns {Result} one fact per line; `data` holds the same as numbers, with the hook under `hook`
+ * @example
+ * tests({ root, positional: [], flags: {} }); // lines: ["Test runs: 14 since 2026-10-09 (…), 312 s in tests.", "Redundant: none.", …]
+ */
+export function tests({ root }) {
+  if (!isOnRails(root)) return offRails();
+
+  const report = summarize(readRuns(root), slowThreshold(root));
+  const hook = commitHook(root);
+
+  return { code: 0, lines: reportLines(report, hook), data: { ...report, hook: hook ?? null } };
 }
 
 /**
@@ -591,19 +626,45 @@ export function mayStop({ root }) {
 /** Longest the test script may run before the check gives up. */
 const TEST_TIMEOUT_MS = 15 * 60 * 1000;
 
+/** The rails' test run, as the test-run log names it. */
+const TEST_COMMAND = "node --run test";
+
 /**
  * Run the project's `test` script. `node --run` needs no package manager, so the rails stay runtime-neutral.
+ * The run goes to the test-run log with its duration, and its whole output is kept in a file, so a red
+ * run is read there and not run a second time.
  *
  * @param {string} root
  * @returns {string | undefined} the refusal reason when the tests are red, otherwise undefined
  */
 function runTests(root) {
+  const tree = treeKey(root);
+  const started = Date.now();
   const run = spawnSync(process.execPath, ["--run", "test"], { cwd: root, encoding: "utf8", timeout: TEST_TIMEOUT_MS });
+  const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
+
+  const kept = saveOutput(root, output);
+  logRun(root, { tree, started, green: run.status === 0, output });
   if (run.status === 0) return undefined;
 
-  const tail = `${run.stdout ?? ""}${run.stderr ?? ""}`.trim().split("\n").slice(-15).join("\n");
+  const tail = output.trim().split("\n").slice(-15).join("\n");
 
-  return `The test script is red (exit ${run.status ?? "timeout"}), so "tests" stays unconfirmed. Fix the tests, then run the check again.\n${tail}`;
+  return `The test script is red (exit ${run.status ?? "timeout"}), so "tests" stays unconfirmed. Fix the tests, then run the check again. The whole output is in ${kept}.\n${tail}`;
+}
+
+/**
+ * Write the rails' own test run to the log. The tree is kept only when it is still the one the run
+ * started on, and a run on a tree that already had its answer is marked as a repeat.
+ *
+ * @param {string} root
+ * @param {{ tree: string | undefined, started: number, green: boolean, output: string }} facts
+ */
+function logRun(root, { tree, started, green, output }) {
+  const key = fullKey(root) ?? TEST_COMMAND;
+  const earlier = earlierRun(readRuns(root), { command: TEST_COMMAND, key, scope: "full", exitKnown: true }, tree);
+  const same = tree !== undefined && treeKey(root) === tree;
+
+  appendRun(root, { at: new Date(started).toISOString(), command: TEST_COMMAND, key, scope: "full", ...(same ? { tree } : {}), ms: Date.now() - started, outcome: green ? "green" : "red", by: "rails", ...(earlier ? { repeats: earlier.outcome } : {}), ...readings(parseTestOutput(output)) });
 }
 
 /** @param {string | true | undefined} value */

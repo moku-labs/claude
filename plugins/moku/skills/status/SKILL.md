@@ -28,6 +28,9 @@ Read four things from it and lead with them:
 | `debts` | Work the rails consider unsettled: a change stuck inside a station, uncommitted work no change accounts for. |
 | `ideas` | The backlog kept with `moku-rails idea`. |
 
+A `Tests:` line in the plain output means test runs were repeated on an unchanged tree, or tests are
+slow. Relay it, and get the list with `moku-rails tests`.
+
 A brand-new directory has no ledger. `status` still works there and reports "not initialized".
 
 **Debts come first in the output.** They are the reason a next step is blocked.

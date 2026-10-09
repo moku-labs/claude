@@ -48,10 +48,12 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 
 **Delta:**
 1. Read the existing plugin code and its tests first.
-2. Run the existing suite to confirm the baseline is green; keep it green.
+2. Run the plugin's existing tests once to confirm the baseline is green; keep it green.
 3. Write tests for the new behavior only — those are your red-first tests. Do not rewrite the suite.
 4. Implement until the new tests pass and every pre-existing test still passes.
 5. Preserve the public API unless the spec's `## Changes` says otherwise. If it changes, say so in the contract — the README-freshness check will want a README update.
+
+**Test runs.** One run per edit, scoped to your plugin, with its output kept in a file that you read as often as you need. Never start the tests again to see another part of what they printed, and never run the project's whole test script: the orchestrator runs it once per wave. The rule and the command to keep the output are in `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`; the Bash hook tells you when you repeat a run on files nobody edited.
 
 ## Lint as you go
 
@@ -68,7 +70,7 @@ skill).
 ```bash
 biome check src/plugins/{name}/
 oxlint src/plugins/{name}/      # current stack; legacy stack: eslint src/plugins/{name}/
-bunx vitest run src/plugins/{name}/   # `bun test src/plugins/{name}/` when the project has no vitest
+bunx vitest run src/plugins/{name}/   # `bun test src/plugins/{name}/` when the project has no vitest; skip it when this command was green and you edited nothing since
 bunx tsc --noEmit               # when it is cheap; otherwise the orchestrator runs it
 ```
 

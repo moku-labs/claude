@@ -270,16 +270,20 @@ Not part of the initial build. This runs for `/moku:build add {name}`, for a res
 3. **LLM docs** — regenerate `llms.txt` and `llms-full.txt` in full; they are cheap and must match the
    current state exactly.
 4. **Integration tests** — add scenarios for the changed or added behavior and any new cross-plugin
-   interaction, then run the whole suite for regressions.
-5. **Coverage** — re-run `bun run test:coverage`. New uncovered code that drops it below 80% goes to
-   gap closure.
+   interaction. Item 5 runs them with every other test.
+5. **Coverage** — re-run `bun run test:coverage`. It runs the whole suite, so it is the regression run
+   too. New uncovered code that drops it below 80% goes to gap closure.
 6. **Release** — if the change ships, hand over to the `moku:moku-release` skill (Step 5.10).
 
 Delta updates run as one pass, not stop-and-resume: work out what changed by diffing the current plugin
 list against the archived STATE.md, run items 1–5 for what it touched, then
-`bun run format` → `bun run lint` → `bunx tsc --noEmit` → `bun run test`, and report.
+`bun run format` → `bun run lint` → `bunx tsc --noEmit`, and report. `bun run test` runs here only when
+a file changed after item 5: on an unchanged tree the coverage run already answered it.
+
+Every test run in this file follows `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`:
+one run per tree, the output kept in a file, and no whole run right before a commit whose hook runs it.
 
 > **Checkpoint cost under `--continue`:** when the pre-commit hook runs the full gate (build, publint,
 > lint, whole test suite), every per-wave checkpoint pays it, multiplied by the wave count. On a large
 > project prefer a lighter per-wave checkpoint (`tsc` plus the changed scope's tests) and the full gate
-> once at the end.
+> once at the end. `moku-rails tests` says what the hook of this project runs.

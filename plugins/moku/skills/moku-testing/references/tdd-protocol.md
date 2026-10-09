@@ -123,6 +123,9 @@ Moku projects test with Vitest. Use `bun test <path>` instead only when the proj
 `package.json`: Bun's own runner has no `vi.stubGlobal` and no `expectTypeOf(...).parameter`, so it
 fails Vitest suites that are green. The same rule holds for every test command below.
 
+Each test command below runs once per edit. Keep its output in a file and read the file; do not start
+the tests again to see another part of what they printed (`test-runs.md`, next to this file).
+
 - Tests MUST fail at this point (stubs return wrong values, methods don't exist yet)
 - If any test passes on stubs, the test is too weak — add assertions that verify real behavior
 - Record the total test count and failing count for the output contract

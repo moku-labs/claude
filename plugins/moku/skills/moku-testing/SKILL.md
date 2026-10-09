@@ -18,6 +18,10 @@ The `moku-builder` agent follows Red → Green → Refactor when constructing pl
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md` for the full TDD protocol: four phases (Types → Red → Green → Refactor), output contract extensions, core plugin adaptations, and edge cases.
 
+## Test Runs
+
+When to run which tests, and how often, is one rule for every station: `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`. In short: one run per tree, the output kept in a file and read from there, the plugin's own tests while it is built, the whole script once per wave and once at the close, and no whole run right before a commit whose hook runs it. `moku-rails tests` prints the runs that were repeated and the slow tests.
+
 ## Context Tiers
 
 Every Moku plugin callback receives a specific context tier. Tests mock the matching tier; using fields from another tier is a blocker.

@@ -17,7 +17,8 @@
       ] },
       { "matcher": "Bash", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-bash.mjs", "timeout": 5 },
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/verify-before-commit.sh", "timeout": 60 }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/verify-before-commit.sh", "timeout": 60 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-test-run.mjs", "timeout": 10 }
       ] }
     ],
     "PostToolUse": [
@@ -28,7 +29,13 @@
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-agent-result.mjs", "timeout": 5 }
       ] },
       { "matcher": "Bash", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit-review.sh", "timeout": 30 }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit-review.sh", "timeout": 30 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-test-run.mjs", "timeout": 10 }
+      ] }
+    ],
+    "PostToolUseFailure": [
+      { "matcher": "Bash", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-test-run.mjs", "timeout": 10 }
       ] }
     ],
     "PreCompact": [

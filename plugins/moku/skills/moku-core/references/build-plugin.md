@@ -37,7 +37,8 @@ with `skeleton-conventions.md` (hook-compliant authoring) and `house-style.md` (
 15. `Config` and `Api` are `type` aliases, never `interface`. `createCoreConfig<Config, Events, [typeof p1, …]>`
     requires the third tuple argument once any explicit type argument is given.
 16. The verification chain is `bunx tsc --noEmit`, `bun run lint`, `bun run test` and `bun run build` —
-    the build step catches bundling bugs `tsc` misses.
+    the build step catches bundling bugs `tsc` misses. Each runs once per tree; when and how often the
+    tests run is in `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`.
 17. Do not guess paths: `ls` or glob before `Read`, never `Read` a directory, and take the exact spec
     path from the STATE.md plugin table — spec numbers are not guessable.
 
