@@ -10,7 +10,7 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 
 | Plugin | Skills | Agents | Hooks | Bins | Default |
 |---|---:|---:|---:|---:|---|
-| `moku` | 19 | 14 | 16 scripts / 7 events | 2 | enabled |
+| `moku` | 19 | 14 | 21 scripts / 10 events | 2 | enabled |
 | `moku-web` | 2 | 4 | — | — | enabled |
 | `moku-design` | 2 | 1 | — | 1 | enabled |
 | `moku-worker` | 1 | — | — | — | enabled |
@@ -84,25 +84,27 @@ Only the orchestrating session spawns agents; no agent lists `Agent` in `tools`.
 A Sonnet agent never closes a gate: its findings go through `moku-skeptic` and the verdict is the
 orchestrating session's.
 
-### Hooks — 18 scripts across 9 events (`hooks/hooks.json`)
+### Hooks — 21 scripts, 15 of them wired to 10 events (`hooks/hooks.json`)
 
 | Event | Scripts |
 |---|---|
 | `SessionStart` | `detect-moku-project.sh`, `session-rails.mjs` |
+| `UserPromptSubmit` | `on-prompt.mjs` |
 | `PreToolUse` (Write, Edit) | `pre-write.mjs` |
-| `PreToolUse` (Bash) | `verify-before-commit.sh` |
+| `PreToolUse` (Bash) | `pre-bash.mjs`, `verify-before-commit.sh`, `on-test-run.mjs` |
 | `PostToolUse` (Write, Edit) | `format-on-save.sh` (async) |
-| `PostToolUse` (Bash) | `pre-commit-review.sh` |
+| `PostToolUse` (Bash) | `pre-commit-review.sh`, `on-test-run.mjs` |
 | `PostToolUse` (Agent) | `on-agent-result.mjs` |
+| `PostToolUseFailure` (Bash) | `on-test-run.mjs` |
 | `PreCompact` / `PostCompact` | `precompact-state.sh`, `postcompact-state.sh` |
 | `SubagentStart` | `on-subagent-start.mjs` |
 | `SubagentStop` | `on-subagent-stop.mjs` |
 | `Stop` | `on-stop.mjs` |
 
 Not wired into `hooks.json`, called by the scripts above or by skills:
-`check-plugin-antipatterns.sh`, `validate-common-usage.sh`, `validate-plugin-index.sh`,
-`validate-plugin-structure.sh`. `moku-statusline.sh` is wired through `settings.json`
-(`subagentStatusLine`). Output style: `output-styles/moku.md`.
+`check-plugin-antipatterns.sh`, `link-planning.mjs`, `validate-common-usage.sh`,
+`validate-plugin-index.sh`, `validate-plugin-structure.sh`. `moku-statusline.sh` is wired through
+`settings.json` (`subagentStatusLine`). Output style: `output-styles/moku.md`.
 
 ### Bins (2)
 
