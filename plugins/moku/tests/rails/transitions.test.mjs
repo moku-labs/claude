@@ -138,3 +138,48 @@ describe("who makes a quick edit", () => {
     assert.match(tweakTier(["src/plugins/hud/view.ts"], { exists, misses: 2 }).reasons[0], /missed this edit 2 times/);
   });
 });
+
+describe("who makes a quick edit in a game", () => {
+  const exists = () => true;
+  const inGame = (paths) => tweakTier(paths, { exists, game: true });
+
+  it("the builder takes the root wiring: the game, the root flow and the page", () => {
+    for (const file of ["index.ts", "game.ts", "config.ts"]) {
+      assert.deepEqual(inGame([file]), { tier: "deep", reasons: [`${file}: it is the game's root wiring`] }, file);
+    }
+  });
+
+  it("the builder takes a door: the index of a layer, of a feature and of the plugins", () => {
+    for (const file of ["shared/index.ts", "shared/rules/index.ts", "features/index.ts", "features/hello/index.ts", "plugins/index.ts"]) {
+      assert.match(inGame([file]).reasons[0], /door of a layer or a feature/, file);
+    }
+  });
+
+  it("the builder takes the public surface of the game's own plugin, and the state and the kit", () => {
+    assert.match(inGame(["plugins/exit/index.ts"]).reasons[0], /plugin's public surface/);
+    assert.match(inGame(["plugins/exit/api.ts"]).reasons[0], /plugin's public surface/);
+    assert.match(inGame(["core/state.ts"]).reasons[0], /game's state or kit/);
+    assert.match(inGame(["core/kit.ts"]).reasons[0], /game's state or kit/);
+  });
+
+  it("the fast agent keeps what is nobody's surface: a view, a node, a rule, strings, balance data", () => {
+    for (const file of ["features/hello/views/hello-screen.tsx", "features/hello/flow/tap.ts", "features/hello/rules/score.ts", "features/hello/strings/en.json", "shared/assets.ts", "core/tables.ts", "plugins/exit/handlers.ts"]) {
+      assert.deepEqual(inGame([file]), { tier: "fast", reasons: [] }, file);
+    }
+  });
+
+  it("still counts files, new files and tooling the way every project does", () => {
+    assert.match(inGame(["features/hello/flow/a.ts", "features/hello/flow/b.ts", "features/hello/flow/c.ts"]).reasons[0], /3 files, more than 2/);
+    assert.match(tweakTier(["features/hello/flow/new.ts"], { exists: () => false, game: true }).reasons[0], /a new file/);
+    assert.match(inGame(["package.json"]).reasons[0], /tooling or configuration/);
+    assert.match(inGame(["vitest.config.ts"]).reasons[0], /tooling or configuration/);
+    assert.match(inGame(["src/index.ts"]).reasons[0], /project's root wiring/);
+  });
+
+  it("leaves the same names alone in a project that is not a game", () => {
+    for (const file of ["index.ts", "game.ts", "config.ts", "core/state.ts", "features/hello/index.ts", "shared/index.ts", "plugins/index.ts", "plugins/moku/index.ts"]) {
+      assert.deepEqual(tweakTier([file], { exists }), { tier: "fast", reasons: [] }, file);
+      assert.deepEqual(tweakTier([file], { exists, game: false }), { tier: "fast", reasons: [] }, file);
+    }
+  });
+});
