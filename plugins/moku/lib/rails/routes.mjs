@@ -80,6 +80,18 @@ const TWEAK_SENSITIVE = [
 ];
 
 /**
+ * The same kinds of path in a game. A game has no `src/`: its wiring, doors and core sit at the project
+ * root (the layout of the `moku-game` skill). Read only when the project is a game, because a framework
+ * repository may have a root `index.ts` or a `plugins/` folder that mean something else.
+ */
+const GAME_TWEAK_SENSITIVE = [
+  { pattern: /^(?:index|game|config)\.ts$/, why: "it is the game's root wiring" },
+  { pattern: /^(?:shared|features)\/(?:[^/]+\/)?index\.ts$|^plugins\/index\.ts$/, why: "it is the door of a layer or a feature" },
+  { pattern: /^plugins\/[^/]+\/(?:index|types|api|state|events)\.ts$/, why: "it is a plugin's public surface" },
+  { pattern: /^core\/(?:state|kit)\.ts$/, why: "it is the game's state or kit" },
+];
+
+/**
  * Who makes a quick edit: the fast agent, or the builder. The answer is counted, not judged: a model that
  * sizes its own task sizes it small.
  *
@@ -88,11 +100,12 @@ const TWEAK_SENSITIVE = [
  * already missed twice.
  *
  * @param {string[]} paths project-relative files the edit touches
- * @param {{ exists: (path: string) => boolean, misses?: number }} facts whether a file exists, and how often the fast agent already missed this edit
+ * @param {{ exists: (path: string) => boolean, misses?: number, game?: boolean }} facts whether a file exists, how often the fast agent already missed this edit, and whether the project is a game
  * @returns {{ tier: "fast" | "deep", reasons: string[] }} `reasons` is empty for the fast tier
  * @example
  * tweakTier(["src/plugins/hud/view.ts"], { exists: () => true }); // { tier: "fast", reasons: [] }
  * tweakTier(["src/plugins/hud/index.ts"], { exists: () => true }); // { tier: "deep", reasons: ["src/plugins/hud/index.ts: it is a plugin's public surface"] }
+ * tweakTier(["game.ts"], { exists: () => true, game: true }); // { tier: "deep", reasons: ["game.ts: it is the game's root wiring"] }
  */
 export function tweakTier(paths, facts) {
   const reasons = [];
@@ -104,9 +117,31 @@ export function tweakTier(paths, facts) {
   for (const path of paths) {
     if (!facts.exists(path)) reasons.push(`${path}: a new file`);
 
-    const sensitive = TWEAK_SENSITIVE.find((entry) => entry.pattern.test(path));
-    if (sensitive) reasons.push(`${path}: ${sensitive.why}`);
+    const why = sensitiveReason(path, facts.game === true);
+    if (why) reasons.push(`${path}: ${why}`);
   }
 
   return { tier: reasons.length === 0 ? "fast" : "deep", reasons };
+}
+
+/**
+ * Why a small edit to this path can break more than it shows, or undefined when it cannot. Every project
+ * has the `src/` and tooling paths. A game adds its root files, its doors and its state, which sit outside
+ * `src/`. In any other project those names mean nothing.
+ *
+ * @param {string} path project-relative path
+ * @param {boolean} game the project is a game
+ * @returns {string | undefined} the reason, as the end of the sentence "<path>: ..."
+ * @example
+ * sensitiveReason("features/hello/index.ts", true); // "it is the door of a layer or a feature"
+ * sensitiveReason("features/hello/index.ts", false); // undefined
+ */
+function sensitiveReason(path, game) {
+  const everywhere = TWEAK_SENSITIVE.find((entry) => entry.pattern.test(path));
+  if (everywhere) return everywhere.why;
+
+  // The game table is anchored at the project root, so only a game consults it
+  if (!game) return undefined;
+
+  return GAME_TWEAK_SENSITIVE.find((entry) => entry.pattern.test(path))?.why;
 }
