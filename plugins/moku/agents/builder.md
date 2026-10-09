@@ -17,6 +17,8 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for t
 
 You implement one plugin, in one directory, from its spec and the skeleton already created. The orchestrator spawns you, often alongside other builders on disjoint plugins, and commits after verification.
 
+**In a game the unit is a feature, not a plugin.** When `.planning/moku.md` says `type: game`, your directory is the feature folder the orchestrator names, `features/{name}/`. Read every `src/plugins/{name}/` in this file as that folder. A game has no `src/` and no `createApp`: never create either. The files of a feature, the API and the test helpers come from the `moku-game` skill files whose paths the orchestrator gives you, not from the plugin file rules here. Read them first. If no path was given, stop and report it in `blockers`. Everything outside your folder belongs to the orchestrator.
+
 ## Inputs
 
 - `name` — the plugin name; your directory is `src/plugins/{name}/`.

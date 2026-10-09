@@ -130,6 +130,7 @@ The checker's one architecture BLOCKER is I1: a Layer-3 app that defines a frame
 - Every plugin gets an implementation order number and a wave assignment. Plugin 1 depends on nothing; each later plugin depends only on already-numbered plugins.
 - Structure: `src/config.ts`, `src/index.ts` and `src/plugins/` only. Any other root file or folder is justified to the user explicitly.
 - Consumer code imports `createApp` and `createPlugin` from the framework package, never from `@moku-labs/core`.
+- A game is the exception to the two rules above. A project whose `.planning/moku.md` says `type: game` follows the layout of the `moku-game` skill: load it before the first spec. One spec per feature in `features/<f>/`. No `src/`, no `createApp`, also not as the fix for an I1 finding. Where a plan reference names `src/` or `createApp`, the game layout wins. If the skill is not available, the `moku-game` pack is not installed: stop and ask the person to install it.
 - Include `onStart`/`onStop` only when there is a real resource to manage, and say why in the spec either way.
 - Every spec carries package dependencies, a testing strategy, verification criteria, JSDoc requirements per `moku-core/references/jsdoc-examples.md` (the contract and a scenario `@example` on every `Api` type member), and a consumer-API example with every plugin method typed.
 - Specs are self-contained: someone reading them implements the whole thing without asking further questions.

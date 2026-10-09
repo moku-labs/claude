@@ -184,6 +184,25 @@ describe("moku-rails: the habit tracker walkthrough", () => {
     assert.equal(rails(root, "guard-bash", "echo done > .planning/notes.md").code, 0);
   });
 
+  it("gates a game's source roots once the marker says type: game, and only then", () => {
+    const game = project({ initialized: true });
+    writeFileSync(join(game, ".planning", "moku.md"), "# Moku Project\n\ntype: game\nname: hello-game\n");
+    const app = project({ initialized: true });
+
+    assert.match(rails(game, "guard", "features/hello/flow/new.ts").text, /writing station/);
+    assert.equal(rails(game, "guard", "game.ts").code, 2);
+    assert.equal(rails(game, "guard-bash", "cat > core/state.ts <<'EOF'").code, 2);
+    assert.equal(rails(game, "guard", "generated/assets.ts").code, 0);
+    assert.equal(rails(game, "guard", "tests/integration/hello.test.ts").code, 0);
+    assert.equal(rails(app, "guard", "features/hello/flow/new.ts").code, 0, "not a game: the name means nothing");
+    assert.equal(rails(app, "guard", "plugins/index.ts").code, 0);
+
+    rails(game, "open", "2026-10-09-new-node", "--size", "S", "--type", "feature", "--title", "A new node");
+    rails(game, "enter", "build");
+
+    assert.equal(rails(game, "guard", "features/hello/flow/new.ts").code, 0);
+  });
+
   it("pausing with nothing open is a harmless no-op", () => {
     assert.equal(rails(project({ initialized: true }), "pause", "--reason", "x").code, 0);
   });

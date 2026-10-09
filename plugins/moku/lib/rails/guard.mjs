@@ -12,6 +12,12 @@ import { shellWriteTargets } from "./shell.mjs";
 
 const SOURCE_PATH = /(?:^|\/)src\//;
 
+/** A game has no `src/`: its source is three root files and four layer folders (the layout of the `moku-game` skill). */
+const GAME_SOURCE_PATH = /^(?:index|game|config)\.ts$|^(?:core|shared|features|plugins)\//;
+
+/** Art inside a game layer (`shared/assets/`, `features/<f>/assets/`) is delivered, not authored. A `.ts` file there is still source. */
+const GAME_ART_PATH = /\/assets\/(?!.*\.tsx?$)/;
+
 /**
  * @typedef {object} GuardFacts
  * @property {boolean} onRails the directory has a ledger or the project marker; without it the guard has no opinion
@@ -20,6 +26,7 @@ const SOURCE_PATH = /(?:^|\/)src\//;
  * @property {boolean} [routed] false while the person's last request has not been placed on the route
  * @property {boolean} [subagent] true when the writer is a subagent the orchestrator spawned from the station
  * @property {boolean} [agentsRunning] true while the station records live agents (`.planning/agents/`)
+ * @property {boolean} [game] true when the project marker says `type: game`: its source sits at the root, not in `src/`
  * @property {Array<{ status: string, station: string | null }>} changes
  */
 
@@ -37,8 +44,8 @@ export function guardWrite(filePath, facts) {
   // A path outside the project root belongs to something else
   if (filePath.startsWith("..")) return { allow: true };
 
-  // Anything outside src/ is not architecture: planning files, docs, configs
-  if (!SOURCE_PATH.test(filePath)) return { allow: true };
+  // Anything outside the source roots is not architecture: planning files, docs, configs
+  if (!isSource(filePath, facts.game === true)) return { allow: true };
 
   // A directory nobody put on the rails is none of our business, whatever its package.json names
   if (!facts.onRails) return { allow: true };
@@ -69,6 +76,23 @@ export function guardWrite(filePath, facts) {
   }
 
   return { allow: true };
+}
+
+/**
+ * True when the path is source the rails gate. Every project: anything under `src/`. A game adds its root
+ * files and layer folders, because it has no `src/`. In any other project those names mean nothing.
+ *
+ * @param {string} filePath project-relative path
+ * @param {boolean} game the project is a game
+ * @returns {boolean}
+ * @example
+ * isSource("features/hello/flow/tap.ts", true); // true
+ * isSource("plugins/moku/README.md", false); // false: a root `plugins/` folder of a framework repo
+ */
+function isSource(filePath, game) {
+  if (SOURCE_PATH.test(filePath)) return true;
+
+  return game && GAME_SOURCE_PATH.test(filePath) && !GAME_ART_PATH.test(filePath);
 }
 
 /**
