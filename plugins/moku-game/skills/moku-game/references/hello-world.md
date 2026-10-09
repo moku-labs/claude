@@ -136,8 +136,9 @@ Init writes the tooling files of `tooling-config.md`, current lint stack: Biome 
 | `.gitignore` | The tooling file plus `.moku` and `dist-native`. `moku-game dev` warns until `.moku/` is in it. |
 | `bunfig.toml` | Not written. A game has none; the engine writes its own under `.moku/`. Pin with `bun add --exact`. |
 | `tsconfig.build.json`, `tsdown.config.ts` | Not written. `moku-game build` builds the game. |
+| `CLAUDE.md` | The game variant below, in "CLAUDE.md". |
 
-The rest is unchanged: `.bun-version`, `.editorconfig`, `cspell.json`, `CLAUDE.md`. No `eslint.config.ts`
+The rest is unchanged: `.bun-version`, `.editorconfig`, `cspell.json`. No `eslint.config.ts`
 and no `declarations.d.ts`. The CI is `examples/app/ci.yml` of `@moku-labs/ci`, without its
 `build_worker_script` and `migrate_script` lines (init Step 4).
 
@@ -285,6 +286,71 @@ This is the app variant of the tooling hook. The package hook runs `validate`, `
 `test:integration`; a game has none of them. `--no-error-on-unmatched-pattern` keeps the hook quiet
 when every staged file is ignored, for example `generated/`. The `visual` job is the headless leg: it
 needs no browser and takes under a second here.
+
+## CLAUDE.md
+
+The template of `tooling-config.md` describes a package: "Build with tsdown", `test:unit`, TypeScript 7,
+`src/config.ts`, `src/plugins/`. None of that is true in a game. A game takes that template with the
+title and the four sections below in place of its own. The sections `Package Manager` and
+`Moku Development Toolkit` stay as they are. The `Specification` section points at
+`node_modules/@moku-labs/game/llms.txt` instead of the core specification.
+
+```markdown
+# [Game Name]
+
+[One-line description]. A 2D game on @moku-labs/game.
+
+## Scripts
+
+- `bun run dev` — The game page with hot reload on http://127.0.0.1:3000/
+- `bun run editor` — The same page with the editor's tools on http://127.0.0.1:3000/__editor/
+- `bun run keys` — Write `generated/`: asset keys, compiled strings, the dev manifest
+- `bun run pack` — The production asset pack in `dist/assets`
+- `bun run build` — `keys --check`, then the pack and the production page in `dist/web`
+- `bun run native` — One verb of `@moku-labs/native`. Needs `native` in `config.ts`
+- `bun run lint` — Biome check + oxlint
+- `bun run lint:fix` — Auto-fix lint issues
+- `bun run format` — Format with Biome
+- `bun run typecheck` — `tsc --noEmit`
+- `bun run test` — Headless tests (vitest)
+- `bun run test:coverage` — Tests with coverage
+- `bun run test:visual` — The headless leg of the visual tests
+- `bun run deploy` — A placeholder until the release station picks a target
+
+There is no `bunfig.toml`. Add a package with `bun add --exact`.
+
+## Code Style
+
+- **Formatter:** Biome (2-space indent, double quotes, semicolons, no trailing commas)
+- **Linter:** Biome + oxlint (`.oxlintrc.json`: unicorn, jsdoc and abbreviation rules, plus the ten `moku-game/*` engine rules)
+- **TypeScript:** 6, strict mode with `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`. Not 7: the editor's project index needs the TypeScript JS API
+- **Imports:** Use `import type`, enforced by Biome `useImportType`
+- **JSDoc:** Required on all source exports with descriptions, params, returns, and examples
+
+## Architecture
+
+A game is a folder at the project root. It has no `src/` and calls no `createApp`.
+
+- `index.ts` — the game as one data object (`defineGameApp`)
+- `config.ts` — the page, the native app and the save, as plain data
+- `game.ts` — the root flow
+- `core/` — the state and the kit
+- `shared/` — what two features need
+- `features/<name>/` — one feature: `flow/`, `views/`, `strings/`, and later `rules/`, `styles/`, `assets/`
+- `plugins/<name>/` — the game's own plugins
+- `generated/` — written by `bun run keys`. Never edit it
+
+A layer imports only from the layers below it: core, then shared, then features. A feature reaches
+another feature through `@features/<name>` only. Only `index.ts` and `game.ts` import `@features`.
+Run `bun run keys` after adding an asset or a message, before the typecheck.
+
+## Testing
+
+- Headless tests in `tests/integration/` and `features/<name>/__tests__/`: `*.test.ts`
+- Visual tests in `tests/visual/*.visual.ts`, listed in `tests/visual/index.ts`. The baselines in `tests/visual/baselines/` are committed
+- Prepared saves in `tests/scenarios/<name>.ts`, opened with `?player=<name>`
+- 90% coverage threshold on the logic. The `.tsx` views are not counted
+```
 
 ## package.json
 
