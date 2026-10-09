@@ -36,8 +36,11 @@ Rules differ per kind, and the wrong kind produces false blockers.
 | Web app (Layer 3) | `createApp` from `@moku-labs/web`; `src/index.html`, `src/routes.tsx`, `app.ts`, `spa.tsx`, a `config.ts` of constants |
 | Worker app (Layer 3) | `createApp` from `@moku-labs/worker`; `server.ts`, thin `cloudflare/worker.ts`, `endpoints.ts` |
 | Full-stack (Layer 3) | depends on both frameworks; all web + worker roots present is correct, not duplication |
+| Game (Layer 3) | `.planning/moku.md` says `type: game`; `defineGameApp` from `@moku-labs/game/app` in the root `index.ts`; no `src/` |
 
 Read `package.json` and glob the root files before judging. Consumer-app exemptions are in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/consumer-plugins.md`.
+
+**Scope in a game.** A game has no `src/`. Its source roots are `index.ts`, `game.ts`, `config.ts`, `core/`, `shared/`, `features/` and `plugins/`: glob these where a section below names `src/`. The game's own plugins sit in `plugins/<p>/`, so read `src/plugins/{name}/` in sections B and D as `plugins/{name}/`. A feature folder is not a plugin, and section B does not apply to it. The layout of a game is the `moku-game` skill: load it with the Skill tool for the root files. The game conventions are checked by `moku-game:moku-game-validator`, not here.
 
 ## A. Core specification
 

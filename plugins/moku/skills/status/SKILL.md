@@ -52,8 +52,12 @@ Other sources, each optional:
 | `.planning/build/agent-log.md` | Recent agent completions with verdicts. "No agent activity recorded." when absent. |
 | `.planning/build/diagnostics.log` | Hook denials, tool failures, blocked writes. |
 | `.planning/memory.md` | Project-specific memory. |
-| `src/plugins/` | Filesystem evidence of what was actually built. |
+| `src/plugins/` | Filesystem evidence of what was actually built. In a game: `features/` and `plugins/`. |
 | `.planning/specs/` | Spec files and their count. |
+
+A game has no `src/`. When `.planning/moku.md` says `type: game`, the units are the feature folders
+`features/<f>/` and the game's own plugins `plugins/<p>/`. Read them as the filesystem evidence, and
+show a feature as a row of the Plugin Status table.
 
 Wave rows come from the `## Plugin Table:` section of `STATE.md`:
 

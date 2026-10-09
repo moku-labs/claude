@@ -121,7 +121,7 @@ A generic type alias documents what it extracts and who consumes it; when it is 
 
 ## Process
 
-1. Glob the target scope (`src/**/*.ts`, `src/**/*.tsx`), excluding tests and config files.
+1. Glob the target scope (`src/**/*.ts`, `src/**/*.tsx`), excluding tests and config files. A game has no `src/`: when `.planning/moku.md` says `type: game`, the scope is `index.ts`, `game.ts` and the `.ts` and `.tsx` files under `core/`, `shared/`, `features/` and `plugins/`. Read `src/**` in parts A and B as these roots. `generated/` is written by a tool and is out of scope. So is `core/kit.ts`: its shape is the engine's binding, which `moku-game:moku-game-validator` checks. The rules are the same as for any project.
 2. For each file, locate every non-trivial function body and apply part A with the exemptions. In `src/index.ts`, also check the `createApp`/`createPlugin` entry exports for the opaque wrapper form (flag #8).
 3. In the same pass, inventory the exports, including the grep seeds for Gap A and Gap B, and apply part B.
 4. For each readability offender record file, function name, body start and end lines, body line count, the violated rule numbers, and a concrete fix — which stanzas to split and their intent comments, which compound boolean becomes a named predicate, which literal becomes a named constant, which block becomes a helper (balanced; cite rule 9 when a stanza suffices instead of extraction).
