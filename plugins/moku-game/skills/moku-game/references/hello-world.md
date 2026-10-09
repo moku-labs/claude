@@ -551,6 +551,9 @@ export const { defineNode, defineFlow, defineFeature, projection, defineBundles,
  */
 import { defineBundles } from "@core/kit";
 
+/**
+ * The bundles of the shared layer. `ui` is loaded at boot and stays loaded.
+ */
 export const uiAssets = defineBundles({ ui: { tier: "boot" } });
 ```
 
@@ -565,6 +568,9 @@ import { defineFeature } from "@core/kit";
 import enStrings from "@generated/strings.en";
 import { uiAssets } from "./assets";
 
+/**
+ * The shared layer as a feature: the boot bundle and the messages of the whole game.
+ */
 export const sharedFeature = defineFeature("shared", {
   assets: uiAssets,
   strings: { en: enStrings }
@@ -581,6 +587,9 @@ export const sharedFeature = defineFeature("shared", {
 import { defineNode } from "@core/kit";
 import { type } from "@moku-labs/game";
 
+/**
+ * The rest node the Hello screen is shown on. It waits for the intent `tap`.
+ */
 export const home = defineNode({
   scene: "hello",
   outcomes: { tap: type() },
@@ -597,6 +606,9 @@ export const home = defineNode({
 import { defineNode } from "@core/kit";
 import { type } from "@moku-labs/game";
 
+/**
+ * The transit node that counts one tap into the save and one into the session.
+ */
 export const tap = defineNode({
   outcomes: { done: type() },
   run: ({ player, session, out }) => {
@@ -615,6 +627,9 @@ export const tap = defineNode({
 import { defineScene } from "@core/kit";
 import { helloScreen } from "./hello-screen";
 
+/**
+ * The Hello scene: the `ui` bundle and the Hello screen.
+ */
 export const helloScene = defineScene("hello", {
   bundle: "ui",
   layers: {},
@@ -636,6 +651,9 @@ import type { Player } from "@core/state";
  */
 export type HelloView = { taps: number };
 
+/**
+ * The Hello screen: the greeting, the tap counter and the button that answers the `home` gate.
+ */
 export const helloScreen = projection({
   name: "hello.screen",
   layer: "ui",
@@ -688,6 +706,9 @@ import { helloScene } from "./views/scene";
 export { home } from "./flow/home";
 export { tap } from "./flow/tap";
 
+/**
+ * Hello as a feature: its scene and its screen.
+ */
 export const helloFeature = defineFeature("hello", {
   scenes: [helloScene],
   projections: [helloScreen]
@@ -720,6 +741,9 @@ Record<string, never>; "hello.taps": { n: number } }`), `generated/strings.en.ts
 import { defineFlow } from "@core/kit";
 import { home, tap } from "@features";
 
+/**
+ * The root flow of the game: `home` waits, `tap` counts, then back to `home`.
+ */
 export const mainFlow = defineFlow("main", {
   nodes: { home, tap },
   start: "home",
