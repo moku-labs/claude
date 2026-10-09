@@ -1,5 +1,37 @@
 # App Build — Detailed Steps
 
+## Game
+
+A project whose `.planning/moku.md` says `type: game` is built by this section. Read it before Step 1.
+A game has no `src/`, no `src/plugins/{name}/`, no `src/main.ts` and no `createApp`. The game validator
+reports a `createApp` in a game as a BLOCKER. Where a step below or another build reference names one
+of them, this section wins.
+
+The layout and the API of a game have one source: the `moku-game` skill. Load it with the Skill tool
+before the first file, and take every path and every call from it. Nothing of it is repeated here. If
+the skill is not available, the `moku-game` pack is not installed. Stop, say so, and ask the person to
+install the pack. Do not build a game from the app steps instead.
+
+- **Unit of work.** One feature folder, `features/<f>/`, with the files and tests its spec lists. One
+  `moku:moku-builder` per feature. Features write disjoint folders, so they run in parallel, the way
+  the units of Step 3 do. A builder has no Skill tool: put the base directory of the `moku-game` skill
+  and the reference files the feature needs into its prompt, so it reads them as files.
+- **Shared files.** The files the features share and the wiring are yours: you write them before the
+  wave and wire the features in after it. A builder writes only inside its feature folder.
+- **Check after a wave.** The game's own scripts, in this order:
+  ```bash
+  bun run keys --check && bun run typecheck && bun run lint && bun run test && bun run test:visual
+  ```
+  A red `keys --check` means the generated files are stale: run `bun run keys` and run the line again.
+  `moku-verify-artifacts` does not apply to a game. It looks for `src/plugins/<name>` and fails.
+- **Steps that change.** Step 1: the shape to build to is the game layout, not the app shape of
+  `moku-idioms.md`. Step 3: replaced by the unit of work above. Step 4: does not apply, a game has no
+  `src/main.ts` and no `createApp`. Step 5.5: its axes are those of a web or worker app and do not
+  apply. Step 6: the whole-game tests are the headless tests of the `moku-game` skill, and nothing
+  boots through `createApp`.
+- **Steps that stay.** Every other step applies as it does to any app. Step 5 runs the game validator
+  and Step 7.5 runs `moku-game:playtest`.
+
 ## Step 1: Read and validate the plan
 
 Read the spec (default `.planning/app-spec.md`). It needs a framework reference, the ordered plugin

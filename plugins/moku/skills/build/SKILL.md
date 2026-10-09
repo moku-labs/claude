@@ -14,6 +14,8 @@ they claim, and the change moves one wave at a time so the user keeps control.
 
 Agent types are plugin-qualified when you spawn them: `moku:moku-builder`, `moku:moku-code-reviewer` and so on. A bare name does not launch.
 
+A game is the exception. When `.planning/moku.md` says `type: game`, read the "Game" section of `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/build-app.md` before the routes below. Its unit of work is a feature folder, and no `src/` path in this skill applies to it.
+
 Agents may run in the background (`run_in_background: true`): the write gate never holds a subagent by the routing flag, a prompt the harness writes while they run closes nothing, and ending your turn to wait for their hand-backs is a legitimate end of turn inside the station. Several Agent calls in one response already run in parallel, so the foreground is fine too, and it is the only choice in a non-interactive session (an eval, `claude -p`), where a background completion may never arrive. Only one builder writes a given plugin at a time: never spawn two on the same `src/plugins/{name}/`, and when a builder refuses because it found another writer there, that refusal is correct. You commit after each green round; builders never commit.
 
 ## Rails first

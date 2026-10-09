@@ -86,7 +86,8 @@ After the hello world runs, the route is the usual one, with game material in it
 
 - **brainstorm**: the game idea, the core loop, the feel. Ask for anything the person already has: sketches, references, screenshots of games they like, their own art. Read every image they send.
 - **design**: screens and the look. Shots come from the running game in the editor, not from HTML mockups.
-- **plan**, **build**, **verify** as for any app. Delta specs for later changes.
+- **plan** and **build** follow the game layout, not the app layout: one spec and one unit of work per feature folder, no `src/`, no `createApp`. The steps are the "Game" section of `moku-core/references/build-app.md`. The layout is the `moku-game` skill. A game cannot be planned or built without the `moku-game` pack: when it is missing, say so and ask the person to install it.
+- **verify** as for any app. Delta specs for later changes.
 - **e2e** runs as playtest (`moku-game:playtest`): headless walks, visual tests, play in the editor, and the phone when the change needs it.
 - **assets**: when the person asks for art, music, sound or voice in bulk, use the `moku-ai` pack. Keys, providers and costs are its job. Always show the cost estimate and wait for a yes before a paid run.
 
