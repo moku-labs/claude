@@ -242,6 +242,9 @@ export function splitIdea(idea: string): { tag: string; title: string } {
   return { tag: found?.[1]?.trim() ?? '', title: found?.[2] ?? idea }
 }
 
+/** The most a status says. The bar cuts it at its own edge, so this only keeps a runaway text out of the state. */
+const STATUS_WIDTH = 200
+
 /**
  * A tool call in a few words, for a status line: what is being done, not how.
  *
@@ -259,11 +262,11 @@ export function describeCall(call: Record<string, unknown>, lang: Lang = 'en'): 
     // Claude writes the description of a command. When it is not in the deck's language, the command is named instead
     const described = text(call.description)
 
-    return described !== '' && (detectLanguage(described) ?? lang) === lang ? short(described, 60) : say.command(programOf(text(call.command)))
+    return described !== '' && (detectLanguage(described) ?? lang) === lang ? short(described, STATUS_WIDTH) : say.command(programOf(text(call.command)))
   }
   if (call.tool === 'Edit' || call.tool === 'Write') return say.edit(file)
   if (call.tool === 'Read') return say.read(file)
-  if (call.tool === 'Agent') return say.agent(short(text(call.description), 40))
+  if (call.tool === 'Agent') return say.agent(short(text(call.description), STATUS_WIDTH))
 
   return say.tool(text(call.tool).replace(/^mcp__.*__/, ''))
 }

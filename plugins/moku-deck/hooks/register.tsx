@@ -257,7 +257,7 @@ export const register: Register = on => {
           <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
             {said !== undefined && (
               <Text color={LAV} dimColor={!isRunning} wrap="truncate-end">
-                {w.status(w.who(said.who), short(said.text, 60), isRunning)}
+                {w.status(w.who(said.who), said.text, isRunning)}
                 {others > 0 ? w.more(others) : ''}
               </Text>
             )}
