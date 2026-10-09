@@ -71,6 +71,20 @@ export function shellWriteTargets(command) {
 }
 
 /**
+ * The simple commands of a command line, each as its words. The commands inside `$(...)` come before the
+ * command that holds them. A heredoc body and quoted text are data and start no command; a redirect is no word.
+ *
+ * @param {string} command
+ * @returns {{ words: string[], piped: boolean }[]} `words` keep leading `VAR=value` assignments; `piped`: its output feeds the next command
+ * @example
+ * shellCommands("cd app && CI=1 bun run test 2>&1 | tail -5");
+ * // [{ words: ["cd", "app"], piped: false }, { words: ["CI=1", "bun", "run", "test"], piped: true }, { words: ["tail", "-5"], piped: false }]
+ */
+export function shellCommands(command) {
+  return readSegments(withoutHeredocBodies(command)).map((segment) => ({ words: segment.words, piped: segment.piped }));
+}
+
+/**
  * Drop heredoc bodies: they are data for the command, not commands. A heredoc that never closes is kept,
  * so a fake `<<` cannot hide the rest of the command from the guard.
  *

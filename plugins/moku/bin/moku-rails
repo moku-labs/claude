@@ -27,6 +27,7 @@ const HANDLERS = {
   idea: commands.idea,
   tier: commands.tier,
   waves: commands.waves,
+  tests: commands.tests,
   init: commands.init,
   guard: commands.guard,
   "guard-bash": commands.guardBash,
