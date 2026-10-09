@@ -177,7 +177,8 @@ task scenarios, not isolated unit checks. Follow `build-final.md` Step 5.8 (scen
 → execution) but scope the scenarios to this app's journeys: boot via `createApp`, drive the real plugin
 stack through flows a user would perform (load a route → render → navigate → handle an event end to
 end), no mocks. Tests go to `tests/integration/`. Run `bun run test`; failures route to gap closure
-(max 2 rounds).
+(max 2 rounds). One run per fix round, its output kept in a file
+(`${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`).
 
 ## Step 7: Runtime smoke test — boot the real artifact
 

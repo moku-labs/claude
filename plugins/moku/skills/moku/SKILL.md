@@ -144,6 +144,10 @@ moku-rails close
 
 One green test run confirms `tests` for every change closed on the same tree. The tree is the HEAD commit with nothing uncommitted. So when several changes close together, commit first, then check and close them one after another: the script runs once, and each later check answers `green on <sha>, not run again`. A new commit or any uncommitted file is a new tree, and the script runs again. Never start one test run per change on a tree that did not change.
 
+A commit through a pre-commit hook that runs the whole test script is that green run: the rails record it, and the check answers `not run again` at once. So do not run the tests right before or right after such a commit. `moku-rails tests` says what the hook of this project runs, how many runs were repeated on an unchanged tree, and which tests are slow. When you plan the test runs of a station, follow `references/test-runs.md` of the `moku-testing` skill (`moku-rails tests` prints its path). The check at the close is never skipped.
+
+When `moku-rails close` prints a `Slow tests:` line, tell the person which tests are slow and offer to speed them up as a change of its own. On a no, or a "later", keep it with `moku-rails idea`. Never change a test for speed without a yes.
+
 Then move `.planning/changes/<id>/` to `.planning/archive/changes/<id>/` with a short `outcome.md`: what changed, what was decided and why. History is annotated, never deleted.
 
 ## What bends and what does not

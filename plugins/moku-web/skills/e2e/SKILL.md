@@ -97,6 +97,10 @@ committed Playwright regression tests.
 
 Keep every regression test it authored. Feed its P0/P1 findings into the fix loop and re-run the suite.
 
+A re-run follows a fix. The suite does not run twice on files nobody edited: keep the output of a run
+in a file and read it from there. This is the moku test-run rule; `moku-rails tests` prints the path of
+the file that holds it, and the runs that were repeated.
+
 ## Step 3 — the UX gate
 
 The gate is never skipped, and it is not "an agent's opinion" — it is two independent reviews plus your

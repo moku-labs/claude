@@ -200,7 +200,9 @@ status from `STATE.md`, then the total count, the tier distribution and the plan
 
 1. `src/plugins/<name>/` must exist.
 2. Assess the tier from the file structure.
-3. Fast checks first: `bun run format`, `bun run lint`, `bun run typecheck`, `bun run test`.
+3. Fast checks first: `bun run format`, `bun run lint`, `bun run typecheck`, then the tests of this
+   plugin only (`bunx vitest run src/plugins/<name>/`; `bun test src/plugins/<name>/` when the project
+   has no vitest). The whole test script is not this subcommand's job.
 4. All green and no `--full` → report PASS and stop. The agent fan-out is the expensive path.
 5. Otherwise spawn in parallel: `moku:moku-structure-validator` (tier, file organization, index
    quality, spec conformance), `moku:moku-style-validator` (readability and JSDoc),

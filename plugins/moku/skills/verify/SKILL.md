@@ -149,6 +149,9 @@ For cycle `1..ITERATIONS`:
    `import type` get added.
 5. **Re-check.** `bun run format`, `bun run typecheck`, `bun run lint`, `bun run test`. Skip a script
    that does not exist. A fix that regressed a check is corrected or reverted before the next cycle.
+   The tests run once per cycle, after its last fix, never once per fix, and a cycle that fixed
+   nothing does not run them again: the validator's run stands
+   (`${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`).
 6. **Stop early** when a full pass surfaces nothing new and no validator went un-run.
 
 Stop conditions: a clean pass, or `ITERATIONS` reached. If findings remain at the budget, report
