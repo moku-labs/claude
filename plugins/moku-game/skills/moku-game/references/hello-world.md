@@ -52,7 +52,9 @@ rules need no package of their own: they ship in `@moku-labs/game` as `@moku-lab
 
 A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.1` when
 `config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.3`
-for `moku-game native`. See `device.md`. The hello world installs neither.
+for `moku-game native`. `@moku-labs/system` alone does not build: each name in `system` needs its Tauri
+peer (`@tauri-apps/api`, `@tauri-apps/plugin-haptics`, `@tauri-apps/plugin-store`). The install lines
+and the peer of each name are in `device.md`. The hello world installs none of them.
 
 ## Font
 
