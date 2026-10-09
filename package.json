@@ -5,6 +5,7 @@
   "description": "Repository tooling for the moku Claude Code plugins. Not published.",
   "scripts": {
     "test": "node --test \"plugins/*/tests/**/*.test.mjs\"",
+    "test:mods": "claude plugin test plugins/moku-deck",
     "validate": "claude plugin validate . && for p in plugins/*; do claude plugin validate \"$p\" || exit 1; done",
     "evals": "PATH=\"$PWD/plugins/moku/bin:$PATH\" claude plugin eval plugins/moku --scaffold --trust-plugin --no-publish --allow-tools Write Edit Bash",
     "check": "node scripts/check-manifests.mjs"
