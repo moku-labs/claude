@@ -4,8 +4,9 @@ const TEST_COMMAND =
   /(^|[\s;&|(])(bun (run )?test|bunx? vitest|vitest|npm (run )?test|pnpm (run )?test|node --run test|node --test|playwright test|moku-rails check tests)(\s|$)/
 
 const ITEM = /^\*\*(\d)\.\s+(.+?)\*\*\s*$/gm
-const CODE_SPAN = /`([^`\n]{2,40})`/g
-const ASKS_FOR_A_REPLY = /(скажи|напиши|выбери|ответь|\bsay\b|\breply\b|\bchoose\b)/i
+// An answer is named in a code span or in quotes: say `fix 1 2`, say "apply 1 3", скажи «мержи»
+const CODE_SPAN = /`([^`\n]{2,40})`|"([^"\n]{2,40})"|«([^»\n]{2,40})»|“([^”\n]{2,40})”/g
+const ASKS_FOR_A_REPLY = /(скажи|напиши|выбери|ответь|набери|\bsay\b|\breply\b|\bchoose\b|\btype\b|\banswer\b)/i
 const PLAIN_WORDS = /^[\p{L}\d][\p{L}\d ]{1,30}$/u
 
 /**
@@ -36,7 +37,7 @@ export function parseReply(text: string): Reply {
   const quick = text
     .split('\n')
     .filter(line => ASKS_FOR_A_REPLY.test(line))
-    .flatMap(line => [...line.matchAll(CODE_SPAN)].map(found => found[1] ?? ''))
+    .flatMap(line => [...line.matchAll(CODE_SPAN)].map(found => found[1] ?? found[2] ?? found[3] ?? found[4] ?? ''))
     .filter(answer => PLAIN_WORDS.test(answer))
 
   return { items: [...items.values()], quick: [...new Set(quick)].slice(0, 6) }
@@ -138,14 +139,29 @@ export function stationOf(station: string, isGame: boolean, lang: Lang = 'en'): 
  * The stations of a change in order, each with where it stands.
  *
  * @example
- * routeOf(change).find(step => step.state === 'now')?.station // 'build'
+ * routeOf(change).find(step => step.state === 'now' || step.state === 'next')?.station // 'build'
  */
-export function routeOf(change: Change): { station: string; state: 'done' | 'now' | 'skipped' | 'todo'; isOptional: boolean }[] {
-  return (ROUTES[change.size] ?? ROUTES.M ?? []).map(station => ({
+export function routeOf(change: Change): { station: string; state: 'done' | 'now' | 'next' | 'skipped' | 'todo'; isOptional: boolean }[] {
+  const route = ROUTES[change.size] ?? ROUTES.M ?? []
+  const passed = route.map(station => change.done.includes(station) || change.skipped.includes(station))
+
+  // Between two stations nothing is entered: the change stands before the first station after the last one it passed
+  const at = change.station === null ? passed.lastIndexOf(true) + 1 : route.indexOf(change.station)
+
+  return route.map((station, i) => ({
     station,
     isOptional: OPTIONAL_STATIONS.has(station),
-    state: change.station === station ? 'now' : change.done.includes(station) ? 'done' : change.skipped.includes(station) ? 'skipped' : 'todo',
+    state: stateOf(change, station, i, at),
   }))
+}
+
+/** A station behind the change is done, or was passed without being done. One at the change is entered, or is next. */
+function stateOf(change: Change, station: string, i: number, at: number): 'done' | 'now' | 'next' | 'skipped' | 'todo' {
+  if (i === at) return change.station === null ? 'next' : 'now'
+  if (change.done.includes(station)) return 'done'
+  if (i < at || change.skipped.includes(station)) return 'skipped'
+
+  return 'todo'
 }
 
 /**
@@ -154,13 +170,26 @@ export function routeOf(change: Change): { station: string; state: 'done' | 'now
  * @example
  * parseFlow('{"changes":[{"id":"a","status":"open","size":"S","station":"build"}],"ideas":[]}', '').change?.station // 'build'
  */
-export function parseFlow(ledger: string, runsLog: string, marker = ''): Flow {
+export function parseFlow(ledger: string, runsLog: string, marker = '', lane = ''): Flow {
   const parsed = json(ledger)
   const changes = Array.isArray(parsed.changes) ? parsed.changes.filter(isRecord) : []
-  const open = changes.find(change => change.status === 'open')
   const ideas = Array.isArray(parsed.ideas) ? parsed.ideas.filter(idea => typeof idea === 'string') : []
+  const open = openChange(changes, lane)
 
   return { change: open === undefined ? null : toChange(open), ideas, telemetry: parseTelemetry(runsLog), isSample: false, isGame: /^type:[ \t]*game\b/m.test(marker) }
+}
+
+/**
+ * The open change of one lane. Every worktree of a project shares one ledger, and a change names the worktree it
+ * was opened in: a session shows its own change, never another worktree's. Of several, the one inside a station.
+ */
+function openChange(changes: Record<string, unknown>[], lane: string): Record<string, unknown> | undefined {
+  const open = changes.filter(change => change.status === 'open')
+  const mine = open.filter(change => change.worktree === lane)
+  const main = open.filter(change => typeof change.worktree !== 'string')
+  const own = mine.length > 0 ? mine : main
+
+  return own.find(change => typeof change.station === 'string') ?? own.at(-1)
 }
 
 /**

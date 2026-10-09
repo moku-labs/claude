@@ -58,6 +58,8 @@ declare module 'claude-code' {
       digests: Record<string, Digest>
       expanded: string[]
       sending: string | null
+      isSession: boolean
+      ideaLimit: number
     }
   }
 }
