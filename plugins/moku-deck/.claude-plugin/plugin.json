@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "moku-deck",
+  "displayName": "Moku Deck",
+  "version": "0.83.0",
+  "description": "A reply bar and a side pane for a moku session, drawn inside Claude Code: one-press answers to a reply, the route of the open change with the station you are on, parked ideas, and what the test log says. Uses the early-access function hooks API, so it is disabled by default.",
+  "author": {
+    "name": "Oleksandr Kucherenko",
+    "email": "moku-labs@users.noreply.github.com"
+  },
+  "repository": "https://github.com/moku-labs/claude",
+  "license": "MIT",
+  "keywords": [
+    "moku",
+    "mod",
+    "pane",
+    "rails",
+    "tests"
+  ],
+  "dependencies": [
+    "moku"
+  ],
+  "defaultEnabled": false,
+  "types": "./types/index.d.ts"
+}
