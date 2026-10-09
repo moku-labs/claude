@@ -33,6 +33,7 @@ const KEPT_RUNS = 50
 /** Where a prompt of the person comes from: the prompt box, the phone or web bridge, the host app. */
 const PERSON = new Set(['composer', 'bridge', 'sdk'])
 const DIGEST_STORE = 'digests'
+const LANG_STORE = 'lang'
 const DIGEST_BATCH = 10
 const KEPT_DIGESTS = 300
 
@@ -42,6 +43,12 @@ let isDigesting = false
 // The answer on its way to the chat. A prompt waits until the session is idle, so a press can take a while to
 // show: until it has, a second press sends nothing.
 let pending: string | undefined
+
+// The person's own words decide the language. Claude's answers decide it only until the person has written enough.
+let hasPersonSpoken = false
+
+// A text the model would not digest is not sent to it again in this session
+const gaveUp = new Set<string>()
 const TABS: Tab[] = ['flow', 'ideas', 'tests']
 
 // The moku brand: one hot pink for where you are, mint for what is good, amber for what waits, lavender for quiet text
@@ -83,6 +90,7 @@ export const register: Register = on => {
     await refresh($)
     $.clock.every(REFRESH_MS, () => void refresh($))
     await loadDigests($)
+    await loadLanguage($)
     await readLastReply($)
 
     return next(e)
@@ -101,7 +109,7 @@ export const register: Register = on => {
     // A notification of a background task or a message of another session is a prompt too: it answers nothing
     if (!PERSON.has(e.origin?.kind ?? '')) return next(e)
 
-    await follow($, e.text)
+    await follow($, e.text, true)
     await update($, reply, () => null)
     await update($, picked, () => [])
     await update($, isPicking, () => false)
@@ -113,7 +121,7 @@ export const register: Register = on => {
   // The reply bar: every finished answer of the main loop offers its named answers and its items
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.answer !== '') {
-      await follow($, e.answer)
+      await follow($, e.answer, false)
       await refresh($)
       await update($, reply, () => parseReply(e.answer))
       await update($, lastCall, () => null)
@@ -387,8 +395,13 @@ export const register: Register = on => {
           <Box flexDirection="column" gap={1}>
             <Box flexDirection="column">
               <Text bold wrap="wrap">
-                {change.title}
+                {cards[digestKey(change.title, speech)]?.title ?? change.title}
               </Text>
+              {cards[digestKey(change.title, speech)] !== undefined && (
+                <Text dimColor wrap="wrap">
+                  {change.title}
+                </Text>
+              )}
               <Text dimColor>
                 {w.kind(change.type, change.size, isGame)}
               </Text>
@@ -642,47 +655,87 @@ async function loadDigests($: EngineInterface): Promise<void> {
   }
 }
 
-/** Ask a small model for a short card of every idea that has none in the language of the conversation. */
+/** Ask a small model for a short card of every shown idea that has none in the language of the deck. */
 async function digestIdeas($: EngineInterface): Promise<void> {
-  if (isDigesting) return
+  const shown = (await read($, flow)).ideas.slice(-(await read($, ideaLimit)))
+
+  // The backlog can be longer than one request. It goes on only after a request that wrote cards:
+  // a model that does not answer is not asked again in a loop.
+  if ((await digest($, shown)) && (await read($, tab)) === 'ideas') void digestIdeas($)
+}
+
+/** The title of the open change is written by an agent, mostly in English: it gets a card in the deck's language too. */
+async function digestTitle($: EngineInterface): Promise<void> {
+  const title = (await read($, flow)).change?.title
+  const speech = await read($, lang)
+
+  if (title !== undefined && (detectLanguage(title) ?? speech) !== speech) await digest($, [title])
+}
+
+/**
+ * Write the cards of the texts that have none, ten in one request, and keep them. Answers whether cards were written.
+ */
+async function digest($: EngineInterface, texts: string[]): Promise<boolean> {
+  if (isDigesting) return false
 
   const speech = await read($, lang)
   const known = await read($, digests)
-  const shown = (await read($, flow)).ideas.slice(-(await read($, ideaLimit)))
-  const missing = shown.filter(idea => known[digestKey(idea, speech)] === undefined).slice(0, DIGEST_BATCH)
-  if (missing.length === 0) return
+  const missing = texts.filter(text => known[digestKey(text, speech)] === undefined && !gaveUp.has(digestKey(text, speech))).slice(0, DIGEST_BATCH)
+  if (missing.length === 0) return false
 
   isDigesting = true
-  let hasWritten = false
 
   try {
     const asked = await $.model.complete({ model: 'haiku', ...digestRequest(missing, speech) })
     const written = asked.isAnswered ? parseDigests(asked.text, missing.length) : []
 
-    if (written.length > 0) {
-      const added = Object.fromEntries(missing.map((idea, i) => [digestKey(idea, speech), written[i] ?? { title: headline(idea), points: [] }]))
-      const all = Object.fromEntries(Object.entries({ ...known, ...added }).slice(-KEPT_DIGESTS))
+    if (written.length === 0) {
+      for (const text of missing) gaveUp.add(digestKey(text, speech))
 
-      await update($, digests, () => all)
-      await $.store.set(DIGEST_STORE, all)
-      hasWritten = true
+      return false
     }
+
+    const added = Object.fromEntries(missing.map((text, i) => [digestKey(text, speech), written[i] ?? { title: headline(text), points: [] }]))
+    const all = Object.fromEntries(Object.entries({ ...known, ...added }).slice(-KEPT_DIGESTS))
+
+    await update($, digests, () => all)
+    await $.store.set(DIGEST_STORE, all)
+
+    return true
   } catch {
-    // A card that was not written leaves the idea with its opening words
+    // A card that was not written leaves the text as it is
+    for (const text of missing) gaveUp.add(digestKey(text, speech))
+
+    return false
   } finally {
     isDigesting = false
   }
-
-  // The backlog can be longer than one request. It goes on only after a request that wrote cards:
-  // a model that does not answer is not asked again in a loop.
-  if (hasWritten && (await read($, tab)) === 'ideas') void digestIdeas($)
 }
 
-/** The deck speaks the language of the conversation: a text long enough to tell sets it, a short one keeps it. */
-async function follow($: EngineInterface, text: string): Promise<void> {
+/**
+ * The deck speaks the language of the person. A prompt of theirs long enough to tell sets it, and it is kept for
+ * the next session. Claude's answer sets it only while the person has not written such a prompt yet.
+ */
+async function follow($: EngineInterface, text: string, isPerson: boolean): Promise<void> {
   const spoken = detectLanguage(text)
+  if (spoken === undefined || (!isPerson && hasPersonSpoken)) return
 
-  if (spoken !== undefined && spoken !== (await read($, lang))) await update($, lang, () => spoken)
+  if (isPerson) hasPersonSpoken = true
+  if (spoken === (await read($, lang))) return
+
+  await update($, lang, () => spoken)
+  if (isPerson) await $.store.set(LANG_STORE, spoken).catch(() => undefined)
+}
+
+/** The language the person wrote in last time: a new session starts in it, before anybody has said a word. */
+async function loadLanguage($: EngineInterface): Promise<void> {
+  try {
+    const kept = await $.store.get(LANG_STORE)
+    if (kept === 'en' || kept === 'ru') await update($, lang, () => kept)
+    if (kept === 'en' || kept === 'ru') hasPersonSpoken = true
+  } catch {
+    // No store: the language follows the conversation from its first long text
+  }
 }
 
 /** Open the deck where the person asked for it. */
@@ -715,6 +768,8 @@ async function refresh($: EngineInterface): Promise<void> {
 
     if (!(await read($, isSession))) await update($, isSession, () => true)
     if (JSON.stringify(await read($, flow)) !== JSON.stringify(live)) await update($, flow, () => live)
+
+    void digestTitle($)
   } catch {
     // A file caught mid-write is read again on the next tick
   }
@@ -726,7 +781,7 @@ async function readLastReply($: EngineInterface): Promise<void> {
     const last = (await $.session.messages()).findLast(message => message.role === 'assistant' && message.text !== '')
     if (last === undefined) return
 
-    await follow($, last.text)
+    await follow($, last.text, false)
     await update($, reply, () => parseReply(last.text))
   } catch {
     // A new session has no answer yet
