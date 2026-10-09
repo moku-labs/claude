@@ -281,10 +281,15 @@ test('the deck speaks the language of the conversation, and a short answer does 
   // The press answers in Russian too, and `ok` is too short to switch the deck back
   await pane.press({ key: 'approve' })
   expect(sent).toEqual(['одобрено, продолжай'])
+  await $.prompt.submit({ text: 'да, продолжай со следующего шага', origin: { kind: 'composer' } } as never)
   await $.prompt.submit({ text: 'ok', origin: { kind: 'composer' } } as never)
   expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Идеи/ })).toBeDefined()
 
-  // A long English prompt does
+  // Claude answering in English does not: the person wrote in Russian
+  await $.turn.complete({ answer: 'Done. The mod reloads after this message, as it did before.', durationMs: 1, isAborted: false, turnId: 't2', reason: 'answer' } as never)
+  expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Идеи/ })).toBeDefined()
+
+  // A long English prompt of the person does
   await $.prompt.submit({ text: 'please continue with the next step of the build', origin: { kind: 'composer' } } as never)
   expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Ideas/ })).toBeDefined()
   await pane.unmount()

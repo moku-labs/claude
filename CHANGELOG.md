@@ -2,6 +2,17 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.7 (2026-10-09)
+
+### Fixed
+- **The deck was Russian in one session and English in another.** The language followed the last long
+  text, also Claude's answer. The person's own prompt decides now. Claude's answer decides only until
+  the person has written a prompt long enough to tell. The language is kept in the plugin store, so a
+  new session starts in the language the person wrote in last.
+- **The title of the open change stayed in English.** An agent writes it into the ledger. When it is not
+  in the deck's language, the small model writes a short title in that language, shown above the one as
+  written. The card is kept, one request per title and language.
+
 ## 0.83.6 (2026-10-09)
 
 ### Fixed
