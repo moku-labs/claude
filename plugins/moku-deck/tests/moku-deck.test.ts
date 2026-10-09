@@ -5,6 +5,10 @@ import { describeCall, describeRun, detectLanguage, digestRequest, headline, par
 // The test environment has timers, and the declarations of a hooks module name none
 declare function setTimeout(run: (value?: unknown) => void, ms: number): unknown
 
+// A control is the app's own button on a terminal and the mod's own on a desktop, pressed on the way down
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const tap = (ui: any, key: string): Promise<unknown> => (ui.surface === 'desktop' ? ui.pointer({ type: 'down', x: 1, y: 0, in: key }) : ui.press({ key }))
+
 const REPLY = [
   '**1. Pins in the game template are old**',
   '',
@@ -88,15 +92,15 @@ test('the flow tab shows where a paused change stands and answers the gate with 
     const pane = await $.ui.mount({ ...PANE, surface })
 
     // The tab is kept for the session, so each surface starts from the flow
-    await pane.press({ key: 'tab-flow' })
+    await tap(pane, 'tab-flow')
     expect(await pane.find({ type: 'Text', text: /Sample data/ })).toBeDefined()
     expect(await pane.find({ type: 'Text', text: /you are here/ })).toBeDefined()
     expect(await pane.find({ type: 'Text', text: /^playtest$/ })).toBeDefined()
     expect(await pane.find({ type: 'Text', text: /Waits for you/ })).toBeDefined()
-    await pane.press({ key: 'approve' })
+    await tap(pane, 'approve')
 
-    await pane.press({ key: 'tab-ideas' })
-    await pane.press({ key: 'idea-0' })
+    await tap(pane, 'tab-ideas')
+    await tap(pane, 'idea-0')
     await pane.unmount()
   }
 
@@ -118,13 +122,13 @@ test('a repeated green test run is counted, and the agent is told once the switc
 
   expect(second.context).toBe(undefined)
 
-  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
 
-  await pane.press({ key: 'tab-tests' })
+  await tap(pane, 'tab-tests')
   expect(await pane.find({ type: 'Text', text: /3 of 14 test runs were not needed/ })).toBeDefined()
   expect(await pane.findAll({ type: 'Text', text: /^not needed$/ })).toHaveLength(1)
   expect(await pane.findAll({ type: 'Text', text: /^Whole suite$/ })).toHaveLength(2)
-  await pane.press({ key: 'coach' })
+  await tap(pane, 'coach')
   expect(await pane.find({ type: 'Button', key: 'coach', text: /On/ })).toBeDefined()
 
   const third = await $.tool.call({ tool: 'Bash', command: 'npm test' })
@@ -173,7 +177,7 @@ test('the bar says what runs while a tool call runs, and keeps it as the last wo
   // With no answers on the bar the finished call stays as the last word, until another call or a reply
   expect(await after.find({ type: 'Text', text: /Claude is editing/ })).toBe(undefined)
   expect(await after.find({ type: 'Text', text: /Claude was editing guard\.mjs/ })).toBeDefined()
-  expect(await after.find({ type: 'Button', key: 'deck' })).toBeDefined()
+  expect(await after.find({ type: 'Client', key: 'deck' })).toBeDefined()
   await after.unmount()
 })
 
@@ -214,7 +218,7 @@ test('on a desktop an answer is drawn by the mod, and a press on it sends that a
   // The answer is sent once. The bar stays, with the door to the deck
   const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await after.find({ type: 'Client', key: 'quick-1' })).toBe(undefined)
-  expect(await after.find({ type: 'Button', key: 'deck' })).toBeDefined()
+  expect(await after.find({ type: 'Client', key: 'deck' })).toBeDefined()
   await after.unmount()
 })
 
@@ -238,7 +242,7 @@ test('a prompt typed in the chat takes the offered answers off the bar', async (
 
   const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await after.find({ type: 'Client', key: 'quick-0' })).toBe(undefined)
-  expect(await after.find({ type: 'Button', key: 'deck' })).toBeDefined()
+  expect(await after.find({ type: 'Client', key: 'deck' })).toBeDefined()
   await after.unmount()
 })
 
@@ -267,8 +271,8 @@ test('the deck speaks the language of the conversation, and a short answer does 
     return { text: e.text }
   })
 
-  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  await pane.press({ key: 'tab-flow' })
+  const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await tap(pane, 'tab-flow')
   expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Ideas/ })).toBeDefined()
 
   // A Russian answer of the main loop switches every word of the deck
@@ -279,7 +283,7 @@ test('the deck speaks the language of the conversation, and a short answer does 
   expect(await pane.find({ type: 'Button', key: 'approve', text: /Одобрить и продолжить/ })).toBeDefined()
 
   // The press answers in Russian too, and `ok` is too short to switch the deck back
-  await pane.press({ key: 'approve' })
+  await tap(pane, 'approve')
   expect(sent).toEqual(['одобрено, продолжай'])
   await $.prompt.submit({ text: 'да, продолжай со следующего шага', origin: { kind: 'composer' } } as never)
   await $.prompt.submit({ text: 'ok', origin: { kind: 'composer' } } as never)
@@ -316,20 +320,20 @@ test('an idea gets a short card in the language of the conversation, and the not
 
   await $.turn.complete({ answer: 'Сделал. Мод перезагрузится после этого сообщения.', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
 
-  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  await pane.press({ key: 'tab-ideas' })
+  const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await tap(pane, 'tab-ideas')
 
   expect(asked.length).toBe(1)
   expect(asked[0]).toContain('Write in Russian.')
   expect(await pane.findAll({ type: 'Text', text: /^Карточка \d$/ })).toHaveLength(3)
   expect(await pane.find({ type: 'Text', text: /Daily challenge mode/ })).toBe(undefined)
 
-  await pane.press({ key: 'more-0' })
+  await tap(pane, 'more-0')
   expect(await pane.find({ type: 'Text', text: /Daily challenge mode|Undo the last move/ })).toBeDefined()
 
   // The cards are kept: opening the tab again asks nothing
-  await pane.press({ key: 'tab-flow' })
-  await pane.press({ key: 'tab-ideas' })
+  await tap(pane, 'tab-flow')
+  await tap(pane, 'tab-ideas')
   expect(asked.length).toBe(1)
   await pane.unmount()
 })
@@ -346,14 +350,14 @@ test('a second press while the first answer is still on its way sends nothing', 
     return { text: e.text }
   })
 
-  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
-  await pane.press({ key: 'tab-flow' })
+  const pane = await $.ui.mount({ ...PANE, surface: 'terminal' })
+  await tap(pane, 'tab-flow')
 
-  const first = pane.press({ key: 'approve' })
+  const first = tap(pane, 'approve')
   await new Promise(resolve => setTimeout(resolve, 20))
   expect(await pane.find({ type: 'Text', text: /Sending: approved, continue/ })).toBeDefined()
 
-  const second = pane.press({ key: 'approve' })
+  const second = tap(pane, 'approve')
   await new Promise(resolve => setTimeout(resolve, 20))
   expect(sent).toEqual(['approved, continue'])
 
@@ -394,4 +398,28 @@ test('a notification of a background task leaves the offered answers on the bar'
   const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await band.find({ type: 'Client', key: 'quick-0' })).toBeDefined()
   await band.unmount()
+})
+
+test('on a desktop every control of the pane is the mod\'s own, and one click presses it', async ($, on) => {
+  const sent: string[] = []
+  on('fs.exists', () => ({ value: false }))
+  on('prompt.submit', ($, e) => {
+    sent.push(e.text)
+
+    return { text: e.text }
+  })
+
+  const pane = await $.ui.mount({ plugin: 'moku-deck', component: 'Pane', requestId: 'moku-deck', props: PANE.props, surface: 'desktop' })
+
+  await tap(pane, 'tab-flow')
+  expect(await pane.find({ type: 'Button' })).toBe(undefined)
+  expect(await pane.find({ type: 'Client', key: 'approve' })).toBeDefined()
+
+  await tap(pane, 'approve')
+  expect(sent).toEqual(['approved, continue'])
+
+  // Another control answers right away: nothing of the first press holds it back
+  await tap(pane, 'tab-ideas')
+  expect(await pane.find({ type: 'Client', key: 'idea-0' })).toBeDefined()
+  await pane.unmount()
 })
