@@ -29,6 +29,9 @@ const RUNS_FILE = '.planning/tests/runs.jsonl'
 const MARKER_FILE = '.planning/moku.md'
 const REFRESH_MS = 5000
 const KEPT_RUNS = 50
+
+/** Where a prompt of the person comes from: the prompt box, the phone or web bridge, the host app. */
+const PERSON = new Set(['composer', 'bridge', 'sdk'])
 const DIGEST_STORE = 'digests'
 const DIGEST_BATCH = 10
 const KEPT_DIGESTS = 300
@@ -66,6 +69,8 @@ const lang = atom({ plugin: 'moku-deck', key: 'lang' } as const, 'en')
 const digests = atom({ plugin: 'moku-deck', key: 'digests' } as const, {})
 const expanded = atom({ plugin: 'moku-deck', key: 'expanded' } as const, [])
 const sending = atom({ plugin: 'moku-deck', key: 'sending' } as const, null)
+const isSession = atom({ plugin: 'moku-deck', key: 'isSession' } as const, false)
+const ideaLimit = atom({ plugin: 'moku-deck', key: 'ideaLimit' } as const, 6)
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -93,10 +98,14 @@ export const register: Register = on => {
 
   // A prompt the person sends answers the reply in their own words: its offers are stale from then on
   on('prompt.submit', async ($, e, next) => {
+    // A notification of a background task or a message of another session is a prompt too: it answers nothing
+    if (!PERSON.has(e.origin?.kind ?? '')) return next(e)
+
     await follow($, e.text)
     await update($, reply, () => null)
     await update($, picked, () => [])
     await update($, isPicking, () => false)
+    void refresh($)
 
     return next(e)
   })
@@ -105,6 +114,7 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.answer !== '') {
       await follow($, e.answer)
+      await refresh($)
       await update($, reply, () => parseReply(e.answer))
       await update($, lastCall, () => null)
       await update($, picked, () => [])
@@ -135,6 +145,9 @@ export const register: Register = on => {
     try {
       return await next(e)
     } finally {
+      // A rails command moves the change: the ledger is read again at once, not at the next tick
+      if (e.tool === 'Bash' && /moku-rails/.test(e.command)) void refresh($)
+
       // The finished call stays as the last word of the status until another one takes its place
       await update($, lastCall, () => call)
       await update($, calls, now => now.filter(one => one.id !== id))
@@ -224,11 +237,10 @@ export const register: Register = on => {
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     const shown = (await read($, reply)) ?? { items: [], quick: [] }
     const running = await read($, calls)
-    const { isSample } = await read($, flow)
 
     // The bar belongs to a moku session: it is always there in one, with or without answers to give, and absent
     // anywhere else unless the preview is on
-    if (e.props.hasSurvey || !(!isSample || (await read($, isPreview)))) return next(e)
+    if (e.props.hasSurvey || !((await read($, isSession)) || (await read($, isPreview)))) return next(e)
 
     const { Box, Button, Text } = $.ui.resolve(e)
     const chosen = [...(await read($, picked))].sort((a, b) => a - b)
@@ -321,7 +333,10 @@ export const register: Register = on => {
     const { Box, Button, Text } = $.ui.resolve(e)
     const active = await read($, tab)
     const { change, telemetry, isSample, isGame, ...rest } = await read($, flow)
-    const ideas = [...rest.ideas].sort((a, b) => splitIdea(a).tag.localeCompare(splitIdea(b).tag))
+    // A backlog grows for months. The tab shows the newest few, and the rest on request: a card costs a model call.
+    const limit = await read($, ideaLimit)
+    const ideas = rest.ideas.slice(-limit).sort((a, b) => splitIdea(a).tag.localeCompare(splitIdea(b).tag))
+    const hidden = rest.ideas.length - ideas.length
     const { runs } = await read($, tests)
     const coaching = await read($, isCoaching)
     const speech = await read($, lang)
@@ -343,10 +358,11 @@ export const register: Register = on => {
           {TABS.map(one => (
             <Button
               key={`tab-${one}`}
-              label={one === 'ideas' && ideas.length > 0 ? `${w.tabs[one]} ${ideas.length}` : w.tabs[one]}
+              label={one === 'ideas' && rest.ideas.length > 0 ? `${w.tabs[one]} ${rest.ideas.length}` : w.tabs[one]}
               variant={active === one ? 'primary' : 'secondary'}
               onPress={async () => {
                 await update($, tab, () => one)
+                void refresh($)
                 if (one === 'ideas') void digestIdeas($)
               }}
             />
@@ -386,25 +402,26 @@ export const register: Register = on => {
                 return (
                   <Box flexDirection="column">
                     <Box gap={1}>
-                      {step.state === 'now' && (
+                      {(step.state === 'now' || step.state === 'next') && (
                         <Text color={PINK} bold>
-                          ◆
+                          {step.state === 'now' ? '◆' : '◇'}
                         </Text>
                       )}
                       {step.state === 'done' && <Text color={MINT}>●</Text>}
                       {/* A station still ahead is amber when the change must pass it, lavender when it may be skipped */}
                       {isAhead && <Text color={step.isOptional ? LAV : AMBER}>○</Text>}
                       <Text
-                        color={step.state === 'now' ? PINK : step.state === 'done' ? 'text' : step.isOptional ? LAV : 'text'}
+                        color={step.state === 'now' || step.state === 'next' ? PINK : step.state === 'done' ? 'text' : step.isOptional ? LAV : 'text'}
                         dimColor={isAhead}
-                        bold={step.state === 'now'}
+                        bold={step.state === 'now' || step.state === 'next'}
                         strikethrough={step.state === 'skipped'}
                       >
                         {name}
                       </Text>
                       {step.state === 'now' && <Text dimColor>{w.here}</Text>}
+                      {step.state === 'next' && <Text dimColor>{w.nextUp}</Text>}
                     </Box>
-                    {step.state === 'now' && (
+                    {(step.state === 'now' || step.state === 'next') && (
                       <Box paddingLeft={2}>
                         <Text color={LAV} wrap="wrap">
                           {hint}
@@ -463,6 +480,7 @@ export const register: Register = on => {
                 {w.ideasEmpty}
               </Text>
             )}
+            {hidden > 0 && <Text dimColor>{w.newest(ideas.length, rest.ideas.length)}</Text>}
             {ideas.some(idea => cards[digestKey(idea, speech)] === undefined) && isDigesting && <Text color={LAV}>{w.digesting}</Text>}
             {ideas.map((idea, i) => {
               const { tag, title } = splitIdea(idea)
@@ -509,6 +527,18 @@ export const register: Register = on => {
                 </Box>
               )
             })}
+            {hidden > 0 && (
+              <Box>
+                <Button
+                  key="more-ideas"
+                  label={w.showMore(Math.min(6, hidden))}
+                  onPress={async () => {
+                    await update($, ideaLimit, now => now + 6)
+                    void digestIdeas($)
+                  }}
+                />
+              </Box>
+            )}
           </Box>
         )}
 
@@ -618,7 +648,8 @@ async function digestIdeas($: EngineInterface): Promise<void> {
 
   const speech = await read($, lang)
   const known = await read($, digests)
-  const missing = (await read($, flow)).ideas.filter(idea => known[digestKey(idea, speech)] === undefined).slice(0, DIGEST_BATCH)
+  const shown = (await read($, flow)).ideas.slice(-(await read($, ideaLimit)))
+  const missing = shown.filter(idea => known[digestKey(idea, speech)] === undefined).slice(0, DIGEST_BATCH)
   if (missing.length === 0) return
 
   isDigesting = true
@@ -663,13 +694,26 @@ async function openDeck($: EngineInterface): Promise<void> {
 /** Read the open change, the parked ideas and the test log from disk. */
 async function refresh($: EngineInterface): Promise<void> {
   try {
-    const live = (await $.fs.exists(LEDGER_FILE))
-      ? parseFlow(
-          await $.fs.read(LEDGER_FILE),
-          (await $.fs.exists(RUNS_FILE)) ? await $.fs.read(RUNS_FILE) : '',
-          (await $.fs.exists(MARKER_FILE)) ? await $.fs.read(MARKER_FILE) : '',
-        )
-      : SAMPLE_FLOW
+    const hasLedger = await $.fs.exists(LEDGER_FILE)
+    const hasMarker = await $.fs.exists(MARKER_FILE)
+
+    // The rails replace the ledger by a rename, so for a moment it is not there. A directory that was a moku
+    // session a tick ago still is one: the last state stays, and the sample is for a directory that never was.
+    if (!hasLedger) {
+      if (!(await read($, isSession)) && !hasMarker && !(await read($, flow)).isSample) await update($, flow, () => SAMPLE_FLOW)
+
+      return
+    }
+
+    const lane = (await $.fs.stat('.', { resolve: true })).realPath ?? ''
+    const live = parseFlow(
+      await $.fs.read(LEDGER_FILE),
+      (await $.fs.exists(RUNS_FILE)) ? await $.fs.read(RUNS_FILE) : '',
+      hasMarker ? await $.fs.read(MARKER_FILE) : '',
+      lane,
+    )
+
+    if (!(await read($, isSession))) await update($, isSession, () => true)
     if (JSON.stringify(await read($, flow)) !== JSON.stringify(live)) await update($, flow, () => live)
   } catch {
     // A file caught mid-write is read again on the next tick

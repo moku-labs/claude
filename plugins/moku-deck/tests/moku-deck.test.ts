@@ -234,7 +234,7 @@ test('a prompt typed in the chat takes the offered answers off the bar', async (
   expect(await before.find({ type: 'Text', text: / (is|was) / })).toBe(undefined)
   await before.unmount()
 
-  await $.prompt.submit({ text: 'нет, давай иначе' } as never)
+  await $.prompt.submit({ text: 'нет, давай иначе', origin: { kind: 'composer' } } as never)
 
   const after = await $.ui.mount({ ...BAND, surface: 'desktop' })
   expect(await after.find({ type: 'Client', key: 'quick-0' })).toBe(undefined)
@@ -281,11 +281,11 @@ test('the deck speaks the language of the conversation, and a short answer does 
   // The press answers in Russian too, and `ok` is too short to switch the deck back
   await pane.press({ key: 'approve' })
   expect(sent).toEqual(['одобрено, продолжай'])
-  await $.prompt.submit({ text: 'ok' } as never)
+  await $.prompt.submit({ text: 'ok', origin: { kind: 'composer' } } as never)
   expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Идеи/ })).toBeDefined()
 
   // A long English prompt does
-  await $.prompt.submit({ text: 'please continue with the next step of the build' } as never)
+  await $.prompt.submit({ text: 'please continue with the next step of the build', origin: { kind: 'composer' } } as never)
   expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Ideas/ })).toBeDefined()
   await pane.unmount()
 })
@@ -357,4 +357,36 @@ test('a second press while the first answer is still on its way sends nothing', 
   expect(await pane.find({ type: 'Text', text: /Sending:/ })).toBe(undefined)
   expect(sent).toEqual(['approved, continue'])
   await pane.unmount()
+})
+
+test('a change between two stations stands before the next one, in its own lane, and quoted answers count', () => {
+  const ledger = JSON.stringify({
+    changes: [
+      { id: 'other', status: 'open', size: 'S', station: 'build', done: ['intake'], worktree: '/repo/.claude/worktrees/other' },
+      { id: 'mine', status: 'open', size: 'L', station: null, done: ['intake', 'design'] },
+    ],
+  })
+  const main = parseFlow(ledger, '', 'type: game\n', '/repo')
+  const lane = parseFlow(ledger, '', '', '/repo/.claude/worktrees/other')
+
+  expect(main.change?.id).toBe('mine')
+  expect(lane.change?.id).toBe('other')
+  expect(routeOf(main.change!).map(step => `${step.station}:${step.state}`).slice(0, 5)).toEqual(['intake:done', 'brainstorm:skipped', 'design:done', 'plan:next', 'build:todo'])
+  expect(parseReply('Say "apply 1 3" or скажи «мержи 74».').quick).toEqual(['apply 1 3', 'мержи 74'])
+})
+
+test('a notification of a background task leaves the offered answers on the bar', async ($, on) => {
+  const BAND = { plugin: 'moku-deck', component: 'AbovePrompt', props: { hasSurvey: false, isWorking: false, maxRows: 10, bodyColumns: 120 } as never } as const
+  on('fs.exists', () => ({ value: false }))
+  on('ui.open', () => ({ value: {} as never }))
+  on('turn.complete', () => ({ text: '' }))
+  on('prompt.submit', ($, e) => ({ text: e.text }))
+
+  await $.command.run({ command: 'moku-deck' } as never)
+  await $.turn.complete({ answer: 'Скажи `pr S6`.', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
+  await $.prompt.submit({ text: 'Agent finished its task', origin: { kind: 'task-notification' } } as never)
+
+  const band = await $.ui.mount({ ...BAND, surface: 'desktop' })
+  expect(await band.find({ type: 'Client', key: 'quick-0' })).toBeDefined()
+  await band.unmount()
 })
