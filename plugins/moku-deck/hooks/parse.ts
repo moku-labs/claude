@@ -253,7 +253,14 @@ export function describeCall(call: Record<string, unknown>, lang: Lang = 'en'): 
   const file = text(call.file_path).split('/').at(-1) ?? ''
   const say = CALLS[lang]
 
-  if (call.tool === 'Bash') return isTestCommand(text(call.command)) ? say.tests(describeRun(text(call.command), lang).what.toLowerCase()) : short(text(call.description) || text(call.command), 60)
+  if (call.tool === 'Bash') {
+    if (isTestCommand(text(call.command))) return say.tests(describeRun(text(call.command), lang).what.toLowerCase())
+
+    // Claude writes the description of a command. When it is not in the deck's language, the command is named instead
+    const described = text(call.description)
+
+    return described !== '' && (detectLanguage(described) ?? lang) === lang ? short(described, 60) : say.command(programOf(text(call.command)))
+  }
   if (call.tool === 'Edit' || call.tool === 'Write') return say.edit(file)
   if (call.tool === 'Read') return say.read(file)
   if (call.tool === 'Agent') return say.agent(short(text(call.description), 40))
@@ -269,6 +276,7 @@ const CALLS = {
     read: (file: string) => `reading ${file}`,
     agent: (task: string) => `starting an agent: ${task}`,
     tool: (name: string) => `using ${name}`,
+    command: (program: string) => `running ${program}`,
   },
   ru: {
     tests: (what: string) => `прогон тестов, ${what}`,
@@ -276,10 +284,23 @@ const CALLS = {
     read: (file: string) => `чтение ${file}`,
     agent: (task: string) => `запуск агента: ${task}`,
     tool: (name: string) => `инструмент ${name}`,
+    command: (program: string) => `команда ${program}`,
   },
 }
 
 const MIN_LETTERS = 12
+
+/**
+ * The program a shell command runs: its first word that is not a step into a directory or a variable.
+ *
+ * @example
+ * programOf('cd app && FOO=1 gh pr merge 74') // 'gh'
+ */
+export function programOf(command: string): string {
+  const words = command.split(/&&|\|\||[;|\n(]/).flatMap(part => part.trim().split(/\s+/).filter(word => !/^[A-Za-z_]\w*=/.test(word)).slice(0, 1))
+
+  return words.find(word => word !== '' && word !== 'cd' && word !== 'export') ?? 'shell'
+}
 
 /**
  * The language a text is written in, by its letters, or nothing for a text too short to tell. Code is left out:

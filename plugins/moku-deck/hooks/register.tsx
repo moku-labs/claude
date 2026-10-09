@@ -95,6 +95,15 @@ export const register: Register = on => {
     return next(e)
   })
 
+  // The status shows the description Claude gives a shell command, so Claude is asked to write it in the
+  // language of the conversation. English needs no asking.
+  on('prompt.compose', async ($, e, next) => {
+    const composed = await next(e)
+    const ask = words(await read($, lang)).describeIn
+
+    return ask === '' ? composed : { ...composed, sections: [...composed.sections, { id: 'moku-deck:language', text: ask, scope: 'session' as const }] }
+  })
+
   // The status line: every tool call is on it for as long as it runs
   on('tool.call', async ($, e, next) => {
     const id = e.tool_use_id ?? ''
