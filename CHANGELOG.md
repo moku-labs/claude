@@ -2,6 +2,16 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.8 (2026-10-09)
+
+### Fixed
+- **Parts of the deck's `Flow` tab stayed in English.**
+  - The reason a change waits for the person is written by an agent. It gets a short card in the deck's
+    language, like the title: one line and up to four points.
+  - The type of a change is said in Russian: `fix` is «исправление», `feature` is «фича».
+  - The title as written is no longer shown under the translated one.
+- The two buttons of the gate wrap to a second row in a narrow pane. The second one was cut off.
+
 ## 0.83.7 (2026-10-09)
 
 ### Fixed

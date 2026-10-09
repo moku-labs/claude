@@ -4,6 +4,9 @@ import type { Lang } from '../types'
  * Every word the deck shows, per language. A new language is one more entry here and one more script in
  * `detectLanguage`. Station names, checklist items and `moku` stay as the rails spell them: they are names.
  */
+/** The types of a change in Russian. A type the rails add later is shown as the rails spell it. */
+const TYPES_RU: Record<string, string> = { fix: 'исправление', feature: 'фича', tweak: 'правка', refactor: 'рефакторинг', project: 'проект' }
+
 const WORDS = {
   en: {
     tabs: { flow: 'Flow', ideas: 'Ideas', tests: 'Tests' },
@@ -77,7 +80,7 @@ const WORDS = {
     opened: 'moku deck открыт.',
     sample: 'Пример данных. В этой папке нет moku-сессии. Так выглядела бы работа над игрой.',
     noChange: 'Открытых изменений нет. Рельсы свободны для новой работы.',
-    kind: (type: string, size: string, isGame: boolean) => `${isGame ? 'игра, ' : ''}${type}, размер ${size}`,
+    kind: (type: string, size: string, isGame: boolean) => `${isGame ? 'игра, ' : ''}${TYPES_RU[type] ?? type}, размер ${size}`,
     here: 'вы здесь',
     nextUp: 'дальше',
     showMore: (left: number) => `Показать ещё: ${left}`,

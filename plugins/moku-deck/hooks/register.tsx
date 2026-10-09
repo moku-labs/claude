@@ -397,11 +397,6 @@ export const register: Register = on => {
               <Text bold wrap="wrap">
                 {cards[digestKey(change.title, speech)]?.title ?? change.title}
               </Text>
-              {cards[digestKey(change.title, speech)] !== undefined && (
-                <Text dimColor wrap="wrap">
-                  {change.title}
-                </Text>
-              )}
               <Text dimColor>
                 {w.kind(change.type, change.size, isGame)}
               </Text>
@@ -462,8 +457,22 @@ export const register: Register = on => {
                 <Text color={AMBER} bold>
                   {w.waits}
                 </Text>
-                <Text wrap="wrap">{change.pauseReason === '' ? w.paused : change.pauseReason}</Text>
-                <Box gap={1}>
+                {cards[digestKey(change.pauseReason, speech)] === undefined ? (
+                  <Text wrap="wrap">{change.pauseReason === '' ? w.paused : change.pauseReason}</Text>
+                ) : (
+                  <Box flexDirection="column">
+                    <Text bold wrap="wrap">
+                      {cards[digestKey(change.pauseReason, speech)]?.title}
+                    </Text>
+                    {cards[digestKey(change.pauseReason, speech)]?.points.map(point => (
+                      <Box columnGap={1}>
+                        <Text color={AMBER}>•</Text>
+                        <Text wrap="wrap">{point}</Text>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                <Box columnGap={1} rowGap={1} flexWrap="wrap">
                   <Button key="approve" variant="primary" label={w.approve} onPress={() => answer($, w.approveSay)} />
                   <Button key="discuss-pause" label={w.discuss} onPress={() => void $.prompt.fill({ text: w.discussFill, mode: 'insert' })} />
                 </Box>
@@ -666,10 +675,12 @@ async function digestIdeas($: EngineInterface): Promise<void> {
 
 /** The title of the open change is written by an agent, mostly in English: it gets a card in the deck's language too. */
 async function digestTitle($: EngineInterface): Promise<void> {
-  const title = (await read($, flow)).change?.title
+  const change = (await read($, flow)).change
   const speech = await read($, lang)
+  const written = change === null ? [] : [change.title, change.pauseReason]
 
-  if (title !== undefined && (detectLanguage(title) ?? speech) !== speech) await digest($, [title])
+  // A text already in the deck's language, or too short to tell, is shown as it is
+  await digest($, written.filter(text => text !== '' && (detectLanguage(text) ?? speech) !== speech))
 }
 
 /**
