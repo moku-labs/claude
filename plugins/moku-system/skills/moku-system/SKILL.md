@@ -13,7 +13,7 @@ description: >
 
 # Moku System Patterns
 
-> **Synced to `@moku-labs/system@0.3.1`** (npm `dist-tags.latest`; catalog from the `v0.3.1` tag source +
+> **Synced to `@moku-labs/system@0.3.2`** (npm `dist-tags.latest`; catalog from the `v0.3.2` tag source +
 > the root and per-plugin READMEs). Full surface — the 10 plugins (1 core + 9 opt-in capabilities), the ten
 > entry points, config, the provider seam, `SystemResult`, events, native permissions and the dependency
 > graph — is in [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework
@@ -23,7 +23,7 @@ description: >
 > **New in 0.3.0:** `lifecycle`, `back`, `haptics`, `keepAwake` capabilities, each on its own subpath. The
 > `@tauri-apps/api` peer floor is `^2.12.0`. **New in 0.3.1 (packaging only):** `@moku-labs/core` +
 > `@moku-labs/common` moved from bundled pins to `peerDependencies` (`^1.7.1` / `^0.3.4`). Bun and npm
-> install peers automatically, so an app still declares neither.
+> install peers automatically, so an app still declares neither. **0.3.2** is docs only.
 
 ## Current Project State
 !`test -f package.json && grep -E '"@moku-labs/system"' package.json 2>/dev/null || true`
@@ -98,7 +98,7 @@ the `moku-idioms.md` rubric — load the `moku:moku-core` skill with the Skill t
 - Do not expect `notify.show()` to prompt. Call `requestPermission()` yourself, from a user gesture.
 - Do not expect stored data to move between providers. The Tauri store file and IndexedDB are separate.
 
-## Framework API (@moku-labs/system v0.3.1)
+## Framework API (@moku-labs/system v0.3.2)
 
 ```ts
 import { createApp } from "@moku-labs/system";

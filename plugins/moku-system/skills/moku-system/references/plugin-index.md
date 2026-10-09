@@ -1,6 +1,6 @@
 # @moku-labs/system — Plugin & Property Index
 
-**Synced version:** `0.3.1` (npm `dist-tags.latest`; catalog generated from the `v0.3.1` git tag **source** +
+**Synced version:** `0.3.2` (npm `dist-tags.latest`; catalog generated from the `v0.3.2` git tag **source** +
 the root and per-plugin READMEs). `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` are
 **`peerDependencies`** since 0.3.1 (through 0.3.0 they were bundled exact pins `1.6.0` / `0.3.2`). Bun and
 npm install peers automatically, so an app still declares neither. `idb-keyval@6.3.0` stays the one bundled
@@ -13,18 +13,16 @@ dependency. Six **OPTIONAL** `peerDependencies` (`peerDependenciesMeta.optional`
 **New in 0.3.0:** four capability plugins — `lifecycle`, `back`, `haptics`, `keepAwake` — each on its own
 subpath (§5.7–§5.10). The `@tauri-apps/api` peer floor rose from `^2.11.0` to `^2.12.0` (`back.exit()` needs
 `exit`, `@since 2.12.0`). No existing plugin changed. **New in 0.3.1:** packaging only, core and common moved
-to peers.
+to peers. **New in 0.3.2:** docs only, no `src/` change.
 
-⚠️ Upstream docs are **stale in six places**. The registry's "source wins" policy applies:
+⚠️ Upstream docs are **stale in three places** (0.3.2 fixed three others: `TrayConfig.icon`, the deep-link
+launch handover and the peers in `llms-full.txt` and the README). The registry's "source wins" policy applies:
 
 | # | Stale text | Source of truth |
 |---|-----------|-----------------|
-| 1 | `llms.txt` and `llms-full.txt` say `Package: @moku-labs/system 0.1.0` | `package.json` → `0.3.1` |
+| 1 | `llms-full.txt` says `Version: 0.3.1` (`llms.txt` names no version) | `package.json` → `0.3.2` |
 | 2 | `llms.txt` §1: kind is `"tauri"` when `__TAURI_INTERNALS__` is present | `src/plugins/runtime/detect.ts`: `globalThis.isTauri === true` **or** `"__TAURI_INTERNALS__" in globalThis` |
-| 3 | `llms-full.txt`: `TrayConfig.icon?: string` | `src/plugins/tray/types.ts`: `icon?: string \| Uint8Array \| number[]` |
-| 4 | `llms-full.txt` §4.5: `DeepLinkState` has `launchUrl` / `launchReplayDone`; the replay window "closes immediately" after the first delivery | `src/plugins/deep-link/types.ts` + `api.ts`: `handedOver: Map<string, HandoverPath>`, `launchPhaseOpen`, `launchPhaseEndsAt`; a symmetric handover with a 5000 ms launch phase |
-| 5 | `src/plugins/runtime/README.md`: `runtime` config is "NOT reachable through `createApp`'s `pluginConfigs`" | `src/index.ts` JSDoc lists `runtime` as a `pluginConfigs` key and the kernel cascade ends at `createApp`; the key is applied but **untyped** (hoist the object) |
-| 6 | `README.md` calls `@moku-labs/core` a "bundled dependency"; its Install section lists only the `@tauri-apps/*` peers | `package.json` (0.3.1): `@moku-labs/core@^1.7.1` and `@moku-labs/common@^0.3.4` are `peerDependencies` |
+| 3 | `src/plugins/runtime/README.md`: `runtime` config is "NOT reachable through `createApp`'s `pluginConfigs`" | `src/index.ts` JSDoc lists `runtime` as a `pluginConfigs` key and the kernel cascade ends at `createApp`; the key is applied but **untyped** (hoist the object) |
 
 ## A standalone `@moku-labs/core` framework — one core, zero default plugins
 
@@ -51,7 +49,7 @@ registers **no default capability**. Every capability is opt-in.
 code into every bundle, so instances live on subpaths only. `runtimePlugin` and the `Runtime` type
 namespace are **not** public. `src/plugins/index.ts` is a source-tree barrel, not a package entry.
 
-## 2. `createApp` form (v0.3.1)
+## 2. `createApp` form (v0.3.2)
 
 ```ts
 import { createApp, createPlugin } from "@moku-labs/system";

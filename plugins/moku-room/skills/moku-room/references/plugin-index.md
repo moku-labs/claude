@@ -1,16 +1,16 @@
 # @moku-labs/room — Plugin & Property Index
 
-**Synced version:** `0.8.3` (catalog generated from the `v0.8.3` git tag **source** — `src/index.ts`,
-`src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`. `v0.8.2 → v0.8.3` touched only
-`package.json`, `bun.lock` and `.github/dependabot.yml`: **no `src/` change**. Upstream `llms.txt`/`llms-full.txt`
-and the README are current for the API surface through 0.8.0, but their dependency lines are **stale at
-`v0.8.3`**: they still say core `1.5.0` / common `0.2.1` are bundled and the client core has no peer dependency.
-Per the registry's "source wins" policy the tag source is authoritative). Since 0.8.3 `@moku-labs/core@^1.7.1` +
+**Synced version:** `0.8.4` (catalog generated from the `v0.8.4` git tag **source** — `src/index.ts`,
+`src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`. `v0.8.3 → v0.8.4` touched only
+`README.md`, `llms.txt`, `llms-full.txt`, `package.json`, `bun.lock` and a CI workflow: **no `src/` change**.
+Upstream `llms.txt`/`llms-full.txt` and the README are current for the API surface through 0.8.0, and since
+`v0.8.4` their dependency lines are right too: core and common are required peers. `llms-full.txt` still
+says `Version: 0.8.3`. Per the registry's "source wins" policy the tag source is authoritative). Since 0.8.3 `@moku-labs/core@^1.7.1` +
 `@moku-labs/common@^0.3.4` are **`peerDependencies`** (dev-pinned upstream at core `1.7.1` / common `0.3.4`);
 bun and npm install them automatically, so an app still declares neither (I1). Bundled `dependencies` are now
 only `trystero@~0.25.2` (signaling) and `qrcode@^1.5.4` (join QR).
 **`@moku-labs/worker@>=0.15.0 <1.0.0` is an OPTIONAL `peerDependency`** (`peerDependenciesMeta.optional`; dev
-pin `0.20.2`) — needed **only** by the `./server` tier (its `hubPlugin` is a `@moku-labs/worker` plugin);
+pin `0.20.3`) — needed **only** by the `./server` tier (its `hubPlugin` is a `@moku-labs/worker` plugin);
 pure-client apps install nothing extra. Engines node ≥24, bun ≥1.3.14.
 
 > **New since 0.3.1 (no breaking change, `0.3.2` → `0.8.2`):**
@@ -32,6 +32,8 @@ pure-client apps install nothing extra. Engines node ≥24, bun ≥1.3.14.
 >   **`"auto"`**; `serverSignaling(url)` exposes a derived `iceEndpoint`; the hub's `handle` serves
 >   **`GET /api/ice`** (short-lived Cloudflare Realtime TURN credentials); new `hub.ice` config block.
 >   The old "no TURN ever" statement is **no longer true** for the `./server` tier (see the D2 note below).
+> - **0.8.4 (`#19`, docs only)** — the README, `llms.txt` and `llms-full.txt` now say core and common are
+>   peer dependencies. No `src/` change, no API change.
 > - **0.8.3 (`#16`, `#17`, packaging only)** — core + common move from bundled `dependencies` to
 >   `peerDependencies` (`^1.7.1` / `^0.3.4`); the optional worker peer widens from `^0.15.0` to
 >   `>=0.15.0 <1.0.0`, so a worker with `turnPlugin` (≥0.16) no longer warns. No `src/` change, no API change.
@@ -85,7 +87,7 @@ accounts, no lobby servers.
 > P2P DataChannels (a hostile-NAT pair may ride a Cloudflare TURN relay, never the DO). A consumer may also
 > inject its own STUN/TURN via `transport.iceServers` (array or provider, 0.6.0).
 
-## 1. Client core API form (v0.8.3)
+## 1. Client core API form (v0.8.4)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **core defaults** — already wired. An app
 adds exactly one role facade and its own game plugin; there are no `roomPlugins` arrays. Select the
@@ -161,7 +163,7 @@ plugin (`depends: [stagePlugin]` / `[controllerPlugin]`) then sees the complete 
 edge. They install **no forwarding hooks** (Moku's event bus is global; the engines' `emit("room:*")`
 already reaches every hook regardless of `depends`), delegate API, and own no state.
 
-### Facade API surfaces (re-verified at `v0.8.3` — `StageApi` / `ControllerApi` signatures are unchanged since `v0.2.0`)
+### Facade API surfaces (re-verified at `v0.8.4` — `StageApi` / `ControllerApi` signatures are unchanged since `v0.2.0`)
 
 ```ts
 type StageApi = {

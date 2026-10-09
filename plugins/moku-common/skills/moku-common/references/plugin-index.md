@@ -1,10 +1,11 @@
 # @moku-labs/common — Plugin & Property Index
 
-**Synced version:** `0.3.4` (npm `dist-tags.latest`; catalog generated from the `v0.3.4` git tag **source** +
+**Synced version:** `0.3.5` (npm `dist-tags.latest`; catalog generated from the `v0.3.5` git tag **source** +
 the root `README.md` and the per-module READMEs `src/plugins/log/README.md`, `src/plugins/env/README.md`,
 `src/cli/README.md`). Upstream ships **no `llms.txt`**, so the source is the only authority. No regular
 dependencies. One peer dependency: `@moku-labs/core` `^1.7.1` (since 0.3.4; through 0.3.3 it was an exact
-`1.7.0` dependency). The framework that bundles common must install core itself. Engines node ≥24, bun ≥1.3.14.
+`1.7.0` dependency). The framework that bundles common must install core itself. `0.3.4 → 0.3.5` is a CI
+bump only (`@moku-labs/ci` 1.3.0): no `src/` change. Engines node ≥24, bun ≥1.3.14.
 `sideEffects: false`, ESM + CJS on `.` and `./cli`, ESM only on `./browser`, types included.
 
 ⚠️ The READMEs and JSDoc disagree with the source in four places. The registry's "source wins" policy applies:

@@ -10,7 +10,7 @@ visual tests), `sharp` (the asset pack), `typescript >=5.5` (the project index),
 (the system shell, the store save), `@moku-labs/native ^0.3.2` (`moku-game native`). Engines node ≥24,
 bun ≥1.3.14. ESM only.
 
-The second half indexes **`@moku-labs/editor@0.9.1`** (peers `@moku-labs/game >=0.10.0` and
+The second half indexes **`@moku-labs/editor@0.9.3`** (peers `@moku-labs/game >=0.10.0` and
 `typescript >=5.5`).
 
 > The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). It matches the
@@ -487,14 +487,18 @@ camelCase words joined by dots, at least two (`dice.rolls`).
 
 # @moku-labs/editor — Plugin Index
 
-**Synced version:** `0.9.0` (catalog from the `v0.9.0` tag: `llms.txt`, `llms-full.txt` §6 "Configuration
-reference", `README.md`, `package.json`, and `moku-editor --help` of the published package). Three Moku
+**Synced version:** `0.9.3` (catalog from the `v0.9.0` tag: `llms.txt`, `llms-full.txt` §6 "Configuration
+reference", `README.md`, `package.json`, and `moku-editor --help` of the published package; 0.9.1 to 0.9.3
+from the diff between the tags: `README.md`, `llms.txt`, `llms-full.txt`, `src/plugins/pages`,
+`src/plugins/capture`). Three Moku
 cores in one package. Peers `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`, `@moku-labs/game >=0.10.0`,
 `typescript >=5.5` (the project index needs the TypeScript JS API: 6.x). Deps `preact`, `elkjs`. The tools
 page ships prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-full.txt`.
 
 | Version | What changed |
 |---|---|
+| 0.9.3 | A series takes its planned count of shots, `floor(durationMs / intervalMs)`. A late shot is taken late. A series stops early only at `durationMs + 3 s` since its start, or on Stop. Before, a slow first capture after a page load could end a short series after one shot |
+| 0.9.2 | `moku-editor e2e` runs one Playwright process per project and spec file, prints one line per run and a summary, and holds `.moku/e2e.lock` so two runs never overlap |
 | 0.9.1 | `/manifest.json` answers from `generated/manifest.json` (game 0.13), else from the game root |
 | 0.9.0 | `moku-editor e2e -c <playwright config>`: one Playwright run per project, each on its own `PORT` |
 | 0.8.0 | The engine page: `moku-editor --root .` in a moku-game folder calls `preparePage`; the entry `@moku-labs/editor/agent/page`; peer game `>=0.10.0`. The bin catches SIGINT and SIGTERM from the start |
@@ -536,11 +540,20 @@ moku-editor e2e -c <playwright config> [playwright args…]                     
 - **Discovery file.** After the start the bin writes `<root>/.moku/editor.json` `{ version, pid, port, url,
   ws, token, root, html, startedAt }` (mode 0600) and removes it on stop. `moku-editor mcp` reads it.
 - **`e2e`.** `moku-editor e2e -c <playwright config> [playwright args…]` runs a game's editor Playwright
-  specs with one Playwright process per project, so one fresh editor bin per project: Bun 1.3.14's dev
-  server crashes after many hot reloads in one process. Each project gets `PORT` = `PORT` (else 4417) plus
-  its index. An explicit `--project` or a `--list` runs once as given. A project with no test for the
-  filter passes (`--pass-with-no-tests`). `CI=true` installs Chromium first. The exit code is the first
-  failing one. Without `-c`: `[moku-editor] e2e needs the Playwright config: -c <file>`, exit 2.
+  specs with one Playwright process per project and spec file (since 0.9.2; per project in 0.9.0), so each
+  spec file gets a fresh editor bin: Bun's dev server degrades after many hot reloads in one process.
+  - **Plan.** One `--list` run with your words makes the plan, so `--project`, file arguments and
+    `-g` / `-G` narrow it. `--shard` and `--last-failed` act on the list run only.
+  - **Runs.** Each (project, file) pair runs with `--project=<name>`, an anchored regex of the file and
+    `--pass-with-no-tests`, on `PORT` = `PORT` (else 4417) plus the run's index. `--reporter` goes to the
+    runs only. A `--list`, or words that match no test, run once as given.
+  - **Output.** One line per run, `chromium-desktop · layout.spec.ts · passed · 12.3 s`, then
+    `e2e: 21 runs · 0 failed · 640.2 s`. A failed run's line and a failing summary print as errors.
+  - **Lock.** A run holds `.moku/e2e.lock` in the working directory with its pid. A second run exits 1:
+    `[moku-editor] another e2e run (pid N) holds .moku/e2e.lock: wait for it, or delete the file when no
+    run is left`. A dead pid's lock is taken over. A `--list` takes no lock.
+  - `CI=true` installs Chromium first. The exit code is the first failing one. Without `-c`:
+    `[moku-editor] e2e needs the Playwright config: -c <file>`, exit 2.
 - The server binds `127.0.0.1` only. Host, Origin and a per-start token gate every socket. The token is
   never printed.
 
@@ -676,8 +689,9 @@ installed. Every message starts with `[moku-editor] `.
 ## Compatibility with the engine
 
 - Editor 0.9 peers on game `>=0.10.0`: the engine page needs `preparePage` of `@moku-labs/game/cli`.
-  Verified together: editor 0.9.0 with game 0.12.0 (`files:project-on` on a fresh scaffold, TypeScript
-  6.0.3).
+  Verified together: editor 0.9.1 with game 0.13.0 (`files:project-on` on a fresh scaffold, TypeScript
+  6.0.3). Editor 0.9.2 and 0.9.3 keep the peer range and change only `moku-editor e2e` and the series
+  shot count; they were not run on a scaffold.
 - Element rects come from `game.locate { key }` when the manifest lists it, else `game.rect`.
   `game.capture` may answer a data URL or `{ png, legend? }`; capture takes both.
 - The Sound switch runs `game.mute` when the manifest lists it. The registry does not probe commands, so in

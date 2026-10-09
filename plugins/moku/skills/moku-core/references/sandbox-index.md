@@ -1,14 +1,14 @@
 # Moku Sandbox — Coding-Style Index
 
 > **Reference exemplars** vendored from `github.com/moku-labs/core/tests/sandbox` to inspire
-> coding style during build. Pinned commit: `d95c279036a27753a1808b3d25a219808631939c` (`main` after `v1.7.0`: spec 15 §6 one-place API contract)
-> Vendored: `2026-09-21` · files live under `skills/moku-core/references/sandbox/`.
+> coding style during build. Pinned commit: `df76939cdf9a541c5aadf15d612e67da3891fcab` (`main` at `v1.7.1`: spec 14 §10 row 8, annotate `register` when `api` is a pre-typed factory)
+> Vendored: `2026-10-09` · files live under `skills/moku-core/references/sandbox/`.
 > Refresh with the `spec-sync` skill (moku-maintainer pack) — it re-vendors both `spec/` and `sandbox/`.
 >
 > These are **read-only style references, not compilable code.** Their imports
 > (`from "../config"`, `from "../../../../src"`) reflect the upstream sandbox layout, not your
 > project. Read them to mirror *structure, naming, JSDoc, and test style* — do not copy import
-> paths. This is a **curated subset** (~48 of 108 upstream files); fetch any non-vendored sibling
+> paths. This is a **curated subset** (~48 of 109 upstream files); fetch any non-vendored sibling
 > on demand from the raw URL pattern in the footer.
 
 ## How to use this index
@@ -72,6 +72,6 @@ plugin's size to decide the file split.
 
 - Raw URL pattern (pinned): `https://raw.githubusercontent.com/moku-labs/core/d928159967e21efc0fe4620844fdf2cba69b191b/tests/sandbox/<path>`
 - Regenerate the resolved SHA: `gh api 'repos/moku-labs/core/commits?path=tests/sandbox&per_page=1' --jq '.[0].sha'`
-- Full upstream tree has ~108 files; only the ~48 highest-signal exemplars are vendored here. To
+- Full upstream tree has ~109 files; only the ~48 highest-signal exemplars are vendored here. To
   study a non-vendored sibling (e.g. `demo/tools/`, the `cms/media/` sub-domain, `type-gaps.test.ts`),
   fetch it from the raw URL pattern above.

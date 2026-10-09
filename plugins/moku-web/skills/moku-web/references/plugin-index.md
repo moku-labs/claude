@@ -7,7 +7,7 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `2.4.4` · **Layer:** 2 (framework) ·
+**Framework:** `@moku-labs/web` · **Synced version:** `2.4.5` · **Layer:** 2 (framework) ·
 **Depends on:** `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` as **`peerDependencies`** since
 v2.4.4 (dev-pinned upstream at core `1.7.1` / common `0.3.4`; before that bundled exact pins, core `1.6.0` /
 common `0.3.2` at v2.3.3). Bun and npm install peers automatically, so an app still declares neither and
@@ -36,6 +36,10 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 >   `history.replaceState`, so Back skips the page navigated from (e.g. the same page in another language).
 > - **Peer deps (v2.4.4).** `@moku-labs/core` and `@moku-labs/common` moved from `dependencies` (exact
 >   `1.6.0` / `0.3.2`) to `peerDependencies` (`^1.7.1` / `^0.3.4`). No `src/` change in 2.4.4.
+> - **Docs and one type (v2.4.5).** `llms.txt`, `llms-full.txt` and the README now name `@moku-labs/core`
+>   and `@moku-labs/common` as peers and list the `collection` provider. The collection README imports
+>   `collectionPlugin` from the root entry. `content` types a directive node's `data` as mdast `Data` for
+>   TypeScript 7; the type is internal. No API, config or event change.
 >
 > **What's new in 2.3.x (vs 2.2.2) — additive, no breaking change:**
 > - **New `collectionPlugin` — static-data collection provider (v2.3.0).** The collection-keyed sibling of
@@ -135,12 +139,13 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 > ⚠️ The upstream `llms.txt`/`llms-full.txt` were last re-synced at 1.8.2 (for the v1.8.0 cache
 > feature) and still describe `content` as the plain markdown pipeline — they do NOT mention the
 > v1.9.0–v1.12.0 content directives (`mermaid`/`::embed`/`::gallery`) or `cacheHeaders`/fingerprinted
-> bundle naming, and (re-verified at 2.4.4) they do NOT mention the `collection` plugin either. The
-> upstream `src/plugins/collection/README.md` imports `collectionPlugin` from `@moku-labs/web/browser`,
-> but `src/browser.ts` at `v2.4.4` does NOT export it (only `collectionUrl` + `loadCollectionShard` +
+> bundle naming (re-verified at 2.4.5: both files do describe `cacheHeaders` and the hashed bundle names;
+> the `::embed` / `::gallery` directives are still missing). Since 2.4.5 they list the `collection` plugin and the core/common peers,
+> and the upstream `src/plugins/collection/README.md` imports `collectionPlugin` from the root entry.
+> `src/browser.ts` at `v2.4.5` still does NOT export it (only `collectionUrl` + `loadCollectionShard` +
 > the `Collection` types). This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v2.4.4)
+## 1. Framework API form (v2.4.5)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed
@@ -500,4 +505,5 @@ re-verified at 1.12.4: llms last synced 1.8.2, missing the `mermaid`/`::embed`/`
 directives — all read from `src/` here; at 2.3.3: llms untouched since, missing the `collection` plugin,
 and the collection README imports `collectionPlugin` from `./browser`, which `src/browser.ts` does not
 export; at 2.4.4: llms-full gained `build.env` only, still no `collection`, and llms/README still describe
-only `preact` as a peer, not core/common).
+only `preact` as a peer, not core/common; at 2.4.5: llms and README name core/common as peers and list
+`collection`, and the collection README imports `collectionPlugin` from the root entry).
