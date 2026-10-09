@@ -132,6 +132,62 @@ describe("guardShell", () => {
   });
 });
 
+describe("guardWrite in a game", () => {
+  const game = { onRails: true, initialized: true, game: true, changes: [] };
+
+  it("blocks game source before init", () => {
+    const verdict = guardWrite("features/hello/flow/new.ts", { onRails: true, initialized: false, game: true, changes: [] });
+
+    assert.equal(verdict.allow, false);
+    assert.match(verdict.reason, /not initialized/);
+  });
+
+  it("blocks game source when no change is open", () => {
+    const verdict = guardWrite("features/hello/flow/new.ts", game);
+
+    assert.equal(verdict.allow, false);
+    assert.match(verdict.reason, /writing station/);
+  });
+
+  it("blocks every source root of the layout: the three root files and the four layer folders", () => {
+    for (const file of ["index.ts", "game.ts", "config.ts", "core/state.ts", "shared/rules/score.ts", "features/index.ts", "features/hello/views/hello-screen.tsx", "features/hello/strings/en.json", "plugins/exit/index.ts"]) {
+      assert.equal(guardWrite(file, game).allow, false, file);
+    }
+  });
+
+  it("allows game source while a change is at a writing station", () => {
+    assert.equal(guardWrite("features/hello/flow/new.ts", { ...game, changes: building }).allow, true);
+    assert.equal(guardWrite("game.ts", { ...game, changes: building }).allow, true);
+  });
+
+  it("allows what is not source: generated files, tests, tooling, the engine's folder and planning", () => {
+    for (const file of ["generated/assets.ts", "tests/integration/hello.test.ts", "tests/visual/baselines/home/rest/state.json", "vitest.config.ts", "package.json", ".moku/main.ts", ".planning/specs/hello.md", "assets/icon.png"]) {
+      assert.equal(guardWrite(file, game).allow, true, file);
+    }
+  });
+
+  it("allows art in an assets folder of a layer, but not code hidden there", () => {
+    assert.equal(guardWrite("features/fruit/assets/apple.png", game).allow, true);
+    assert.equal(guardWrite("shared/assets/font-body.fnt", game).allow, true);
+    assert.equal(guardWrite("features/fruit/assets/rules.ts", game).allow, false);
+  });
+
+  it("still gates src/ in a game, and judges shell writes by the same roots", () => {
+    assert.equal(guardWrite("src/main.ts", game).allow, false);
+    assert.equal(guardShell("cat > features/hello/flow/new.ts <<'EOF'", game).allow, false);
+    assert.equal(guardShell("cp art/apple.png features/fruit/assets/apple.png", game).allow, true);
+  });
+
+  it("leaves the same names alone in a project that is not a game", () => {
+    const framework = { onRails: true, initialized: true, changes: [] };
+
+    for (const file of ["plugins/moku/lib/rails/guard.mjs", "plugins/index.ts", "features/hello/flow/new.ts", "core/state.ts", "shared/index.ts", "index.ts", "config.ts", "game.ts"]) {
+      assert.equal(guardWrite(file, framework).allow, true, file);
+      assert.equal(guardWrite(file, { ...framework, game: false }).allow, true, file);
+    }
+  });
+});
+
 describe("guardWrite for a subagent", () => {
   it("does not consult the routed flag: the station was routed when the agent was spawned", () => {
     assert.equal(guardWrite("src/plugins/streak/api.ts", { onRails: true, initialized: true, routed: false, subagent: true, changes: building }).allow, true);
