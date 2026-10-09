@@ -345,7 +345,7 @@ the block below.
 - **Default:** on
 - **Depends on:** moku-core-version (when the project also depends directly on `@moku-labs/core`)
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/worker` AND its
-  resolved/declared version `< frameworks[worker].knownVersion` in `moku-frameworks.md` (currently `0.20.3`).
+  resolved/declared version `< frameworks[worker].knownVersion` in `moku-frameworks.md` (currently `0.20.4`).
 - **Apply:**
   1. Read `frameworks[worker].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/worker` dependency to that version (preserve the range operator
@@ -379,7 +379,7 @@ the block below.
   NOT add a direct `@moku-labs/core` dependency. Since `0.3.1`, room declares `@moku-labs/worker@^0.15.0` as an
   **optional peer** — needed only by apps that adopt the `./server` signaling tier.)
 - **Detect:** `package.json` dependencies contain `@moku-labs/room` AND its resolved/declared version
-  `< frameworks[room].knownVersion` in `moku-frameworks.md` (currently `0.8.3`).
+  `< frameworks[room].knownVersion` in `moku-frameworks.md` (currently `0.8.4`).
 - **Apply:**
   1. Read `frameworks[room].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set `@moku-labs/room` to that version (preserve the range operator; default exact).
@@ -412,7 +412,7 @@ the block below.
 - **Default:** on
 - **Depends on:** moku-core-version (when the project also depends directly on `@moku-labs/core`)
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/common` AND its
-  resolved/declared version `< frameworks[common].knownVersion` in `moku-frameworks.md` (currently `0.3.4`).
+  resolved/declared version `< frameworks[common].knownVersion` in `moku-frameworks.md` (currently `0.3.5`).
 - **Apply:**
   1. Read `frameworks[common].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/common` dependency to that version (preserve the range operator
@@ -454,7 +454,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/system` AND its
-  resolved/declared version `< frameworks[system].knownVersion` in `moku-frameworks.md` (currently `0.3.1`).
+  resolved/declared version `< frameworks[system].knownVersion` in `moku-frameworks.md` (currently `0.3.2`).
 - **Apply:**
   1. Read `frameworks[system].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/system` dependency to that version (preserve the range operator
@@ -500,7 +500,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/editor` AND its
-  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.9.1`).
+  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.9.3`).
 - **Apply:**
   1. Read `frameworks[editor].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/editor` dependency to that version (preserve the range operator

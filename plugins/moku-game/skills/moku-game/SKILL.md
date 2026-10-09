@@ -15,7 +15,7 @@ description: >
 
 # Moku Game Patterns
 
-> **Synced to `@moku-labs/game@0.13.0`** and **`@moku-labs/editor@0.9.1`**: the game shell (`defineGameApp`,
+> **Synced to `@moku-labs/game@0.13.0`** and **`@moku-labs/editor@0.9.3`**: the game shell (`defineGameApp`,
 > `config.ts`, the bin `moku-game` with `visual`), the ten lint rules, `moku-editor --root .` and
 > `moku-editor e2e`, and the plugin catalog here and in `plugin-index.md`. Both take `@moku-labs/core ^1.7.1` +
 > `@moku-labs/common ^0.3.4` as peers. The 17 game
@@ -363,8 +363,9 @@ the agent; `moku-game build` imports none. Every command body starts with the in
   `tests/visual/*.visual.ts`, `tests/e2e/*.e2e.ts`, `tests/editor/*.editor.ts`. `moku-game/test-suffix`
   checks the suffixes; the folder's `index.ts` passes (since 0.12), helpers go to `tests/helpers/`.
 - **Editor specs**: `moku-editor e2e -c <playwright config>` (editor 0.9) runs a game's Playwright specs
-  against the editor, one Playwright process and one fresh editor bin per project, each on its own `PORT`
-  (`PORT`, else 4417, plus the project's index).
+  against the editor, one Playwright process and one fresh editor bin per project and spec file (since
+  0.9.2; per project in 0.9.0), each on its own `PORT` (`PORT`, else 4417, plus the run's index). A run
+  holds `.moku/e2e.lock`, so two runs never overlap.
 
 ## Lint rules L1–L13 (the engine's lint config; a game follows the same rules)
 
@@ -437,7 +438,7 @@ bunx moku-editor --root .          # the game's "editor" script
   writing the file) reloads the page through Bun and restores the game where it was, in about a second.
   The session reads as tainted afterwards.
 - `moku-editor e2e -c <playwright config> [playwright args…]` (0.9) runs a game's editor Playwright specs
-  with one Playwright process per project.
+  with one Playwright process per project and spec file (since 0.9.2).
 - Editor 0.9 peers on game ≥0.10. A source the game does not have shows as "not installed", not as an
   error. The Sound switch runs `game.mute`.
   Recipes are in `references/editor.md`.

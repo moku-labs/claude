@@ -4,17 +4,19 @@ A discoverability map of what each plugin brings into a session, so the componen
 rough context cost) is visible before relying on it. Use `claude plugin details <name>` for the live
 component list and `/usage` for actual token spend.
 
-One marketplace, nine plugins: the core (`moku`), one pack per framework, and a maintainer pack.
+One marketplace, eleven plugins: the core (`moku`), one pack per framework, and a maintainer pack.
 A pack depends on `moku` and never reaches core files by path — it loads the `moku:moku-core` skill
 with the Skill tool and reads `references/<file>` under the base directory the tool prints.
 
 | Plugin | Skills | Agents | Hooks | Bins | Default |
 |---|---:|---:|---:|---:|---|
-| `moku` | 18 | 14 | 16 scripts / 7 events | 2 | enabled |
+| `moku` | 19 | 14 | 16 scripts / 7 events | 2 | enabled |
 | `moku-web` | 2 | 4 | — | — | enabled |
 | `moku-design` | 2 | 1 | — | 1 | enabled |
 | `moku-worker` | 1 | — | — | — | enabled |
 | `moku-room` | 1 | — | — | — | enabled |
+| `moku-game` | 2 | 1 | — | — | enabled |
+| `moku-ai` | 1 | — | — | — | enabled |
 | `moku-native` | 1 | — | — | — | enabled |
 | `moku-system` | 1 | — | — | — | enabled |
 | `moku-common` | 1 | — | — | — | enabled |
@@ -24,7 +26,7 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 
 ## `moku` — the core
 
-### Lifecycle skills (12)
+### Lifecycle skills (13)
 
 Invoked as `/moku:<name>`, and by the conductor. Each one enters and leaves a station through
 `bin/moku-rails`.
@@ -32,6 +34,7 @@ Invoked as `/moku:<name>`, and by the conductor. Each one enters and leaves a st
 | Skill | model / effort | What it does |
 |---|---|---|
 | `moku` | fable / medium | The conductor — the single conversational entry. Opens a change, picks the station, invokes the others. |
+| `session` | fable / low | Starts a moku session in a directory: runs `moku-rails session start`, which turns the rails and their hooks on, then hands over to the conductor. |
 | `init` | fable / medium | Project level: scaffolds the project and leaves `.planning/moku.md`, the marker the rails read. |
 | `brainstorm` | fable / high | Present → Challenge → Decide debate loop into a position and a context file. |
 | `plan` | fable / high | Plan stages and specs; supports a delta spec for M changes. |
@@ -57,7 +60,7 @@ Model-invocable, no `model`/`effort` — they inherit the session.
 | `moku-common-conventions` | MC1–MC3, raw console or process.env in moku, log sink | MC1–MC3 in `references/conventions.md`; paired with `moku-structure-validator` and the `validate-common-usage` hook |
 | `moku-readme` | root readme, moku-labs readme style | The root-README house style: masthead, badges, central table, mermaid, footer |
 
-### Agents (13)
+### Agents (14)
 
 Only the orchestrating session spawns agents; no agent lists `Agent` in `tools`.
 
@@ -131,22 +134,35 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
 
 ## `moku-worker` — the `@moku-labs/worker` pack
 
-- **Skills (1):** `moku-worker` — the Cloudflare Workers backend framework, synced to `0.20.2`
-  (9 plugins: bindings, server, kv, d1, queues, storage, durableObjects, deploy, cli; `endpoint.new`
+- **Skills (1):** `moku-worker` — the Cloudflare Workers backend framework, synced to `0.20.4`
+  (10 plugins: bindings, server, kv, d1, queues, storage, durableObjects, turn, deploy, cli; `endpoint.new`
   guards; stage is plain global config since 0.12.0). Full catalog in `references/plugin-index.md`.
 - **Evals (1):** `worker-one-app` — one worker app composing deploy and cli, no facade (idiom I6).
 
 ## `moku-room` — the `@moku-labs/room` pack
 
-- **Skills (1):** `moku-room` — couch multiplayer, synced to `0.8.2`. A standalone `@moku-labs/core`
+- **Skills (1):** `moku-room` — couch multiplayer, synced to `0.8.4`. A standalone `@moku-labs/core`
   framework, sibling to web and worker, not built on them: 7 plugins, three signaling adapters, and
   an opt-in `./server` tier exporting `hubPlugin` + the `Hub` Durable Object. Full catalog in
   `references/plugin-index.md`.
 - **Evals (1):** `room-standalone-core` — room is its own core, not a web or worker plugin pack.
 
+## `moku-game` — the `@moku-labs/game` and `@moku-labs/editor` pack
+
+- **Skills (2):** `moku-game` (knowledge: the 2D puzzle game engine on PixiJS v8 and its dev tools, synced
+  to game `0.13.0` and editor `0.9.3`; full catalog in `references/plugin-index.md`), `playtest`
+  (fable / medium — the e2e station of a project whose `.planning/moku.md` says `type: game`).
+- **Agents (1):** `moku-game-validator` (sonnet / medium).
+
+## `moku-ai` — the `@moku-labs/ai` pack
+
+- **Skills (1):** `moku-ai` — the asset build system, synced to `0.16.1`: `*.moku.yaml` build files in,
+  generated assets out through the `moku` CLI, with a cost estimate, a budget gate and a resumable cache.
+  Full catalog in `references/plugin-index.md`.
+
 ## `moku-native` — the `@moku-labs/native` pack
 
-- **Skills (1):** `moku-native` — the Node-only native packager, synced to `0.2.2`. A standalone
+- **Skills (1):** `moku-native` — the Node-only native packager, synced to `0.3.3`. A standalone
   `@moku-labs/core` framework that drives Tauri 2: 5 default plugins (project, tauri, build, doctor, cli),
   a second `createApp` beside the web app, permission codegen from `config.system`, five targets, typed
   CLI verbs with no argv parser. Full catalog in `references/plugin-index.md`.
@@ -155,16 +171,17 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
 
 ## `moku-system` — the `@moku-labs/system` pack
 
-- **Skills (1):** `moku-system` — one system API for the browser and a Tauri shell, synced to `0.2.1`.
-  A standalone `@moku-labs/core` framework: the `runtime` core plugin plus 5 opt-in capabilities (store,
-  notify, clipboard, tray, deepLink), each on its own subpath, every method returning a `SystemResult`.
+- **Skills (1):** `moku-system` — one system API for the browser and a Tauri shell, synced to `0.3.2`.
+  A standalone `@moku-labs/core` framework: the `runtime` core plugin plus 9 opt-in capabilities (store,
+  notify, clipboard, tray, deepLink, lifecycle, back, haptics, keepAwake), each on its own subpath, every
+  method returning a `SystemResult`.
   Full catalog in `references/plugin-index.md`.
 - **Evals (1):** `system-result-not-runtime` — capabilities from their subpaths, outcomes narrowed from
   the result, no runtime branching and no hand-written fallbacks.
 
 ## `moku-common` — the `@moku-labs/common` pack
 
-- **Skills (1):** `moku-common` — the shared package, synced to `0.3.3`: `logPlugin` and `envPlugin` as
+- **Skills (1):** `moku-common` — the shared package, synced to `0.3.5`: `logPlugin` and `envPlugin` as
   core plugins a framework registers in `createCoreConfig`, the env providers per runtime (`processEnv`,
   `dotenv`, `cloudflareBindings`, `browserEnv`, `workerSafeProcessEnv`), the branded `./cli` kit and the
   `./browser` entry. The rules MC1–MC3 stay in the core skill `moku-common-conventions`. Full catalog in

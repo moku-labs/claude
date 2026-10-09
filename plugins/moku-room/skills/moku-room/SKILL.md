@@ -11,7 +11,7 @@ description: >
 
 # Moku Room Patterns
 
-> **Synced to `@moku-labs/room@0.8.3`** (catalog from the `v0.8.3` tag source; peer deps `@moku-labs/core@^1.7.1`
+> **Synced to `@moku-labs/room@0.8.4`** (catalog from the `v0.8.4` tag source; peer deps `@moku-labs/core@^1.7.1`
 > + `@moku-labs/common@^0.3.4`, optional peer `@moku-labs/worker@>=0.15.0 <1.0.0`). Full surface — the 7 plugins, the client core (`.`) + the opt-in `./server`
 > tier (a **`hubPlugin` + `Hub` DO** export, **not** a core — compose into your own `@moku-labs/worker` app), the
 > three signaling adapters, config, the six events, and the dependency graph — is in
@@ -78,7 +78,7 @@ patterns underneath. Shared-screen vs phone roles, the WebRTC peer mesh, and syn
 reach them via `ctx.require(plugin)`. Keep the Cloudflare entry (`cloudflare/worker.ts`) thin: it delegates
 `fetch` to the composed worker app's `server.hub.handle`.
 
-## Framework API (@moku-labs/room v0.8.3)
+## Framework API (@moku-labs/room v0.8.4)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **client-core defaults** — already wired. An
 app adds exactly one role facade (`stagePlugin` host / `controllerPlugin` phone) + its game plugin; there are

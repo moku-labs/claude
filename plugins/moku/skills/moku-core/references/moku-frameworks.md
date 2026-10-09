@@ -63,7 +63,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "2.4.4",
+      "knownVersion": "2.4.5",
       "pack": "moku-web",
       "skill": "plugins/moku-web/skills/moku-web",
       "pluginIndex": "plugins/moku-web/skills/moku-web/references/plugin-index.md",
@@ -86,7 +86,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.20.3",
+      "knownVersion": "0.20.4",
       "pack": "moku-worker",
       "skill": "plugins/moku-worker/skills/moku-worker",
       "pluginIndex": "plugins/moku-worker/skills/moku-worker/references/plugin-index.md",
@@ -109,7 +109,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../room",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.8.3",
+      "knownVersion": "0.8.4",
       "pack": "moku-room",
       "skill": "plugins/moku-room/skills/moku-room",
       "pluginIndex": "plugins/moku-room/skills/moku-room/references/plugin-index.md",
@@ -132,7 +132,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../common",
       "layer": 2,
       "role": "shared-infra",
-      "knownVersion": "0.3.4",
+      "knownVersion": "0.3.5",
       "pack": "moku-common",
       "skill": "plugins/moku-common/skills/moku-common",
       "pluginIndex": "plugins/moku-common/skills/moku-common/references/plugin-index.md",
@@ -177,7 +177,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../system",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.3.1",
+      "knownVersion": "0.3.2",
       "pack": "moku-system",
       "skill": "plugins/moku-system/skills/moku-system",
       "pluginIndex": "plugins/moku-system/skills/moku-system/references/plugin-index.md",
@@ -223,7 +223,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../editor",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.9.1",
+      "knownVersion": "0.9.3",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -265,6 +265,29 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
   ]
 }
 ```
+
+> **Family sync 2026-10-09: web 2.4.5, worker 0.20.4, room 0.8.4, common 0.3.5, system 0.3.2, editor 0.9.3**
+> (npm `dist-tags.latest`; each read from the diff between the two tags). core 1.7.1, native 0.3.3, game
+> 0.13.0 and ai 0.16.1 did not move. No API, event, config or plugin change in any of the six. The peer
+> ranges stay `@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4`.
+> - **web 2.4.4 → 2.4.5:** docs and one internal type. `llms.txt`, `llms-full.txt` and the README now name
+>   core and common as peers and list the `collection` provider; the collection README imports
+>   `collectionPlugin` from the root entry. `content` types a directive node's `data` as mdast `Data`
+>   (TypeScript 7); the type is not exported.
+> - **worker 0.20.3 → 0.20.4, common 0.3.4 → 0.3.5:** CI only (`@moku-labs/ci` 1.3.0, Dependabot
+>   auto-merge). No `src/` change.
+> - **room 0.8.3 → 0.8.4:** docs only. The README, `llms.txt` and `llms-full.txt` now say core and common
+>   are peers.
+> - **system 0.3.1 → 0.3.2:** docs only. `llms-full.txt` now matches the source on `TrayConfig.icon`
+>   (`string | Uint8Array | number[]`) and on the deep-link launch handover; the README names the required
+>   peers.
+> - **editor 0.9.1 → 0.9.3:** 0.9.2 `moku-editor e2e` runs one Playwright process per project and spec
+>   file, prints one line per run and a summary, and holds `.moku/e2e.lock`. 0.9.3 a series takes its
+>   planned count of shots and stops early only at `durationMs + 3 s` or on Stop. Peer game `>=0.10.0`
+>   is unchanged. The game template still pins the pair it was run on, game 0.13.0 with editor 0.9.1.
+> - **Upstream install lines now name the peers** in web, room and system
+>   (`bun add @moku-labs/web @moku-labs/core @moku-labs/common …`). The packs still teach I1: an app
+>   declares neither, Bun and npm install the peers.
 
 > **Game and editor sync 2026-10-08: `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.1`, `@moku-labs/native@0.3.3`** (npm
 > `dist-tags.latest`; catalogs from the `v0.13.0` and `v0.9.0` tag source, `llms.txt`, `docs/*.md`,
