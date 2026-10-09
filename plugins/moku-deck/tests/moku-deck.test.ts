@@ -203,13 +203,8 @@ test('on a desktop an answer is drawn by the mod, and a press on it sends that a
   expect(await band.find({ type: 'Client', key: 'quick-0' })).toBeDefined()
   expect(await band.find({ type: 'Text', text: /^pr S6$/, in: 'quick-0' })).toBeDefined()
 
-  // A press outside the laid-out body is no press: the surface measures the region first
-  await band.resize({ columns: 12, rows: 1, in: 'quick-1' })
+  // The press is taken on the way down, once: the release adds nothing
   await band.pointer({ type: 'down', x: 1, y: 0, in: 'quick-1' })
-  await band.pointer({ type: 'up', x: 40, y: 0, in: 'quick-1' })
-  expect(sent).toEqual([])
-  await band.pointer({ type: 'down', x: 1, y: 0, in: 'quick-1' })
-  await band.pointer({ type: 'up', x: 1, y: 0, in: 'quick-1' })
   expect(sent).toEqual(['cleanup'])
   await band.unmount()
 

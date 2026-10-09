@@ -21,7 +21,7 @@ const HEIGHT = 1.5
 
 /**
  * One answer of the reply bar, drawn by the mod itself: the app's own button has one height, and this body is a
- * little taller, so it is easier to hit. A press inside it is posted to the hooks module.
+ * little taller, so it is easier to hit. A press on it is posted to the hooks module.
  *
  * @example
  * <Client key="quick-0" module="./answer.tsx" props={{ label: 'pr S6', kind: 'next' }} />
@@ -32,14 +32,15 @@ const Answer: ClientModule<Props, { isDown: boolean }> = (props, surface) => {
   const look = LOOKS[props.kind] ?? LOOKS.optional
   const body = isDown ? look.lit : look.rest
 
+  // The press is taken on the way down. The first click on the bar also gives it the focus, and the release
+  // of that click does not always arrive: an answer that waited for it needed a second click.
   surface.onPointer(event => {
-    const isInside = event.x >= 0 && event.y >= 0 && event.x < surface.columns && event.y < surface.rows
+    if (event.type === 'down') {
+      surface.setState({ isDown: true })
+      surface.post({ press: true })
+    }
 
-    if (event.type === 'down') surface.setState({ isDown: true })
-    if (event.type !== 'up') return
-
-    surface.setState({ isDown: false })
-    if (isInside) surface.post({ press: true })
+    if (event.type === 'up' || event.type === 'leave') surface.setState({ isDown: false })
   })
 
   return (
