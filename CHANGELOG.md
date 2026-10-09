@@ -2,6 +2,43 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.82.0 (2026-10-09)
+
+### Added
+- **Test runs are seen.** Every test run in a moku session goes to `.planning/tests/runs.jsonl`: the
+  command, whether it was the whole test script, the tree, the duration, the outcome and who ran it
+  (an agent, the rails, the commit hook). A new Bash hook, `on-test-run.mjs`, records the runs agents
+  start. `moku-rails check tests` records its own and keeps its whole output in `.planning/tests/last.log`.
+- **`moku-rails tests`.** Prints the runs, the runs that repeated a result on an unchanged tree and the
+  seconds they cost, what the project's commit hook runs, and the slow tests. `--json` gives the numbers.
+- **Advice on a repeat.** An agent that starts a test command which already ran on the same files is told
+  so. It is advice, never a refusal, and a changed tree is never commented on.
+- **The commit hook counts.** A commit through a pre-commit hook that runs the whole test script
+  (lefthook, husky, simple-git-hooks) is recorded as the green run of the new HEAD, so
+  `moku-rails check tests` answers `not run again`. A hook that runs a part of the script, runs for some
+  commits only, was skipped, or left no passed test job in the output proves nothing.
+- **Slow tests.** Timings are read from Vitest, `bun test` and `node --test`. Tests at or over
+  `slowTestMs` (1000 ms, set in `.claude/moku.local.md`) are listed, and `moku-rails close` prints them
+  as an offer for the person. No test is changed without a yes.
+- **One test-run policy.** `skills/moku-testing/references/test-runs.md`: one run per tree, the output
+  kept in a file, the plugin's tests while building, the whole script once per wave and at the close,
+  no whole run beside a commit whose hook runs it. Builders, validators, verify, build, check, e2e and
+  playtest point at it.
+
+  Measured on 84 past sessions before the change: 5177 test runs, 28% of them repeated a run with no
+  edit between, about 3.8 h of 15.7 h test time. 801 of the 804 repeats of a green run differed only in
+  the output filter.
+
+### Changed
+- `moku-rails status` adds a `Tests:` line when runs were repeated in the last day or tests are slow.
+- The build delta pass no longer runs the suite after the coverage run on an unchanged tree. The
+  regression step is skipped on a tree the whole script passed on. `check plugin <name>` runs that
+  plugin's tests only.
+
+### Unchanged
+- `moku-rails close` still refuses without a green `tests` on the current tree. A test run from a shell
+  never confirms it.
+
 ## 0.81.5 (2026-10-09)
 
 ### Fixed
