@@ -2,6 +2,32 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.81.5 (2026-10-09)
+
+### Fixed
+- **The write gate did not see the source of a game.** The gate covered paths under `src/` only, and a game
+  has no `src/`. In a game `moku-rails guard features/hello/flow/new.ts` answered `allow` with no change open.
+  - The gate now reads the project type from `.planning/moku.md`. When it says `type: game`, the gate also
+    covers `index.ts`, `game.ts`, `config.ts` and the folders `core/`, `shared/`, `features/` and `plugins/`
+    at the project root. The same rules apply as for `src/`: no source before init, and none without an
+    open change at a writing station.
+  - Shell writes are judged by the same roots: `cat > core/state.ts` is refused where a Write would be.
+  - Not gated in a game: `generated/`, `tests/`, `.moku/`, the tooling files, and art in an `assets/`
+    folder of a layer. A `.ts` or `.tsx` file in an `assets/` folder is still source.
+  - Any other project type behaves as before. A root `plugins/` or `features/` folder there is not gated.
+  - Before init the marker does not exist, so the type is unknown and only `src/` is gated, as before.
+- **Plan and build had no game branch.** The conductor sent a game through "plan, build, verify as for any
+  app". The app path builds `src/plugins/{name}/` and writes `src/main.ts` with `createApp`. The game
+  validator calls a `createApp` in a game a BLOCKER, and `moku-verify-artifacts` fails on a game.
+  - `build-app.md` opens with a "Game" section. The unit of work is one feature folder, `features/<f>/`.
+    The check after a wave is `bun run keys --check && bun run typecheck && bun run lint && bun run test &&
+    bun run test:visual`. Step 4 and `moku-verify-artifacts` do not apply to a game.
+  - The plan skill states the exception next to the structure rule: one spec per feature, no `src/`, no
+    `createApp`.
+  - The conductor, the build skill and the builder agent send a game to that section.
+  - The layout and the API stay in the `moku-game` skill. The core pack points at it and says to install
+    the `moku-game` pack when it is missing.
+
 ## 0.81.4 (2026-10-09)
 
 ### Changed
