@@ -2,6 +2,22 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.84.0 (2026-10-09)
+
+### Changed
+- **The target stack is Bun 1.4.2.** It was 1.3.14. A new project gets `.bun-version` `1.4.2`,
+  `engines.bun` `>=1.4.2` and `@types/bun` `1.4.2`, and `/moku:upgrade` offers the same to an existing one
+  through the `tooling-freshness` migration.
+  - Why: on 1.3.14 the Bun dev server froze or crashed when a page rebundle overlapped its first bundle.
+    The editor measured 39 of 74 runs on 1.3.14 and 0 of 241 on 1.4.2. 1.4.0 and 1.4.1 have regressions
+    that 1.4.2 fixes.
+  - `tooling-config.md` says what 1.4 changes for a project: `bunfig.toml` is strict TOML, and an old
+    lockfile is kept, never deleted.
+  - The game template moves too. The hello world ran green on Bun 1.4.2 with `@types/bun` 1.4.2:
+    install, keys, typecheck, lint, test, visual, build.
+- Not changed: the `Engines` line of each framework pack. It says what the published package declares.
+  The session hook still warns below Bun 1.3.14, the floor those packages declare.
+
 ## 0.83.9 (2026-10-09)
 
 ### Fixed

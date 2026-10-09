@@ -74,7 +74,7 @@ bun run format             # {what}
 
 ## Requirements
 
-- **Node `>= 24`** and **Bun `>= 1.3.14`** — use `bun` exclusively (never npm/yarn/pnpm).
+- **Node `>= 24`** and **Bun `>= 1.4.2`** — use `bun` exclusively (never npm/yarn/pnpm).
 - **TypeScript** in strict mode, with `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess`.
 - **[`{related pkg}`]({url})** — {why it's needed}.
 

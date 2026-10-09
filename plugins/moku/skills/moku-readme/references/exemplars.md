@@ -27,7 +27,7 @@ What to copy:
 - The **Catalog table** is the doc's spine: `| Export | Kind | Responsibility |`, with
   each export name linking to its source README.
 - `Scripts` block lists every `bun run …` with aligned `#` comments.
-- `Requirements` = Node ≥ 24 · Bun ≥ 1.3.14 · TS strict + the `@moku-labs/core` link.
+- `Requirements` = Node ≥ 24 · Bun ≥ 1.4.2 · TS strict + the `@moku-labs/core` link.
 
 ## web — framework
 

@@ -229,7 +229,7 @@ The framework brings Preact, the Markdown pipeline, and the build/deploy/cli too
 
 ```json
 {
-  "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" },
+  "engines": { "node": ">=24.0.0", "bun": ">=1.4.2" },
   "dependencies": {
     "@moku-labs/web": "1.6.1"
   },

@@ -75,11 +75,11 @@ and (if it changes the scaffold) update `tooling-config.md`.
 - **Applies to:** all
 - **Default:** on
 - **Depends on:** —
-- **Detect:** `.bun-version < 1.3.14`, OR `@biomejs/biome < 2.4.16`, OR `@types/bun < 1.3.14`, OR
-  `publint < 0.3.21`, OR `@arethetypeswrong/cli < 0.18.3`, OR `engines.bun` floor `< 1.3.14`.
+- **Detect:** `.bun-version < 1.4.2`, OR `@biomejs/biome < 2.4.16`, OR `@types/bun < 1.4.2`, OR
+  `publint < 0.3.21`, OR `@arethetypeswrong/cli < 0.18.3`, OR `engines.bun` floor `< 1.4.2`.
 - **Apply:**
-  1. `.bun-version` → `1.3.14`; `package.json.engines.bun` → `>=1.3.14`.
-  2. `package.json.devDependencies`: `@biomejs/biome` → `2.4.16`, `@types/bun` → `1.3.14`,
+  1. `.bun-version` → `1.4.2`; `package.json.engines.bun` → `>=1.4.2`.
+  2. `package.json.devDependencies`: `@biomejs/biome` → `2.4.16`, `@types/bun` → `1.4.2`,
      `publint` → `0.3.21`, `@arethetypeswrong/cli` and `@arethetypeswrong/core` → `0.18.3`.
   3. `biome.json`: update `$schema` URL to `…/schemas/2.4.16/schema.json`.
   4. `bun install`.

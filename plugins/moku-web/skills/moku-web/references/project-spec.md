@@ -84,7 +84,7 @@ one-page marketing site to a multi-locale app with hundreds of routes.
 
 | File | Purpose | Required settings |
 |---|---|---|
-| `package.json` | scripts + deps | `engines.node ">=24"`, `bun ">=1.3.14"`; runtime deps = `@moku-labs/web` + `preact` only; everything else `devDependencies`; scripts are thin `app.cli.*` passthroughs |
+| `package.json` | scripts + deps | `engines.node ">=24"`, `bun ">=1.4.2"`; runtime deps = `@moku-labs/web` + `preact` only; everything else `devDependencies`; scripts are thin `app.cli.*` passthroughs |
 | `bunfig.toml` | install policy | `[install] exact = true` (pin every dep) — **recommended** |
 | `.bun-version` | toolchain pin | bare version; CI reads it via `setup-bun` |
 | `tsconfig.json` | strict TS, no Vite | `jsx: "react-jsx"`, `jsxImportSource: "preact"`, `moduleResolution: "bundler"`, `verbatimModuleSyntax`, `noEmit`, `strict`, `exactOptionalPropertyTypes`, `noUncheckedIndexedAccess`, **`types: ["bun","node"]`** (TS6 defaults `types` to `[]`) |

@@ -247,7 +247,7 @@ Before calling a root README done:
 - [ ] The central table exists and links out for detail.
 - [ ] Frameworks/toolkits have one on-palette mermaid `flowchart LR`.
 - [ ] `Scripts` mirrors `package.json` (libraries/frameworks); `Requirements` lists
-      Node ≥ 24 · Bun ≥ 1.3.14 · TS strict + the related-package link.
+      Node ≥ 24 · Bun ≥ 1.4.2 · TS strict + the related-package link.
 - [ ] Footer is the canonical `[MIT](./LICENSE) © [moku-labs](...)` line.
 - [ ] Every command, script, import path, and function name referenced exists in source
       (grep-verify — this is also enforced by `build-final.md` Step 5.7).
