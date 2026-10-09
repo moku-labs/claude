@@ -1,6 +1,9 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { describeCall, describeRun, detectLanguage, programOf, splitIdea, isDestructive, isTestCommand, parseFlow, parseReply, routeOf, stationOf, summarizeTests } from '../hooks/parse'
+import { describeCall, describeRun, detectLanguage, digestRequest, headline, parseDigests, programOf, splitIdea, isDestructive, isTestCommand, parseFlow, parseReply, routeOf, stationOf, summarizeTests } from '../hooks/parse'
+
+// The test environment has timers, and the declarations of a hooks module name none
+declare function setTimeout(run: (value?: unknown) => void, ms: number): unknown
 
 const REPLY = [
   '**1. Pins in the game template are old**',
@@ -284,5 +287,74 @@ test('the deck speaks the language of the conversation, and a short answer does 
   // A long English prompt does
   await $.prompt.submit({ text: 'please continue with the next step of the build' } as never)
   expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Ideas/ })).toBeDefined()
+  await pane.unmount()
+})
+
+test('an idea gets a short card in the language of the conversation, and the note itself is one press away', async ($, on) => {
+  const asked: string[] = []
+  on('fs.exists', () => ({ value: false }))
+  on('turn.complete', () => ({ text: '' }))
+  on('store.get', () => ({ value: undefined }))
+  on('store.set', () => ({ value: undefined }))
+  on('model.complete', ($, e) => {
+    asked.push(e.prompt)
+
+    const cards = [1, 2, 3].map(n => ({ title: `Карточка ${n}`, points: ['Что это', 'Зачем это'] }))
+
+    return { value: { isAnswered: true, text: `Вот: ${JSON.stringify(cards)}`, usage: {} } } as never
+  })
+
+  expect(headline('Record & replay timeline (Alex 2026-10-04): Record button, play, Stop')).toBe('Record & replay timeline')
+  expect(digestRequest(['undo'], 'ru').prompt).toContain('Write in Russian.')
+  expect(parseDigests('not json', 1)).toEqual([])
+  expect(parseDigests('[{"title":"A","points":["b"]}]', 2)).toEqual([])
+
+  await $.turn.complete({ answer: 'Сделал. Мод перезагрузится после этого сообщения.', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
+
+  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await pane.press({ key: 'tab-ideas' })
+
+  expect(asked.length).toBe(1)
+  expect(asked[0]).toContain('Write in Russian.')
+  expect(await pane.findAll({ type: 'Text', text: /^Карточка \d$/ })).toHaveLength(3)
+  expect(await pane.find({ type: 'Text', text: /Daily challenge mode/ })).toBe(undefined)
+
+  await pane.press({ key: 'more-0' })
+  expect(await pane.find({ type: 'Text', text: /Daily challenge mode|Undo the last move/ })).toBeDefined()
+
+  // The cards are kept: opening the tab again asks nothing
+  await pane.press({ key: 'tab-flow' })
+  await pane.press({ key: 'tab-ideas' })
+  expect(asked.length).toBe(1)
+  await pane.unmount()
+})
+
+test('a second press while the first answer is still on its way sends nothing', async ($, on) => {
+  const sent: string[] = []
+  let release = () => {}
+  on('fs.exists', () => ({ value: false }))
+  on('prompt.submit', async ($, e) => {
+    sent.push(e.text)
+    // The session is busy: the prompt waits, as it does while a turn runs
+    await new Promise<void>(resolve => (release = resolve))
+
+    return { text: e.text }
+  })
+
+  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await pane.press({ key: 'tab-flow' })
+
+  const first = pane.press({ key: 'approve' })
+  await new Promise(resolve => setTimeout(resolve, 20))
+  expect(await pane.find({ type: 'Text', text: /Sending: approved, continue/ })).toBeDefined()
+
+  const second = pane.press({ key: 'approve' })
+  await new Promise(resolve => setTimeout(resolve, 20))
+  expect(sent).toEqual(['approved, continue'])
+
+  release()
+  await Promise.all([first, second])
+  expect(await pane.find({ type: 'Text', text: /Sending:/ })).toBe(undefined)
+  expect(sent).toEqual(['approved, continue'])
   await pane.unmount()
 })
