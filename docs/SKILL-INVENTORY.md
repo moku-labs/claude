@@ -20,7 +20,7 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 | `moku-native` | 1 | — | — | — | enabled |
 | `moku-system` | 1 | — | — | — | enabled |
 | `moku-common` | 1 | — | — | — | enabled |
-| `moku-deck` | — | — | 1 hooks module / 9 events | — | `defaultEnabled: false` |
+| `moku-deck` | — | — | 1 hooks module / 10 events | — | `defaultEnabled: false` |
 | `moku-maintainer` | 2 | — | — | — | `defaultEnabled: false` |
 
 ---
@@ -196,7 +196,7 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
 
 - **Hooks module (1):** `hooks/register.tsx`, a function hooks module (the early-access mods API), with one
   surface module, `hooks/answer.tsx`, that draws the answers of the bar.
-- **Events hooked (9):** `session.start`, `command.run`, `prompt.submit`, `turn.complete`, `tool.call`,
+- **Events hooked (10):** `session.start`, `command.run`, `prompt.submit`, `prompt.compose`, `turn.complete`, `tool.call`,
   `ui.message`, and `ui.render` for `AbovePrompt`, `Pane` and `ToolUse`.
 - **Command (1):** `/moku-deck` opens the pane. Outside a moku session it also turns a preview on.
 - **Tests:** `tests/moku-deck.test.ts`, run with `npm run test:mods`.

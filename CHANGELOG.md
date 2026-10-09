@@ -2,6 +2,16 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.3 (2026-10-09)
+
+### Fixed
+- **The status of the deck's bar was half translated.** For a shell command the bar shows the description
+  Claude gives the call, and Claude wrote it in English.
+  - In a Russian conversation the deck adds one sentence to the system prompt: write the `description` of
+    a Bash call in Russian. An English conversation gets no sentence.
+  - A description that is still in another language is not shown. The bar names the program instead:
+    `команда gh`.
+
 ## 0.83.2 (2026-10-09)
 
 ### Fixed
