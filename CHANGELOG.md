@@ -2,6 +2,52 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.81.4 (2026-10-09)
+
+### Changed
+- **The vendored Moku Core spec is pinned to `df76939`, `main` at `v1.7.1`.** It was `d95c279`.
+  - One file changed: `spec/14-EVENT-REGISTRATION.md` gains row 8 in §10. Annotate `register` when `api`
+    is a pre-typed factory, or wrap the factory: `api: ctx => createApi(ctx)`. Without it TypeScript checks
+    `api` first, with an empty own-event map.
+  - No heading changed, so `spec-index.md` moves only its pin and date.
+  - No vendored sandbox file changed upstream. Two keep their local comments from 0.79.0.
+    Upstream has one new sandbox test, `pretyped-factory-events.test.ts`. It is not vendored.
+- **Six framework packs are synced to the latest releases.** None of them changes an API, an event, a
+  config field or a plugin. The peer ranges stay `@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4`.
+
+  | Framework | Was | Now | What moved upstream |
+  |---|---|---|---|
+  | `@moku-labs/web` | 2.4.4 | 2.4.5 | Docs, and one internal type in `content` for TypeScript 7 |
+  | `@moku-labs/worker` | 0.20.3 | 0.20.4 | CI only |
+  | `@moku-labs/room` | 0.8.3 | 0.8.4 | Docs |
+  | `@moku-labs/common` | 0.3.4 | 0.3.5 | CI only |
+  | `@moku-labs/system` | 0.3.1 | 0.3.2 | Docs |
+  | `@moku-labs/editor` | 0.9.1 | 0.9.3 | `moku-editor e2e`, the series shot count |
+
+  - **web.** The upstream `llms.txt`, `llms-full.txt` and README now name core and common as peers and list
+    the `collection` provider. The collection README imports `collectionPlugin` from the root entry. The
+    index no longer warns about either.
+  - **room.** The upstream docs now say core and common are peers. The index drops its warning.
+  - **system.** The upstream `llms-full.txt` now matches the source on `TrayConfig.icon` and on the
+    deep-link launch handover. The stale-docs table in the index goes from six rows to three.
+  - **editor 0.9.2.** `moku-editor e2e` runs one Playwright process per project and spec file. It prints one
+    line per run and a summary. A run holds `.moku/e2e.lock`, so a second run exits 1.
+  - **editor 0.9.3.** A series takes its planned count of shots. It stops early only at `durationMs + 3 s`,
+    or on Stop.
+  - **Registry.** `knownVersion` of the six rows, the "currently" lines of the upgrade migrations, and a
+    2026-10-09 sync note.
+  - core 1.7.1, native 0.3.3, game 0.13.0 and ai 0.16.1 did not move.
+- **The game template keeps its install pins.** `hello-world.md` and the files that repeat its pins still
+  name editor 0.9.1, common 0.3.4 and system 0.3.1: the pair the template was run on. The new versions were
+  not run on a scaffold.
+
+### Fixed
+- **`README.md` showed version 0.80.1 in its badge.** It shows 0.81.4.
+- **`docs/SKILL-INVENTORY.md` was behind.** It said nine plugins and left out `moku-game`, `moku-ai` and the
+  `session` skill. It now lists eleven plugins, 19 core skills and 14 core agents. The sync versions are
+  current: worker 0.20.4 with 10 plugins, room 0.8.4, native 0.3.3, system 0.3.2 with 9 capabilities, common
+  0.3.5.
+
 ## 0.81.3 (2026-10-08)
 
 ### Changed
