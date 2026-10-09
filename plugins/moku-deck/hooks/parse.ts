@@ -1,4 +1,4 @@
-import type { Change, Flow, Reply, ReplyItem, Telemetry } from '../types'
+import type { Change, Flow, Lang, Reply, ReplyItem, Telemetry } from '../types'
 
 const TEST_COMMAND =
   /(^|[\s;&|(])(bun (run )?test|bunx? vitest|vitest|npm (run )?test|pnpm (run )?test|node --run test|node --test|playwright test|moku-rails check tests)(\s|$)/
@@ -56,27 +56,50 @@ const ROUTES: Record<string, string[]> = {
 /** The stations a change may skip, as `lib/rails/routes.mjs` has them. */
 const OPTIONAL_STATIONS = new Set(['brainstorm', 'design', 'e2e', 'release'])
 
-/** What a game does differently at a station: it is built by feature, proven by a playtest and shipped as a build. */
-const GAME_HINTS: Record<string, string> = {
-  design: 'Decide the look. Stills first, then shots of the running game.',
-  tweak: 'A quick edit of the game, checked right away.',
-  build: 'Build feature by feature, tests first.',
-  e2e: 'Headless scenarios, baselines, then a real playthrough.',
-  release: 'Ship the web build or a store build.',
+/** What each station is for, in one line a person reads at a glance, per language. */
+const STATION_HINTS: Record<Lang, Record<string, string>> = {
+  en: {
+    intake: 'Size the request and open the change.',
+    brainstorm: 'Explore the idea before any plan.',
+    design: 'Decide the look, the API or the boundaries.',
+    plan: 'Write the specs. No source yet.',
+    tweak: 'A small edit, checked right away.',
+    build: 'Build from the specs, tests first, wave by wave.',
+    verify: 'Validators check structure, style and quality.',
+    e2e: 'Prove it in a real run: a browser or a playtest.',
+    release: 'Version, changelog, publish or deploy.',
+    close: 'Tests green, verify passed, docs updated.',
+  },
+  ru: {
+    intake: 'Оценить запрос и открыть изменение.',
+    brainstorm: 'Обдумать идею до любого плана.',
+    design: 'Решить вид, API или границы.',
+    plan: 'Написать спеки. Кода пока нет.',
+    tweak: 'Небольшая правка, проверка сразу.',
+    build: 'Сборка по спекам, сначала тесты, волна за волной.',
+    verify: 'Валидаторы проверяют структуру, стиль и качество.',
+    e2e: 'Доказать в настоящем запуске: браузер или плейтест.',
+    release: 'Версия, changelog, публикация или деплой.',
+    close: 'Тесты зелёные, verify пройден, доки обновлены.',
+  },
 }
 
-/** What each station is for, in one line a person reads at a glance. */
-const STATION_HINTS: Record<string, string> = {
-  intake: 'Size the request and open the change.',
-  brainstorm: 'Explore the idea before any plan.',
-  design: 'Decide the look, the API or the boundaries.',
-  plan: 'Write the specs. No source yet.',
-  tweak: 'A small edit, checked right away.',
-  build: 'Build from the specs, tests first, wave by wave.',
-  verify: 'Validators check structure, style and quality.',
-  e2e: 'Prove it in a real run: a browser or a playtest.',
-  release: 'Version, changelog, publish or deploy.',
-  close: 'Tests green, verify passed, docs updated.',
+/** What a game does differently at a station: it is built by feature, proven by a playtest and shipped as a build. */
+const GAME_HINTS: Record<Lang, Record<string, string>> = {
+  en: {
+    design: 'Decide the look. Stills first, then shots of the running game.',
+    tweak: 'A quick edit of the game, checked right away.',
+    build: 'Build feature by feature, tests first.',
+    e2e: 'Headless scenarios, baselines, then a real playthrough.',
+    release: 'Ship the web build or a store build.',
+  },
+  ru: {
+    design: 'Решить вид. Сначала статичные кадры, потом снимки запущенной игры.',
+    tweak: 'Быстрая правка игры, проверка сразу.',
+    build: 'Сборка по фичам, сначала тесты.',
+    e2e: 'Headless-сценарии, эталоны, потом настоящее прохождение.',
+    release: 'Выпустить веб-сборку или сборку для стора.',
+  },
 }
 
 /** What the flow tab shows where no moku session exists, so the layout can be judged. */
@@ -103,10 +126,10 @@ export const SAMPLE_FLOW: Flow = {
  * A station as the person calls it and what happens there. A game calls its e2e station the playtest.
  *
  * @example
- * stationOf('e2e', true).name // 'playtest'
+ * stationOf('e2e', true, 'ru').hint // 'Headless-сценарии, эталоны, потом настоящее прохождение.'
  */
-export function stationOf(station: string, isGame: boolean): { name: string; hint: string } {
-  const hint = (isGame ? GAME_HINTS[station] : undefined) ?? STATION_HINTS[station] ?? ''
+export function stationOf(station: string, isGame: boolean, lang: Lang = 'en'): { name: string; hint: string } {
+  const hint = (isGame ? GAME_HINTS[lang][station] : undefined) ?? STATION_HINTS[lang][station] ?? ''
 
   return { name: isGame && station === 'e2e' ? 'playtest' : station, hint }
 }
@@ -167,7 +190,14 @@ export function parseTelemetry(runsLog: string): Telemetry {
 
 const TEST_SEGMENT =
   /(moku-rails check tests|(?:bunx |npx )?playwright test|bunx? vitest(?: run)?|vitest(?: run)?|(?:bun|npm|pnpm) (?:run )?test(?::[\w-]+)?|node --run test|node --test)([^|;&>]*)/
-const KINDS: Record<string, string> = { e2e: 'End-to-end tests', unit: 'Unit tests', integration: 'Integration tests', visual: 'Visual tests', coverage: 'Coverage run' }
+const KINDS: Record<Lang, Record<string, string>> = {
+  en: { e2e: 'End-to-end tests', unit: 'Unit tests', integration: 'Integration tests', visual: 'Visual tests', coverage: 'Coverage run' },
+  ru: { e2e: 'Сквозные тесты', unit: 'Юнит-тесты', integration: 'Интеграционные тесты', visual: 'Визуальные тесты', coverage: 'Прогон с покрытием' },
+}
+const RUNS = {
+  en: { close: 'Close check', whole: 'Whole suite', wholeHow: 'whole suite', browser: 'Browser tests', of: (target: string) => `${target} tests`, more: (n: number) => ` and ${n} more` },
+  ru: { close: 'Проверка при закрытии', whole: 'Весь набор', wholeHow: 'весь набор', browser: 'Тесты в браузере', of: (target: string) => `тесты ${target}`, more: (n: number) => ` и ещё ${n}` },
+}
 const GENERIC_FOLDERS = new Set(['tests', 'test', '__tests__', 'src', 'plugins', 'lib', 'unit', 'integration'])
 
 /**
@@ -176,21 +206,20 @@ const GENERIC_FOLDERS = new Set(['tests', 'test', '__tests__', 'src', 'plugins',
  * @example
  * describeRun('cd app && bun test src/plugins/router | tail -5') // { what: 'router tests', how: 'bun test' }
  */
-export function describeRun(command: string): { what: string; how: string } {
+export function describeRun(command: string, lang: Lang = 'en'): { what: string; how: string } {
   const found = TEST_SEGMENT.exec(command)
   const how = found?.[1] ?? 'tests'
   const paths = (found?.[2] ?? '').split(/\s+/).filter(one => /^[\w.@"'/-]+$/.test(one) && !one.startsWith('-') && /[/.]|^[a-z]/.test(one) && !/^\d+$/.test(one))
+  const say = RUNS[lang]
 
-  if (how === 'moku-rails check tests') return { what: 'Close check', how: 'whole suite' }
-  if (how.includes('playwright')) return { what: 'Browser tests', how }
+  if (how === 'moku-rails check tests') return { what: say.close, how: say.wholeHow }
+  if (how.includes('playwright')) return { what: say.browser, how }
 
-  const kind = KINDS[/:([\w-]+)$/.exec(how)?.[1] ?? '']
+  const kind = KINDS[lang][/:([\w-]+)$/.exec(how)?.[1] ?? '']
   if (kind !== undefined) return { what: kind, how }
-  if (paths.length === 0) return { what: 'Whole suite', how }
+  if (paths.length === 0) return { what: say.whole, how }
 
-  const more = paths.length > 1 ? ` and ${paths.length - 1} more` : ''
-
-  return { what: `${targetOf(paths[0] ?? '')} tests${more}`, how }
+  return { what: `${say.of(targetOf(paths[0] ?? ''))}${paths.length > 1 ? say.more(paths.length - 1) : ''}`, how }
 }
 
 /** The one folder or file name of a path that says what is under test. */
@@ -219,16 +248,52 @@ export function splitIdea(idea: string): { tag: string; title: string } {
  * @example
  * describeCall({ tool: 'Edit', file_path: 'lib/rails/guard.mjs' }) // 'editing guard.mjs'
  */
-export function describeCall(call: Record<string, unknown>): string {
+export function describeCall(call: Record<string, unknown>, lang: Lang = 'en'): string {
   const text = (value: unknown) => (typeof value === 'string' ? value : '')
   const file = text(call.file_path).split('/').at(-1) ?? ''
+  const say = CALLS[lang]
 
-  if (call.tool === 'Bash') return isTestCommand(text(call.command)) ? `running ${describeRun(text(call.command)).what.toLowerCase()}` : short(text(call.description) || text(call.command), 60)
-  if (call.tool === 'Edit' || call.tool === 'Write') return `editing ${file}`
-  if (call.tool === 'Read') return `reading ${file}`
-  if (call.tool === 'Agent') return `starting an agent: ${short(text(call.description), 40)}`
+  if (call.tool === 'Bash') return isTestCommand(text(call.command)) ? say.tests(describeRun(text(call.command), lang).what.toLowerCase()) : short(text(call.description) || text(call.command), 60)
+  if (call.tool === 'Edit' || call.tool === 'Write') return say.edit(file)
+  if (call.tool === 'Read') return say.read(file)
+  if (call.tool === 'Agent') return say.agent(short(text(call.description), 40))
 
-  return `using ${text(call.tool).replace(/^mcp__.*__/, '')}`
+  return say.tool(text(call.tool).replace(/^mcp__.*__/, ''))
+}
+
+/** A call in a few words. English says what the worker is doing, Russian names the work, so each fits its status line. */
+const CALLS = {
+  en: {
+    tests: (what: string) => `running ${what}`,
+    edit: (file: string) => `editing ${file}`,
+    read: (file: string) => `reading ${file}`,
+    agent: (task: string) => `starting an agent: ${task}`,
+    tool: (name: string) => `using ${name}`,
+  },
+  ru: {
+    tests: (what: string) => `прогон тестов, ${what}`,
+    edit: (file: string) => `правка ${file}`,
+    read: (file: string) => `чтение ${file}`,
+    agent: (task: string) => `запуск агента: ${task}`,
+    tool: (name: string) => `инструмент ${name}`,
+  },
+}
+
+const MIN_LETTERS = 12
+
+/**
+ * The language a text is written in, by its letters, or nothing for a text too short to tell. Code is left out:
+ * a Russian reply full of commands is still Russian.
+ *
+ * @example
+ * detectLanguage('Сделал. Мод перезагрузится после этого сообщения.') // 'ru'
+ */
+export function detectLanguage(text: string): Lang | undefined {
+  const letters = text.replace(/```[\s\S]*?```|`[^`\n]*`/g, '').match(/\p{L}/gu) ?? []
+  // A named answer such as `style filled` is too short to say what language the conversation is in
+  if (letters.length < MIN_LETTERS) return undefined
+
+  return letters.filter(letter => /\p{Script=Cyrillic}/u.test(letter)).length / letters.length > 0.3 ? 'ru' : 'en'
 }
 
 /**
@@ -279,13 +344,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * @example
  * summarizeTests('ℹ pass 214\nℹ fail 0') // '214 passed'
  */
-export function summarizeTests(output: string): string {
+export function summarizeTests(output: string, lang: Lang = 'en'): string {
   const passed = /(?:ℹ pass |Tests\s+(?:\d+ failed \| )?)(\d+)/.exec(output)?.[1] ?? /(\d+) pass(?:ed)?\b/.exec(output)?.[1]
   const failed = /(?:ℹ fail )(\d+)/.exec(output)?.[1] ?? /(\d+) fail(?:ed)?\b/.exec(output)?.[1]
+  const [ok, bad] = lang === 'ru' ? ['прошло', 'упало'] : ['passed', 'failed']
 
   if (passed === undefined && failed === undefined) return ''
 
-  return failed !== undefined && failed !== '0' ? `${failed} failed, ${passed ?? '0'} passed` : `${passed ?? '0'} passed`
+  return failed !== undefined && failed !== '0' ? `${failed} ${bad}, ${passed ?? '0'} ${ok}` : `${passed ?? '0'} ${ok}`
 }
 
 /**

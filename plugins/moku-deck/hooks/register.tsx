@@ -5,6 +5,7 @@ import type { Tab, TestRun } from '../types'
 import {
   SAMPLE_FLOW,
   describeCall,
+  detectLanguage,
   describeRun,
   isDestructive,
   isTestCommand,
@@ -16,6 +17,7 @@ import {
   stationOf,
   summarizeTests,
 } from './parse'
+import { words } from './words'
 
 const PANE = 'moku-deck'
 const LEDGER_FILE = '.planning/state.json'
@@ -23,11 +25,7 @@ const RUNS_FILE = '.planning/tests/runs.jsonl'
 const MARKER_FILE = '.planning/moku.md'
 const REFRESH_MS = 5000
 const KEPT_RUNS = 50
-const TABS: { tab: Tab; label: string }[] = [
-  { tab: 'flow', label: 'Flow' },
-  { tab: 'ideas', label: 'Ideas' },
-  { tab: 'tests', label: 'Tests' },
-]
+const TABS: Tab[] = ['flow', 'ideas', 'tests']
 
 // The moku brand: one hot pink for where you are, mint for what is good, amber for what waits, lavender for quiet text
 const PINK = '#ff2e63'
@@ -50,6 +48,7 @@ const tests = atom({ plugin: 'moku-deck', key: 'tests' } as const, { runs: [], e
 const isCoaching = atom({ plugin: 'moku-deck', key: 'isCoaching' } as const, false)
 const calls = atom({ plugin: 'moku-deck', key: 'calls' } as const, [])
 const lastCall = atom({ plugin: 'moku-deck', key: 'lastCall' } as const, null)
+const lang = atom({ plugin: 'moku-deck', key: 'lang' } as const, 'en')
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -70,11 +69,12 @@ export const register: Register = on => {
     await update($, isPreview, () => true)
     await openDeck($)
 
-    return { text: 'moku deck opened.' }
+    return { text: words(await read($, lang)).opened }
   })
 
   // A prompt the person sends answers the reply in their own words: its offers are stale from then on
   on('prompt.submit', async ($, e, next) => {
+    await follow($, e.text)
     await update($, reply, () => null)
     await update($, picked, () => [])
     await update($, isPicking, () => false)
@@ -85,6 +85,7 @@ export const register: Register = on => {
   // The reply bar: every finished answer of the main loop offers its named answers and its items
   on('turn.complete', async ($, e, next) => {
     if (e.agentId === undefined && e.answer !== '') {
+      await follow($, e.answer)
       await update($, reply, () => parseReply(e.answer))
       await update($, lastCall, () => null)
       await update($, picked, () => [])
@@ -99,7 +100,7 @@ export const register: Register = on => {
     const id = e.tool_use_id ?? ''
     const who = e.agentId === undefined ? 'Claude' : `Agent ${e.agentId.slice(0, 4)}`
 
-    const call = { id, who, text: describeCall(e) }
+    const call = { id, who, text: describeCall(e, await read($, lang)) }
 
     await update($, calls, now => [...now, call].slice(-20))
 
@@ -133,7 +134,7 @@ export const register: Register = on => {
       command: e.command,
       who,
       seconds,
-      summary: summarizeTests(ran.text ?? ''),
+      summary: summarizeTests(ran.text ?? '', await read($, lang)),
       isRed,
       isRepeat,
     }
@@ -162,14 +163,15 @@ export const register: Register = on => {
     if (found === undefined) return next(e)
 
     const { Box, Text } = $.ui.resolve(e)
+    const w = words(await read($, lang))
 
     return (
       <Box gap={1}>
         <Text color={found.isRed ? PINK : MINT} bold>
-          {found.isRed ? 'Tests red' : 'Tests green'}
+          {found.isRed ? w.testsRed : w.testsGreen}
         </Text>
-        <Text>{found.summary === '' ? `${found.seconds}s` : `${found.summary} in ${found.seconds}s`}</Text>
-        {found.isRepeat && <Text color={AMBER}>Not needed: nothing was edited since the last green run</Text>}
+        <Text>{w.took(found.summary, found.seconds)}</Text>
+        {found.isRepeat && <Text color={AMBER}>{w.rowNotNeeded}</Text>}
         <Text dimColor wrap="truncate-end">
           {short(found.command, 60)}
         </Text>
@@ -204,7 +206,7 @@ export const register: Register = on => {
     const chosen = [...(await read($, picked))].sort((a, b) => a - b)
     const picking = await read($, isPicking)
     const list = chosen.join(' ')
-    const isTerminal = e.surface === 'terminal'
+    const w = words(await read($, lang))
     const hasAnswers = shown.quick.length > 0 || shown.items.length > 0
     const others = Math.max(0, new Set(running.map(one => one.who)).size - 1)
 
@@ -239,15 +241,15 @@ export const register: Register = on => {
             </Box>
             {shown.quick.map((text, i) => chip(`quick-${i}`, text, tone(text, i), () => void answer($, text)))}
             {shown.items.length > 0 && (
-              <Button key="picking" plain label={picking ? 'Hide the items' : `Pick from ${shown.items.length} items`} onPress={() => update($, isPicking, now => !now)} />
+              <Button key="picking" plain label={picking ? w.hideItems : w.pickFrom(shown.items.length)} onPress={() => update($, isPicking, now => !now)} />
             )}
           </Box>
           {/* The status starts right after what is before it and is cut at the edge: it never reaches an answer */}
           <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
             {said !== undefined && (
               <Text color={LAV} dimColor={!isRunning} wrap="truncate-end">
-                {said.who} {isRunning ? 'is' : 'was'} {short(said.text, 60)}
-                {others > 0 ? `, ${others} more at work` : ''}
+                {w.status(w.who(said.who), short(said.text, 60), isRunning)}
+                {others > 0 ? w.more(others) : ''}
               </Text>
             )}
           </Box>
@@ -259,7 +261,7 @@ export const register: Register = on => {
               <Box gap={1} alignItems="center">
                 <Button
                   key={`pick-${item.n}`}
-                  label={chosen.includes(item.n) ? 'Picked' : 'Pick'}
+                  label={chosen.includes(item.n) ? w.picked : w.pick}
                   variant={chosen.includes(item.n) ? 'primary' : 'secondary'}
                   onPress={() => update($, picked, now => toggle(now, item.n))}
                 />
@@ -288,6 +290,8 @@ export const register: Register = on => {
     const ideas = [...rest.ideas].sort((a, b) => splitIdea(a).tag.localeCompare(splitIdea(b).tag))
     const { runs } = await read($, tests)
     const coaching = await read($, isCoaching)
+    const speech = await read($, lang)
+    const w = words(speech)
     const width = Math.max(16, Math.min(40, e.props.bodyColumns - 8))
     const needed = Math.max(0, telemetry.runs - telemetry.repeats)
     const wastedCells = telemetry.runs === 0 ? 0 : Math.max(telemetry.repeats > 0 ? 1 : 0, Math.round((telemetry.repeats / telemetry.runs) * width))
@@ -301,21 +305,21 @@ export const register: Register = on => {
         <Box gap={1}>
           {TABS.map(one => (
             <Button
-              key={`tab-${one.tab}`}
-              label={one.tab === 'ideas' && ideas.length > 0 ? `${one.label} ${ideas.length}` : one.label}
-              variant={active === one.tab ? 'primary' : 'secondary'}
-              onPress={() => update($, tab, () => one.tab)}
+              key={`tab-${one}`}
+              label={one === 'ideas' && ideas.length > 0 ? `${w.tabs[one]} ${ideas.length}` : w.tabs[one]}
+              variant={active === one ? 'primary' : 'secondary'}
+              onPress={() => update($, tab, () => one)}
             />
           ))}
         </Box>
 
         {isSample && (
           <Text color={AMBER} wrap="wrap">
-            Sample data. This directory has no moku session, so this is how a game change would look.
+            {w.sample}
           </Text>
         )}
 
-        {active === 'flow' && change === null && <Text color={MINT}>No open change. The rails are clear for new work.</Text>}
+        {active === 'flow' && change === null && <Text color={MINT}>{w.noChange}</Text>}
 
         {active === 'flow' && change !== null && (
           <Box flexDirection="column" gap={1}>
@@ -324,14 +328,13 @@ export const register: Register = on => {
                 {change.title}
               </Text>
               <Text dimColor>
-                {isGame ? 'game ' : ''}
-                {change.type}, size {change.size}
+                {w.kind(change.type, change.size, isGame)}
               </Text>
             </Box>
 
             <Box flexDirection="column">
               {routeOf(change).map(step => {
-                const { name, hint } = stationOf(step.station, isGame)
+                const { name, hint } = stationOf(step.station, isGame, speech)
                 const isAhead = step.state === 'todo' || step.state === 'skipped'
 
                 return (
@@ -353,7 +356,7 @@ export const register: Register = on => {
                       >
                         {name}
                       </Text>
-                      {step.state === 'now' && <Text dimColor>you are here</Text>}
+                      {step.state === 'now' && <Text dimColor>{w.here}</Text>}
                     </Box>
                     {step.state === 'now' && (
                       <Box paddingLeft={2}>
@@ -368,7 +371,7 @@ export const register: Register = on => {
             </Box>
 
             <Box gap={1} flexWrap="wrap">
-              <Text dimColor>Before it can close</Text>
+              <Text dimColor>{w.beforeClose}</Text>
               {['tests', 'verify', 'docs'].map(item =>
                 change.open.includes(item) ? (
                   <Text dimColor>○ {item}</Text>
@@ -381,27 +384,27 @@ export const register: Register = on => {
             {change.isPaused ? (
               <Box flexDirection="column" borderStyle="round" borderColor={AMBER} paddingX={1}>
                 <Text color={AMBER} bold>
-                  Waits for you
+                  {w.waits}
                 </Text>
-                <Text wrap="wrap">{change.pauseReason === '' ? 'The station is paused.' : change.pauseReason}</Text>
+                <Text wrap="wrap">{change.pauseReason === '' ? w.paused : change.pauseReason}</Text>
                 <Box gap={1}>
-                  <Button key="approve" variant="primary" label="Approve and continue" onPress={() => answer($, 'approved, continue')} />
-                  <Button key="discuss-pause" label="Discuss first" onPress={() => void $.prompt.fill({ text: 'Before you continue: ', mode: 'insert' })} />
+                  <Button key="approve" variant="primary" label={w.approve} onPress={() => answer($, w.approveSay)} />
+                  <Button key="discuss-pause" label={w.discuss} onPress={() => void $.prompt.fill({ text: w.discussFill, mode: 'insert' })} />
                 </Box>
               </Box>
             ) : (
               <Box gap={1}>
-                <Button key="continue" variant="primary" label="Continue" onPress={() => answer($, 'continue with the next step')} />
-                <Button key="where" label="Where are we" onPress={() => answer($, 'where are we, and what is next')} />
+                <Button key="continue" variant="primary" label={w.go} onPress={() => answer($, w.goSay)} />
+                <Button key="where" label={w.where} onPress={() => answer($, w.whereSay)} />
               </Box>
             )}
 
             {telemetry.repeats + telemetry.slow.length > 0 && (
               <Box gap={1} alignItems="center">
                 <Text color={AMBER} wrap="wrap">
-                  {telemetry.repeats} test runs were not needed, {telemetry.slow.length} tests are slow
+                  {w.testsLine(telemetry.repeats, telemetry.slow.length)}
                 </Text>
-                <Button key="to-tests" plain label="Open tests" onPress={() => update($, tab, () => 'tests')} />
+                <Button key="to-tests" plain label={w.openTests} onPress={() => update($, tab, () => 'tests')} />
               </Box>
             )}
           </Box>
@@ -411,7 +414,7 @@ export const register: Register = on => {
           <Box flexDirection="column" gap={1}>
             {ideas.length === 0 && (
               <Text dimColor wrap="wrap">
-                Nothing is parked. Tell Claude to park an idea and it waits here until you start it.
+                {w.ideasEmpty}
               </Text>
             )}
             {ideas.map((idea, i) => {
@@ -423,7 +426,7 @@ export const register: Register = on => {
                   {isFirstOfGroup && (
                     <Box columnGap={1} alignItems="center">
                       <Text color={LAV} bold>
-                        {tag === '' ? 'other' : tag}
+                        {tag === '' ? w.other : tag}
                       </Text>
                       <Text color="subtle" wrap="truncate-end">
                         {'─'.repeat(Math.max(4, width - (tag === '' ? 5 : tag.length)))}
@@ -435,8 +438,8 @@ export const register: Register = on => {
                       {title}
                     </Text>
                     <Box columnGap={1}>
-                      <Button key={`idea-${i}`} variant="primary" label="Start" onPress={() => answer($, `let us start the parked idea: ${title}`)} />
-                      <Button key={`drop-${i}`} label="Remove" onPress={() => answer($, `remove the parked idea: ${title}`)} />
+                      <Button key={`idea-${i}`} variant="primary" label={w.start} onPress={() => answer($, w.startSay(title))} />
+                      <Button key={`drop-${i}`} label={w.remove} onPress={() => answer($, w.removeSay(title))} />
                     </Box>
                   </Box>
                 </Box>
@@ -450,10 +453,10 @@ export const register: Register = on => {
             <Box flexDirection="column">
               <Text bold color={telemetry.repeats === 0 ? MINT : AMBER} wrap="wrap">
                 {telemetry.runs === 0
-                  ? 'No test run is logged yet.'
+                  ? w.noRuns
                   : telemetry.repeats === 0
-                    ? `All ${telemetry.runs} test runs were needed.`
-                    : `${telemetry.repeats} of ${telemetry.runs} test runs were not needed. ${telemetry.wastedSeconds}s wasted.`}
+                    ? w.allNeeded(telemetry.runs)
+                    : w.wasted(telemetry.repeats, telemetry.runs, telemetry.wastedSeconds)}
               </Text>
               {telemetry.runs > 0 && (
                 <Box>
@@ -463,14 +466,14 @@ export const register: Register = on => {
               )}
               {telemetry.runs > 0 && (
                 <Text dimColor>
-                  {needed} needed, {telemetry.repeats} repeated a green run with no edit between
+                  {w.split(needed, telemetry.repeats)}
                 </Text>
               )}
             </Box>
 
             <Box flexDirection="column">
-              <Text bold>{telemetry.slow.length === 0 ? 'No slow tests.' : 'Slow tests'}</Text>
-              {telemetry.slow.length > 0 && <Text dimColor>The bar is the time one test takes.</Text>}
+              <Text bold>{telemetry.slow.length === 0 ? w.noSlow : w.slow}</Text>
+              {telemetry.slow.length > 0 && <Text dimColor>{w.barHint}</Text>}
               {telemetry.slow.map(test => (
                 <Box gap={1}>
                   {bar(Math.max(1, Math.round((test.ms / slowest) * 12)), AMBER)}
@@ -480,26 +483,26 @@ export const register: Register = on => {
               ))}
               {telemetry.slow.length > 0 && (
                 <Box marginTop={1}>
-                  <Button key="slow" variant="primary" label="Speed up the slow tests" onPress={() => answer($, 'show the slow tests and propose how to speed them up')} />
+                  <Button key="slow" variant="primary" label={w.speedUp} onPress={() => answer($, w.speedUpSay)} />
                 </Box>
               )}
             </Box>
 
             <Box flexDirection="column" gap={1}>
               <Box gap={1} alignItems="center">
-                <Button key="coach" variant={coaching ? 'primary' : 'secondary'} label={coaching ? 'On' : 'Off'} onPress={() => update($, isCoaching, now => !now)} />
-                <Text bold>Tell agents when they repeat a run</Text>
+                <Button key="coach" variant={coaching ? 'primary' : 'secondary'} label={coaching ? w.on : w.off} onPress={() => update($, isCoaching, now => !now)} />
+                <Text bold>{w.coach}</Text>
               </Box>
               <Text dimColor wrap="wrap">
-                {coaching ? 'An agent that repeats a green run is told to read the saved output instead.' : 'Repeats are only counted.'}
+                {coaching ? w.coachOn : w.coachOff}
               </Text>
             </Box>
 
             {runs.length > 0 && (
               <Box flexDirection="column">
-                <Text bold>This session</Text>
+                <Text bold>{w.session}</Text>
                 {runs.slice(-6).map(one => {
-                  const { what, how } = describeRun(one.command)
+                  const { what, how } = describeRun(one.command, speech)
 
                   return (
                     <Box gap={1}>
@@ -509,7 +512,7 @@ export const register: Register = on => {
                         {what}
                       </Text>
                       <Text dimColor wrap="truncate-end">
-                        {one.isRepeat ? 'not needed' : one.isRed ? 'red' : how}
+                        {one.isRepeat ? w.notNeeded : one.isRed ? w.red : how}
                       </Text>
                     </Box>
                   )
@@ -522,17 +525,24 @@ export const register: Register = on => {
         {/* The legend names only the marks the open tab draws */}
         {active === 'flow' && change !== null && (
           <Text dimColor>
-            <Text color={MINT}>●</Text> done  <Text color={PINK}>◆</Text> you are here  <Text color={AMBER}>○</Text> must do  <Text color={LAV}>○</Text> optional
+            <Text color={MINT}>●</Text> {w.done}  <Text color={PINK}>◆</Text> {w.here}  <Text color={AMBER}>○</Text> {w.mustDo}  <Text color={LAV}>○</Text> {w.optional}
           </Text>
         )}
         {active === 'tests' && runs.length > 0 && (
           <Text dimColor>
-            <Text color={MINT}>●</Text> needed  <Text color={AMBER}>●</Text> not needed  <Text color={PINK}>●</Text> red
+            <Text color={MINT}>●</Text> {w.needed}  <Text color={AMBER}>●</Text> {w.notNeeded}  <Text color={PINK}>●</Text> {w.red}
           </Text>
         )}
       </Box>
     )
   })
+}
+
+/** The deck speaks the language of the conversation: a text long enough to tell sets it, a short one keeps it. */
+async function follow($: EngineInterface, text: string): Promise<void> {
+  const spoken = detectLanguage(text)
+
+  if (spoken !== undefined && spoken !== (await read($, lang))) await update($, lang, () => spoken)
 }
 
 /** Open the deck where the person asked for it. */
@@ -561,7 +571,10 @@ async function refresh($: EngineInterface): Promise<void> {
 async function readLastReply($: EngineInterface): Promise<void> {
   try {
     const last = (await $.session.messages()).findLast(message => message.role === 'assistant' && message.text !== '')
-    if (last !== undefined) await update($, reply, () => parseReply(last.text))
+    if (last === undefined) return
+
+    await follow($, last.text)
+    await update($, reply, () => parseReply(last.text))
   } catch {
     // A new session has no answer yet
   }

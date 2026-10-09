@@ -35,6 +35,8 @@ export type Flow = { change: Change | null; ideas: string[]; telemetry: Telemetr
 
 export type Call = { id: string; who: string; text: string }
 
+export type Lang = 'en' | 'ru'
+
 export type Tab = 'flow' | 'ideas' | 'tests'
 
 declare module 'claude-code' {
@@ -50,6 +52,7 @@ declare module 'claude-code' {
       isCoaching: boolean
       calls: Call[]
       lastCall: Call | null
+      lang: Lang
     }
   }
 }

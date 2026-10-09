@@ -2,6 +2,18 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.1 (2026-10-09)
+
+### Changed
+- **The deck speaks the language of the conversation.** English and Russian. The language is told from the
+  letters of the person's prompt and of Claude's answer, code left out. A text under 12 letters, such as
+  `pr S6` or `ok`, does not change it.
+  - Translated: the tabs, every label and button of the pane, the status in the bar, the test row in the
+    transcript, and the prompts the buttons send.
+  - Not translated: `moku`, the station names and the checklist items, which are names of the rails, and
+    the description of a shell command, which Claude writes.
+  - All words are in one table, `hooks/words.ts`. A new language is one more entry there.
+
 ## 0.83.0 (2026-10-09)
 
 ### Added

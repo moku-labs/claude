@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { describeCall, describeRun, splitIdea, isDestructive, isTestCommand, parseFlow, parseReply, routeOf, stationOf, summarizeTests } from '../hooks/parse'
+import { describeCall, describeRun, detectLanguage, splitIdea, isDestructive, isTestCommand, parseFlow, parseReply, routeOf, stationOf, summarizeTests } from '../hooks/parse'
 
 const REPLY = [
   '**1. Pins in the game template are old**',
@@ -242,4 +242,48 @@ test('a prompt typed in the chat takes the offered answers off the bar', async (
   expect(await after.find({ type: 'Client', key: 'quick-0' })).toBe(undefined)
   expect(await after.find({ type: 'Button', key: 'deck' })).toBeDefined()
   await after.unmount()
+})
+
+test('the language of a text is told by its letters, code left out, and a short text tells nothing', () => {
+  expect(detectLanguage('Сделал. Мод перезагрузится после этого сообщения.')).toBe('ru')
+  expect(detectLanguage('Done. The mod reloads after this message.')).toBe('en')
+  expect(detectLanguage('Запусти `gh pr merge 72 --merge` и потом `git pull --ff-only`, это всё.')).toBe('ru')
+  expect(detectLanguage('pr S6')).toBe(undefined)
+  expect(describeRun('npm test', 'ru')).toEqual({ what: 'Весь набор', how: 'npm test' })
+  expect(describeCall({ tool: 'Edit', file_path: 'lib/guard.mjs' }, 'ru')).toBe('правка guard.mjs')
+  expect(stationOf('build', true, 'ru').hint).toBe('Сборка по фичам, сначала тесты.')
+  expect(summarizeTests('ℹ pass 5\nℹ fail 2', 'ru')).toBe('2 упало, 5 прошло')
+})
+
+test('the deck speaks the language of the conversation, and a short answer does not change it', async ($, on) => {
+  const sent: string[] = []
+  on('fs.exists', () => ({ value: false }))
+  on('turn.complete', () => ({ text: '' }))
+  on('prompt.submit', ($, e) => {
+    sent.push(e.text)
+
+    return { text: e.text }
+  })
+
+  const pane = await $.ui.mount({ ...PANE, surface: 'desktop' })
+  await pane.press({ key: 'tab-flow' })
+  expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Ideas/ })).toBeDefined()
+
+  // A Russian answer of the main loop switches every word of the deck
+  await $.turn.complete({ answer: 'Сделал. Мод перезагрузится после этого сообщения. Скажи `ок`.', durationMs: 1, isAborted: false, turnId: 't1', reason: 'answer' } as never)
+  expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Идеи/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /вы здесь/ })).toBeDefined()
+  expect(await pane.find({ type: 'Text', text: /Сборка по фичам/ })).toBeDefined()
+  expect(await pane.find({ type: 'Button', key: 'approve', text: /Одобрить и продолжить/ })).toBeDefined()
+
+  // The press answers in Russian too, and `ok` is too short to switch the deck back
+  await pane.press({ key: 'approve' })
+  expect(sent).toEqual(['одобрено, продолжай'])
+  await $.prompt.submit({ text: 'ok' } as never)
+  expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Идеи/ })).toBeDefined()
+
+  // A long English prompt does
+  await $.prompt.submit({ text: 'please continue with the next step of the build' } as never)
+  expect(await pane.find({ type: 'Button', key: 'tab-ideas', text: /Ideas/ })).toBeDefined()
+  await pane.unmount()
 })
