@@ -4,7 +4,7 @@ A discoverability map of what each plugin brings into a session, so the componen
 rough context cost) is visible before relying on it. Use `claude plugin details <name>` for the live
 component list and `/usage` for actual token spend.
 
-One marketplace, eleven plugins: the core (`moku`), one pack per framework, and a maintainer pack.
+One marketplace, twelve plugins: the core (`moku`), one pack per framework, the deck and a maintainer pack.
 A pack depends on `moku` and never reaches core files by path — it loads the `moku:moku-core` skill
 with the Skill tool and reads `references/<file>` under the base directory the tool prints.
 
@@ -20,6 +20,7 @@ with the Skill tool and reads `references/<file>` under the base directory the t
 | `moku-native` | 1 | — | — | — | enabled |
 | `moku-system` | 1 | — | — | — | enabled |
 | `moku-common` | 1 | — | — | — | enabled |
+| `moku-deck` | — | — | 1 hooks module / 9 events | — | `defaultEnabled: false` |
 | `moku-maintainer` | 2 | — | — | — | `defaultEnabled: false` |
 
 ---
@@ -190,6 +191,15 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
   `references/plugin-index.md`.
 - **Evals (1):** `common-framework-registers` — a framework registers the two core plugins once with a
   provider; a consumer app inherits `ctx.log` / `ctx.env`.
+
+## `moku-deck` — the reply bar and the side pane
+
+- **Hooks module (1):** `hooks/register.tsx`, a function hooks module (the early-access mods API), with one
+  surface module, `hooks/answer.tsx`, that draws the answers of the bar.
+- **Events hooked (9):** `session.start`, `command.run`, `prompt.submit`, `turn.complete`, `tool.call`,
+  `ui.message`, and `ui.render` for `AbovePrompt`, `Pane` and `ToolUse`.
+- **Command (1):** `/moku-deck` opens the pane. Outside a moku session it also turns a preview on.
+- **Tests:** `tests/moku-deck.test.ts`, run with `npm run test:mods`.
 
 ## `moku-maintainer` — this repository's own tooling
 

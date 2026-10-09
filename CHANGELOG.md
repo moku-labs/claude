@@ -2,6 +2,35 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.0 (2026-10-09)
+
+### Added
+- **`moku-deck`, a reply bar and a side pane inside Claude Code.** A new pack, written as a function hooks
+  module. It is disabled by default: the function hooks API is early access and may change between
+  Claude Code releases.
+  - **The bar above the prompt.** It is there in a moku session and absent anywhere else. It turns the
+    answers a reply asks for by name into buttons: a line with "say" or "скажи" and a code span gives one
+    button per span. Mint is the next step, grey is optional, pink deletes something. `Pick from N items`
+    opens the numbered items of the reply, and the picked ones are sent as `apply 1 3`, `fix 1 3` or
+    `skip 1 3`. A prompt typed in the chat takes the buttons off. The status and the buttons take turns:
+    with no buttons the bar says what runs, or what ran last. Beside buttons it says only work still running.
+  - **The pane, `/moku-deck`.** `Flow` shows the route of the open change by its size, the station you are
+    on with one line on what happens there, what is left before it can close, and the gate when the
+    change waits for you. A game calls its e2e station the playtest. A station ahead is amber when the
+    change must pass it and lavender when it may be skipped. `Ideas` lists the parked ideas, grouped by
+    their lead word, each with `Start` and `Remove`. `Tests` reads `.planning/tests/runs.jsonl`: how many
+    runs were not needed, the slow tests, and the test runs of this session named by what they tested.
+  - **A test run in the transcript** is drawn as one row with its verdict.
+  - **The answers of the bar are drawn by the pack itself**, in `hooks/answer.tsx`: the app's own button
+    cannot be made taller or coloured.
+  - Outside a moku session `/moku-deck` turns a preview on, with sample data.
+- `npm run test:mods` runs the pack's tests with `claude plugin test`.
+
+### Known limits
+- `Remove` on an idea sends a request to Claude. The rails have no command that removes an idea yet.
+- The pack reads one project: the `.planning/` of the working directory.
+- On a terminal the answers are the app's own buttons.
+
 ## 0.82.1 (2026-10-09)
 
 ### Fixed
