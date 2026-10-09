@@ -2,6 +2,27 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.6 (2026-10-09)
+
+### Fixed
+Four faults of the deck that real sessions showed.
+- **The route was wrong between two stations.** With no station entered nothing was marked, and a station
+  the change had passed without doing looked like one still ahead. The change now stands before the first
+  station after the last one it passed, marked `next`, and a passed station is struck out.
+- **A session in a worktree could show another worktree's change.** Every worktree of a project shares one
+  ledger. The deck took the first open change of the file. It takes the change of its own lane now.
+- **The bar went away by itself.** The rails replace the ledger by a rename, so for a moment the file is
+  not there, and the deck read that as "no moku session". A directory that was a session stays one.
+- **The answers did not show, or went away early.**
+  - Any prompt cleared them, also a notification of a background task. Only a prompt of the person does.
+  - An answer in quotes was not seen: `Say "apply 1 3"`. Code spans, `"…"`, `«…»` and `“…”` all count.
+- The state is read again right after a `moku-rails` command, at the end of a turn and on a tab press,
+  not only every five seconds.
+
+### Changed
+- The `Ideas` tab shows the newest six ideas and the rest on request. A backlog of thirty notes was thirty
+  cards, and each card costs a model call.
+
 ## 0.83.5 (2026-10-09)
 
 ### Added
