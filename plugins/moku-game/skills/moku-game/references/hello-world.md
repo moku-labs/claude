@@ -17,8 +17,11 @@ lint with the ten engine rules, tests with coverage, `keys --check`, `build`, `m
 `moku-editor --root .` with the project index on, `moku-game-index --check`, `bun run test:visual` twice
 (written, then same), lefthook pre-commit) against `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.1`,
 `pixi.js@8.22.0`, Bun 1.3.14 and the init tooling stack (`oxlint@1.86.0`, `vitest@4.0.18`,
-`typescript@6.0.3`). Not run: the pixel leg of `moku-game visual` (it needs `playwright-core` and a
-browser) and `moku-game native`. When something here does not compile, read
+`typescript@6.0.3`). The pins below are one patch later, `@moku-labs/editor@0.9.3` and
+`@moku-labs/common@0.3.5`. On them the install, `keys`, typecheck, lint, tests with coverage,
+`bun run test:visual` twice, `build` and `moku-game-index --check` were run again on a fresh scaffold;
+`moku-game dev`, the editor server and the lefthook hook were not. Not run: the pixel leg of
+`moku-game visual` (it needs `playwright-core` and a browser) and `moku-game native`. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: it is the engine in one page and always matches the
 installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_modules/@moku-labs/editor/`).
 
@@ -27,13 +30,13 @@ installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_module
 Pin exact versions. A game has no `bunfig.toml`, so pass `--exact`.
 
 ```sh
-bun add --exact @moku-labs/game@0.13.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.4
-bun add --exact -d @moku-labs/editor@0.9.1 sharp@0.34.5
+bun add --exact @moku-labs/game@0.13.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.5
+bun add --exact -d @moku-labs/editor@0.9.3 sharp@0.34.5
 ```
 
 `@moku-labs/core` and `@moku-labs/common` are peers of both packages; pin them so the game and the
 editor share one copy. `pixi.js` (`^8`) is a peer of the engine. `sharp` is an optional peer: `moku-game
-build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.1` peers on `@moku-labs/game
+build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.3` peers on `@moku-labs/game
 >=0.10.0` and `typescript >=5.5`.
 
 Every other dev dependency is init's tooling set of the current lint stack, at the versions
@@ -50,7 +53,7 @@ changes for a game:
 Never add `vitest@latest`: the coverage plugin must be the same version as Vitest. The engine's lint
 rules need no package of their own: they ship in `@moku-labs/game` as `@moku-labs/game/lint`.
 
-A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.1` when
+A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.2` when
 `config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.3`
 for `moku-game native`. `@moku-labs/system` alone does not build: each name in `system` needs its Tauri
 peer (`@tauri-apps/api`, `@tauri-apps/plugin-haptics`, `@tauri-apps/plugin-store`). The install lines
@@ -377,14 +380,14 @@ Run `bun run keys` after adding an asset or a message, before the typecheck.
   },
   "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" },
   "dependencies": {
-    "@moku-labs/common": "0.3.4",
+    "@moku-labs/common": "0.3.5",
     "@moku-labs/core": "1.7.1",
     "@moku-labs/game": "0.13.0",
     "pixi.js": "8.22.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@moku-labs/editor": "0.9.1",
+    "@moku-labs/editor": "0.9.3",
     "@types/bun": "1.3.14",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",

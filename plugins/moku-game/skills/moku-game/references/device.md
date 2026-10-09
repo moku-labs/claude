@@ -22,7 +22,7 @@ export default {
 
 ```sh
 # system names a plugin, or save is "store": the package and the Tauri peers of the list above
-bun add --exact @moku-labs/system@0.3.1 @tauri-apps/api@2.12.2 @tauri-apps/plugin-haptics@2.4.1
+bun add --exact @moku-labs/system@0.3.2 @tauri-apps/api@2.12.2 @tauri-apps/plugin-haptics@2.4.1
 bun add --exact @tauri-apps/plugin-store@2.5.0   # only with "store" in system, or save: "store"
 bun add --exact -d @moku-labs/native@0.3.3       # moku-game native
 ```

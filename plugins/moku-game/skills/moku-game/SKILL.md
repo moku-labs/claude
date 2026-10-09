@@ -52,7 +52,7 @@ You `createApp` **from the game**: `createApp`, `createPlugin` and every helper 
 | Framework | `@moku-labs/game` 0.13.0. Entries: `.` (engine), `./app` (`defineGameApp`, `startMoment`, the types of `index.ts` and `config.ts`), `./app/page` (`startPage`, the page `moku-game` writes), `./app/system` (`systemShellOf`, `fromSystem`, `storeSave`, `createSystemApp`), `./cli` (`runCli`, `preparePage`), `./lint` (the oxlint JS plugin `moku-game`), `./testing` (headless tests, Node and Bun), `./visual` (visual tests), `./assets` (key scanner, string compiler, packer), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./hot` (the dev hot-swap plugin), `./project` (the project index), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bins `moku-game` (dev, build, native, keys, pack, visual), `moku-game-index` (the project index) and `moku-game-assets` (a game without `config.ts`). Ships `llms.txt` |
 | Built on | `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (peer deps since 0.4.3, Bun installs them: kernel, `ctx.log`, `ctx.env`) |
 | Rendering | `pixi.js ^8` **peer dependency**, loaded lazily with `import()`. WebGPU first, Pixi's WebGL fallback. No DOM, no React: screens are JSX laid out by `yoga-layout` (bundled, lazy) |
-| Dev tools | `@moku-labs/editor` 0.9.1 (dev dep). `moku-editor --root .` asks the engine for the dev page with the agent `@moku-labs/editor/agent/page` on it; tools page prebuilt; `moku-editor mcp` for Claude Code; `moku-editor e2e` for a game's editor Playwright specs |
+| Dev tools | `@moku-labs/editor` 0.9.3 (dev dep). `moku-editor --root .` asks the engine for the dev page with the agent `@moku-labs/editor/agent/page` on it; tools page prebuilt; `moku-editor mcp` for Claude Code; `moku-editor e2e` for a game's editor Playwright specs |
 | Optional peers | `sharp` (asset pack: `moku-game build` and `pack`), `playwright-core` (pixel leg of visual tests), `typescript` (the project index; 6.x, the JS API), `@moku-labs/system` (the system shell, the store save), `@moku-labs/native` (`moku-game native`) |
 | Native | `config.ts` names `native` and `system`; `moku-game native build ios` runs `@moku-labs/native` (Tauri 2) over it, and the page wires `@moku-labs/system`. The game imports neither. See `references/device.md` |
 | Package manager | Bun only. ESM only, `"sideEffects": false`, no CJS |
@@ -209,7 +209,7 @@ default is in `plugin-index.md` "Game shell". The whole shell is `docs/shell.md`
 1. Write `package.json` with the scripts (`dev`, `editor`, `keys`, `pack`, `build`, `native`, `lint`,
    `typecheck`, `test`, `test:coverage`, `test:visual`). No `bunfig.toml`.
 2. Install with exact pins: `bun add --exact @moku-labs/game@0.13.0 pixi.js@8.22.0 @moku-labs/core@1.7.1
-   @moku-labs/common@0.3.4`, then `bun add --exact -d @moku-labs/editor@0.9.1 sharp@0.34.5` and the
+   @moku-labs/common@0.3.5`, then `bun add --exact -d @moku-labs/editor@0.9.3 sharp@0.34.5` and the
    tooling set. TypeScript `6.0.3`.
 3. Write the tooling files a game changes: `tsconfig.json` (`jsx`, `jsxImportSource`, the layer `paths`),
    `vitest.config.ts` (the same aliases), `biome.json`, `.oxlintrc.json` (the ten `moku-game/*` rules),
@@ -470,7 +470,7 @@ A game imports no native package (L13) and writes no bridge. It names what it ne
   builds the `@moku-labs/system` app, and passes its provider to `platform`: pause and resume become the
   `"background"` reason, Back runs the Back chain, `haptic` reaches the haptics plugin, keep-awake holds
   the wake lock. A web-only game with `system: []` bundles no system code. Install
-  `@moku-labs/system@0.3.1` when the list is not empty or `save` is `"store"`, together with the Tauri
+  `@moku-labs/system@0.3.2` when the list is not empty or `save` is `"store"`, together with the Tauri
   peer of each name: without it `moku-game build` stops with `Could not resolve: "@tauri-apps/…"`. The
   install lines are in [`references/device.md`](references/device.md).
 - `native: { name, identifier, icon?, targets? }`. `moku-game native build ios --simulator` (or `android`,

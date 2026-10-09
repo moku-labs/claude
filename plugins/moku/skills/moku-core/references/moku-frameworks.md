@@ -284,7 +284,9 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > - **editor 0.9.1 → 0.9.3:** 0.9.2 `moku-editor e2e` runs one Playwright process per project and spec
 >   file, prints one line per run and a summary, and holds `.moku/e2e.lock`. 0.9.3 a series takes its
 >   planned count of shots and stops early only at `durationMs + 3 s` or on Stop. Peer game `>=0.10.0`
->   is unchanged. The game template still pins the pair it was run on, game 0.13.0 with editor 0.9.1.
+>   is unchanged. Since 0.82.1 the game template pins game 0.13.0 with editor 0.9.3, common 0.3.5 and
+>   system 0.3.2: a fresh scaffold was installed, checked and built on that set. The editor server of
+>   0.9.3 was not started.
 > - **Upstream install lines now name the peers** in web, room and system
 >   (`bun add @moku-labs/web @moku-labs/core @moku-labs/common …`). The packs still teach I1: an app
 >   declares neither, Bun and npm install the peers.
