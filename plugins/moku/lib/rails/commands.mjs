@@ -11,7 +11,7 @@ import { relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
-import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, saveLedger, setInitializing } from "./ledger.mjs";
+import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
 import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
@@ -456,7 +456,7 @@ export function facts(root) {
 
   const ledger = loadLedger(root);
 
-  return { onRails: true, initialized: isInitialized(root), initializing: isInitializing(root), routed: ledger.turn?.routed, agentsRunning: runningAgents(root).length > 0, changes: ledger.changes };
+  return { onRails: true, initialized: isInitialized(root), initializing: isInitializing(root), game: projectType(root) === "game", routed: ledger.turn?.routed, agentsRunning: runningAgents(root).length > 0, changes: ledger.changes };
 }
 
 /**

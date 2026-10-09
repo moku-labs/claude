@@ -373,6 +373,21 @@ export function isInitialized(root) {
 }
 
 /**
+ * The project type the init station wrote into the marker (`type: game`), or undefined before init.
+ *
+ * @param {string} root project root
+ * @returns {string | undefined} `framework`, `consumer`, `tools` or `game`
+ * @example
+ * projectType("/work/merge-game"); // "game"
+ */
+export function projectType(root) {
+  const file = join(root, MARKER_FILE);
+  if (!existsSync(file)) return undefined;
+
+  return /^type:[ \t]*(\S+)/m.exec(readFileSync(file, "utf8"))?.[1];
+}
+
+/**
  * True when the directory is on the rails: a session was started here, or the project is initialized.
  * Nothing else counts. A package.json that names `@moku-labs/*` does not put a repository on the rails,
  * so the hooks stay silent in every project that never asked for them.
