@@ -10,3 +10,6 @@ experiments/
 # Eval run output
 plugins/*/evals/results/
 docs/revival/e2e-logs/
+
+# Type declarations the engine lays beside a mod it loads from this folder
+plugins/*/.claude-plugin/types/
