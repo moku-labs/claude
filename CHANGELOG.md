@@ -2,6 +2,12 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.4 (2026-10-09)
+
+### Fixed
+- **The status of the deck's bar was cut at 60 characters**, with room left in the bar. The bar cuts it at
+  its own edge now.
+
 ## 0.83.3 (2026-10-09)
 
 ### Fixed
