@@ -429,7 +429,7 @@ the block below.
 ### moku-native-version
 - **Title:** Bump `@moku-labs/native` to the current registry version
 - **Stack:** — (registry-driven, stack-independent)
-- **Applies to:** app
+- **Applies to:** app, game
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/native` AND its
@@ -450,7 +450,7 @@ the block below.
 ### moku-system-version
 - **Title:** Bump `@moku-labs/system` to the current registry version
 - **Stack:** — (registry-driven, stack-independent)
-- **Applies to:** app
+- **Applies to:** app, game
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/system` AND its
