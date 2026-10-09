@@ -64,6 +64,10 @@ const WORDS = {
     took: (summary: string, seconds: number) => (summary === '' ? `${seconds}s` : `${summary} in ${seconds}s`),
     rowNotNeeded: 'Not needed: nothing was edited since the last green run',
     describeIn: '',
+    details: 'Details',
+    sendingNow: (text: string) => `Sending: ${text}`,
+    less: 'Less',
+    digesting: 'Writing short cards for the ideas…',
   },
   ru: {
     tabs: { flow: 'Маршрут', ideas: 'Идеи', tests: 'Тесты' },
@@ -124,6 +128,10 @@ const WORDS = {
     took: (summary: string, seconds: number) => (summary === '' ? `${seconds} с` : `${summary} за ${seconds} с`),
     rowNotNeeded: 'Лишний: после зелёного прогона ничего не правилось',
     describeIn: 'The person follows your work in Russian. Write the `description` of every Bash call in Russian.',
+    details: 'Подробнее',
+    sendingNow: (text: string) => `Отправляю: ${text}`,
+    less: 'Свернуть',
+    digesting: 'Пишу короткие карточки для идей…',
   },
 }
 

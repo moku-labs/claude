@@ -6,6 +6,10 @@ import {
   SAMPLE_FLOW,
   describeCall,
   detectLanguage,
+  digestKey,
+  digestRequest,
+  headline,
+  parseDigests,
   describeRun,
   isDestructive,
   isTestCommand,
@@ -25,6 +29,16 @@ const RUNS_FILE = '.planning/tests/runs.jsonl'
 const MARKER_FILE = '.planning/moku.md'
 const REFRESH_MS = 5000
 const KEPT_RUNS = 50
+const DIGEST_STORE = 'digests'
+const DIGEST_BATCH = 10
+const KEPT_DIGESTS = 300
+
+// One model call writes the cards at a time: a second press while it runs starts nothing
+let isDigesting = false
+
+// The answer on its way to the chat. A prompt waits until the session is idle, so a press can take a while to
+// show: until it has, a second press sends nothing.
+let pending: string | undefined
 const TABS: Tab[] = ['flow', 'ideas', 'tests']
 
 // The moku brand: one hot pink for where you are, mint for what is good, amber for what waits, lavender for quiet text
@@ -49,6 +63,9 @@ const isCoaching = atom({ plugin: 'moku-deck', key: 'isCoaching' } as const, fal
 const calls = atom({ plugin: 'moku-deck', key: 'calls' } as const, [])
 const lastCall = atom({ plugin: 'moku-deck', key: 'lastCall' } as const, null)
 const lang = atom({ plugin: 'moku-deck', key: 'lang' } as const, 'en')
+const digests = atom({ plugin: 'moku-deck', key: 'digests' } as const, {})
+const expanded = atom({ plugin: 'moku-deck', key: 'expanded' } as const, [])
+const sending = atom({ plugin: 'moku-deck', key: 'sending' } as const, null)
 
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
@@ -56,9 +73,11 @@ export const register: Register = on => {
 
     // A reload cannot know which calls of the old copy are still running
     await update($, calls, () => [])
+    await update($, sending, () => null)
     await update($, lastCall, () => null)
     await refresh($)
     $.clock.every(REFRESH_MS, () => void refresh($))
+    await loadDigests($)
     await readLastReply($)
 
     return next(e)
@@ -223,6 +242,7 @@ export const register: Register = on => {
     // last one that ran. Once answers are offered only work still running is said, after them.
     const said = running.at(-1) ?? (hasAnswers ? undefined : ((await read($, lastCall)) ?? undefined))
     const isRunning = running.length > 0
+    const onItsWay = await read($, sending)
 
     // The outline of an answer says what kind it is: mint is the next step, lavender is optional, pink deletes something
     const tone = (text: string, i: number) => (isDestructive(text) ? PINK : i === 0 ? MINT : LAV)
@@ -255,7 +275,12 @@ export const register: Register = on => {
           </Box>
           {/* The status starts right after what is before it and is cut at the edge: it never reaches an answer */}
           <Box flexGrow={1} flexShrink={1} minWidth={0} overflow="hidden">
-            {said !== undefined && (
+            {onItsWay !== null && (
+              <Text color={MINT} bold wrap="truncate-end">
+                {w.sendingNow(onItsWay)}
+              </Text>
+            )}
+            {onItsWay === null && said !== undefined && (
               <Text color={LAV} dimColor={!isRunning} wrap="truncate-end">
                 {w.status(w.who(said.who), said.text, isRunning)}
                 {others > 0 ? w.more(others) : ''}
@@ -301,6 +326,9 @@ export const register: Register = on => {
     const coaching = await read($, isCoaching)
     const speech = await read($, lang)
     const w = words(speech)
+    const cards = await read($, digests)
+    const onItsWay = await read($, sending)
+    const open = await read($, expanded)
     const width = Math.max(16, Math.min(40, e.props.bodyColumns - 8))
     const needed = Math.max(0, telemetry.runs - telemetry.repeats)
     const wastedCells = telemetry.runs === 0 ? 0 : Math.max(telemetry.repeats > 0 ? 1 : 0, Math.round((telemetry.repeats / telemetry.runs) * width))
@@ -317,10 +345,19 @@ export const register: Register = on => {
               key={`tab-${one}`}
               label={one === 'ideas' && ideas.length > 0 ? `${w.tabs[one]} ${ideas.length}` : w.tabs[one]}
               variant={active === one ? 'primary' : 'secondary'}
-              onPress={() => update($, tab, () => one)}
+              onPress={async () => {
+                await update($, tab, () => one)
+                if (one === 'ideas') void digestIdeas($)
+              }}
             />
           ))}
         </Box>
+
+        {onItsWay !== null && (
+          <Text color={MINT} bold wrap="wrap">
+            {w.sendingNow(onItsWay)}
+          </Text>
+        )}
 
         {isSample && (
           <Text color={AMBER} wrap="wrap">
@@ -426,9 +463,12 @@ export const register: Register = on => {
                 {w.ideasEmpty}
               </Text>
             )}
+            {ideas.some(idea => cards[digestKey(idea, speech)] === undefined) && isDigesting && <Text color={LAV}>{w.digesting}</Text>}
             {ideas.map((idea, i) => {
               const { tag, title } = splitIdea(idea)
               const isFirstOfGroup = i === 0 || splitIdea(ideas[i - 1] ?? '').tag !== tag
+              const card = cards[digestKey(idea, speech)]
+              const isOpen = open.includes(idea)
 
               return (
                 <Box flexDirection="column" rowGap={1}>
@@ -443,12 +483,27 @@ export const register: Register = on => {
                     </Box>
                   )}
                   <Box flexDirection="column" borderStyle="round" borderColor="subtle" paddingX={1} rowGap={1}>
-                    <Text bold wrap="wrap">
-                      {title}
-                    </Text>
+                    {/* The card says the idea in a few words. The note as it was written is one press away. */}
+                    <Box flexDirection="column">
+                      <Text bold wrap="wrap">
+                        {card?.title ?? headline(idea)}
+                      </Text>
+                      {card?.points.map(point => (
+                        <Box columnGap={1}>
+                          <Text color={LAV}>•</Text>
+                          <Text wrap="wrap">{point}</Text>
+                        </Box>
+                      ))}
+                    </Box>
+                    {isOpen && (
+                      <Text dimColor wrap="wrap">
+                        {title}
+                      </Text>
+                    )}
                     <Box columnGap={1}>
                       <Button key={`idea-${i}`} variant="primary" label={w.start} onPress={() => answer($, w.startSay(title))} />
                       <Button key={`drop-${i}`} label={w.remove} onPress={() => answer($, w.removeSay(title))} />
+                      <Button key={`more-${i}`} plain label={isOpen ? w.less : w.details} onPress={() => update($, expanded, now => (now.includes(idea) ? now.filter(one => one !== idea) : [...now, idea]))} />
                     </Box>
                   </Box>
                 </Box>
@@ -547,6 +602,51 @@ export const register: Register = on => {
   })
 }
 
+/** The cards written in earlier sessions: an idea is digested once per language, not once per session. */
+async function loadDigests($: EngineInterface): Promise<void> {
+  try {
+    const kept = await $.store.get(DIGEST_STORE)
+    if (typeof kept === 'object' && kept !== null) await update($, digests, () => kept as Record<string, { title: string; points: string[] }>)
+  } catch {
+    // No store, no cards kept: they are written again
+  }
+}
+
+/** Ask a small model for a short card of every idea that has none in the language of the conversation. */
+async function digestIdeas($: EngineInterface): Promise<void> {
+  if (isDigesting) return
+
+  const speech = await read($, lang)
+  const known = await read($, digests)
+  const missing = (await read($, flow)).ideas.filter(idea => known[digestKey(idea, speech)] === undefined).slice(0, DIGEST_BATCH)
+  if (missing.length === 0) return
+
+  isDigesting = true
+  let hasWritten = false
+
+  try {
+    const asked = await $.model.complete({ model: 'haiku', ...digestRequest(missing, speech) })
+    const written = asked.isAnswered ? parseDigests(asked.text, missing.length) : []
+
+    if (written.length > 0) {
+      const added = Object.fromEntries(missing.map((idea, i) => [digestKey(idea, speech), written[i] ?? { title: headline(idea), points: [] }]))
+      const all = Object.fromEntries(Object.entries({ ...known, ...added }).slice(-KEPT_DIGESTS))
+
+      await update($, digests, () => all)
+      await $.store.set(DIGEST_STORE, all)
+      hasWritten = true
+    }
+  } catch {
+    // A card that was not written leaves the idea with its opening words
+  } finally {
+    isDigesting = false
+  }
+
+  // The backlog can be longer than one request. It goes on only after a request that wrote cards:
+  // a model that does not answer is not asked again in a loop.
+  if (hasWritten && (await read($, tab)) === 'ideas') void digestIdeas($)
+}
+
 /** The deck speaks the language of the conversation: a text long enough to tell sets it, a short one keeps it. */
 async function follow($: EngineInterface, text: string): Promise<void> {
   const spoken = detectLanguage(text)
@@ -591,14 +691,25 @@ async function readLastReply($: EngineInterface): Promise<void> {
 
 /** Send a short answer as the person's own prompt, or leave it in the prompt box when that is refused. */
 async function answer($: EngineInterface, text: string): Promise<void> {
-  await update($, picked, () => [])
-  await update($, isPicking, () => false)
-  await update($, reply, () => null)
+  if (pending !== undefined) return
+
+  pending = text
 
   try {
-    await $.prompt.submit({ text, asUser: true })
-  } catch {
-    await $.prompt.fill({ text, mode: 'insert' })
+    // Said first, so the press is seen at once
+    await update($, sending, () => text)
+    await update($, picked, () => [])
+    await update($, isPicking, () => false)
+    await update($, reply, () => null)
+
+    try {
+      await $.prompt.submit({ text, asUser: true })
+    } catch {
+      await $.prompt.fill({ text, mode: 'insert' })
+    }
+  } finally {
+    pending = undefined
+    await update($, sending, () => null)
   }
 }
 
