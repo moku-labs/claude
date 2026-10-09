@@ -2,6 +2,16 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.9 (2026-10-09)
+
+### Fixed
+- **A button of the deck's pane did nothing on the first click, and could stop answering at all.**
+  - On a desktop the app's own button takes the first click as the focus of the pane. Every control of
+    the pane is now drawn by the pack itself, like the answers of the bar, and is pressed on the way down:
+    the tabs, `Approve and continue`, `Continue`, `Start`, `Remove`, `Details` and the rest.
+  - 0.83.5 held every press back while an answer was on its way. A prompt that never started left the
+    whole deck dead. Now only the same answer within four seconds is held back, as one press seen twice.
+
 ## 0.83.8 (2026-10-09)
 
 ### Fixed

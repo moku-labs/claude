@@ -1,5 +1,5 @@
 import { atom, read, update } from 'claude-code'
-import type { EngineInterface, Register } from 'claude-code'
+import type { ButtonProps, Elements, EngineInterface, Register, RenderElement } from 'claude-code'
 
 import type { Tab, TestRun } from '../types'
 import {
@@ -29,6 +29,8 @@ const RUNS_FILE = '.planning/tests/runs.jsonl'
 const MARKER_FILE = '.planning/moku.md'
 const REFRESH_MS = 5000
 const KEPT_RUNS = 50
+const SAME_PRESS_MS = 4000
+const SENDING_SHOWN_MS = 20_000
 
 /** Where a prompt of the person comes from: the prompt box, the phone or web bridge, the host app. */
 const PERSON = new Set(['composer', 'bridge', 'sdk'])
@@ -40,9 +42,11 @@ const KEPT_DIGESTS = 300
 // One model call writes the cards at a time: a second press while it runs starts nothing
 let isDigesting = false
 
-// The answer on its way to the chat. A prompt waits until the session is idle, so a press can take a while to
-// show: until it has, a second press sends nothing.
-let pending: string | undefined
+// What each control the mod draws itself does when pressed, by its key. A drawing fills it, a `ui.message` reads it.
+const actions = new Map<string, () => unknown>()
+
+// The answer sent last and when: the same answer again within a few seconds is the same press, not a second one
+let lastSent: { text: string; at: number } | undefined
 
 // The person's own words decide the language. Claude's answers decide it only until the person has written enough.
 let hasPersonSpoken = false
@@ -228,15 +232,9 @@ export const register: Register = on => {
     )
   })
 
-  // A press on an answer the mod drew itself: the key of the instance says which answer it was
+  // A press on a control the mod drew itself: the key of the instance says which one
   on('ui.message', async ($, e, next) => {
-    const shown = await read($, reply)
-    const list = [...(await read($, picked))].sort((a, b) => a - b).join(' ')
-    const quick = /^quick-(\d+)$/.exec(e.element)?.[1]
-    const verb = /^verb-(apply|fix|skip)$/.exec(e.element)?.[1]
-    const text = quick !== undefined ? shown?.quick[Number(quick)] : verb !== undefined && list !== '' ? `${verb} ${list}` : undefined
-
-    if (text !== undefined) await answer($, text)
+    await actions.get(e.element)?.()
 
     return next(e)
   })
@@ -250,7 +248,8 @@ export const register: Register = on => {
     // anywhere else unless the preview is on
     if (e.props.hasSurvey || !((await read($, isSession)) || (await read($, isPreview)))) return next(e)
 
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const { Box, Text, ...table } = $.ui.resolve(e)
+    const Button = e.surface === 'desktop' ? own($.ui.resolve(e).Client) : table.Button
     const chosen = [...(await read($, picked))].sort((a, b) => a - b)
     const picking = await read($, isPicking)
     const list = chosen.join(' ')
@@ -267,14 +266,11 @@ export const register: Register = on => {
     // The outline of an answer says what kind it is: mint is the next step, lavender is optional, pink deletes something
     const tone = (text: string, i: number) => (isDestructive(text) ? PINK : i === 0 ? MINT : LAV)
 
-    // Mint is the next step, grey is optional, pink deletes. On a desktop the mod draws the answer itself
-    // (answer.tsx), since the app's own button cannot be made taller; a press there arrives as a `ui.message`.
+    // Mint is the next step, grey is optional, pink deletes
     const chip = (key: string, label: string, color: string, onPress: () => void) => {
       if (e.surface !== 'desktop') return <Button key={key} label={label} variant={color === MINT ? 'primary' : 'secondary'} onPress={onPress} />
 
-      const { Client } = $.ui.resolve(e)
-
-      return <Client key={key} module="./answer.tsx" props={{ label, kind: color === MINT ? 'next' : color === PINK ? 'deletes' : 'optional' }} />
+      return control($.ui.resolve(e).Client, key, label, color === MINT ? 'next' : color === PINK ? 'deletes' : 'optional', onPress)
     }
 
     return (
@@ -338,7 +334,8 @@ export const register: Register = on => {
   })
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
-    const { Box, Button, Text } = $.ui.resolve(e)
+    const { Box, Text, ...table } = $.ui.resolve(e)
+    const Button = e.surface === 'desktop' ? own($.ui.resolve(e).Client) : table.Button
     const active = await read($, tab)
     const { change, telemetry, isSample, isGame, ...rest } = await read($, flow)
     // A backlog grows for months. The tab shows the newest few, and the rest on request: a card costs a model call.
@@ -801,25 +798,56 @@ async function readLastReply($: EngineInterface): Promise<void> {
 
 /** Send a short answer as the person's own prompt, or leave it in the prompt box when that is refused. */
 async function answer($: EngineInterface, text: string): Promise<void> {
-  if (pending !== undefined) return
+  const now = Date.now()
 
-  pending = text
+  // The same answer twice in a row is one press seen twice. Nothing else is held back: a prompt that never
+  // starts must not leave every control of the deck dead.
+  if (lastSent !== undefined && lastSent.text === text && now - lastSent.at < SAME_PRESS_MS) return
+
+  lastSent = { text, at: now }
+
+  // Said first, so the press is seen at once. It is taken down when the prompt is taken, or after a while.
+  await update($, sending, () => text)
+  try {
+    $.clock.after(SENDING_SHOWN_MS, () => void update($, sending, shown => (shown === text ? null : shown)))
+  } catch {
+    // No clock, no timer: the line is taken down when the prompt is taken
+  }
+  await update($, picked, () => [])
+  await update($, isPicking, () => false)
+  await update($, reply, () => null)
 
   try {
-    // Said first, so the press is seen at once
-    await update($, sending, () => text)
-    await update($, picked, () => [])
-    await update($, isPicking, () => false)
-    await update($, reply, () => null)
-
-    try {
-      await $.prompt.submit({ text, asUser: true })
-    } catch {
-      await $.prompt.fill({ text, mode: 'insert' })
-    }
+    await $.prompt.submit({ text, asUser: true })
+  } catch {
+    await $.prompt.fill({ text, mode: 'insert' })
   } finally {
-    pending = undefined
-    await update($, sending, () => null)
+    await update($, sending, shown => (shown === text ? null : shown))
+  }
+}
+
+/**
+ * One control the mod draws itself, and what a press on it does.
+ *
+ * @example
+ * control(Client, 'approve', 'Approve and continue', 'primary', () => answer($, 'approved, continue'))
+ */
+function control(Client: Elements['desktop']['Client'], key: string, label: string, kind: string, action: () => unknown): RenderElement {
+  actions.set(key, action)
+
+  return (<Client key={key} module="./answer.tsx" props={{ label, kind }} />) as RenderElement
+}
+
+/**
+ * The app's own button on a desktop takes its first click as the focus of the pane, so a press there needed two.
+ * This stands in for it: the same props, drawn by the mod and pressed on the way down.
+ */
+function own(Client: Elements['desktop']['Client']): (props: ButtonProps) => RenderElement {
+  return props => {
+    const label = props.label ?? ''
+    const kind = props.plain === true ? 'plain' : props.variant === 'primary' ? 'primary' : 'optional'
+
+    return control(Client, props.key ?? label, label, kind, () => props.onPress(undefined as never))
   }
 }
 
