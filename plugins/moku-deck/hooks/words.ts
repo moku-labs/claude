@@ -63,6 +63,7 @@ const WORDS = {
     testsGreen: 'Tests green',
     took: (summary: string, seconds: number) => (summary === '' ? `${seconds}s` : `${summary} in ${seconds}s`),
     rowNotNeeded: 'Not needed: nothing was edited since the last green run',
+    describeIn: '',
   },
   ru: {
     tabs: { flow: 'Маршрут', ideas: 'Идеи', tests: 'Тесты' },
@@ -122,6 +123,7 @@ const WORDS = {
     testsGreen: 'Тесты зелёные',
     took: (summary: string, seconds: number) => (summary === '' ? `${seconds} с` : `${summary} за ${seconds} с`),
     rowNotNeeded: 'Лишний: после зелёного прогона ничего не правилось',
+    describeIn: 'The person follows your work in Russian. Write the `description` of every Bash call in Russian.',
   },
 }
 

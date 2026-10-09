@@ -1,6 +1,6 @@
 import { expect, mock, test } from 'claude-code/testing'
 
-import { describeCall, describeRun, detectLanguage, splitIdea, isDestructive, isTestCommand, parseFlow, parseReply, routeOf, stationOf, summarizeTests } from '../hooks/parse'
+import { describeCall, describeRun, detectLanguage, programOf, splitIdea, isDestructive, isTestCommand, parseFlow, parseReply, routeOf, stationOf, summarizeTests } from '../hooks/parse'
 
 const REPLY = [
   '**1. Pins in the game template are old**',
@@ -246,6 +246,10 @@ test('the language of a text is told by its letters, code left out, and a short 
   expect(detectLanguage('pr S6')).toBe(undefined)
   expect(describeRun('npm test', 'ru')).toEqual({ what: 'Весь набор', how: 'npm test' })
   expect(describeCall({ tool: 'Edit', file_path: 'lib/guard.mjs' }, 'ru')).toBe('правка guard.mjs')
+  expect(programOf('cd app && FOO=1 gh pr merge 74')).toBe('gh')
+  expect(describeCall({ tool: 'Bash', command: 'cd x && gh pr merge 74', description: 'Merge the pull request and fast-forward main' }, 'ru')).toBe('команда gh')
+  expect(describeCall({ tool: 'Bash', command: 'gh pr merge 74', description: 'Смержить pull request и подтянуть main' }, 'ru')).toBe('Смержить pull request и подтянуть main')
+  expect(describeCall({ tool: 'Bash', command: 'gh pr merge 74', description: 'Merge the pull request and fast-forward main' }, 'en')).toBe('Merge the pull request and fast-forward main')
   expect(stationOf('build', true, 'ru').hint).toBe('Сборка по фичам, сначала тесты.')
   expect(summarizeTests('ℹ pass 5\nℹ fail 2', 'ru')).toBe('2 упало, 5 прошло')
 })
