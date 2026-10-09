@@ -10,6 +10,9 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   of `hello-world.md` had only the `@file` block of their file: `uiAssets`, `sharedFeature`, `home`,
   `tap`, `helloScene`, `helloScreen`, `helloFeature` and `mainFlow`. Each has its own block now. The
   rule is unchanged.
+- **An answer in the deck's bar needed two clicks.** The answer waited for the release of the click. The
+  first click on the bar also gives it the focus, and its release did not always arrive. The press is
+  taken on the way down now.
 
 ## 0.83.1 (2026-10-09)
 
