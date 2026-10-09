@@ -37,6 +37,8 @@ export type Call = { id: string; who: string; text: string }
 
 export type Lang = 'en' | 'ru'
 
+export type Digest = { title: string; points: string[] }
+
 export type Tab = 'flow' | 'ideas' | 'tests'
 
 declare module 'claude-code' {
@@ -53,6 +55,9 @@ declare module 'claude-code' {
       calls: Call[]
       lastCall: Call | null
       lang: Lang
+      digests: Record<string, Digest>
+      expanded: string[]
+      sending: string | null
     }
   }
 }

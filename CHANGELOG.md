@@ -2,6 +2,20 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.83.5 (2026-10-09)
+
+### Added
+- **An idea in the deck is a short card.** The backlog holds long notes written by agents, mostly in
+  English. The `Ideas` tab now asks a small model, `haiku`, for a title of at most 7 words and 2 to 4
+  points per idea, in the language of the conversation. Ten ideas go in one request. A card is kept in
+  the plugin store, so an idea is digested once per language. `Details` shows the note as it was written.
+  The request runs when the tab is opened, never before.
+
+### Fixed
+- **A press in the deck could send the answer twice.** A prompt from a button waits until the session is
+  idle, so nothing showed and the person pressed again. One answer is on its way at a time now, and the
+  bar and the pane say `Sending: …` from the press until the prompt is taken.
+
 ## 0.83.4 (2026-10-09)
 
 ### Fixed
