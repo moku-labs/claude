@@ -92,11 +92,17 @@ If `tests/visual/index.ts` exists, the engine bin runs it (game 0.12 and later).
 from `.moku/visual/` on a free port, so it needs no dev server and runs while the editor is up.
 
 ```bash
-bunx moku-game visual                          # the headless leg, and the pixel leg on a Mac
-bunx moku-game visual --update                 # only with UPDATE_BASELINES
+bunx moku-game visual --no-pixels                 # the headless leg: green on any machine
+bunx moku-game visual --pixels                    # adds the pixel leg: only with playwright-core installed
+bunx moku-game visual --no-pixels --update        # only with UPDATE_BASELINES
 bunx moku-game visual --only <name> --no-pixels   # one test, headless leg only
 bunx moku-game visual --url http://127.0.0.1:3000/   # the pixel leg on a page that is served already
 ```
+
+The first line is what the template's `bun run test:visual` runs. Step 1 ran it already: on an unchanged
+tree its result stands, so do not run it again. Never run plain `moku-game visual` on a Mac without
+`playwright-core`. It starts the pixel leg after a green headless leg and exits 1 with
+`[game] The pixel leg needs playwright-core.` Check first: `test -d node_modules/playwright-core`.
 
 Exit 1 means a checkpoint differs or a test failed. A game below 0.12, or one with a runner of its own,
 runs its script instead (`bun tests/visual/run.ts`, the same flags).
