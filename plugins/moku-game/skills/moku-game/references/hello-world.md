@@ -16,7 +16,7 @@ the reference game `merge-game` in moku-labs/demos. Verified end to end (install
 lint with the ten engine rules, tests with coverage, `keys --check`, `build`, `moku-game dev`,
 `moku-editor --root .` with the project index on, `moku-game-index --check`, `bun run test:visual` twice
 (written, then same), lefthook pre-commit) against `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.1`,
-`pixi.js@8.22.0`, Bun 1.3.14 and the init tooling stack (`oxlint@1.86.0`, `vitest@4.0.18`,
+`pixi.js@8.22.0`, Bun 1.4.2 and the init tooling stack (`oxlint@1.86.0`, `vitest@4.0.18`,
 `typescript@6.0.3`). The pins below are one patch later, `@moku-labs/editor@0.9.3` and
 `@moku-labs/common@0.3.5`. On them the install, `keys`, typecheck, lint, tests with coverage,
 `bun run test:visual` twice, `build` and `moku-game-index --check` were run again on a fresh scaffold;
@@ -378,7 +378,7 @@ Run `bun run keys` after adding an asset or a message, before the typecheck.
     "test:visual": "moku-game visual --no-pixels",
     "deploy": "echo 'No deploy target yet: the release station picks one.'"
   },
-  "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" },
+  "engines": { "node": ">=24.0.0", "bun": ">=1.4.2" },
   "dependencies": {
     "@moku-labs/common": "0.3.5",
     "@moku-labs/core": "1.7.1",
@@ -388,7 +388,7 @@ Run `bun run keys` after adding an asset or a message, before the typecheck.
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
     "@moku-labs/editor": "0.9.3",
-    "@types/bun": "1.3.14",
+    "@types/bun": "1.4.2",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",
     "eslint-plugin-unicorn": "63.0.0",

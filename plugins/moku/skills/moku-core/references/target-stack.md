@@ -43,7 +43,7 @@ no `tsconfig.build.json`, because `moku-game build` builds it. Its tooling is th
 | `eslint-plugin-unicorn` | `63.0.0` | Exact. Loaded as JS plugin `unicorn-js`, for `prevent-abbreviations` only. 70+ fails to load. |
 | `tsdown` | `0.23.0` | First version that emits declarations on TS 7: `rolldown-plugin-dts` 0.28 runs the TS 7 binary (`tsgo` generator). |
 | `@biomejs/biome` | `2.4.16` | Adds `noExcessiveCognitiveComplexity` (max 15) in place of sonarjs. |
-| `@types/bun` | `1.3.14` | No `typescript` peer dep. |
+| `@types/bun` | `1.4.2` | No `typescript` peer dep. |
 | `@arethetypeswrong/cli` / `core` | `0.18.3` | Bundles its own TypeScript 5.6; works next to TS 7. |
 | `publint` | `0.3.21` | No TS dependency. |
 | `vitest` / `@vitest/coverage-istanbul` | `4.0.18` | unchanged |
@@ -65,8 +65,8 @@ The rest equals the current stack. Full bodies: `tooling-config.md`, section
 | Field | Value |
 |-------|-------|
 | `engines.node` | `>=24.0.0` |
-| `engines.bun` | `>=1.3.14` |
-| `.bun-version` | `1.3.14` |
+| `engines.bun` | `>=1.4.2` |
+| `.bun-version` | `1.4.2` |
 
 The Node floor follows the upstream moku-family engines: `@moku-labs/core@0.1.3` raised its floor
 to `node >=24.0.0` (PR #9) and `@moku-labs/web@1.6.2` already requires `node >=24` — see the
@@ -103,7 +103,7 @@ Detect the lint stack first (`lint-stacks.md`). A project is **below** its targe
   `typescript-eslint` `< 8.58.0`, or `tsdown` `< 0.22.1`. TypeScript 6 is the legacy target, not a gap.
 - `tsconfig.json` → `compilerOptions.types` is absent (TS6 needs it explicit).
 - `tsconfig.build.json` → `compilerOptions.rootDir` is absent.
-- `.bun-version` `< 1.3.14` (freshness, advisory).
+- `.bun-version` `< 1.4.2` (freshness, advisory).
 - `package.json` → `engines.node` floor `< 24.0.0`, or `engines.node` absent (Stack 3 signature).
 
 ---

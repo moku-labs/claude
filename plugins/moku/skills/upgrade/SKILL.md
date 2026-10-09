@@ -84,7 +84,7 @@ Current stack: 1 (TypeScript 5.9.3)  →  Target: 3 (TS6 baseline · Node 24 flo
 Will apply (default):
   ts6-core           typescript 5.9.3 → 6.0.3 · typescript-eslint 8.56.0 → 8.58.0
                      · tsdown 0.20.3 → 0.22.1 · tsconfig +types:["bun"] · build +rootDir
-  tooling-freshness  bun 1.3.8 → 1.3.14 · biome 2.4.2 → 2.4.16 · @types/bun → 1.3.14
+  tooling-freshness  bun 1.3.8 → 1.4.2 · biome 2.4.2 → 2.4.16 · @types/bun → 1.4.2
                      · publint → 0.3.21 · attw → 0.18.3
   node24-floor       engines.node >=22.0.0 → >=24.0.0 (aligns with core 0.1.3 / web 1.6.2 engines)
 

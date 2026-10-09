@@ -37,12 +37,12 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
   "repository": { "type": "git", "url": "git+https://github.com/<owner>/<repo>.git" },
   "homepage": "https://github.com/<owner>/<repo>#readme",
   "bugs": { "url": "https://github.com/<owner>/<repo>/issues" },
-  "engines": { "node": ">=24.0.0", "bun": ">=1.3.14" },
+  "engines": { "node": ">=24.0.0", "bun": ">=1.4.2" },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.3",
     "@arethetypeswrong/core": "0.18.3",
     "@biomejs/biome": "2.4.16",
-    "@types/bun": "1.3.14",
+    "@types/bun": "1.4.2",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",
     "eslint-plugin-unicorn": "63.0.0",
@@ -759,8 +759,12 @@ exact = true
 ## .bun-version
 
 ```
-1.3.14
+1.4.2
 ```
+
+Bun 1.4 reads `bunfig.toml` as strict TOML: a string without quotes or an integer too large throws.
+A lockfile written before 1.4 stays `lockfileVersion: 1` under `bun install`. Do not delete it: a lockfile
+written from nothing on 1.4 is version 2 and resolves every transitive package again.
 
 ## .gitignore
 
@@ -978,7 +982,7 @@ Everything else not listed here is the same as in the current stack, for example
     "@arethetypeswrong/cli": "0.18.3",
     "@arethetypeswrong/core": "0.18.3",
     "@biomejs/biome": "2.4.16",
-    "@types/bun": "1.3.14",
+    "@types/bun": "1.4.2",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint": "9.39.3",
     "eslint-config-biome": "2.1.3",

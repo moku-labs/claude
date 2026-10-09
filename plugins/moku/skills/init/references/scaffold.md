@@ -31,7 +31,7 @@ Identical for framework, consumer app and library. Copy each body from `tooling-
 | # | File | Notes |
 |---|---|---|
 | 1 | `bunfig.toml` | `exact = true`. Write this **before** any `bun install` so pinning applies from the first install. A game writes none: it pins with `bun add --exact`. |
-| 2 | `.bun-version` | `1.3.14` |
+| 2 | `.bun-version` | `1.4.2` |
 | 3 | `package.json` | `"type": "module"`, `engines`, the script contract, devDependencies at the exact pinned versions. `main`/`module`/`types`/`exports`/`files`/`repository` for packages; an app may omit them. |
 | 4 | `biome.json` | |
 | 5 | `.oxlintrc.json` | The current lint stack, copied as plain data. The `unicorn-js/prevent-abbreviations` allowList ships pre-expanded — do not shrink it. Never write `eslint.config.ts` for a new project; the ESLint bodies are legacy only. |
