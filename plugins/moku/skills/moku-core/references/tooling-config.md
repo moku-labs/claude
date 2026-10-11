@@ -664,6 +664,11 @@ export default defineConfig({
 });
 ```
 
+90% is the goal, and it is reached by tests of behaviour. An agent never edits `include`, `exclude` or
+`thresholds`, never adds an ignore comment and never writes a test only to move the number: when honest
+tests leave the logic under 90%, it lists the uncovered lines and asks the person
+(`moku-testing/references/test-value.md` → "Coverage").
+
 ## lefthook.yml
 
 ```yaml

@@ -334,6 +334,22 @@ the agent; `moku-game build` imports none. Every command body starts with the in
 
 ## Testing
 
+What earns a test in a game. The rule is `references/test-value.md` of the `moku:moku-testing` skill: name
+the bug a test catches, guard every behaviour the spec promises, nothing else. Each thing is tested at one
+level:
+
+| What | The one place it is tested | Not |
+|---|---|---|
+| Pure rules, the bot, a reducer | unit, `features/<f>/__tests__/unit/` | again in a walk |
+| A flow, a gate, a save, a recovery | one headless walk in `tests/integration/` | the same route asserted in unit and isolated tests too |
+| One feature alone | `isolated`, only for what a whole-game walk cannot reach | a copy of the integration walk |
+| Layout, sizes, colours, fonts, style tables | visual baselines and the design check | a unit test that repeats the numbers |
+| A motion | where it starts, where it ends, what it commits | each millisecond of the timeline |
+| Tokens, `timing.ts`, strings, asset keys | nothing: the types and `keys --check` | a loop that asserts the shape of the data |
+
+A test file that imports the design's numbers to compare them with the game's numbers is the design
+check done badly: delete the idea, keep the design check.
+
 - **Headless**: `createHeadless(app)` from `@moku-labs/game/testing` sets fast mode, starts the app and
   resolves at the first rest node. `game.walk([{ at: "home", intent: "roll" }])` plays a route;
   `game.answer`, `game.state()`, `game.history()`, `game.stop()`. Seams: `fakeClock(start)` with

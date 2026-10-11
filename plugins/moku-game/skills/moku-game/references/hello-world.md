@@ -261,7 +261,11 @@ export default defineConfig({
 
 Coverage counts the logic a headless test reaches: the game, the root flow, core, shared, features,
 plugins. It leaves out the `.tsx` views: their `from` and `view` run on the page, which `moku-game dev`
-and the e2e station drive. The family's 90% stays.
+and the e2e station drive. The family's 90% stays, as a goal reached by tests of behaviour. A file of
+plain data (`styles/`, tokens, layout tables, `timing.ts`) is covered by being imported: it gets no test
+of its own. Never edit `include`, `exclude` or `thresholds` and never add an ignore comment to reach the
+number; when honest tests leave the logic under 90%, list the uncovered lines and ask the person
+(`moku:moku-testing` → `references/test-value.md`).
 
 ```yaml
 # lefthook.yml

@@ -41,18 +41,23 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 
 ## TDD protocol
 
+Which tests to write is `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-value.md`: read it before the first test. Name the bug each test catches; a constant compared with its copy, a check `tsc` already makes and a scenario already asserted at another level are not tests. Every behaviour of the spec's `## Verification` gets one test that fails when it breaks. Fewer tests is not the goal and more tests is not the goal: every promise guarded, nothing else.
+
 **Greenfield:**
 1. Write the unit and integration tests first, in `src/plugins/{name}/__tests__/`.
 2. Run them and confirm they fail, with the project's test runner: `bunx vitest run src/plugins/{name}/` when `package.json` depends on `vitest` (the Moku default), otherwise `bun test src/plugins/{name}/`. Bun's own runner has no `vi.stubGlobal` and no `expectTypeOf(...).parameter`, so it fails Vitest suites that are green.
 3. Implement the domain files (state, api, handlers, types) until they pass.
-4. Keep `index.ts` to wiring only (R3).
+4. The kill check: for each logic file, break one line the way a bug would, run that file's tests once, restore the line. A test must fail; if none does, close the hole and break it again. At most eight per plugin. The last test run happens after the last restore.
+5. Keep `index.ts` to wiring only (R3).
 
 **Delta:**
 1. Read the existing plugin code and its tests first.
 2. Run the plugin's existing tests once to confirm the baseline is green; keep it green.
 3. Write tests for the new behavior only — those are your red-first tests. Do not rewrite the suite.
-4. Implement until the new tests pass and every pre-existing test still passes.
+4. Implement until the new tests pass and every pre-existing test still passes. Then the kill check on the logic files you changed.
 5. Preserve the public API unless the spec's `## Changes` says otherwise. If it changes, say so in the contract — the README-freshness check will want a README update.
+
+**Existing tests and coverage.** Never delete or weaken an existing test, also not a useless one: report it in `blockers` with `delete` as the fix and the person decides. Never edit the coverage `include`, `exclude` or `thresholds`, and never add an ignore comment: when honest tests leave the logic under the threshold, list the uncovered lines with the reason in `blockers` and write no filler.
 
 **Test runs.** One run per edit, scoped to your plugin, with its output kept in a file that you read as often as you need. Never start the tests again to see another part of what they printed, and never run the project's whole test script: the orchestrator runs it once per wave. The rule and the command to keep the output are in `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`; the Bash hook tells you when you repeat a run on files nobody edited.
 
@@ -89,6 +94,9 @@ Prose summary first, then the fenced block as your last message. A run that ends
   "verdict": "PASS | FAIL",
   "files": ["src/plugins/{name}/index.ts", "..."],
   "tests": {"unit": N, "integration": N, "pass": true, "preexistingGreen": true},
+  "behaviours": [{"criterion": "a line of the spec's Verification", "test": "path:line"}],
+  "killed": {"of": N, "killed": N, "pairs": [{"file": "api.ts", "line": N, "break": "what you changed", "test": "path:line"}]},
+  "coverageIgnores": N,
   "lint": {"biome": "clean | N findings", "second": "oxlint | eslint | none", "secondResult": "clean | N findings"},
   "newDependencies": ["pkg@version", "..."],
   "publicApiChanged": true,
@@ -96,7 +104,7 @@ Prose summary first, then the fenced block as your last message. A run that ends
 }
 ```
 
-- `verdict: PASS` needs passing tests, both linters clean in your scope, and (delta) a still-green pre-existing suite.
+- `verdict: PASS` needs passing tests, both linters clean in your scope, (delta) a still-green pre-existing suite, a test for every behaviour in `behaviours`, and `killed.killed` equal to `killed.of`.
 - `preexistingGreen` — delta only.
 - `publicApiChanged` — true when the `api:`, events or `Config` surface changed.
 - `newDependencies` — packages for the orchestrator to add.

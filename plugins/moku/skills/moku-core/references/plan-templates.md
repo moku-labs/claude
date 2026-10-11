@@ -110,9 +110,10 @@ Each specification file must contain:
 [npm/bun packages needed with versions]
 
 ## Testing Strategy
-- **Unit tests** (`__tests__/unit/`): [What to test for each domain file]
+- **Unit tests** (`__tests__/unit/`): [The behaviours to test, each as the bug it catches. Files of types or data: none]
 - **Integration tests** (`__tests__/integration/`): [Full plugin wiring tests]
-- **Type-level tests:** [What to verify with expectTypeOf and @ts-expect-error]
+- **Type-level tests:** [What a consumer can get wrong: verify with expectTypeOf and @ts-expect-error]
+- **Not tested, on purpose:** [constants and tables, what tsc proves, what another level already asserts]
 - All tests live inside the plugin directory, NOT in root `tests/`
 
 ## Code Example

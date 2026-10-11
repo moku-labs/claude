@@ -24,7 +24,7 @@ It persists in STATE.md as `## LeanMode: true`, so it carries across resumes.
 | Spec | the whole spec file | `## Overview` (tier, description), `## Config` (type shape), `## API` (signatures), `## Events`, `## Dependencies` (names only) |
 | Framework config | all of `src/config.ts` | the `export type Config` and `export type Events` blocks |
 | Dependencies | each dependency's full `index.ts` | `export type Api` from each dependency's `types.ts` |
-| Build rules | the full list | one line: `Tier [tier]. TDD: types→red→green→refactor. No explicit generics. import type. JSDoc. Tests in __tests__/.` |
+| Build rules | the full list | one line: `Tier [tier]. TDD: types→red→green→kill check→refactor. Tests of behaviour only (test-value.md). No explicit generics. import type. JSDoc. Tests in __tests__/.` |
 | TDD protocol | the reference read | one line naming the four phases; the builder already has the skill |
 | Output contract | schema with examples and field descriptions | schema only |
 | Verification criteria | included | omitted — the artifact check covers them |
@@ -58,7 +58,7 @@ Depends: [plugin names, or "None"]
 omit only when the spec has no screen from a design context]
 
 ## Output
-End with JSON: {agent, plugin, verdict, tdd, intent, filesCreated, testsPass, lintPass, issues}
+End with JSON: {agent, plugin, verdict, tdd, behaviours, killed, coverageIgnores, intent, filesCreated, testsPass, lintPass, issues}
 ```
 
 ### Other prompts and output

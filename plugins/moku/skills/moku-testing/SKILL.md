@@ -18,6 +18,20 @@ The `moku-builder` agent follows Red → Green → Refactor when constructing pl
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md` for the full TDD protocol: four phases (Types → Red → Green → Refactor), output contract extensions, core plugin adaptations, and edge cases.
 
+## What earns a test
+
+Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-value.md` before writing, reviewing or removing a test. In short:
+
+- Name the bug a test catches before you write it. No bug to name: no test. Not a test: a constant
+  compared with a copy of itself, what `tsc` proves, the same scenario at a second level, the framework's
+  own behaviour.
+- Every behaviour the spec's `## Verification` promises has one test that fails when it breaks. A promise
+  without a test fails the build.
+- After green, the kill check: break one line per logic file, see a test fail, restore.
+- 90% coverage is the goal and is reached by tests of behaviour. No filler, no edit of the threshold, no
+  ignore comment without the person's yes.
+- An existing test is never deleted by an agent alone.
+
 ## Test Runs
 
 When to run which tests, and how often, is one rule for every station: `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`. In short: one run per tree, the output kept in a file and read from there, the plugin's own tests while it is built, the whole script once per wave and once at the close, and no whole run right before a commit whose hook runs it. `moku-rails tests` prints the runs that were repeated and the slow tests.
@@ -54,11 +68,14 @@ Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-patterns.md` for
 **Canonical test exemplars** (real moku code): for a mock-ctx unit test open `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/sandbox/plugins/analytics/__tests__/unit/api.test.ts` (or `router/__tests__/unit/api.test.ts`); for a `createTestApp()` integration test open `…/sandbox/plugins/analytics/__tests__/integration/analytics.test.ts`; for `expectTypeOf`/`@ts-expect-error` type-level style open `…/sandbox/factory-chain.test.ts` / `events.test.ts`. See `sandbox-index.md`.
 
 **Key rules:**
-- Each domain file gets its own test file: `state.ts` → `__tests__/unit/state.test.ts`
+- A domain file with logic gets its own test file: `state.ts` → `__tests__/unit/state.test.ts`. A file of
+  types or plain data gets none
 - Each test creates its own mock context (no shared mutable state)
 - Test descriptions are behavior-oriented: "returns empty array when no routes registered"
-- Every test has at least one meaningful assertion (no `expect(true).toBe(true)`)
-- Edge cases: empty input, boundary values, error conditions
+- Every test can fail for a named bug (`references/test-value.md`); `expect(true).toBe(true)` and a
+  constant compared with its own copy cannot
+- Edge cases where the behaviour changes: an empty input that takes another branch, a boundary where the
+  result flips, an error the code handles on purpose
 
 ## Integration Test Pattern
 
@@ -109,7 +126,8 @@ it("rejects wrong event payload type", () => {
 ```
 
 **Key rules:**
-- At least one type test per: API method return type, event payload, config field
+- Type tests for what a consumer can get wrong: a wrong event name, a wrong payload, a wrong argument, a
+  return type that widened to `any`. Not one per field: `tsc` already checks what the code itself uses
 - `@ts-expect-error` for compile-time rejection (wrong types, wrong event names)
 - `expectTypeOf` for positive type assertions
 
