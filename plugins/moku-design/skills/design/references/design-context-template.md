@@ -8,7 +8,7 @@ learn what to build, never how.
 This template is the quality bar and is self-contained. Calibrate to the section shapes and the inventory
 tables below; no external example is needed.
 
-**Two rules at capture:**
+**Three rules at capture:**
 
 1. The document opens with the "spec, not source" callout reproduced verbatim in §0 below, substituting
    only `{NAME}` and the conventions line. The plan and build stations rely on it being present to forward
@@ -17,6 +17,11 @@ tables below; no external example is needed.
 2. Every section is populated from the actual prototype — no `TBD`, no placeholder prose, no invented
    features. The inventory (§6) lists every screen, panel, popup, menu, modal, transient element and
    component the prototype actually contains.
+3. The prototype is named as the single source of truth for layout and measurements: the §0 paragraph
+   "The numbers are the spec" stays verbatim, and the **Measurement reference** table in §5 is filled with
+   the prototype path, its frame, the target's units and the conversion between them. Plan copies that
+   table into every screen spec and build copies it into every builder brief, so a context without it
+   leaves the builder to guess sizes or to measure a picture.
 
 Saved to `.planning/design/{slug}/design-context.md`.
 
@@ -60,12 +65,25 @@ rule (R2), the node-free client bundle (R3), and readable-code style — see the
 (`references/project-spec.md`, Rules R1–R7) and **moku-readable-code**. **This document tells you WHAT to
 build; the framework conventions tell you HOW.**
 
+**The numbers are the spec.** The code is not copied; the measurements are. The approved prototype is the
+single source of truth for layout and measurements: every size, position, gap, radius, shadow and text
+shadow is read from `index.html` and `styles.scss`, converted to the target's units by the
+**Measurement reference** table in §5, and never guessed. A generated image (from Astra or any other art
+tool) is an art asset or a style reference. It is never a reference for layout, sizes or positions. Where
+an image and the prototype disagree, the prototype wins.
+
+**Text is text.** Words are drawn by a font from the string table, in the faces of the **Typography**
+table in §2. A word is never baked into an image or a sprite, because a baked word cannot be translated.
+The one exception is lettering that is art, listed by name in §2. The build is compared to the prototype
+by measurement, fonts first, before it is called done (the design check).
+
 **Files in this folder**
 | File | What it is |
 |------|-----------|
-| [`index.html`](./index.html) | The complete, runnable prototype. Open it in a browser — everything below is live and clickable. The behavioural source of truth — but **demo-quality**, not code to copy. |
-| [`styles.scss`](./styles.scss) | The full stylesheet extracted from the prototype (theming, layout, every component). Reference for **intent**, not a file to lift. |
+| [`index.html`](./index.html) | The complete, runnable prototype. Open it in a browser — everything below is live and clickable. The source of truth for behaviour, layout and measurements — but **demo-quality**, not code to copy. |
+| [`styles.scss`](./styles.scss) | The full stylesheet extracted from the prototype (theming, layout, every component). The source of the exact sizes, positions, radii and shadows. Read the numbers; do not lift the file. |
 | [`app.js`](./app.js) | All interaction logic extracted from the prototype. Reference for **behaviour**, not a file to lift. |
+| {`art/…`, one row per generated image, or omit} | {What the image shows.} Art asset or style reference (volume, gloss, palette). **Not a reference for layout or sizes.** |
 | `design-context.md` | This document. |
 
 {1–2 sentences on what is real vs stubbed in the prototype — e.g. "front-end only; demo data held in
@@ -81,8 +99,17 @@ organising idea that makes it distinctive. State what makes it feel the way it d
 **Personality —** {the art direction in a phrase — e.g. "Editorial / Swiss-modernist, warm and
 print-precise."}
 
-**Typography —** {the type voices and what each is used for. Name the fonts (Google Fonts only in the
-prototype) and the role each plays.}
+**Typography —** {the type voices and what each is used for. Google Fonts only in the prototype.}
+
+| Face | Weight | Used for | Sizes in the prototype (px) | Licence | Locales it has glyphs for |
+|---|---|---|---|---|---|
+| {e.g. Fredoka} | {700} | {title, buttons, labels} | {58, 44, 38, 24, 21} | {OFL} | {en; no Cyrillic} |
+
+All words are live text in these faces. Effects on text (a lip, a shadow, an outline) are part of the
+text style, never drawn into the art.
+
+**Lettering as art —** {`none`, or the short list of words that are drawn as an image by an artistic
+decision, each with the reason and how it is translated. Everything not listed here is text.}
 
 **Colour —** {the palette: ground, ink, accent(s); light and dark behaviour; how semantic colours
 (labels, priorities, status) are used. State the restraint rules.}
@@ -108,6 +135,16 @@ double-click-to-rename, customise (colour/icon), delete-always-confirms, filteri
 toasts. This section is what keeps the design coherent — be specific.}
 
 ## 5. Layout & page behaviour
+
+**Measurement reference**
+| Field | Value |
+|---|---|
+| Prototype | `.planning/design/{slug}/index.html` and `styles.scss`: the single source of truth for sizes, positions, radii and shadows |
+| Prototype frame | {width}×{height} CSS px {e.g. `390×693`, or `fluid, checked at 1440 and 390 wide`} |
+| Target units | {e.g. `CSS px`, or `game reference units, 1080×1920`} |
+| Conversion | {`target = prototype px × 1` for web, or e.g. `game units = prototype px × 1080 / 390`} |
+| Art | {`none`, or the folder of the generated art and what each file is used for. Art assets only, never layout} |
+
 {How the layout flows and responds: document-flow vs fixed window, how content grows, how it compacts
 on short screens, the footer, and the **full mobile behaviour** (reflow, bottom sheets, swipe, tap
 targets). Note anything that differs on mobile so the implementer reproduces it.}
@@ -233,6 +270,12 @@ Both keep §1, §8 and §9. See `design-mode-api.md` and `design-mode-architectu
    component the prototype contains is listed exactly once, in the right group.
 4. §8 demo content matches the data the prototype actually renders.
 5. §9 names the non-negotiables and repeats "re-implement, don't port".
-6. The Files in this folder table labels every prototype file as demo or reference, not source.
-7. For an `api` or `architecture` run, its section carries the alternatives, the axes table and the
+6. The Files in this folder table labels every prototype file as demo or reference, not source, and
+   every generated image as art or style reference, not a reference for layout or sizes.
+7. For a `ui` run, the §0 paragraph "The numbers are the spec" is intact and the §5 **Measurement
+   reference** table is filled: prototype path, frame, target units, conversion, art.
+8. For a `ui` run, §2 has the **Typography** table with every face, weight, size, licence and the
+   locales it covers, and the **Lettering as art** line. No sentence says that words or their effects
+   are baked into the art, except for the names on that line.
+9. For an `api` or `architecture` run, its section carries the alternatives, the axes table and the
    recorded reasons for the rejected options.

@@ -67,6 +67,13 @@ For all plugins in the plan:
 - Code Example (createPlugin call — NO explicit generics)
 - Verification (checklist of pass criteria)
 
+**For a specification that names a design context** (`.planning/design/<slug>/design-context.md`), also
+verify a `## Design Reference` section with the prototype path, the conversion from prototype px to the
+target's units, the fonts (face, weight, sizes) and the art assets. Missing section, path, conversion or
+fonts: FAIL. A spec that names a generated image as the reference for layout, sizes or positions: FAIL.
+A spec that puts a word into an image or a sprite, when the design context does not list it as
+lettering that is art: FAIL.
+
 **For core plugin specification files**, verify these sections (simplified template):
 - Overview (Type: Core Plugin, implementation order, description)
 - Config (or "None")

@@ -15,7 +15,10 @@ install the pack. Do not build a game from the app steps instead.
 - **Unit of work.** One feature folder, `features/<f>/`, with the files and tests its spec lists. One
   `moku:moku-builder` per feature. Features write disjoint folders, so they run in parallel, the way
   the units of Step 3 do. A builder has no Skill tool: put the base directory of the `moku-game` skill
-  and the reference files the feature needs into its prompt, so it reads them as files.
+  and the reference files the feature needs into its prompt, so it reads them as files. A feature with
+  a screen from a design context also gets the `## Design Reference` section of
+  "Design context is a spec, not source" below: the prototype path and the conversion from prototype px
+  to game units. Images from Astra or `moku-ai` are the sprites, never the layout.
 - **Shared files.** The files the features share and the wiring are yours: you write them before the
   wave and wire the features in after it. A builder writes only inside its feature folder.
 - **Check after a wave.** The game's own scripts, in this order:
@@ -23,14 +26,20 @@ install the pack. Do not build a game from the app steps instead.
   bun run keys --check && bun run typecheck && bun run lint && bun run test && bun run test:visual
   ```
   A red `keys --check` means the generated files are stale: run `bun run keys` and run the line again.
+- **Look after a wave.** Green scripts are not a look. The editor runs for the whole build
+  (`moku-game` skill → "The editor is the working mode"). After each wave that changes what a player
+  sees, read the game through the editor's MCP tools (`moku_status`, `moku_read` `game.position` and
+  `game.ui`, one `moku_screenshot` per touched screen; by script in the pane when the tools are not
+  connected) and show the person the shots with the wave report. A screen that does not draw, or draws
+  off the design, is fixed in this wave, not found in the playtest.
   `moku-verify-artifacts` does not apply to a game. It looks for `src/plugins/<name>` and fails.
 - **Steps that change.** Step 1: the shape to build to is the game layout, not the app shape of
   `moku-idioms.md`. Step 3: replaced by the unit of work above. Step 4: does not apply, a game has no
   `src/main.ts` and no `createApp`. Step 5.5: its axes are those of a web or worker app and do not
   apply. Step 6: the whole-game tests are the headless tests of the `moku-game` skill, and nothing
   boots through `createApp`.
-- **Steps that stay.** Every other step applies as it does to any app. Step 5 runs the game validator
-  and Step 7.5 runs `moku-game:playtest`.
+- **Steps that stay.** Every other step applies as it does to any app. Step 5 runs the game validator,
+  Step 7.5 runs `moku-game:playtest` and Step 7.6 runs the design check on the game in the editor.
 
 ## Step 1: Read and validate the plan
 
@@ -233,6 +242,32 @@ means there is nothing to test — note it in one line and move on.
 
 Never present a finished web app as working on the strength of unit and integration tests alone.
 
+## Step 7.6: Design check (every build with a design context)
+
+A design context for this change (`.planning/design/<slug>/design-context.md`, named by the spec's
+`## Design Reference`) makes this step part of the build. Run it yourself, without being asked: the
+person must never have to say "now compare it to the design".
+
+The procedure is in the `moku-design` pack: load the `moku-design:design` skill with the Skill tool and
+read `references/design-check.md` under the base directory it prints. In short:
+
+1. Measure the prototype at its frame: position, size, radius, shadow and colour of every inventory
+   row of §6, and family, weight, size, line height and letter spacing of every text.
+2. Measure the same rows in the running build: the app from Step 7, or the game in the editor
+   (`moku-game:playtest` → "The design check").
+3. Compare, expected = prototype value × the conversion. Fonts first. Then "text is text": every word
+   is drawn by a font from the string table, none is baked into an image.
+4. Fix what fails, measure again, at most two rounds. A difference that is intended is a row
+   "by decision" with its source, not a pass by silence.
+5. Write `.planning/design/<slug>/check/design-check.md` and show the verdict line, the open rows and
+   the pairs of shots.
+
+The build is not reported as done while the verdict is FAIL: `moku-rails pause`, show the open rows and
+ask. The rails hold the same line: for a change tied to a design, `moku-rails done build` is refused
+until the report says `Verdict: PASS`. `--no-design-check "<their words>"` is the person's answer,
+never your shortcut. If the `moku-design` pack is not installed, run the five steps above from this page and say so.
+No design context for the change: note it in one line and move on.
+
 ## Step 8: README
 
 Generate or update the root `README.md` (and any per-custom-plugin READMEs) now that the app exists.
@@ -258,7 +293,8 @@ Package publishing is a different station — the `moku:moku-release` skill.
 Cover: custom plugins created, entry point structure, validation results, integration test count and
 coverage, the runtime smoke test (the command, the surface, the status — state plainly that the app was
 booted and served, or that the gate was skipped for a pure library), whether the e2e gate ran and what
-it found, README and deployment output, and issues found and fixed. Then update `.planning/STATE.md`.
+it found, the design check (the verdict line, the rows open or by decision, the path of the report; or
+"no design context"), README and deployment output, and issues found and fixed. Then update `.planning/STATE.md`.
 
 ## App quality bar
 
@@ -281,6 +317,22 @@ the token system, one route table, a node-free client bundle — R1–R7) and re
 instruction into every builder's prompt. Do not copy or port the prototype's CSS, JS, DOM, class names
 or bugs, and do not use it as a scaffold. The design context says what to build; the `moku-web` skill
 says how.
+
+The code is not copied; the numbers are. The approved prototype is the single source of truth for layout
+and measurements, in a web app and in a game alike. Every builder of a screen or component from the
+design gets a `## Design Reference` section in its prompt (shape in `build-wave-execution.md`), taken
+from the spec's `## Design Reference` or from the **Measurement reference** table in §5 of the design
+context:
+
+- the prototype path: `.planning/design/<slug>/index.html` and `styles.scss`,
+- the conversion from prototype px to the target's units (web `× 1`; a game
+  `× reference width / frame width`, for example `× 1080 / 390`),
+- the art assets the unit uses.
+
+A generated image, from Astra or any other tool, is an art asset or a style reference. It is never a
+reference for layout, sizes or positions, also when it shows a whole screen. When neither the spec nor
+the design context gives the conversion, read the frame size from the prototype and state the conversion
+before the wave starts; do not let a builder guess sizes or measure a picture.
 
 ## Web applications
 

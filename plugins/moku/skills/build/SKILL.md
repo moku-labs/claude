@@ -193,10 +193,15 @@ After two rounds without green, report what remains.
 
 ## Closing the station
 
-Waves done, final verification green, docs written: update STATE.md, report what was built, and run
+Waves done, final verification green, docs written, and the design check passed when the change has a
+design context (`build-app.md` Step 7.6; you run it yourself, the person does not ask for it): update
+STATE.md, report what was built, and run
 
 ```bash
 moku-rails done build
 ```
+
+Exit 2 with `Next step: design-check` means the change follows a design and its check is missing or
+FAIL: run `build-app.md` Step 7.6, then `done build` again.
 
 Then say what comes next — `moku:verify` scoped to what the change touched.

@@ -84,6 +84,13 @@ When `moku-design` is installed and its `astra` option is on, also check that `c
 (`command -v codex`). Without it Astra is unavailable and Fable reviews alone. Do not run
 `moku-astra probe` here: a probe spends model quota. `check astra` does that on request.
 
+For a game, also check the editor is wired as the working mode: `@moku-labs/editor` in
+`devDependencies`, an `editor` script, `.mcp.json` with a `moku-editor` server, `.claude/launch.json`
+with `game-editor`, and whether the `mcp__moku-editor__*` tools are listed in this session. Report each
+missing piece with its fix (`bunx moku-editor mcp-config --port 3000` prints the `.mcp.json`; the tools
+appear after the person approves the server and restarts the session). Listed tools: call `moku_status`
+and report what it says. Do not start the editor for this check.
+
 ## Check 4 — tooling
 
 - `package.json` carries the script contract: `lint`, `typecheck`, `test`, `build`, plus `validate`,

@@ -408,3 +408,71 @@ describe("moku-rails: a session of quick edits", () => {
     assert.match(rails(root, "guard", "src/plugins/hud/view.ts").text, /has not been routed yet/);
   });
 });
+
+describe("moku-rails: a change that follows a design", () => {
+  /** A medium change with the design "board" captured and the build station entered. */
+  function built() {
+    const root = project({ initialized: true });
+    mkdirSync(join(root, ".planning", "design", "board"), { recursive: true });
+    writeFileSync(join(root, ".planning", "design", "board", "design-context.md"), "# Board\n");
+    rails(root, "open", "2026-10-11-board", "--size", "M", "--type", "feature", "--title", "The board");
+    rails(root, "enter", "design");
+    assert.equal(rails(root, "done", "design", "--design", "board").code, 0);
+    rails(root, "enter", "plan");
+    rails(root, "done", "plan");
+    assert.equal(rails(root, "enter", "build").code, 0);
+    return root;
+  }
+
+  /** Write the report of the design check with one verdict. */
+  function report(root, verdict) {
+    mkdirSync(join(root, ".planning", "design", "board", "check"), { recursive: true });
+    writeFileSync(join(root, ".planning", "design", "board", "check", "design-check.md"), `# Design check\nVerdict: ${verdict}    Rows: 12\n`);
+  }
+
+  it("refuses to finish build before the design check ran, and names it as the next step", () => {
+    const verdict = rails(built(), "done", "build");
+
+    assert.equal(verdict.code, 2);
+    assert.match(verdict.text, /did not run/);
+    assert.match(verdict.text, /Next step: design-check/);
+  });
+
+  it("refuses to finish build while the check has open rows", () => {
+    const root = built();
+    report(root, "FAIL");
+
+    assert.equal(rails(root, "done", "build").code, 2);
+  });
+
+  it("finishes build on a passed check", () => {
+    const root = built();
+    report(root, "PASS");
+
+    assert.equal(rails(root, "done", "build").code, 0);
+  });
+
+  it("finishes build without the check on the person's word, and keeps the word", () => {
+    const root = built();
+
+    assert.equal(rails(root, "done", "build", "--no-design-check", "ship it, the board is fine").code, 0);
+    assert.match(rails(root, "status", "--json").text, /build without design check: ship it/);
+  });
+
+  it("refuses a design that was never captured, and a slug that is a path", () => {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-10-11-home", "--size", "M", "--type", "feature", "--title", "Home");
+    rails(root, "enter", "design");
+
+    assert.equal(rails(root, "done", "design", "--design", "home").code, 2);
+    assert.equal(rails(root, "done", "design", "--design", "../../etc").code, 1);
+  });
+
+  it("asks for no check on a change without a design", () => {
+    const root = project({ initialized: true });
+    rails(root, "open", "2026-10-11-fix", "--size", "S", "--type", "fix", "--title", "A fix");
+    rails(root, "enter", "build");
+
+    assert.equal(rails(root, "done", "build").code, 0);
+  });
+});

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import { requiredBefore, routeFor, tweakTier } from "../../lib/rails/routes.mjs";
-import { canClose, canEnter } from "../../lib/rails/transitions.mjs";
+import { canClose, canEnter, canFinish } from "../../lib/rails/transitions.mjs";
 
 const ready = { initialized: true };
 const fresh = { initialized: false };
@@ -181,5 +181,33 @@ describe("who makes a quick edit in a game", () => {
       assert.deepEqual(tweakTier([file], { exists }), { tier: "fast", reasons: [] }, file);
       assert.deepEqual(tweakTier([file], { exists, game: false }), { tier: "fast", reasons: [] }, file);
     }
+  });
+});
+
+describe("canFinish", () => {
+  it("lets a change without a design finish build with no report", () => {
+    assert.equal(canFinish({}, "build", undefined).ok, true);
+  });
+
+  it("refuses build on a change with a design while the check has open rows", () => {
+    const verdict = canFinish({ design: "board" }, "build", "FAIL");
+
+    assert.equal(verdict.ok, false);
+    assert.equal(verdict.missing, "design-check");
+    assert.match(verdict.reason, /open rows/);
+  });
+
+  it("refuses build and e2e when the check never ran", () => {
+    assert.match(canFinish({ design: "board" }, "build", undefined).reason, /did not run/);
+    assert.equal(canFinish({ design: "board" }, "e2e", undefined).ok, false);
+  });
+
+  it("lets build finish on a passed check", () => {
+    assert.equal(canFinish({ design: "board" }, "build", "PASS").ok, true);
+  });
+
+  it("asks nothing of the stations before the build", () => {
+    assert.equal(canFinish({ design: "board" }, "design", undefined).ok, true);
+    assert.equal(canFinish({ design: "board" }, "plan", undefined).ok, true);
   });
 });

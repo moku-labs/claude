@@ -205,7 +205,7 @@ Label every one of them demo and reference, not source.
 ### E2 — Write `design-context.md`
 
 Read the actual prototype and the concept spec, then write
-`.planning/design/{SLUG}/design-context.md` from `design-context-template.md`. Three rules:
+`.planning/design/{SLUG}/design-context.md` from `design-context-template.md`. Five rules:
 
 1. **§0 verbatim.** Reproduce the "spec, not source" callout exactly as the template has it, substituting
    only `{NAME}` and the conventions line for the medium. It has to be the first section after the title
@@ -218,6 +218,16 @@ Read the actual prototype and the concept spec, then write
 3. **Every section populated** from what the prototype does. No `TBD`, no placeholder prose, no invented
    features. The Files table labels each prototype file as demo or reference. §9 repeats "re-implement,
    don't port".
+4. **The prototype is the measurement reference.** Keep the §0 paragraph "The numbers are the spec" and
+   fill the §5 **Measurement reference** table: the prototype path, its frame in px, the target's units
+   and the conversion (web `× 1`; a game `× reference width / frame width`, for example `× 1080 / 390`).
+   Give every generated image a row in the Files table as an art asset or a style reference. Never write
+   that a screen is built "from" or "in the layout of" an image: an image of a screen shows a style, the
+   prototype holds the numbers.
+5. **Fonts and text.** Fill the **Typography** table in §2 from the prototype's computed styles: face,
+   weight, every size, the licence, the locales the face has glyphs for. Words are text: write no design
+   where a label, a button word or a title is baked into an image. Lettering that is art by decision goes
+   on the **Lettering as art** line with its reason; ask the person before you put a word there.
 
 Then run the checklist at the foot of the template and close any gap before moving on.
 
@@ -229,7 +239,8 @@ final `## Recovery` and `## Next Action:` in `state.md`.
 ### E4 — Hand off
 
 Restate the spec-not-source reminder (the wording is in the skill), print the plan-station next step with
-the context path, then `moku-rails done design`.
+the context path, then `moku-rails done design --design {SLUG}`. The slug makes the rails hold `build`
+and `e2e` until the design check passes.
 
 ---
 
@@ -239,4 +250,7 @@ the context path, then `moku-rails done design`.
   medium and its prototype rules, the disposable-demo framing.
 - **Into Astra:** the round's screenshots and, once it exists, `design-context.md` as `--context`.
 - **Out:** `.planning/design/{SLUG}/design-context.md` plus the registry row, consumed by the plan and
-  build stations, which forward the re-implement-never-copy instruction to their agents.
+  build stations, which forward the re-implement-never-copy instruction and the **Measurement reference**
+  table (prototype path, conversion) to their agents.
+- **Back in after the build:** the design check (`design-check.md`) compares the build to the prototype
+  by measurement. The build and e2e stations run it themselves.

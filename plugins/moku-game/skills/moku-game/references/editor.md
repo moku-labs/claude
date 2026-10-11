@@ -4,6 +4,17 @@ How Claude runs `@moku-labs/editor@0.9.3` beside a game on `@moku-labs/game@0.13
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
+## 0. Two ways in, one editor
+
+The editor is the working mode of a game session (`SKILL.md` → "The editor is the working mode"). The
+first way to read and drive the game is the MCP server `moku-editor`, registered by the game's
+`.mcp.json`: `moku_status` first, then `moku_read`, `moku_wait`, `moku_run`, `moku_screenshot`,
+`moku_series`, `moku_selection`, `moku_select`, `moku_reload` and one tool per command door (`game_tap`).
+The tool list is in §6 and in `plugin-index.md` → "MCP for Claude Code". The browser pane of this file is
+for the person to watch and point, and it is the way to read and drive by script (§4) when the MCP server
+is not connected. Both use one running bin: start it once (§1), the bridge finds it through
+`.moku/editor.json`.
+
 ## 1. Start the dev server in the background
 
 The game's `editor` script is the editor bin: `moku-editor --root .`. A game has no HTML file: the bin asks
@@ -114,6 +125,10 @@ card it names; `<name>` is the element key for `doors.sources.locate`.
 input while it is on.
 
 ## 4. Read and drive the game by script
+
+With the MCP server connected, the same reads are `moku_read { id: "game.position" }` and the same
+commands are the door tools or `moku_run`; prefer them. The script way below is the fallback, and the way
+to reach what no door covers.
 
 The tools page exposes **no global**. The game page does: `globalThis.game` (the app), `globalThis.doors`
 (`{ read, watch, sources, run, commands }`), `globalThis.system` (the system app, or `undefined`) and,

@@ -25,7 +25,9 @@ moku-rails enter design      # exit 2 = refused: relay the reason and the named 
 
 Design is allowed before `init`, so this is often the first station a project ever enters. Before every
 stop to ask the user something — each round pick, each polish gate — run `moku-rails pause --reason "..."`.
-When the design is captured, `moku-rails done design`.
+When a `ui` design is captured, `moku-rails done design --design {slug}`: the slug ties the change to its
+design, and the rails then finish `build` and `e2e` only on a passed design check. An `api` or
+`architecture` design has no prototype to compare with: plain `moku-rails done design`.
 
 If the rails refuse because no change is open, open one first
 (`moku-rails open <date-slug> --size M|L --type <type> --title "..."`) and enter again. Design is on
@@ -127,7 +129,8 @@ done until a screenshot or a live URL shows it.
 - Stop at every human gate. The round pick, the polish gate and the capture are the user's decisions. One
   round per invocation is fine.
 - Capture is written by this session, not an agent: `design-context.md` opens with the "spec, not source"
-  callout verbatim and carries an exhaustive inventory. See `references/design-context-template.md`.
+  callout verbatim, carries an exhaustive inventory, and names the prototype as the single source of truth
+  for layout and measurements, with the unit conversion. See `references/design-context-template.md`.
 - Design never plans or builds. After capture, recommend the plan station.
 
 ## Hand-off
@@ -137,8 +140,21 @@ When the design is captured, repeat the principle and print the next step:
 > Design captured → `.planning/design/{slug}/design-context.md`. This is a specification, not source.
 > The prototype in that folder is throwaway demo code. Build it from scratch on the real stack with all
 > the project's conventions; do not copy its CSS, JS, DOM or its bugs.
+> Its numbers are the spec: sizes, positions, radii and shadows come from the prototype, times the
+> conversion in §5. Generated images are art, not a layout reference. Words are text in the fonts of §2.
+> After the build the design check compares the result to the prototype by itself, fonts first.
 
-Then `moku-rails done design`, and hand the context path to the plan station.
+Then `moku-rails done design --design {slug}` (plain `done design` for an `api` or `architecture` run),
+and hand the context path to the plan station.
+
+## The design check
+
+After a build, the build is compared to the approved prototype by measurement: positions, sizes, radii,
+shadows, colours, and first of all fonts. The procedure, the tolerances and the report are in
+`references/design-check.md`. The build station runs it at its end and the e2e station runs it again
+(`moku-web:e2e`, `moku-game:playtest`); the person never has to ask for it. Invoked directly with
+"check the build against the design", run that reference for the named slug and write nothing but its
+`check/` folder.
 
 ## Gotchas
 

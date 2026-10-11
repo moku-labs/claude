@@ -279,7 +279,7 @@ Base sources (`sources.*`): `graph`, `position`, `history`, `tainted`, `cheats`,
 Base commands (`commands.*`): `answer`, `tap`, `drag`, `key`, `fill`, `walk`, `bookmark`, `restore`, `step`,
 `pause`, `resume`, `capture`, `debug`, `reducedMotion`, `timeScale`, `mute`, `trace`. `capture` takes
 `{ legend?, layers?, sheet?, diff? }` and answers `{ png, legend? }`, not a bare string. The catalogue is
-plain data shaped for MCP tools (id, title, input schema); no MCP server ships yet. Effects: `read`, `route`, `cosmetic`, `cheat`, `raw`; a `cheat` or `raw` taints the
+plain data shaped for MCP tools (id, title, input schema), and `moku-editor mcp` serves it to Claude Code as tools ("The editor is the working mode" below). Effects: `read`, `route`, `cosmetic`, `cheat`, `raw`; a `cheat` or `raw` taints the
 session and is journaled.
 
 `__MOKU_GAME_DEV__` is a global the engine declares and reads, never sets. A game never re-declares it.
@@ -408,6 +408,52 @@ the opt-in `moku-lint-oxlint` upgrade. `moku-game-validator` checks what lint ca
 
 JSDoc in a game is always the multi-line form (`/**` on its own line), never `/** one line */`.
 
+## The editor is the working mode
+
+A game session and the editor are one thing. From the first file of a game to its release, the editor
+runs, the person sees the game in the browser pane, and you read the game through the editor's MCP tools.
+You do not work on a game blind and you do not wait for the playtest station to look at it.
+
+| You need | Use | Not |
+|---|---|---|
+| Is the editor up, which game is connected | `mcp__moku-editor__moku_status`, first call of a session | guessing from the port |
+| Where the graph is, what a gate waits for | `moku_read` `game.position` | reading the node source and assuming |
+| A parameter, the committed state | `moku_read` `game.model`, `game.entities`, `game.diff` | a `console.log` |
+| What is on the screen, where, how large | `moku_read` `game.ui`, `game.locate`, `game.render` | measuring a screenshot by eye |
+| A picture of the game or of one element | `moku_screenshot` (`key` crops to an element), `moku_series` for a motion | a pane screenshot of the whole tools page |
+| Tap, answer, walk, pause, step | the door tools (`game_tap`, `game_answer`, `game_walk`…) or `moku_run` | clicking pixels in the pane |
+| Wait for the game to arrive somewhere | `moku_wait` | a sleep |
+| What the person points at | `moku_selection` after their pick; `moku_select { key }` to show them an element | asking them to describe it |
+| After an edit | `moku_reload`, or the hot swap, then read the state again | assuming the edit landed |
+
+How the ways rank. Take the first that is available and say which one you used:
+
+1. **The MCP tools** (`mcp__moku-editor__*`). Typed, no script to write, they work while the pane shows
+   something else. If they are deferred, load them through ToolSearch with `moku-editor`.
+2. **The doors by script** in the browser pane (`references/editor.md` §4). The same catalogue, by
+   `javascript_tool`. Use it when the MCP server is not connected in this session.
+3. **Headless** (`createHeadless`, `bun run test`). The proof of logic. It is never the only look at a
+   change that a player sees.
+
+The pane and the MCP tools go together: the pane is what the person watches and points in, the tools are
+how you read and drive. Open the pane at `/__editor/` at the start of the session and keep it open;
+pictures need the game page visible. After every change a player can see, show it: one `moku_screenshot`
+or the live pane, with the state you read beside it.
+
+**Set-up check, at the start of every game session.** A game has `.mcp.json` with the `moku-editor`
+server and `.claude/launch.json` with `game-editor` (`references/hello-world.md` → "Claude Code files").
+
+- Both files there and the tools listed: call `moku_status` and go on.
+- `.mcp.json` missing or without `moku-editor`: write it (`bunx moku-editor mcp-config --port 3000`
+  prints it; merge, never overwrite another server), write `launch.json` if missing, and tell the person
+  in one line that the tools appear after they approve the server and restart the session. Until then
+  work by way 2.
+- The file is there and the tools are not: the server waits for the person's approval, or the session
+  started before the file existed. Say so once, work by way 2.
+
+Cheat and raw doors (`cheat_*`, `raw_*`) taint the session. Use them to reach a state fast, never inside a
+proof, and say when you did.
+
 ## The editor
 
 ```sh
@@ -422,8 +468,8 @@ bunx moku-editor --root .          # the game's "editor" script
   `--root`, `--port` (`0` for a free port), `--no-hmr`, `--preload`, `--serve-plugin`. Bun only.
 - The project index needs TypeScript with its JS API (6.x). On TypeScript 7 the bin logs
   `files:project-off` and a pick has no `file:line`.
-- `moku-editor mcp` is the stdio MCP server for Claude Code: `claude mcp add moku-editor -- bunx
-  moku-editor mcp --port 3000`. It uses the running bin or starts one.
+- `moku-editor mcp` is the stdio MCP server for Claude Code. The game's `.mcp.json` registers it
+  (`bunx moku-editor mcp --port 3000`). It uses the running bin or starts one.
 - A game with its own HTML page still runs `moku-editor <game-html> --root .` and wires the agent itself;
   a shell game never does.
 - The tools page: six workspaces, ⌘1–⌘6 (Game, Flow, Render, State, Files, Console; Game is the default),

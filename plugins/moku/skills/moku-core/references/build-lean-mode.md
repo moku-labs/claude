@@ -53,6 +53,10 @@ Depends: [plugin names, or "None"]
 ## Decisions
 [Relevant decision-log entries, or omit the section]
 
+## Design Reference
+[Prototype path, unit conversion, fonts, the text-is-text rule and art assets, as in the normal prompt. Never cut from a lean prompt;
+omit only when the spec has no screen from a design context]
+
 ## Output
 End with JSON: {agent, plugin, verdict, tdd, intent, filesCreated, testsPass, lintPass, issues}
 ```
