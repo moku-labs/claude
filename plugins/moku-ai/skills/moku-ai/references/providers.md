@@ -1,6 +1,6 @@
 # Providers, tasks, models, and custom plugins
 
-Verified against `@moku-labs/ai@0.16.1` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
+Verified against `@moku-labs/ai@0.16.8` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
 `src/plugins/<provider>/README.md`, `src/plugins/cli/project-config.ts`. Prices are the bundled
 tables; `priceOverrides` replaces them.
 
@@ -12,7 +12,7 @@ tables; `priceOverrides` replaces them.
 | `sprite` | `fal` | RGBA png, trimmed, optional resize and padding |
 | `sfx` | `elevenlabs`, `fal` | mp3, always |
 | `video` | `fal`, `apimodels`, `ark` | mp4 (`submit` + `poll`, job id journaled) |
-| `music` | `fal` | mp3 |
+| `music` | `fal`, `elevenlabs` (0.16.2) | mp3 |
 | `voiceover` | `elevenlabs`, `openai` | mp3, wav or ogg |
 | `translate` | `openai` | text |
 | `prompt-gen` | `openai`, `codex`, `claude`, `fal` | text (fal: also tool calls) |
@@ -33,7 +33,7 @@ The runner hands a handler `{ ...input, params }`. Field names below are the con
 | `sprite` | `source: { $ref \| $file }`, `model`, `trim?` (true), `padding?` (0), `size?: { width, height }`, `fit?` (`contain` \| `cover` \| `fill`), `pixelArt?` (false), `alphaThreshold?` (8) | `model` is required: `birefnet` or `none`. With `size` the output is exactly `size` and `padding` sits inside it |
 | `sfx` | `model`, `prompt`, `durationMs?`, `promptInfluence?` (0..1), `loop?` | `model` is required. Prompt at most 450 characters. No `durationMs`: the model picks the length |
 | `video` | `model`, `prompt`, `negative?`, `image?`, `endImage?`, `refs?`, `seconds?` (5), `aspect?`, `resolution?`, `audio?`, `fromDraft?` | `image` and refs are `{ $ref }` or `{ $file }` |
-| `music` | `model`, `prompt`, `lengthMs`, `chunks?`, `seed?` | `model` is required, no default |
+| `music` | `model`, `prompt`, `lengthMs`, `chunks?: [{ text, durationMs, styles, avoid? }]`, `seed?` | `model` is required, no default. The model id belongs to the provider: `music_v2_5` on `elevenlabs`, `elevenlabs-music-v2.5` on `fal` |
 | `voiceover` | `text`, `voice`, `language?`, `model?`, `format?` (`mp3` \| `wav` \| `ogg`) | ElevenLabs `voice` is a voice id; OpenAI `voice` is `alloy` and friends |
 | `translate` | `text`, `targetLang`, `sourceLang?`, `model?` | |
 | `prompt-gen` | `prompt`, `system?`, `model?`, `temperature?`, `messages?`, `tools?`, `toolChoice?`, `cacheSystem?` | `messages`/`tools` only on `fal` |
@@ -47,7 +47,8 @@ The runner hands a handler `{ ...input, params }`. Field names below are the con
 `params.draft: true` (ark 2.5 480p draft), `params.omni_reference_task_type` (ark, 0.15.2: `auto` \|
 `reference` \| `edit` \| `extend`; pins the Seedance 2.5 omni reference task; refused on a final from a
 draft), `params.model` and `params.operating_resolution`
-(fal sprite `birefnet`), `params.output_format` (elevenlabs sfx, `mp3_*` only),
+(fal sprite `birefnet`), `params.output_format` (elevenlabs sfx and music, `mp3_*` only), `params.force_instrumental`
+(elevenlabs music, boolean, default `true`),
 `params.reasoning` (codex, claude, fal prompt-gen),
 `params.responseSchema` (prompt-gen JSON answer), `params.generation` (any value; changes the key to
 force a re-render).
@@ -130,6 +131,51 @@ ark video since 0.15.2 and 0.16:
 
 Both return mp3. `app.fal.models("music")` lists them with prices.
 
+### music (elevenlabs, since 0.16.2)
+
+ElevenLabs' own Music API, `POST /v1/music`, with `ELEVENLABS_API_KEY`. It needs a paid ElevenLabs
+plan; on a free plan the call fails with an HTTP 4xx. The item must name `provider: elevenlabs`,
+because the default `music` provider stays `fal`.
+
+| Model id | Length | `chunks` | Price |
+|---|---|---|---|
+| `music_v1` | 3 s to 10 min | no | $0.15 per started minute |
+| `music_v2` | 3 s to 10 min | yes | $0.15 per started minute |
+| `music_v2_5` | 3 s to 10 min | yes | $0.15 per started minute |
+
+The price is an estimate from the ElevenLabs API price page. Set the plan's real rate with
+`elevenlabs.priceOverrides["music:<model>"]`, in USD per started minute. A missing music price is a
+terminal error, never $0. The fal id `elevenlabs-music-v2.5` is refused here.
+
+Rules, each a terminal 400 before any call:
+
+- `lengthMs` is a whole number from 3000 to 600000.
+- A request is a prompt or a chunk plan. With `chunks` the prompt is not sent.
+- `chunks` work on `music_v2` and `music_v2_5` only. Each `durationMs` is a whole number from 3000
+  to 120000, and the durations add up to `lengthMs`. Each `text` has at most 30 lines of at most
+  200 characters.
+- `seed` works only with `chunks`. A seed on a prompt request throws.
+- `params.force_instrumental` works only with a prompt. Default `true`: no vocals.
+- `params.output_format` must start with `mp3_`. Any other `params` key throws.
+
+```yaml
+  - id: music/theme
+    task: music
+    provider: elevenlabs
+    input:
+      model: music_v2_5
+      prompt: "main theme"
+      lengthMs: 43000
+      seed: 7
+      chunks:
+        - { text: "[Intro]", durationMs: 13000, styles: [synthwave, dark, slow build] }
+        - { text: "[Drop]", durationMs: 30000, styles: [driving bass], avoid: [vocals] }
+```
+
+The call is synchronous and waits up to `elevenlabs.musicTimeoutMs` (600000) for the whole track.
+A timeout is retryable, so the runner sends the request again, and ElevenLabs may bill the first
+attempt. A band name, an artist name or known lyrics end the item as `flagged`.
+
 ### voiceover
 
 | Provider | Model | Price |
@@ -152,7 +198,7 @@ Both return mp3. `app.fal.models("music")` lists them with prices.
 |---|---|
 | `fal` | `FAL_KEY` (also sfx and `birefnet` sprites; a `none` sprite needs no key) |
 | `openai` | `OPENAI_API_KEY` |
-| `elevenlabs` | `ELEVENLABS_API_KEY` (voiceover, sfx) |
+| `elevenlabs` | `ELEVENLABS_API_KEY` (voiceover, sfx, music) |
 | `apimodels` | `APIMODELS_API_KEY` |
 | `ark` | `ARK_API_KEY`, plus `ARK_ACCESS_KEY` and `ARK_SECRET_KEY` for assets |
 | `codex`, `claude` | none; local CLI login |
@@ -297,7 +343,7 @@ ships should read the key through `ctx.env` in `onInit` or `api` and close over 
 The task namespaces ship the handler types: `Image.ImageHandler`, `Sprite.SpriteHandler`,
 `Sfx.SfxHandler`, `Video.VideoHandler`, `Music.MusicHandler`, `Voiceover.VoiceoverHandler`,
 `Translate.TranslateHandler`, `PromptGen.PromptGenHandler`, `Asset.AssetHandler`. Video, music and
-asset handlers may use `submit` + `poll` for long jobs; sprite and sfx handlers are `execute` only.
+asset handlers may use `submit` + `poll` for long jobs (the shipped elevenlabs music handler is `execute` only); sprite and sfx handlers are `execute` only.
 A sprite handler gets `source` already resolved to `{ path, mimeType, hash }` and must return
 `image/png`; the shipped pixel step `processSprite` is internal (`src/plugins/sprite/process.ts`)
 and not exported from the package root.

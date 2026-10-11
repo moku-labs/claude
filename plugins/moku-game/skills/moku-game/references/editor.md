@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.9.3` beside a game on `@moku-labs/game@0.13.0` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`, and to the changes of 0.9.1 to 0.9.3; the start in section 1 was run on a fresh scaffold with editor 0.9.1. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
+How Claude runs `@moku-labs/editor@0.10.8` beside a game on `@moku-labs/game@0.14.9` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`, and to the changes of 0.9.1 to 0.10.8; the start in section 1 was run on a fresh scaffold with editor 0.10.8 and game 0.14.9 (the bin started, both pages answered, no browser opened them). When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
@@ -9,7 +9,8 @@ the first-class viewport.
 The editor is the working mode of a game session (`SKILL.md` → "The editor is the working mode"). The
 first way to read and drive the game is the MCP server `moku-editor`, registered by the game's
 `.mcp.json`: `moku_status` first, then `moku_read`, `moku_wait`, `moku_run`, `moku_screenshot`,
-`moku_series`, `moku_selection`, `moku_select`, `moku_reload` and one tool per command door (`game_tap`).
+`moku_series`, `moku_selection`, `moku_select`, `moku_device`, `moku_show`, `moku_files_find`, `moku_project`,
+`moku_reload` and one tool per command door (`game_tap`).
 The tool list is in §6 and in `plugin-index.md` → "MCP for Claude Code". The browser pane of this file is
 for the person to watch and point, and it is the way to read and drive by script (§4) when the MCP server
 is not connected. Both use one running bin: start it once (§1), the bridge finds it through
@@ -19,10 +20,14 @@ is not connected. Both use one running bin: start it once (§1), the bridge find
 
 The game's `editor` script is the editor bin: `moku-editor --root .`. A game has no HTML file: the bin asks
 the engine for the dev page (`preparePage` of `@moku-labs/game/cli`) with the page agent
-`@moku-labs/editor/agent/page` on it, and serves it under `.moku/bunfig.toml`. The game is on `/` with
+`@moku-labs/editor/agent/page` on it, starts the engine's keys watch (`watchKeys`, since editor 0.9.5), and
+serves it under `.moku/bunfig.toml`. So `generated/` is fresh before the page is served, and a saved asset
+or strings file is scanned again: the log prints `› keys: <path>`. The game is on `/` with
 Bun hot reload on (`--no-hmr` turns it off), the tools page on `/__editor/`, and the game's files as
-static (manifest, art, sounds; dot folders and `node_modules` refused). `--port 0` takes a free port.
-Bun only. It binds `127.0.0.1` only. The game's `dev` script, `moku-game dev`, serves the same page
+static (manifest, art, sounds; dot folders and `node_modules` refused), answered with `Cache-Control:
+no-store`. `--port 0` takes a free port.
+Bun ≥1.4.2 only. The game must be `@moku-labs/game` 0.13.1 or later: on an older one the bin stops with
+`install @moku-labs/game >=0.13.1 in the game`. It binds `127.0.0.1` only. The game's `dev` script, `moku-game dev`, serves the same page
 without the agent and without the tools page.
 
 The startup lines name the project index: `files:project-on {"files":…}` is good. `files:project-off`
@@ -214,7 +219,11 @@ await editor.channel.read("game.locate", { key: "tap" });  // every door source 
 by Claude's Edit tool, makes Bun reload the game page. The bridge keeps a `game.bookmark` in
 `sessionStorage` before and restores it after, and the tools page toasts "Game reloaded · state
 restored". The game comes back where it was, with a new session id, frame counting from 0 and
-`tainted: true`. It takes about a second. With `--no-hmr` (or a game's own server) a save in Files still
+`tainted: true`. It takes about a second. A popup that was open comes back open (game 0.13.3): the
+bookmark names the node that waits for the popup's answer, and that node runs again from its start. The
+game is paused again only when the developer had paused it (editor 0.10.4): a pause from a hidden pane is
+not kept. `editor.clock` (the door tool `editor_clock`) answers `{ frame, paused, held, reasons }`; `held`
+is the developer's pause. With `--no-hmr` (or a game's own server) a save in Files still
 keeps the state: the editor bookmarks, reloads the frame and restores (D-07). The Hot reload switch (`H`)
 turns it off and on while the bin runs: Bun cannot change it on a running server, so the bin restarts its
 server on the same port, every socket drops for about a second, and the game frame reloads with its
@@ -226,7 +235,9 @@ after any reload.
 the running page, the session stays the same, and the tools page toasts "Game updated". View files are
 `.tsx`, `styles.ts`, `view.ts`, `animations.ts`, `effects.ts`, the generated strings, and any `.ts`
 directly in `styles/`, `motion/`, `effects/`, `views/`, `world/projections/` or `world/layout/`. A logic
-file (a node, a rule, `state.ts`, a feature `index.ts`) still reloads and restores. The editor's
+file (a node, a rule, `state.ts`, a feature `index.ts`) still reloads and restores. A saved
+`strings/<locale>.json` swaps too: the keys watch writes the generated file. An asset file saved with new
+bytes swaps in the loaded bundles (game 0.13.2); a new, removed or renamed asset file reloads the page. The editor's
 `llms.txt` gives its own numbers on the merge game: about 30 ms from save to the updated frame for a
 swap, about 0.8 s for a reload with restore.
 
@@ -266,10 +277,18 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/<yyyy-mm-dd>/serie
 
 - **MCP.** `moku-editor mcp` is a stdio MCP server: `claude mcp add moku-editor -- bunx moku-editor mcp
   --port 3000` (no HTML file for a shell game; `bunx moku-editor mcp-config --port 3000` prints the
-  `.mcp.json`). It uses the running bin or starts one, and lists 17 `moku_*` tools (`moku_status`,
+  `.mcp.json`). It uses the running bin or starts one, and lists 22 `moku_*` tools (`moku_status`,
   `moku_read`, `moku_run`, `moku_wait`, `moku_screenshot`, `moku_series`, `moku_reference`,
   `moku_selection`, `moku_select`, `moku_files_read`, `moku_files_write`, `moku_reload` and the rest)
-  plus one tool per command door (`game_tap`, `cheat_…`, `raw_game_restore`). Pictures need the game
+  plus one tool per command door (`game_tap`, `cheat_…`, `raw_game_restore`). Since 0.10.3:
+  `moku_device { preset?, orientation?, folded? }` reads or sets the device and answers the game viewport
+  `w` × `h`; `moku_show { workspace? }` reads or switches the workspace (`flow`, `game`, `render`, `state`,
+  `files`, `console`); `moku_select { node }` focuses a node in Flow and answers its files and lines;
+  `moku_files_find { key }` answers where a project-index key lives (`node:main/home`, `jsx:tap`);
+  `moku_project { path?, prefix? }` reads the project index; `moku_hot_reload { on }` switches Bun hot
+  reload, returns once the bin is back (at most 15 s), and wants a `moku_reload` after it. `moku_select`,
+  `moku_device` and `moku_show` need the tools page open. The door tools stay over a restart of the bin
+  (0.10.0). Pictures need the game
   page visible: a paused or hidden game answers `isError`. Without it, Claude uses the same catalogue through `javascript_tool`: list it with
   `Object.values(doors.sources).map(s => [s.id, s.input])` and
   `Object.values(doors.commands).map(c => [c.id, c.input, c.effect])`, then call `doors.read` or
@@ -293,9 +312,11 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/<yyyy-mm-dd>/serie
 - **Hidden pane: the game stays paused.** While the pane is hidden the game page is
   `visibilityState: hidden` and the game holds its own pause reason `"background"`. The pill says
   `Paused` and the canvas does not redraw. `game.resume` answers `true`, but the game stays paused: it only
-  pops `"devtools"`. Show the pane, then resume. Without the pane, `game.step { frames }` still advances
+  pops `"devtools"`. Show the pane, then resume. `editor_clock` answers the reasons: `held: false` with
+  `reasons: ["background"]` is this case. Without the pane, `game.step { frames }` still advances
   the game, so step a few frames before a Shot. Not a finding.
 - **Bun dev reload can break.** After many files change at once the game page can show Bun's "Failed to
-  load bundled module './main.ts'", and a reload does not fix it. Bun 1.3.14 can also crash the dev
-  server after many hot reloads in a row (known to the editor team). Restart `bun run editor`, then reload the
+  load bundled module './main.ts'", and a reload does not fix it. Bun 1.3.14 could also crash the dev
+  server after many hot reloads in a row (known to the editor team); the editor needs Bun ≥1.4.2 since
+  0.10.0. Whether 1.4 still crashes there is not confirmed. Restart `bun run editor`, then reload the
   tools page. `navigate` to the same URL with only a new `#hash` does not reload; use `location.reload()`.

@@ -15,9 +15,10 @@ description: >
 
 # Moku Game Patterns
 
-> **Synced to `@moku-labs/game@0.13.0`** and **`@moku-labs/editor@0.9.3`**: the game shell (`defineGameApp`,
+> **Synced to `@moku-labs/game@0.14.9`** and **`@moku-labs/editor@0.10.8`**: the game shell (`defineGameApp`,
 > `config.ts`, the bin `moku-game` with `visual`), the ten lint rules, `moku-editor --root .` and
-> `moku-editor e2e`, and the plugin catalog here and in `plugin-index.md`. Both take `@moku-labs/core ^1.7.1` +
+> `moku-editor e2e`, and the plugin catalog here and in `plugin-index.md`. Both need Bun ≥1.4.2. The editor
+> peers on game `>=0.13.1`. Both take `@moku-labs/core ^1.7.1` +
 > `@moku-labs/common ^0.3.4` as peers. The 17 game
 > plugins, every API, event and config field are in [`references/plugin-index.md`](references/plugin-index.md).
 > The minimal screen game is [`references/hello-world.md`](references/hello-world.md). How Claude drives
@@ -49,14 +50,14 @@ You `createApp` **from the game**: `createApp`, `createPlugin` and every helper 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | `@moku-labs/game` 0.13.0. Entries: `.` (engine), `./app` (`defineGameApp`, `startMoment`, the types of `index.ts` and `config.ts`), `./app/page` (`startPage`, the page `moku-game` writes), `./app/system` (`systemShellOf`, `fromSystem`, `storeSave`, `createSystemApp`), `./cli` (`runCli`, `preparePage`), `./lint` (the oxlint JS plugin `moku-game`), `./testing` (headless tests, Node and Bun), `./visual` (visual tests), `./assets` (key scanner, string compiler, packer), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./hot` (the dev hot-swap plugin), `./project` (the project index), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bins `moku-game` (dev, build, native, keys, pack, visual), `moku-game-index` (the project index) and `moku-game-assets` (a game without `config.ts`). Ships `llms.txt` |
+| Framework | `@moku-labs/game` 0.14.9. Entries: `.` (engine), `./app` (`defineGameApp`, `startMoment`, the types of `index.ts` and `config.ts`), `./app/page` (`startPage`, the page `moku-game` writes), `./app/system` (`systemShellOf`, `fromSystem`, `storeSave`, `createSystemApp`), `./cli` (`runCli`, `preparePage`, `watchKeys`), `./lint` (the oxlint JS plugin `moku-game`), `./testing` (headless tests, Node and Bun), `./visual` (visual tests), `./assets` (key scanner, string compiler, packer), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./hot` (the dev hot-swap plugin), `./project` (the project index), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bins `moku-game` (dev, build, native, keys, pack, visual), `moku-game-index` (the project index) and `moku-game-assets` (a game without `config.ts`). Ships `llms.txt` |
 | Built on | `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (peer deps since 0.4.3, Bun installs them: kernel, `ctx.log`, `ctx.env`) |
 | Rendering | `pixi.js ^8` **peer dependency**, loaded lazily with `import()`. WebGPU first, Pixi's WebGL fallback. No DOM, no React: screens are JSX laid out by `yoga-layout` (bundled, lazy) |
-| Dev tools | `@moku-labs/editor` 0.9.3 (dev dep). `moku-editor --root .` asks the engine for the dev page with the agent `@moku-labs/editor/agent/page` on it; tools page prebuilt; `moku-editor mcp` for Claude Code; `moku-editor e2e` for a game's editor Playwright specs |
+| Dev tools | `@moku-labs/editor` 0.10.8 (dev dep, peer game `>=0.13.1`). `moku-editor --root .` asks the engine for the dev page with the agent `@moku-labs/editor/agent/page` on it and runs the engine's keys watch; tools page prebuilt; `moku-editor mcp` for Claude Code; `moku-editor e2e` for a game's editor Playwright specs |
 | Optional peers | `sharp` (asset pack: `moku-game build` and `pack`), `playwright-core` (pixel leg of visual tests), `typescript` (the project index; 6.x, the JS API), `@moku-labs/system` (the system shell, the store save), `@moku-labs/native` (`moku-game native`) |
 | Native | `config.ts` names `native` and `system`; `moku-game native build ios` runs `@moku-labs/native` (Tauri 2) over it, and the page wires `@moku-labs/system`. The game imports neither. See `references/device.md` |
-| Package manager | Bun only. ESM only, `"sideEffects": false`, no CJS |
-| Engines | node ≥24, bun ≥1.3.14. TypeScript strict with `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess` |
+| Package manager | Bun only. ESM only, `"sideEffects"` lists the root entry only (since 0.13.2), no CJS |
+| Engines | node ≥24, bun ≥1.4.2 (game since 0.14.0, editor since 0.10.0). TypeScript strict with `exactOptionalPropertyTypes` and `noUncheckedIndexedAccess` |
 
 `tsconfig.json` of a game sets `"jsx": "react-jsx"` and `"jsxImportSource": "@moku-labs/game"`.
 
@@ -83,8 +84,8 @@ features/<f>/
   views/                  projections and components (JSX), the scene
   styles/  motion/  world/  assets/  strings/<locale>.json
 plugins/                  the game's own plugins, listed in `plugins` of index.ts
-generated/                written by `bun run keys`: assets.ts, strings.ts, strings.<locale>.ts,
-                          manifest.json (dev serves it on /manifest.json, next to the page)
+generated/                written by `bun run keys`, and again by `dev` and the editor on save: assets.ts,
+                          strings.ts, strings.<locale>.ts, manifest.json (dev serves it on /manifest.json)
 tests/
   scenarios/<name>.ts     the prepared saves of ?player=<name>; a test starts from them too
   integration/*.test.ts   whole-game headless tests
@@ -107,8 +108,8 @@ What goes where:
 | A style, a text style, tokens | `features/<f>/styles/` (`defineStyle`, `defineTextStyles`), or `shared/styles/` | |
 | An animation, a motion | `features/<f>/motion/` | |
 | ECS components, systems, board projections, board layout | `features/<f>/world/{components,systems,projections,layout}/` | |
-| A picture, a font, a sound | `features/<f>/assets/`, or `shared/assets/` for the whole game. By kind in folders once past about 8 files | `bun run keys` |
-| A string | `features/<f>/strings/<locale>.json`, or `shared/strings/` | `bun run keys` |
+| A picture, a font, a sound | `features/<f>/assets/`, or `shared/assets/` for the whole game. By kind in folders once past about 8 files | `bun run keys`, unless `dev` or the editor runs |
+| A string | `features/<f>/strings/<locale>.json`, or `shared/strings/` | `bun run keys`, unless `dev` or the editor runs |
 | A game plugin (exit, analytics, a save bridge) | `plugins/<p>/`, exported from `plugins/index.ts`, listed in `plugins` of `index.ts` | |
 | A cheat, a dev source or command | `<name>.dev.ts` next to what it drives | The editor's page imports it; `moku-game build` does not |
 | The page title, colours, icons, native app, system plugins, where the save lives | `config.ts` | |
@@ -188,9 +189,9 @@ export default {
 
 | Command | What |
 |---|---|
-| `moku-game dev [--port 3000] [--packed]` | Writes `.moku/{index.html,dev.ts,main.ts,bunfig.toml}` and serves the page with hot reload on `127.0.0.1`. `--port 0` takes a free port |
+| `moku-game dev [--port 3000] [--packed]` | Writes `.moku/{index.html,dev.ts,main.ts,bunfig.toml,assets-stamp.ts}` and serves the page with hot reload on `127.0.0.1`. `--port 0` takes a free port. Since 0.13.1 it runs the scan of `keys` at start and on a save of an asset or a strings file, and prints `› keys: <path>`. `--packed` watches nothing |
 | `moku-game build [--out dist/web]` | Packs the assets, bundles the page minified with `__MOKU_GAME_DEV__` defined `false`. No scenario, no agent, no `.dev` module, no `/control` |
-| `moku-game keys [--check]` | `generated/assets.ts`, the compiled strings, `generated/manifest.json` |
+| `moku-game keys [--check]` | `generated/assets.ts`, the compiled strings, `generated/manifest.json`. For a run without the dev server; `--check` for CI |
 | `moku-game pack [--no-cache]` | The production pack in `dist/assets` (needs `sharp`) |
 | `moku-game native build <target> [--simulator]`, `native dev`, `native doctor`, `native clean` | One verb of `@moku-labs/native` over `config.ts`; the Tauri project in `.moku/tauri`, the apps in `dist-native` |
 | `moku-game visual [--update] [--only <name>] [--no-pixels \| --pixels] [--webgl] [--dir <path>] [--tests <file>] [--url <url>]` | Since 0.12. Runs the visual tests of `tests/visual/index.ts` against `tests/visual/baselines/`. Headless everywhere, pixels on a Mac. Exit 1 when a checkpoint differs |
@@ -208,8 +209,8 @@ default is in `plugin-index.md` "Game shell". The whole shell is `docs/shell.md`
 
 1. Write `package.json` with the scripts (`dev`, `editor`, `keys`, `pack`, `build`, `native`, `lint`,
    `typecheck`, `test`, `test:coverage`, `test:visual`). No `bunfig.toml`.
-2. Install with exact pins: `bun add --exact @moku-labs/game@0.13.0 pixi.js@8.22.0 @moku-labs/core@1.7.1
-   @moku-labs/common@0.3.5`, then `bun add --exact -d @moku-labs/editor@0.9.3 sharp@0.34.5` and the
+2. Install with exact pins: `bun add --exact @moku-labs/game@0.14.9 pixi.js@8.22.0 @moku-labs/core@1.7.6
+   @moku-labs/common@0.3.10`, then `bun add --exact -d @moku-labs/editor@0.10.8 sharp@0.34.5` and the
    tooling set. TypeScript `6.0.3`.
 3. Write the tooling files a game changes: `tsconfig.json` (`jsx`, `jsxImportSource`, the layer `paths`),
    `vitest.config.ts` (the same aliases), `biome.json`, `.oxlintrc.json` (the ten `moku-game/*` rules),
@@ -222,7 +223,9 @@ default is in `plugin-index.md` "Game shell". The whole shell is `docs/shell.md`
 8. `bun run editor` and look at the game. A game is not ready until someone has seen it draw.
 
 The daily loop: `bun run editor` (or `bun run dev` for the page alone), save a view file and watch it
-swap, `bun run keys` after a new asset or string, `bun run test` before a commit.
+swap, `bun run test` before a commit. While the editor or `dev` runs, a saved asset or string is scanned
+by itself. With no server up, run `bun run keys` after a new asset or string: the typecheck and `build`
+read `generated/`.
 
 ## defineGame and the authoring helpers
 
@@ -247,8 +250,8 @@ export const { defineNode, defineFlow, defineFeature, projection, sprite, Sprite
 
 | Term | Shape |
 |---|---|
-| Node | `defineNode({ input?, outcomes, rest?, over?, checkpoint?, barrier?, inbox?, scene?, run })`. `run` gets `{ input, player, session, rng, fx, out, signal, now }` and returns `out.<outcome>(payload)` |
-| Rest node | `rest: true`, the graph waits. A gate answer whose `intent` is an outcome name, or an inbox event, ends it. `checkpoint: true` compacts the journal; `safeNode` points at one |
+| Node | `defineNode({ input?, outcomes, rest?, over?, checkpoint?, barrier?, inbox?, scene?, recover?, run })`. `run` gets `{ input, player, session, rng, fx, out, signal, now }` and returns `out.<outcome>(payload)` |
+| Rest node | `rest: true`, the graph waits. A gate answer whose `intent` is an outcome name, or an inbox event, ends it. `checkpoint: true` compacts the journal; `safeNode` points at one. `recover: ({ player, session, rng, fx, signal, now }) => { … }` (since 0.14.2) runs only when the runner gave up on a transition and enters this node as `safeNode`: it writes the drafts so the safe node can draw itself, and that commits as one edge with `outcome: "recover"`. So the safe node stays a pure wait. On a node that is not `safeNode` it is a warning, on a transit node an error |
 | Flow | `defineFlow(id, { nodes, start, edges, input?, outcomes? })`. One edge per outcome of every node; the compiler checks the table. A flow with `outcomes` is a node of another flow; `exit("name")` leaves it; `to("node", map)` adapts a payload; `slot("name")` is an extension point |
 | Feature | `defineFeature(name, { nodes?, flows?, contribute?, projections?, scenes?, assets?, animations?, ui?, strings?, textStyles?, emitters?, filters? })`. An ordinary plugin. `feature.logicOnly` for headless tests. A feature name is never a flow id or an engine plugin name |
 | Effect | `await fx(descriptor)` for awaited effects (`schedule`, `guide`, `popup`, `play`, `sfx`, `music`, `load`); `fx.emit(hint(kind, payload))` for cosmetic ones. In fast mode effects answer at once |
@@ -325,6 +328,9 @@ the agent; `moku-game build` imports none. Every command body starts with the in
 - `assets.layers` of `config.ts` scans a layer like a feature: `{ shared: "ui" }` keys `shared/assets/*`
   as `ui.*`. A game without `config.ts` runs the older bin `moku-game-assets --root .` itself.
 - Strings: ICU adds `{x, duration, short}`; a value may be `{ "text": "…", "note": "for the translator" }`.
+- An asset file saved with new bytes swaps in the running game under `dev` and the editor (since 0.13.2);
+  a new, removed or renamed one reloads the page. A game plugin that built something from an asset key
+  hooks the dev event `assets:replaced` `{ bundle, keys }`.
 - The page fetches `manifest.json` next to itself: `moku-game dev` serves `generated/manifest.json` on
   `/manifest.json`, `build` writes the packed one to `dist/assets/manifest.json`. Paths in it are relative to that URL. Text needs an MSDF font:
   the built-in styles `body` and `digits` read `text.fonts` (default `ui.font-body`, `ui.font-digits`).
@@ -439,7 +445,9 @@ You do not work on a game blind and you do not wait for the playtest station to 
 | A picture of the game or of one element | `moku_screenshot` (`key` crops to an element), `moku_series` for a motion | a pane screenshot of the whole tools page |
 | Tap, answer, walk, pause, step | the door tools (`game_tap`, `game_answer`, `game_walk`…) or `moku_run` | clicking pixels in the pane |
 | Wait for the game to arrive somewhere | `moku_wait` | a sleep |
-| What the person points at | `moku_selection` after their pick; `moku_select { key }` to show them an element | asking them to describe it |
+| What the person points at | `moku_selection` after their pick; `moku_select { key }` to show them an element, `moku_select { node }` to show them a node in Flow | asking them to describe it |
+| Where an id lives in the code | `moku_files_find { key }` (`node:main/home`, `jsx:tap`), `moku_project` for the keys of a prefix or of a file | a grep for the name |
+| Another device, another workspace | `moku_device { preset?, orientation?, folded? }`, `moku_show { workspace }` | resizing the pane, clicking the rail |
 | After an edit | `moku_reload`, or the hot swap, then read the state again | assuming the edit landed |
 
 How the ways rank. Take the first that is available and say which one you used:
@@ -477,7 +485,8 @@ bunx moku-editor --root .          # the game's "editor" script
 ```
 
 - A game wires nothing. The bin asks the engine for the dev page (`preparePage` of
-  `@moku-labs/game/cli`) with the editor's page agent `@moku-labs/editor/agent/page` on it, then serves it
+  `@moku-labs/game/cli`) with the editor's page agent `@moku-labs/editor/agent/page` on it, starts the
+  engine's keys watch (`watchKeys`, editor 0.9.5), then serves it
   under the page's `.moku/bunfig.toml`. The agent starts with `bridgePlugin` and `capturePlugin` after the
   game and sets `globalThis.editor`. `moku-game build` keeps 0 B of editor code.
 - It prints `Game http://127.0.0.1:3000/`, `Tools http://127.0.0.1:3000/__editor/` and the root. Flags:
@@ -485,7 +494,8 @@ bunx moku-editor --root .          # the game's "editor" script
 - The project index needs TypeScript with its JS API (6.x). On TypeScript 7 the bin logs
   `files:project-off` and a pick has no `file:line`.
 - `moku-editor mcp` is the stdio MCP server for Claude Code. The game's `.mcp.json` registers it
-  (`bunx moku-editor mcp --port 3000`). It uses the running bin or starts one.
+  (`bunx moku-editor mcp --port 3000`). It uses the running bin or starts one; in a game folder it needs
+  no html. 22 generic `moku_*` tools since 0.10.3, and the door tools stay over a restart of the bin.
 - A game with its own HTML page still runs `moku-editor <game-html> --root .` and wires the agent itself;
   a shell game never does.
 - The tools page: six workspaces, ⌘1–⌘6 (Game, Flow, Render, State, Files, Console; Game is the default),
@@ -498,10 +508,12 @@ bunx moku-editor --root .          # the game's "editor" script
 - The server binds `127.0.0.1` only and gates every socket with Host, Origin and a per-start token.
 - A save of a view file swaps in place (hot swap, no reload). A save of a logic file (Files, or an agent
   writing the file) reloads the page through Bun and restores the game where it was, in about a second.
-  The session reads as tainted afterwards.
+  The session reads as tainted afterwards. A pause comes back only when the developer made it
+  (`game.pause`); the read command `editor.clock` tells the two apart (editor 0.10.4). A popup that was
+  open comes back open (game 0.13.3).
 - `moku-editor e2e -c <playwright config> [playwright args…]` (0.9) runs a game's editor Playwright specs
   with one Playwright process per project and spec file (since 0.9.2).
-- Editor 0.9 peers on game ≥0.10. A source the game does not have shows as "not installed", not as an
+- Editor 0.9.5 and later peer on game ≥0.13.1. A source the game does not have shows as "not installed", not as an
   error. The Sound switch runs `game.mute`.
   Recipes are in `references/editor.md`.
 
@@ -512,8 +524,9 @@ bunx moku-editor --root .          # the game's "editor" script
   `effects.ts`, `generated/strings.<locale>.ts`, and any `.ts` directly in `styles/`, `motion/`, `effects/`,
   `views/`, `world/projections/`, `world/layout/`. A logic file reloads the page: `rules/`, `flow/` nodes,
   `state.ts`, `tables.ts`, `kit.ts`, a feature `index.ts`, `world/components/`, `world/systems/`. A view
-  file that exports a scene, a system, a node or a new projection is refused and the page reloads. After
-  a strings JSON edit run `bun run keys`: its output is what swaps.
+  file that exports a scene, a system, a node or a new projection is refused and the page reloads. A
+  strings JSON edit swaps by itself under `dev` and the editor: the keys watch writes the generated file.
+  Only a game with a server of its own runs `bun run keys` for it.
 - **Project index** (`@moku-labs/game/project`, bin `moku-game-index`). It maps every engine id to its
   place in the code: `bunx moku-game-index --root . where node:main/home` prints `<path>:<line>`;
   `--check` exits 1 on a broken file or a key in conflict. Keys: `flow:`, `node:<flow>/<node>`,

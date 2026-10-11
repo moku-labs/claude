@@ -1,7 +1,7 @@
 # @moku-labs/worker — Plugin & Property Index
 
-**Synced version:** `0.20.4` (npm `dist-tags.latest`; surface read from the `v0.20.4` git tag's source —
-upstream `llms.txt`/`llms-full.txt` are stale at this tag, the source wins. The `0.15.0 → 0.20.4` delta,
+**Synced version:** `0.20.9` (npm `dist-tags.latest`; surface read from the `v0.20.9` git tag's source —
+upstream `llms.txt`/`llms-full.txt` are stale at this tag, the source wins. The `0.15.0 → 0.20.9` delta,
 additive, 9 → **10 plugins**: **0.15.1** the `deploy.dev` watcher drops stale watch-echo batches (a rebuild
 can no longer schedule the next one); **0.16.0** added the **`turn` plugin** (`turnPlugin`) — Cloudflare
 Realtime TURN keys as a declared deploy resource — plus the `"turn"` resource kind on
@@ -12,7 +12,8 @@ the declared name exists AND both secrets are bound); **0.19.0** added `turn.<ke
 check at preflight, default `"/api/ice"`); **0.20.0** added the `.env.local` key-pair escape hatch;
 **0.20.1**/**0.20.2** are CI and dependency bumps only; **0.20.3** moved `@moku-labs/core` and
 `@moku-labs/common` from `dependencies` to `peerDependencies`, no source change; **0.20.4** is a CI bump
-only (`@moku-labs/ci` 1.3.0), no `src/` change. Earlier, `0.11.0 → 0.15.0`: **0.12.0 (BREAKING)**
+only (`@moku-labs/ci` 1.3.0), no `src/` change; **0.20.5** to **0.20.9** are CI and dev dependencies only
+(a patch release on every merge to `main`, Dependabot, development on Bun 1.4.3), no `src/` change. Earlier, `0.11.0 → 0.15.0`: **0.12.0 (BREAKING)**
 removed the **`stage` plugin** and rebranded the plugin id to **`"worker"`** — deployment stage is now plain
 global config (`config.stage`, read via `ctx.global.stage`), no stage plugin; **0.12.1** sourced the env provider
 `workerSafeProcessEnv` from `@moku-labs/common`; **0.13.0** added the **`deploy --delete`** teardown command

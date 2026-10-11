@@ -1,6 +1,6 @@
 # @moku-labs/system — Plugin & Property Index
 
-**Synced version:** `0.3.2` (npm `dist-tags.latest`; catalog generated from the `v0.3.2` git tag **source** +
+**Synced version:** `0.3.7` (npm `dist-tags.latest`; catalog generated from the `v0.3.7` git tag **source** +
 the root and per-plugin READMEs). `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` are
 **`peerDependencies`** since 0.3.1 (through 0.3.0 they were bundled exact pins `1.6.0` / `0.3.2`). Bun and
 npm install peers automatically, so an app still declares neither. `idb-keyval@6.3.0` stays the one bundled
@@ -13,14 +13,16 @@ dependency. Six **OPTIONAL** `peerDependencies` (`peerDependenciesMeta.optional`
 **New in 0.3.0:** four capability plugins — `lifecycle`, `back`, `haptics`, `keepAwake` — each on its own
 subpath (§5.7–§5.10). The `@tauri-apps/api` peer floor rose from `^2.11.0` to `^2.12.0` (`back.exit()` needs
 `exit`, `@since 2.12.0`). No existing plugin changed. **New in 0.3.1:** packaging only, core and common moved
-to peers. **New in 0.3.2:** docs only, no `src/` change.
+to peers. **New in 0.3.2:** docs only, no `src/` change. **0.3.3 to 0.3.7:** CI and dev
+dependencies only (a patch release on every merge to `main`, Dependabot, development on Bun 1.4.3), no
+`src/`, docs or peer range change.
 
 ⚠️ Upstream docs are **stale in three places** (0.3.2 fixed three others: `TrayConfig.icon`, the deep-link
 launch handover and the peers in `llms-full.txt` and the README). The registry's "source wins" policy applies:
 
 | # | Stale text | Source of truth |
 |---|-----------|-----------------|
-| 1 | `llms-full.txt` says `Version: 0.3.1` (`llms.txt` names no version) | `package.json` → `0.3.2` |
+| 1 | `llms-full.txt` says `Version: 0.3.1` (`llms.txt` names no version) | `package.json` → `0.3.7` |
 | 2 | `llms.txt` §1: kind is `"tauri"` when `__TAURI_INTERNALS__` is present | `src/plugins/runtime/detect.ts`: `globalThis.isTauri === true` **or** `"__TAURI_INTERNALS__" in globalThis` |
 | 3 | `src/plugins/runtime/README.md`: `runtime` config is "NOT reachable through `createApp`'s `pluginConfigs`" | `src/index.ts` JSDoc lists `runtime` as a `pluginConfigs` key and the kernel cascade ends at `createApp`; the key is applied but **untyped** (hoist the object) |
 
@@ -49,7 +51,7 @@ registers **no default capability**. Every capability is opt-in.
 code into every bundle, so instances live on subpaths only. `runtimePlugin` and the `Runtime` type
 namespace are **not** public. `src/plugins/index.ts` is a source-tree barrel, not a package entry.
 
-## 2. `createApp` form (v0.3.2)
+## 2. `createApp` form (v0.3.7)
 
 ```ts
 import { createApp, createPlugin } from "@moku-labs/system";

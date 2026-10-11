@@ -1,9 +1,9 @@
 # @moku-labs/ai — Plugin & Property Index
 
-**Synced version:** `0.16.1` (npm `dist-tags.latest`; catalog from the `v0.16.1` tag source:
+**Synced version:** `0.16.8` (npm `dist-tags.latest`; catalog from the `v0.16.8` tag source:
 `src/index.ts`, `src/config.ts`, `src/bin.ts`, `src/plugins/*`, `README.md`, `llms.txt`,
 `llms-full.txt`). Peer deps `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (dev-pinned
-1.7.1 / 0.3.4). Runtime deps:
+1.7.5 / 0.3.7). Runtime deps:
 `better-sqlite3` (Node; Bun uses `bun:sqlite`), `openai`, `sharp` (0.35.5, the sprite pixel step),
 `yaml`, `zod`. Engines node ≥24, bun ≥1.3.14. Bin: `moku` (`dist/bin.mjs`), which loads
 `moku.config.{ts,mts,js,mjs}`.
@@ -59,11 +59,11 @@ Lane name: `"{task}/{provider}/default"`. Precedence: exact lane → `"{task}/{p
 | `promptGen` | Standard | registry | same three; fallback chain on unavailable providers | `defaultProvider` (`openai`), `fallback` (`[]`) |
 | `image` | Standard | registry | same three | `defaultProvider` (`codex`) |
 | `video` | Standard | registry | same three; `execute` or `submit` + `poll` | `defaultProvider` (`fal`), `pollIntervalMs` (5000) |
-| `music` | Standard | registry | same three | `defaultProvider` (`fal`), `pollIntervalMs` (5000) |
+| `music` | Standard | registry | same three; `execute` or `submit` + `poll`; providers `elevenlabs` (since 0.16.2) and `fal` | `defaultProvider` (`fal`), `pollIntervalMs` (5000) |
 | `sfx` | Standard | registry | same three; `execute` only, always mp3 | `defaultProvider` (`elevenlabs`) |
 | `sprite` | Standard | registry | same three; `execute` only, always RGBA png | `defaultProvider` (`fal`) |
 | `asset` | Standard | registry | `register(request, opts)` (`AssetRequest.groupName?` since 0.15: 1 to 64 characters, default the provider's group name), `estimate`, `providers()` | `defaultProvider` (`ark`), `pollIntervalMs` (3000) |
-| `elevenlabs` | Complex | registry | `info()`; registers `("voiceover","elevenlabs")`, `("sfx","elevenlabs")` | `apiKeyEnv` (`ELEVENLABS_API_KEY`), `baseUrl`, `defaultModel` (`eleven_multilingual_v2`), `timeoutMs` (60000), `priceOverrides` (voice model ids; `sfx:<model>#second`, `sfx:<model>#auto`) |
+| `elevenlabs` | Complex | registry | `info()` (`models` lists the voice models only; `sfx:` and `music:` price rows are left out); registers `("voiceover","elevenlabs")`, `("sfx","elevenlabs")`, `("music","elevenlabs")` (since 0.16.2: `POST /v1/music`, `estimate` + `execute`, models `music_v1`, `music_v2`, `music_v2_5`) | `apiKeyEnv` (`ELEVENLABS_API_KEY`), `baseUrl`, `defaultModel` (`eleven_multilingual_v2`), `timeoutMs` (60000), `musicTimeoutMs` (600000, since 0.16.2), `priceOverrides` (voice model ids; `sfx:<model>#second`, `sfx:<model>#auto`; `music:<model>`) |
 | `openai` | Complex | registry | `info()`; registers voiceover, translate, prompt-gen | `apiKeyEnv` (`OPENAI_API_KEY`), `baseUrl`, `models` (`{ tts: gpt-4o-mini-tts, chat: gpt-4o-mini }`), `timeoutMs`, `priceOverrides` |
 | `codex` | Complex | registry | `info()`; registers image, prompt-gen over `codex exec` | `bin` (`codex`), `model` (`gpt-6-astra`), `reasoningEffort` (`low`), `timeoutMs` (600000), `workDir` (`.moku/tmp`), `priceOverrides`, `textModel`, `modelMap` |
 | `claude` | Complex | registry | `info()`; registers prompt-gen over `claude -p` | `bin` (`claude`), `textModel`, `modelMap`, `timeoutMs` (600000), `workDir` |
@@ -206,6 +206,30 @@ Checked on the published 0.16.1 without a key: the names above typecheck (`Ark.A
 methods), `draftRecord` answers `undefined`, `moku validate` and `moku estimate` take an ark edit item
 (`seconds: -1` with `omni_reference_task_type: edit`) and an asset item with `groupName`, and `seconds: -1`
 without `edit` fails the estimate. No provider was called.
+
+## 0.16.2 to 0.16.8 notes (PRs #48 to #54)
+
+Only `elevenlabs` changes. No new plugin, task, event or CLI flag. Peer ranges and engines are the
+same as in 0.16.1.
+
+| Version | Change |
+|---|---|
+| 0.16.2 | **elevenlabs** registers `("music","elevenlabs")` over `POST /v1/music`. The call is synchronous: `estimate` + `execute`, no `submit` + `poll`. Models `music_v1`, `music_v2`, `music_v2_5`. `lengthMs` is a whole number from 3000 to 600000. Output is always mp3. New config key `musicTimeoutMs` (600000). New price keys `music:<model>`, $0.15 per started minute, an estimate. A missing music price is a terminal 400. `chunks` go as `composition_plan.chunks` on `music_v2` and `music_v2_5` only; `seed` only with `chunks`. `params` reads `output_format` (`mp3_*`) and `force_instrumental` (boolean, prompt only, default `true`); any other key throws. `detail.status` `bad_prompt` and `bad_composition_plan` are `FlaggedProviderError`. Log events `elevenlabs:music:done` `{ model, lengthMs, bytes }` and `elevenlabs:music:failed`. `app.music.providers()` answers `["elevenlabs", "fal"]`; the default of `music` stays `fal` |
+| 0.16.3 | CI only: a patch is released on every merge to `main` |
+| 0.16.4 | Tests and docs of the music handler (README, `llms.txt`, `llms-full.txt`, the elevenlabs and music READMEs). No code change |
+| 0.16.5 | The repository develops on Bun 1.4.3 (`.bun-version`). `engines` stays node ≥24, bun ≥1.3.14 |
+| 0.16.6 | CI only: Dependabot settings |
+| 0.16.7 | Dev dependencies only: `@moku-labs/core` 1.7.5, `@moku-labs/common` 0.3.7 and `@moku-labs/ci` pinned for development. The peer ranges did not move |
+| 0.16.8 | CI only: a Dependabot bump of dev dependencies releases nothing |
+
+Errors of the music handler, each a two-line `[ai] …` terminal 400 before any call: `ElevenLabs music
+does not support model "<m>".`, `ElevenLabs music lengthMs must be a whole number from 3000 to 600000,
+got <n>.`, `ElevenLabs music model "<m>" does not take chunks.`, `ElevenLabs music chunks add up to <n> ms,
+not lengthMs <n>.`, `ElevenLabs music takes seed only with chunks: the API refuses seed next to a prompt.`,
+`ElevenLabs music does not read params.<key>.`, `No price for ElevenLabs music model "<m>".`
+
+Read from the `v0.16.8` tag source. The upstream tests mock ElevenLabs; no call to the live Music API was
+made for this sync. The 0.16.1 "checked on the published package" note above was not repeated for 0.16.8.
 
 ## 0.14.1 and 0.14.2 notes
 

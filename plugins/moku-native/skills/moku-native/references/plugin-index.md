@@ -1,16 +1,16 @@
 # @moku-labs/native — Plugin & Property Index
 
-**Synced version:** `0.3.3` (npm `dist-tags.latest`; catalog generated from the `v0.3.3` git tag **source**,
+**Synced version:** `0.3.8` (npm `dist-tags.latest`; catalog generated from the `v0.3.8` git tag **source**,
 cross-checked against the root README and `llms.txt` / `llms-full.txt`). Dependencies: `@tauri-apps/cli@^2`
 (regular). **Peer dependencies since 0.3.2:** `@moku-labs/core@^1.7.1` and `@moku-labs/common@^0.3.4` (0.2.x
 exact-pinned core 1.6.0 / common 0.3.2 as regular deps). Install the peers beside the package. Engines
 node ≥24, bun ≥1.3.14.
 
-⚠️ Places where the upstream docs are **stale versus the `v0.3.3` source** (the source wins):
+⚠️ Places where the upstream docs are **stale versus the `v0.3.8` source** (the source wins):
 
 | Doc | Says | Source says |
 |-----|------|-------------|
-| `llms-full.txt:11` | `Version: 0.1.0`, deps common 0.3.0 / core 1.5.0 | `package.json` → `0.3.3`, peers common `^0.3.4` / core `^1.7.1` |
+| `llms-full.txt:11` | `Version: 0.3.2` (the peers on that line are right) | `package.json` → `0.3.8` |
 | `llms-full.txt:1017`, `llms.txt:81` | `Pick<TauriApi, "version">`; "gate on `completeness()` first" | `Pick<TauriApi, "getVersion">` (`src/plugins/doctor/checks/types.ts`); `project.getCompleteness({ target })` |
 | Root `README.md` plugin table | `completeness`, `version`, `runner` | `getCompleteness`, `getVersion`, `getRunner` (`src/plugins/{project,tauri}/types.ts`) |
 | `llms.txt` quick reference, `project` list | omits two methods | `Api` also has `getBundleLayout` and `resolveDerivedPath` |
@@ -33,7 +33,7 @@ under the base directory it prints.
 **Entry points:** one, `@moku-labs/native` (`.`). `import` → `dist/index.mjs` + `index.d.mts`; `require` →
 `dist/index.cjs` + `index.d.cts`. No sub-path exports.
 
-> **Changes 0.2.2 → 0.3.3** (verified in source; no API removals or renames):
+> **Changes 0.2.2 → 0.3.8** (verified in source; no API removals or renames):
 > - 0.3.0: first iOS build works (the runner rewrite no longer eats the quote that opens the pbxproj `shellScript`). New
 >   `app.orientation` and `app.backgroundColor`. iOS safe-area hook in `lib.rs`. New registry rows `back`
 >   and `haptics`. Generated `Cargo.toml` pins `tauri = "2.12"` plus an iOS-only `objc2 = "0.6"` table.
@@ -44,6 +44,8 @@ under the base directory it prints.
 > - 0.3.2: `@moku-labs/core` and `@moku-labs/common` are peer dependencies.
 > - 0.3.3: the doctor check `web-script` reads only `<pm> run <script>` and `<pm> <script>` as a script. A
 >   direct command, such as the `bun` + `moku-game` call `@moku-labs/game` passes, is not checked.
+> - 0.3.4 to 0.3.8: CI and dev dependencies only (a patch release on every merge to `main`, Dependabot,
+>   development on Bun 1.4.3). No `src/`, docs or peer range change.
 >
 > Earlier breaking changes (0.2.0): flat `web.devCommand` / `web.devUrl`; `tauri.mobileInit({ target })`;
 > type-only plugin namespaces; default `targets` is the host desktop target.
@@ -58,7 +60,7 @@ under the base directory it prints.
 | Helpers, constants, runtime class | `hostTargets`, `TARGETS`, `PHASE_ORDER`, `TauriError` |
 | Types | `AppleExportMethod`, `AppleSigning`, `BuildFlavor`, `CapabilityConfigMap`, `Config`, `Events`, `MobileTarget`, `NativeCompleteEvent`, `NativePhase`, `NativePhaseEvent`, `Orientation`, `SigningConfig`, `Target`, `TauriRunner` |
 
-## 2. App form (v0.3.3)
+## 2. App form (v0.3.8)
 
 The five plugins plus core `logPlugin` / `envPlugin` are **defaults** — already wired. `createApp` accepts
 `config`, `pluginConfigs`, `plugins` (extra consumer plugins, appended) and `onReady` / `onError` /

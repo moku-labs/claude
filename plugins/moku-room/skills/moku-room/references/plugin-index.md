@@ -1,6 +1,6 @@
 # @moku-labs/room — Plugin & Property Index
 
-**Synced version:** `0.8.4` (catalog generated from the `v0.8.4` git tag **source** — `src/index.ts`,
+**Synced version:** `0.8.9` (catalog generated from the `v0.8.9` git tag **source** — `src/index.ts`,
 `src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`. `v0.8.3 → v0.8.4` touched only
 `README.md`, `llms.txt`, `llms-full.txt`, `package.json`, `bun.lock` and a CI workflow: **no `src/` change**.
 Upstream `llms.txt`/`llms-full.txt` and the README are current for the API surface through 0.8.0, and since
@@ -32,6 +32,9 @@ pure-client apps install nothing extra. Engines node ≥24, bun ≥1.3.14.
 >   **`"auto"`**; `serverSignaling(url)` exposes a derived `iceEndpoint`; the hub's `handle` serves
 >   **`GET /api/ice`** (short-lived Cloudflare Realtime TURN credentials); new `hub.ice` config block.
 >   The old "no TURN ever" statement is **no longer true** for the `./server` tier (see the D2 note below).
+> - **0.8.5 to 0.8.9 (CI and dev dependencies only)** — a patch release on every merge to `main`,
+>   Dependabot, development on Bun 1.4.3, dev pins core `1.7.5` / common `0.3.7` / worker `0.20.6`. No
+>   `src/`, docs or peer range change.
 > - **0.8.4 (`#19`, docs only)** — the README, `llms.txt` and `llms-full.txt` now say core and common are
 >   peer dependencies. No `src/` change, no API change.
 > - **0.8.3 (`#16`, `#17`, packaging only)** — core + common move from bundled `dependencies` to
@@ -87,7 +90,7 @@ accounts, no lobby servers.
 > P2P DataChannels (a hostile-NAT pair may ride a Cloudflare TURN relay, never the DO). A consumer may also
 > inject its own STUN/TURN via `transport.iceServers` (array or provider, 0.6.0).
 
-## 1. Client core API form (v0.8.4)
+## 1. Client core API form (v0.8.9)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **core defaults** — already wired. An app
 adds exactly one role facade and its own game plugin; there are no `roomPlugins` arrays. Select the
