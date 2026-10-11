@@ -201,4 +201,7 @@ STATE.md, report what was built, and run
 moku-rails done build
 ```
 
+Exit 2 with `Next step: design-check` means the change follows a design and its check is missing or
+FAIL: run `build-app.md` Step 7.6, then `done build` again.
+
 Then say what comes next — `moku:verify` scoped to what the change touched.

@@ -24,6 +24,7 @@ import { basename, dirname, join, resolve } from "node:path";
  * @property {string[]} [skipped] optional stations skipped on purpose, each with a recorded reason in `note`
  * @property {string[]} [scope] requests added after the change was opened
  * @property {string} [worktree] root of the git worktree the change was opened in; absent for the main checkout
+ * @property {string} [design] slug of the design the change follows (`.planning/design/<slug>/`); `build` and `e2e` finish only on its passed design check
  */
 
 /**

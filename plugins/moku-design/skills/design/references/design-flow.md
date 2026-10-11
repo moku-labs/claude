@@ -239,7 +239,8 @@ final `## Recovery` and `## Next Action:` in `state.md`.
 ### E4 — Hand off
 
 Restate the spec-not-source reminder (the wording is in the skill), print the plan-station next step with
-the context path, then `moku-rails done design`.
+the context path, then `moku-rails done design --design {SLUG}`. The slug makes the rails hold `build`
+and `e2e` until the design check passes.
 
 ---
 

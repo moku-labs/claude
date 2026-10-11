@@ -142,7 +142,8 @@ screens, states, viewports and demo data. Fonts first: family, weight, size, lin
 spacing of every text, and the real face loaded (`document.fonts.check`), not a fallback. Then every
 word is a DOM text node from the i18n table, none is inside an image. Failed rows go to
 `moku-web-ux-reviewer` as fixes; at most two rounds. With the verdict at FAIL the station is not done:
-`moku-rails pause`, show the open rows and ask.
+`moku-rails pause`, show the open rows and ask. The rails refuse `done e2e` for a change tied to a
+design until the report says `Verdict: PASS`.
 
 ## Step 4 — close
 

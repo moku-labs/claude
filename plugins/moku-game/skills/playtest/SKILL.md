@@ -230,6 +230,7 @@ Present, in this order:
 7. The shots and videos under `.planning/e2e/game/`.
 
 With the design check at FAIL the station is not done: `moku-rails pause`, show the open rows and ask.
+The rails refuse `done e2e` for a change tied to a design until the report says `Verdict: PASS`.
 
 ```bash
 moku-rails done e2e

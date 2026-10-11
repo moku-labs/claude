@@ -18,7 +18,7 @@ import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier
 import { parseTestOutput, readings } from "./test-output.mjs";
 import { reportLines, slowOffer, statusLine } from "./test-report.mjs";
 import { appendRun, earlierRun, fullKey, readRuns, saveOutput, slowThreshold, summarize, treeKey } from "./test-runs.mjs";
-import { CLOSE_CHECKLIST, canClose, canEnter } from "./transitions.mjs";
+import { CLOSE_CHECKLIST, canClose, canEnter, canFinish } from "./transitions.mjs";
 import { isDone, markWave, nextWave, readWaves } from "./waves.mjs";
 
 /** @typedef {{ code: 0 | 1 | 2, lines: string[], data?: unknown }} Result */
@@ -150,20 +150,40 @@ export function enter({ root, positional, flags }) {
 }
 
 /**
- * Mark the current station done.
+ * Mark the current station done. `--design <slug>` records the design the change follows; from then on
+ * `build` and `e2e` are done only when the design check of that design passed, or the person waived it.
  *
- * @param {Args} args positional: station
+ * @param {Args} args positional: station; flags: --change, --design, --no-design-check
  * @returns {Result}
  * @example
- * done({ root, positional: ["plan"], flags: {} });
+ * done({ root, positional: ["design"], flags: { design: "tic-tac-toe-board" } });
+ * done({ root, positional: ["build"], flags: {} }); // code 2 while the design check says FAIL
  */
 export function done({ root, positional, flags }) {
   const [station] = positional;
-  if (!station) return usage("moku-rails done <station> [--change <id>]");
+  if (!station) return usage('moku-rails done <station> [--change <id>] [--design <slug>] [--no-design-check "<the person\'s words>"]');
 
   const ledger = loadLedger(root);
   const change = findChange(ledger, optional(flags.change));
   if (change.station !== station) return refused(`Change ${change.id} is not inside "${station}" (it is ${change.station ? `inside "${change.station}"` : "between stations"}). Enter the station before finishing it.`);
+
+  // The design this change follows, named by the station that captured it or grounded the plan in it
+  if (flags.design !== undefined) {
+    const slug = optional(flags.design);
+    if (!slug || !DESIGN_SLUG.test(slug)) return usage("moku-rails done <station> --design <slug> (the folder name under .planning/design/)");
+    if (!existsSync(resolve(root, ".planning", "design", slug, "design-context.md"))) return refused(`No design context at .planning/design/${slug}/design-context.md. Capture the design first, or name the right slug.`);
+    change.design = slug;
+  }
+
+  // A change with a design leaves build and e2e only when the build matches the prototype
+  if (flags["no-design-check"] === undefined) {
+    const verdict = canFinish(change, station, designCheckVerdict(root, change.design));
+    if (!verdict.ok) return { code: REFUSED, lines: [`Refused: ${verdict.reason}`, `Next step: ${verdict.missing}`], data: verdict };
+  } else {
+    const reason = optional(flags["no-design-check"]);
+    if (!reason) return usage('moku-rails done <station> --no-design-check "<the person\'s words>"');
+    change.note = `${change.note ? `${change.note} ` : ""}[${station} without design check: ${reason}]`;
+  }
 
   change.station = null;
   if (!change.done.includes(station)) change.done.push(station);
@@ -676,6 +696,26 @@ function logRun(root, { tree, started, green, output }) {
 /** @param {string | true | undefined} value */
 function optional(value) {
   return typeof value === "string" ? value : undefined;
+}
+
+/** A design slug is a folder name, never a path. */
+const DESIGN_SLUG = /^[a-z0-9][a-z0-9-]*$/;
+
+/**
+ * The verdict line of a design's check report, written by the design check of the `moku-design` pack.
+ *
+ * @param {string} root
+ * @param {string | undefined} slug
+ * @returns {"PASS" | "FAIL" | undefined} undefined when the change has no design, or the report has no verdict
+ */
+function designCheckVerdict(root, slug) {
+  if (!slug) return undefined;
+
+  const report = resolve(root, ".planning", "design", slug, "check", "design-check.md");
+  if (!existsSync(report)) return undefined;
+
+  const verdict = /^Verdict:\s*(PASS|FAIL)\b/m.exec(readFileSync(report, "utf8"));
+  return verdict ? /** @type {"PASS" | "FAIL"} */ (verdict[1]) : undefined;
 }
 
 /** @param {string} line @returns {Result} */

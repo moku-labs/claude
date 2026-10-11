@@ -12,6 +12,9 @@ import { OPTIONAL_STATIONS, PRE_INIT_STATIONS, requiredBefore, routeFor } from "
 /** Checklist items that must all be true before a change can close. */
 export const CLOSE_CHECKLIST = ["tests", "verify", "docs"];
 
+/** Stations that leave the look of a change built. A change with a design finishes them only on a passed design check. */
+export const DESIGN_CHECKED_STATIONS = new Set(["build", "e2e"]);
+
 /**
  * Decide whether a change may enter a station.
  *
@@ -71,6 +74,28 @@ export function canClose(change) {
   }
 
   return { ok: true };
+}
+
+/**
+ * Decide whether a change may finish a station. A change that carries a design finishes `build` and `e2e`
+ * only when the design check passed: the build was compared to the approved prototype and no row is open.
+ *
+ * @param {{ design?: string }} change
+ * @param {string} station
+ * @param {"PASS" | "FAIL" | undefined} check verdict of the design check report; undefined when there is no report
+ * @returns {Verdict}
+ * @example
+ * canFinish({ design: "board" }, "build", "FAIL");
+ * // { ok: false, missing: "design-check", reason: "..." }
+ */
+export function canFinish(change, station, check) {
+  if (!change.design || !DESIGN_CHECKED_STATIONS.has(station)) return { ok: true };
+  if (check === "PASS") return { ok: true };
+
+  const report = `.planning/design/${change.design}/check/design-check.md`;
+  const state = check === "FAIL" ? `The design check has open rows (${report} says FAIL).` : `The design check did not run (no verdict in ${report}).`;
+
+  return refuse("design-check", `${state} The change follows the design "${change.design}", so "${station}" is done only when the build matches the prototype. Run the design check and fix the open rows, or ask the person and record their answer with \`moku-rails done ${station} --no-design-check "<their words>"\`.`);
 }
 
 /**

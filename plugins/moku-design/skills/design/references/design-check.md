@@ -126,5 +126,10 @@ Prototype: .planning/design/{slug}/index.html    Frame: 390×693    Conversion: 
 | A3 | check/expected/a3-board.png | check/actual/a3-board.png |
 ```
 
+The rails read the `Verdict:` line: it starts a line of its own, exactly `Verdict: PASS` or
+`Verdict: FAIL`. For a change that follows this design, `moku-rails done build` and `moku-rails done e2e`
+are refused while the report is missing or says FAIL. Only the person lifts that, in their own words:
+`moku-rails done build --no-design-check "<their words>"`. Never pass that flag on your own.
+
 `Verdict: PASS` needs zero open rows. Show the person the verdict line, the open rows and the pairs of
 shots; the full table stays in the file.

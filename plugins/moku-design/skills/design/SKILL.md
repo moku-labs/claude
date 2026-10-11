@@ -25,7 +25,9 @@ moku-rails enter design      # exit 2 = refused: relay the reason and the named 
 
 Design is allowed before `init`, so this is often the first station a project ever enters. Before every
 stop to ask the user something — each round pick, each polish gate — run `moku-rails pause --reason "..."`.
-When the design is captured, `moku-rails done design`.
+When a `ui` design is captured, `moku-rails done design --design {slug}`: the slug ties the change to its
+design, and the rails then finish `build` and `e2e` only on a passed design check. An `api` or
+`architecture` design has no prototype to compare with: plain `moku-rails done design`.
 
 If the rails refuse because no change is open, open one first
 (`moku-rails open <date-slug> --size M|L --type <type> --title "..."`) and enter again. Design is on
@@ -142,7 +144,8 @@ When the design is captured, repeat the principle and print the next step:
 > conversion in §5. Generated images are art, not a layout reference. Words are text in the fonts of §2.
 > After the build the design check compares the result to the prototype by itself, fonts first.
 
-Then `moku-rails done design`, and hand the context path to the plan station.
+Then `moku-rails done design --design {slug}` (plain `done design` for an `api` or `architecture` run),
+and hand the context path to the plan station.
 
 ## The design check
 

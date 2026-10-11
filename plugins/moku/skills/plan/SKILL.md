@@ -116,6 +116,8 @@ The code is not copied; the numbers are. The approved prototype is the single so
 
 Sizes, positions, radii and shadows in the spec are read from the prototype and converted, never guessed and never measured from an image. A design context with no **Measurement reference** table: read the frame from the prototype, write the section yourself and say that you did.
 
+When the plan is grounded in a `ui` design the change did not capture itself (an earlier design run), tie it to the change as the plan station closes: `moku-rails done plan --design <slug>`. The rails then finish `build` and `e2e` only on a passed design check.
+
 The spec's Verification section ends with "the design check passes for this unit's inventory rows". The build station runs that check itself.
 
 The design context says what to build; the specs and the conventions say how.

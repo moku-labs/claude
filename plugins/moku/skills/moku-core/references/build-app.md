@@ -257,7 +257,9 @@ read `references/design-check.md` under the base directory it prints. In short:
    the pairs of shots.
 
 The build is not reported as done while the verdict is FAIL: `moku-rails pause`, show the open rows and
-ask. If the `moku-design` pack is not installed, run the five steps above from this page and say so.
+ask. The rails hold the same line: for a change tied to a design, `moku-rails done build` is refused
+until the report says `Verdict: PASS`. `--no-design-check "<their words>"` is the person's answer,
+never your shortcut. If the `moku-design` pack is not installed, run the five steps above from this page and say so.
 No design context for the change: note it in one line and move on.
 
 ## Step 8: README
