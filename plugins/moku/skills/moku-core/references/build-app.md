@@ -32,8 +32,8 @@ install the pack. Do not build a game from the app steps instead.
   `src/main.ts` and no `createApp`. Step 5.5: its axes are those of a web or worker app and do not
   apply. Step 6: the whole-game tests are the headless tests of the `moku-game` skill, and nothing
   boots through `createApp`.
-- **Steps that stay.** Every other step applies as it does to any app. Step 5 runs the game validator
-  and Step 7.5 runs `moku-game:playtest`.
+- **Steps that stay.** Every other step applies as it does to any app. Step 5 runs the game validator,
+  Step 7.5 runs `moku-game:playtest` and Step 7.6 runs the design check on the game in the editor.
 
 ## Step 1: Read and validate the plan
 
@@ -236,6 +236,30 @@ means there is nothing to test — note it in one line and move on.
 
 Never present a finished web app as working on the strength of unit and integration tests alone.
 
+## Step 7.6: Design check (every build with a design context)
+
+A design context for this change (`.planning/design/<slug>/design-context.md`, named by the spec's
+`## Design Reference`) makes this step part of the build. Run it yourself, without being asked: the
+person must never have to say "now compare it to the design".
+
+The procedure is in the `moku-design` pack: load the `moku-design:design` skill with the Skill tool and
+read `references/design-check.md` under the base directory it prints. In short:
+
+1. Measure the prototype at its frame: position, size, radius, shadow and colour of every inventory
+   row of §6, and family, weight, size, line height and letter spacing of every text.
+2. Measure the same rows in the running build: the app from Step 7, or the game in the editor
+   (`moku-game:playtest` → "The design check").
+3. Compare, expected = prototype value × the conversion. Fonts first. Then "text is text": every word
+   is drawn by a font from the string table, none is baked into an image.
+4. Fix what fails, measure again, at most two rounds. A difference that is intended is a row
+   "by decision" with its source, not a pass by silence.
+5. Write `.planning/design/<slug>/check/design-check.md` and show the verdict line, the open rows and
+   the pairs of shots.
+
+The build is not reported as done while the verdict is FAIL: `moku-rails pause`, show the open rows and
+ask. If the `moku-design` pack is not installed, run the five steps above from this page and say so.
+No design context for the change: note it in one line and move on.
+
 ## Step 8: README
 
 Generate or update the root `README.md` (and any per-custom-plugin READMEs) now that the app exists.
@@ -261,7 +285,8 @@ Package publishing is a different station — the `moku:moku-release` skill.
 Cover: custom plugins created, entry point structure, validation results, integration test count and
 coverage, the runtime smoke test (the command, the surface, the status — state plainly that the app was
 booted and served, or that the gate was skipped for a pure library), whether the e2e gate ran and what
-it found, README and deployment output, and issues found and fixed. Then update `.planning/STATE.md`.
+it found, the design check (the verdict line, the rows open or by decision, the path of the report; or
+"no design context"), README and deployment output, and issues found and fixed. Then update `.planning/STATE.md`.
 
 ## App quality bar
 

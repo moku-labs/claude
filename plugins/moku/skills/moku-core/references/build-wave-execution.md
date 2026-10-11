@@ -131,6 +131,11 @@ trade-offs — follow them rather than re-deciding. Omit the section when there 
 - Prototype: `.planning/design/[slug]/index.html` and `styles.scss`. The single source of truth for
   layout and measurements: read every size, position, gap, radius, shadow and text shadow from it.
 - Units: [target unit] = prototype px × [factor, e.g. `1` for web, `1080 / 390` for a portrait game].
+- Fonts: [face, weight and sizes of this unit's text, converted; the font files or keys]. The exact
+  faces of the design, never a look-alike.
+- Text: every word is text from the string table, drawn by a font. Never bake a word into an image or
+  a sprite; a text effect (lip, shadow, outline) belongs to the text style. Exception: [the words the
+  design context lists as lettering that is art, or "none"].
 - Art: [asset files or keys this unit uses]. Art assets only. An image, also one that shows the whole
   screen, is never a reference for layout or sizes. Where an image and the prototype disagree, the
   prototype wins.

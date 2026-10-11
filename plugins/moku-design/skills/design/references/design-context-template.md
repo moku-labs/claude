@@ -72,6 +72,11 @@ shadow is read from `index.html` and `styles.scss`, converted to the target's un
 tool) is an art asset or a style reference. It is never a reference for layout, sizes or positions. Where
 an image and the prototype disagree, the prototype wins.
 
+**Text is text.** Words are drawn by a font from the string table, in the faces of the **Typography**
+table in §2. A word is never baked into an image or a sprite, because a baked word cannot be translated.
+The one exception is lettering that is art, listed by name in §2. The build is compared to the prototype
+by measurement, fonts first, before it is called done (the design check).
+
 **Files in this folder**
 | File | What it is |
 |------|-----------|
@@ -94,8 +99,17 @@ organising idea that makes it distinctive. State what makes it feel the way it d
 **Personality —** {the art direction in a phrase — e.g. "Editorial / Swiss-modernist, warm and
 print-precise."}
 
-**Typography —** {the type voices and what each is used for. Name the fonts (Google Fonts only in the
-prototype) and the role each plays.}
+**Typography —** {the type voices and what each is used for. Google Fonts only in the prototype.}
+
+| Face | Weight | Used for | Sizes in the prototype (px) | Licence | Locales it has glyphs for |
+|---|---|---|---|---|---|
+| {e.g. Fredoka} | {700} | {title, buttons, labels} | {58, 44, 38, 24, 21} | {OFL} | {en; no Cyrillic} |
+
+All words are live text in these faces. Effects on text (a lip, a shadow, an outline) are part of the
+text style, never drawn into the art.
+
+**Lettering as art —** {`none`, or the short list of words that are drawn as an image by an artistic
+decision, each with the reason and how it is translated. Everything not listed here is text.}
 
 **Colour —** {the palette: ground, ink, accent(s); light and dark behaviour; how semantic colours
 (labels, priorities, status) are used. State the restraint rules.}
@@ -260,5 +274,8 @@ Both keep §1, §8 and §9. See `design-mode-api.md` and `design-mode-architectu
    every generated image as art or style reference, not a reference for layout or sizes.
 7. For a `ui` run, the §0 paragraph "The numbers are the spec" is intact and the §5 **Measurement
    reference** table is filled: prototype path, frame, target units, conversion, art.
-8. For an `api` or `architecture` run, its section carries the alternatives, the axes table and the
+8. For a `ui` run, §2 has the **Typography** table with every face, weight, size, licence and the
+   locales it covers, and the **Lettering as art** line. No sentence says that words or their effects
+   are baked into the art, except for the names on that line.
+9. For an `api` or `architecture` run, its section carries the alternatives, the axes table and the
    recorded reasons for the rejected options.

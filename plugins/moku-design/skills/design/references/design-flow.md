@@ -205,7 +205,7 @@ Label every one of them demo and reference, not source.
 ### E2 — Write `design-context.md`
 
 Read the actual prototype and the concept spec, then write
-`.planning/design/{SLUG}/design-context.md` from `design-context-template.md`. Four rules:
+`.planning/design/{SLUG}/design-context.md` from `design-context-template.md`. Five rules:
 
 1. **§0 verbatim.** Reproduce the "spec, not source" callout exactly as the template has it, substituting
    only `{NAME}` and the conventions line for the medium. It has to be the first section after the title
@@ -224,6 +224,10 @@ Read the actual prototype and the concept spec, then write
    Give every generated image a row in the Files table as an art asset or a style reference. Never write
    that a screen is built "from" or "in the layout of" an image: an image of a screen shows a style, the
    prototype holds the numbers.
+5. **Fonts and text.** Fill the **Typography** table in §2 from the prototype's computed styles: face,
+   weight, every size, the licence, the locales the face has glyphs for. Words are text: write no design
+   where a label, a button word or a title is baked into an image. Lettering that is art by decision goes
+   on the **Lettering as art** line with its reason; ask the person before you put a word there.
 
 Then run the checklist at the foot of the template and close any gap before moving on.
 
@@ -247,3 +251,5 @@ the context path, then `moku-rails done design`.
 - **Out:** `.planning/design/{SLUG}/design-context.md` plus the registry row, consumed by the plan and
   build stations, which forward the re-implement-never-copy instruction and the **Measurement reference**
   table (prototype path, conversion) to their agents.
+- **Back in after the build:** the design check (`design-check.md`) compares the build to the prototype
+  by measurement. The build and e2e stations run it themselves.

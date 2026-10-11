@@ -139,9 +139,19 @@ When the design is captured, repeat the principle and print the next step:
 > The prototype in that folder is throwaway demo code. Build it from scratch on the real stack with all
 > the project's conventions; do not copy its CSS, JS, DOM or its bugs.
 > Its numbers are the spec: sizes, positions, radii and shadows come from the prototype, times the
-> conversion in §5. Generated images are art, not a layout reference.
+> conversion in §5. Generated images are art, not a layout reference. Words are text in the fonts of §2.
+> After the build the design check compares the result to the prototype by itself, fonts first.
 
 Then `moku-rails done design`, and hand the context path to the plan station.
+
+## The design check
+
+After a build, the build is compared to the approved prototype by measurement: positions, sizes, radii,
+shadows, colours, and first of all fonts. The procedure, the tolerances and the report are in
+`references/design-check.md`. The build station runs it at its end and the e2e station runs it again
+(`moku-web:e2e`, `moku-game:playtest`); the person never has to ask for it. Invoked directly with
+"check the build against the design", run that reference for the named slug and write nothing but its
+`check/` folder.
 
 ## Gotchas
 

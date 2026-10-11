@@ -127,6 +127,15 @@ and measurements is the approved prototype in `.planning/design/<slug>/`, read t
 **Measurement reference** table of its `design-context.md`. When an image and the prototype disagree, the
 prototype wins. Say so in every hand-off that passes her images on: "art only, layout from the prototype".
 
+## No words in the art
+
+Words on a screen are text, drawn by a font, so they can be translated. Never ask her for an asset with a
+label, a button word, a number or a title in it: write "no text, no letters, no numbers" into every
+`generate` brief for a sprite, a button, a panel or an icon. The exception is lettering that is art by
+decision (a logo), listed on the **Lettering as art** line of `design-context.md` §2. Concept art of a
+whole screen may show words, and those words say nothing about the font: the faces and sizes come from
+the prototype.
+
 ## The asset manifest
 
 Generated art lives under `assets/**/` with a `manifest.json` beside it, matching

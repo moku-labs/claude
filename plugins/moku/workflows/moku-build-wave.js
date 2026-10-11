@@ -117,7 +117,9 @@ const DESIGN_REFERENCE =
   'single source of truth for layout and measurements: read every size, position, radius and shadow ' +
   'from its HTML and styles and convert it with the conversion the section gives. Never guess a size ' +
   'and never measure one from an image: a generated image is an art asset, also when it shows the ' +
-  'whole screen. Read the numbers, never copy the prototype code.'
+  'whole screen. Use the exact font faces, weights and sizes the section names. Every word is text ' +
+  'from the string table, drawn by a font; never bake a word into an image or a sprite unless the ' +
+  'section lists it as lettering that is art. Read the numbers, never copy the prototype code.'
 phase('Build+Verify')
 const results = await pipeline(
   plugins,

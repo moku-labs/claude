@@ -110,9 +110,13 @@ The code is not copied; the numbers are. The approved prototype is the single so
 
 - the prototype path (`.planning/design/<slug>/index.html` and `styles.scss`),
 - the conversion from prototype px to the target's units (web `× 1`; a game `× reference width / frame width`, for example `× 1080 / 390`),
+- the fonts: the faces, weights and sizes of the unit's text, from the **Typography** table in §2, and the font files to add,
+- text is text: every word comes from the string table and is drawn by a font, never baked into an image or a sprite, so it can be translated. The only exception is a word on the **Lettering as art** line of §2,
 - the art: which generated images the unit uses, as art assets only. An image, from Astra or any other tool, is never a reference for layout, sizes or positions, also when it shows a whole screen.
 
 Sizes, positions, radii and shadows in the spec are read from the prototype and converted, never guessed and never measured from an image. A design context with no **Measurement reference** table: read the frame from the prototype, write the section yourself and say that you did.
+
+The spec's Verification section ends with "the design check passes for this unit's inventory rows". The build station runs that check itself.
 
 The design context says what to build; the specs and the conventions say how.
 

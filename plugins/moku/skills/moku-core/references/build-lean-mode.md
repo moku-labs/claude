@@ -54,7 +54,7 @@ Depends: [plugin names, or "None"]
 [Relevant decision-log entries, or omit the section]
 
 ## Design Reference
-[Prototype path, unit conversion and art assets, as in the normal prompt. Never cut from a lean prompt;
+[Prototype path, unit conversion, fonts, the text-is-text rule and art assets, as in the normal prompt. Never cut from a lean prompt;
 omit only when the spec has no screen from a design context]
 
 ## Output

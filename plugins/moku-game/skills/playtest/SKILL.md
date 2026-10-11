@@ -154,6 +154,33 @@ Follow `references/editor.md`:
 Prefer `read_page` and `find` for text on the tools page; take a pane screenshot for the report when a
 picture says it better.
 
+## The design check
+
+When a design context belongs to the change (`.planning/design/<slug>/design-context.md`), this step is
+part of the playtest. Run it without being asked, after Step 3, on the game in the editor. The procedure,
+the tolerances and the report are in the `moku-design` pack: load `moku-design:design` with the Skill
+tool and read `references/design-check.md` under the base directory it prints. Pack absent: do the steps
+below and say so.
+
+The expected side is the approved HTML prototype at its frame, times the **Conversion** of the design
+context (`× 1080 / 390` for a portrait game). An image from Astra or `moku-ai` is not the expected side.
+
+How to read the game's side:
+
+1. Set the pane so the game frame has the prototype's aspect, and bring each inventory row of §6 to the
+   state it names, from a scenario or by `doors.run`.
+2. Bounds: `capture { legend: true }` gives the rects of every keyed view as data; the element card of a
+   pick gives `ref x,y w×h` in reference units. Compare the reference units to prototype px × conversion.
+3. Fonts first: for every text element read its text style from the card and its `defineTextStyles`
+   entry: the font key, the size, the weight of the face behind the key. The face is the design's face,
+   not the body font the package ships. The font has the glyphs of every locale of `strings/`.
+4. Text is text: every word of the design's copy is a text element with a string key
+   (`doors.sources.ui`). A word found only inside a texture is a FAIL, unless §2 of the design context
+   lists it as lettering that is art. A lip, a shadow or an outline on a word is its text style.
+5. One shot per row with the Shot button, saved as `check/actual/<row>.jpg` beside the prototype's shot.
+
+Failed rows go into the fix loop of Step 6. The verdict line and the open rows go into Step 7.
+
 ## Step 4 — the device leg (optional)
 
 Run it when DEVICE is set, or when the change touched `native` or `system` in `config.ts`, audio (also
@@ -197,8 +224,12 @@ Present, in this order:
 2. Headless and visual results; baselines updated with the reason.
 3. Defects found and fixed, with file and line.
 4. Console warnings and `ui.lint()` findings, accepted or rejected.
-5. The second opinion: who reviewed, accepted and rejected counts.
-6. The shots and videos under `.planning/e2e/game/`.
+5. The design check: the verdict line, rows open or by decision, the path of
+   `.planning/design/<slug>/check/design-check.md`; or "no design context".
+6. The second opinion: who reviewed, accepted and rejected counts.
+7. The shots and videos under `.planning/e2e/game/`.
+
+With the design check at FAIL the station is not done: `moku-rails pause`, show the open rows and ask.
 
 ```bash
 moku-rails done e2e

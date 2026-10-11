@@ -129,12 +129,28 @@ triage. The full procedure is `references/e2e-testing.md` → "The UX gate". In 
 5. **Fix.** Accepted findings go back to `moku-web-ux-reviewer` (behavior, layout, responsive) or
    `moku-web-e2e-tester` (functional and baselines). Re-screenshot and re-review. At most two review passes.
 
+## Step 3.5 — the design check
+
+When a design context belongs to the change (`.planning/design/<slug>/design-context.md`), run the design
+check without being asked. The procedure, the tolerances and the report are in the `moku-design` pack:
+load `moku-design:design` with the Skill tool and read `references/design-check.md` under the base
+directory it prints. Pack absent: follow rule 5 of `references/e2e-testing.md` and say so.
+
+Expected is the approved HTML prototype, measured in the browser at its frame with
+`getBoundingClientRect()` and `getComputedStyle()`. Actual is the running app, the same script, the same
+screens, states, viewports and demo data. Fonts first: family, weight, size, line height and letter
+spacing of every text, and the real face loaded (`document.fonts.check`), not a fallback. Then every
+word is a DOM text node from the i18n table, none is inside an image. Failed rows go to
+`moku-web-ux-reviewer` as fixes; at most two rounds. With the verdict at FAIL the station is not done:
+`moku-rails pause`, show the open rows and ask.
+
 ## Step 4 — close
 
 Present, in this order: the coverage table (each inventory item tested, baselined, behavior-checked,
 confirmed), the engines and viewports exercised, defects found and fixed, exploratory findings with the
-regression tests added, the UX gate result naming the reviewers and the accepted/rejected counts, and any
-baselines updated with the reason.
+regression tests added, the UX gate result naming the reviewers and the accepted/rejected counts, the
+design check (the verdict line, rows open or by decision, the path of the report; or "no design
+context"), and any baselines updated with the reason.
 
 ```bash
 moku-rails done e2e
