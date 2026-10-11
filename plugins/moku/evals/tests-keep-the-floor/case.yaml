@@ -1,0 +1,4 @@
+schema_version: '1.1'
+name: tests-keep-the-floor
+context:
+  scaffold_script: fixture.sh
