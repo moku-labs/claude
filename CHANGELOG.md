@@ -2,6 +2,24 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.4 (2026-10-11)
+
+### Fixed
+- **The stop hook no longer tells an agent to deliver a report it has already handed back.**
+  - Seen in a build of `@moku-labs/game`: `moku-builder-deep` handed back a report with a valid
+    contract, `verdict: PASS`. One second later `SubagentStop` blocked it with "You are ending without
+    your report ... Do no more work". New work from the coordinator arrived in the same turn, and the
+    builder obeyed the hook: it reported the work as not started. It happened after every report.
+  - Cause: the harness delivers a report through the `SubagentHandback` tool, so the text is in the tool
+    call. The hook read only `last_assistant_message`.
+  - Now the hook also reads the `message` of the agent's last `SubagentHandback` call from the
+    transcript. A prompt after that call starts a new run, so an old report does not cover a resumed
+    agent that stops without a new one.
+  - The agent log gets the verdict of a handed-back report. Before it said `no report`.
+  - Checked on the transcript of that builder: both of its reports now pass the hook.
+  - Not known: what `last_assistant_message` holds in the real payload after a hand-back. The hook
+    blocks the same way for an empty string and for a short text.
+
 ## 0.85.3 (2026-10-11)
 
 ### Fixed

@@ -3,7 +3,8 @@
  * SubagentStop hook: every moku agent ends with a report, and its outcome lands in `.planning/build/agent-log.md`.
  *
  * An agent that stops without the output contract is told once, through the stop decision, to deliver its
- * report now (the hook's `reason` is the agent's next instruction). If it stops a second time without one,
+ * report now (the hook's `reason` is the agent's next instruction). A report handed back through the
+ * `SubagentHandback` tool is read from the transcript: it is not in the agent's last message. If it stops a second time without one,
  * the log says so and names whether the turn limit was hit, and the person sees the resume instruction.
  * The status skill reads the log. Silent outside projects with planning state.
  */
@@ -11,7 +12,7 @@
 import { appendFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
 
-import { MOKU_AGENT, RESUME_INSTRUCTION, forgetAgent, turnBudget } from "../lib/hooks/agents.mjs";
+import { MOKU_AGENT, RESUME_INSTRUCTION, forgetAgent, handedBack, turnBudget } from "../lib/hooks/agents.mjs";
 import { extractContract, summarize } from "../lib/hooks/contract.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
@@ -26,7 +27,8 @@ if (!root || !MOKU_AGENT.test(agentType)) process.exit(0);
 // The agent is no longer running, whatever it reported
 if (agentId) forgetAgent(root, agentId);
 
-const contract = extractContract(String(payload.last_assistant_message ?? ""));
+// The report is the agent's last message, or what it handed back through SubagentHandback in this run
+const contract = extractContract(String(payload.last_assistant_message ?? "")) ?? extractContract(handedBack(payload.agent_transcript_path));
 
 // No report yet, first stop: the agent gets one instruction to deliver it before it ends
 if (!contract && payload.stop_hook_active !== true) {

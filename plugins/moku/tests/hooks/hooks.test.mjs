@@ -718,6 +718,47 @@ describe("agents running inside a station", () => {
   });
 });
 
+describe("a report handed back through SubagentHandback", () => {
+  const contract = 'Done.\n```json\n{"agent":"moku-builder-deep","verdict":"PASS","blockers":[],"warnings":[]}\n```';
+  const said = (text) => ({ type: "assistant", message: { id: `m-${text.length}`, content: [{ type: "text", text }] } });
+  const handback = (message) => ({ type: "assistant", message: { id: "m-handback", content: [{ type: "tool_use", name: "SubagentHandback", input: { message } }] } });
+  const delivered = { type: "user", message: { content: [{ type: "tool_result", content: [{ type: "text", text: '{"success":true}' }] }] } };
+  const prompt = (text) => ({ type: "user", message: { content: [{ type: "text", text }] } });
+
+  /** Stop a builder whose transcript holds these entries; its last message is plain text, as the harness passes it. */
+  function stopAfter(root, entries, extra = {}) {
+    const transcript = join(root, "agent.jsonl");
+    writeFileSync(transcript, `${entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`);
+
+    return hook("on-subagent-stop.mjs", { cwd: root, agent_id: "agent-1", agent_type: "moku:moku-builder-deep", stop_hook_active: false, last_assistant_message: "Now the reconcile itself.", agent_transcript_path: transcript, ...extra });
+  }
+
+  it("is the agent's report: the agent is not told to deliver it again, and the log has its verdict", () => {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+
+    const result = stopAfter(root, [prompt("Build the ui plugin."), said("Now the reconcile itself."), handback(contract), delivered]);
+
+    assert.equal(result.out, "", "no block: new work that arrives now is not met by 'do no more work'");
+    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /moku:moku-builder-deep \| PASS B:0 W:0/);
+  });
+
+  it("does not count for a later run: a resumed agent that stops with no new hand-back is told once", () => {
+    const root = project({ initialized: true });
+
+    const result = stopAfter(root, [prompt("Build the ui plugin."), handback(contract), delivered, prompt("New work: apply finding 1."), said("I will look at it.")], { last_assistant_message: "I will look at it." });
+
+    assert.equal(JSON.parse(result.out).decision, "block");
+  });
+
+  it("without the contract is still no report, and so is a transcript that cannot be read", () => {
+    const root = project({ initialized: true });
+
+    assert.equal(JSON.parse(stopAfter(root, [prompt("Build."), handback("All done, it works."), delivered]).out).decision, "block");
+    assert.equal(JSON.parse(stopAfter(root, [], { agent_transcript_path: join(root, "missing.jsonl") }).out).decision, "block");
+  });
+});
+
 describe("an agent that could not start", () => {
   const ERROR = 'Shell command permission check failed for pattern "!`test -f .planning/STATE.md`"';
   const start = (root, id, type, session = "s1") => hook("on-subagent-start.mjs", { cwd: root, session_id: session, agent_id: id, agent_type: type });
