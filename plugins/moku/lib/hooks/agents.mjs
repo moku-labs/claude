@@ -207,6 +207,43 @@ export function turnsUsed(transcriptPath) {
 }
 
 /**
+ * The report an agent handed back in its current run: the `message` of its last `SubagentHandback`
+ * call. The harness delivers a report through that tool, so the text is in the call and not in the
+ * agent's last message. A prompt that came after the call (new work for a resumed agent) starts a new
+ * run, and the old report no longer counts.
+ *
+ * @param {string | undefined} transcriptPath the `agent_transcript_path` of a SubagentStop payload
+ * @returns {string} the report, or "" when the run has none or the transcript cannot be read
+ * @example
+ * extractContract(handedBack(payload.agent_transcript_path));
+ */
+export function handedBack(transcriptPath) {
+  if (typeof transcriptPath !== "string" || !existsSync(transcriptPath)) return "";
+
+  let report = "";
+  for (const line of readFileSync(transcriptPath, "utf8").split("\n")) {
+    if (!line.includes('"type":"assistant"') && !line.includes('"type":"user"')) continue;
+
+    try {
+      const entry = JSON.parse(line);
+      const content = entry.message?.content;
+
+      if (entry.type === "assistant" && Array.isArray(content)) {
+        const call = content.findLast((block) => block?.type === "tool_use" && block.name === "SubagentHandback");
+        if (call) report = String(call.input?.message ?? "");
+      }
+
+      // A tool result is the run going on; anything else a user entry carries is a new prompt
+      if (entry.type === "user" && (!Array.isArray(content) || content.some((block) => block?.type !== "tool_result"))) report = "";
+    } catch {
+      /* a partial last line */
+    }
+  }
+
+  return report;
+}
+
+/**
  * Whether an agent that ended without a report hit its turn limit, as far as the transcript tells.
  *
  * @param {{ agent_type?: string, agent_transcript_path?: string }} payload SubagentStop payload
