@@ -153,7 +153,7 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
 ## `moku-game` — the `@moku-labs/game` and `@moku-labs/editor` pack
 
 - **Skills (2):** `moku-game` (knowledge: the 2D puzzle game engine on PixiJS v8 and its dev tools, synced
-  to game `0.14.9` and editor `0.10.8`; full catalog in `references/plugin-index.md`), `playtest`
+  to game `0.14.12` and editor `0.10.10`; full catalog in `references/plugin-index.md`), `playtest`
   (fable / medium — the e2e station of a project whose `.planning/moku.md` says `type: game`).
 - **Agents (1):** `moku-game-validator` (sonnet / medium).
 

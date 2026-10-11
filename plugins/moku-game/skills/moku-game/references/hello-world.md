@@ -15,13 +15,18 @@ Derived from the engine's fixture `tests/fixtures/mini-game/`, its `docs/shell.m
 the reference game `merge-game` in moku-labs/demos. Verified on a fresh scaffold of these files (install,
 `keys`, typecheck, lint with the ten engine rules, tests with coverage, `keys --check`, `build`,
 `moku-game-index --check`, `bun run test:visual` twice (written, then same), `moku-editor --help`)
-against the pins below: `@moku-labs/game@0.14.9`, `@moku-labs/editor@0.10.8`, `@moku-labs/core@1.7.6`,
+against `@moku-labs/game@0.14.9`, `@moku-labs/editor@0.10.8`, `@moku-labs/core@1.7.6`,
 `@moku-labs/common@0.3.10`, `pixi.js@8.22.0`, Bun 1.4.3 and the init tooling stack (`oxlint@1.86.0`,
-`vitest@4.0.18`, `typescript@6.0.3`). `moku-game dev` and `moku-editor --root .` were each started and
-stopped: the page, the tools page and a game file answered 200, the editor logged `files:project-on`, and
-a saved `strings/en.json` was compiled by the keys watch. No browser opened either page, so the draw, the
-hot swap in the page and the MCP tools were not seen on these pins; the last run that looked at the page
-was game 0.13.0 with editor 0.9.1. The native shell was run on the same scaffold with `@moku-labs/system@0.3.7`,
+`vitest@4.0.18`, `typescript@6.0.3`). The pins below, `@moku-labs/game@0.14.12` and
+`@moku-labs/editor@0.10.10`, were run on a copy of that scaffold with the two packages moved by `bun add
+--exact`, not on files written anew: `keys`, typecheck, lint, tests, tests with coverage, `bun run
+test:visual` once (the baselines of 0.14.9 read "same"), `build` with its `keys --check`,
+`moku-game-index --root . --check` and `moku-editor --help` passed. `moku-game dev --port 0` and
+`moku-editor --root . --port 0` were each started and stopped: the page, the tools page and
+`/manifest.json` answered 200, and the editor logged `files:project-on`. Not run on these pins: a save of
+`strings/en.json` under the keys watch (last seen on 0.14.9 with 0.10.8). No browser opened either page, so the draw, the
+hot swap in the page, the tools page of editor 0.10.9 and later and the MCP tools were not seen on these pins; the last run that looked at the page
+was game 0.13.0 with editor 0.9.1. The native shell was run on game 0.14.9, not on these pins, with `@moku-labs/system@0.3.7`,
 `@moku-labs/native@0.3.8`, `@tauri-apps/api@2.12.2` and `@tauri-apps/plugin-haptics@2.4.1`: `native doctor ios`
 passed, `native build ios --simulator` built the app, and on the iPhone 17 Pro simulator (iOS 26.3) the
 page drew and two taps read "2 taps". Not run: the lefthook hook, the pixel leg of
@@ -34,13 +39,13 @@ installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_module
 Pin exact versions. A game has no `bunfig.toml`, so pass `--exact`.
 
 ```sh
-bun add --exact @moku-labs/game@0.14.9 pixi.js@8.22.0 @moku-labs/core@1.7.6 @moku-labs/common@0.3.10
-bun add --exact -d @moku-labs/editor@0.10.8 sharp@0.34.5
+bun add --exact @moku-labs/game@0.14.12 pixi.js@8.22.0 @moku-labs/core@1.7.6 @moku-labs/common@0.3.10
+bun add --exact -d @moku-labs/editor@0.10.10 sharp@0.34.5
 ```
 
 `@moku-labs/core` and `@moku-labs/common` are peers of both packages; pin them so the game and the
 editor share one copy. `pixi.js` (`^8`) is a peer of the engine. `sharp` is an optional peer: `moku-game
-build` and `pack` need it for the asset pack. `@moku-labs/editor@0.10.8` peers on `@moku-labs/game
+build` and `pack` need it for the asset pack. `@moku-labs/editor@0.10.10` peers on `@moku-labs/game
 >=0.13.1` and `typescript >=5.5`. Both packages need Bun ≥1.4.2.
 
 Every other dev dependency is init's tooling set of the current lint stack, at the versions
@@ -438,12 +443,12 @@ play. After a change a player can see, look at it in the editor and show it, bef
   "dependencies": {
     "@moku-labs/common": "0.3.10",
     "@moku-labs/core": "1.7.6",
-    "@moku-labs/game": "0.14.9",
+    "@moku-labs/game": "0.14.12",
     "pixi.js": "8.22.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@moku-labs/editor": "0.10.8",
+    "@moku-labs/editor": "0.10.10",
     "@types/bun": "1.4.2",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",
@@ -841,7 +846,8 @@ app to `createHeadless`. `pluginConfigs` takes every plugin config but the keys 
 (`model.initialPlayer`, `flow.mainFlow`, `renderer.mount`, `assets.manifest`, all of `clock` and
 `platform`, and the rest in `plugin-index.md`): such a key is a compile error. Other keys of the
 definition: `referenceLong` (1920), `seed` (42), `plugins` (the game's own, after the features),
-`headless: { features?, plugins? }`.
+`headless: { features?, plugins? }`. Since 0.14.10 `game.headless()` composes the logic of `features`
+when `headless.features` is left out, as here; `headless: { features: [] }` composes none.
 
 ## tests/
 

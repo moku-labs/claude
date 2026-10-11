@@ -15,7 +15,7 @@ description: >
 
 # Moku Game Patterns
 
-> **Synced to `@moku-labs/game@0.14.9`** and **`@moku-labs/editor@0.10.8`**: the game shell (`defineGameApp`,
+> **Synced to `@moku-labs/game@0.14.12`** and **`@moku-labs/editor@0.10.10`**: the game shell (`defineGameApp`,
 > `config.ts`, the bin `moku-game` with `visual`), the ten lint rules, `moku-editor --root .` and
 > `moku-editor e2e`, and the plugin catalog here and in `plugin-index.md`. Both need Bun ≥1.4.2. The editor
 > peers on game `>=0.13.1`. Both take `@moku-labs/core ^1.7.1` +
@@ -52,10 +52,10 @@ You `createApp` **from the game**: `createApp`, `createPlugin` and every helper 
 
 | Layer | Technology |
 |-------|-----------|
-| Framework | `@moku-labs/game` 0.14.9. Entries: `.` (engine), `./app` (`defineGameApp`, `startMoment`, the types of `index.ts` and `config.ts`), `./app/page` (`startPage`, the page `moku-game` writes), `./app/system` (`systemShellOf`, `fromSystem`, `storeSave`, `createSystemApp`), `./cli` (`runCli`, `preparePage`, `watchKeys`), `./lint` (the oxlint JS plugin `moku-game`), `./testing` (headless tests, Node and Bun), `./visual` (visual tests), `./assets` (key scanner, string compiler, packer), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./hot` (the dev hot-swap plugin), `./project` (the project index), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bins `moku-game` (dev, build, native, keys, pack, visual), `moku-game-index` (the project index) and `moku-game-assets` (a game without `config.ts`). Ships `llms.txt` |
+| Framework | `@moku-labs/game` 0.14.12. Entries: `.` (engine), `./app` (`defineGameApp`, `startMoment`, the types of `index.ts` and `config.ts`), `./app/page` (`startPage`, the page `moku-game` writes), `./app/system` (`systemShellOf`, `fromSystem`, `storeSave`, `createSystemApp`), `./cli` (`runCli`, `preparePage`, `watchKeys`), `./lint` (the oxlint JS plugin `moku-game`), `./testing` (headless tests, Node and Bun), `./visual` (visual tests), `./assets` (key scanner, string compiler, packer), `./inspect` (read a running game, safe in production), `./control` (drive a dev build), `./hot` (the dev hot-swap plugin), `./project` (the project index), `./fonts/*` (the MSDF body font and its licence), `./jsx-runtime` + `./jsx-dev-runtime` (never imported by hand). Bins `moku-game` (dev, build, native, keys, pack, visual), `moku-game-index` (the project index) and `moku-game-assets` (a game without `config.ts`). Ships `llms.txt` |
 | Built on | `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (peer deps since 0.4.3, Bun installs them: kernel, `ctx.log`, `ctx.env`) |
 | Rendering | `pixi.js ^8` **peer dependency**, loaded lazily with `import()`. WebGPU first, Pixi's WebGL fallback. No DOM, no React: screens are JSX laid out by `yoga-layout` (bundled, lazy) |
-| Dev tools | `@moku-labs/editor` 0.10.8 (dev dep, peer game `>=0.13.1`). `moku-editor --root .` asks the engine for the dev page with the agent `@moku-labs/editor/agent/page` on it and runs the engine's keys watch; tools page prebuilt; `moku-editor mcp` for Claude Code; `moku-editor e2e` for a game's editor Playwright specs |
+| Dev tools | `@moku-labs/editor` 0.10.10 (dev dep, peer game `>=0.13.1`). `moku-editor --root .` asks the engine for the dev page with the agent `@moku-labs/editor/agent/page` on it and runs the engine's keys watch; tools page prebuilt; `moku-editor mcp` for Claude Code; `moku-editor e2e` for a game's editor Playwright specs |
 | Optional peers | `sharp` (asset pack: `moku-game build` and `pack`), `playwright-core` (pixel leg of visual tests), `typescript` (the project index; 6.x, the JS API), `@moku-labs/system` (the system shell, the store save), `@moku-labs/native` (`moku-game native`) |
 | Native | `config.ts` names `native` and `system`; `moku-game native build ios` runs `@moku-labs/native` (Tauri 2) over it, and the page wires `@moku-labs/system`. The game imports neither. See `references/device.md` |
 | Package manager | Bun only. ESM only, `"sideEffects"` lists the root entry only (since 0.13.2), no CJS |
@@ -161,7 +161,8 @@ export default defineGameApp({
   nine of `screen` (`world`, `renderer`, `input`, `assets`, `scenes`, `anim`, `i18n`, `text`, `ui`),
   `audio`, `effects`, `platform`, then `shared`, the features and the game's plugins.
   `game.headless()` composes the logic plugins, `logicOnly` of `headless.features`, then
-  `headless.plugins`.
+  `headless.plugins`. Since 0.14.10 `headless.features` left out takes `features`; `headless: { features:
+  [] }` composes none. `shared` and `plugins` are never taken by default.
 - Seams of both: `seed`, `clock`, `provider`, `player`, `session`. Screen only: `manifest`, `io`,
   `platform`, `keepAwake`, `audio`, `renderer`. Defaults: `fakeClock(startMoment)` (`1_000_000`), a fresh
   `memory()` save, seed 42. Without a `renderer.mount` the renderer is inert, so `game.screen()` runs in
@@ -211,8 +212,8 @@ default is in `plugin-index.md` "Game shell". The whole shell is `docs/shell.md`
 
 1. Write `package.json` with the scripts (`dev`, `editor`, `keys`, `pack`, `build`, `native`, `lint`,
    `typecheck`, `test`, `test:coverage`, `test:visual`). No `bunfig.toml`.
-2. Install with exact pins: `bun add --exact @moku-labs/game@0.14.9 pixi.js@8.22.0 @moku-labs/core@1.7.6
-   @moku-labs/common@0.3.10`, then `bun add --exact -d @moku-labs/editor@0.10.8 sharp@0.34.5` and the
+2. Install with exact pins: `bun add --exact @moku-labs/game@0.14.12 pixi.js@8.22.0 @moku-labs/core@1.7.6
+   @moku-labs/common@0.3.10`, then `bun add --exact -d @moku-labs/editor@0.10.10 sharp@0.34.5` and the
    tooling set. TypeScript `6.0.3`.
 3. Write the tooling files a game changes: `tsconfig.json` (`jsx`, `jsxImportSource`, the layer `paths`),
    `vitest.config.ts` (the same aliases), `biome.json`, `.oxlintrc.json` (the ten `moku-game/*` rules),
@@ -256,7 +257,7 @@ export const { defineNode, defineFlow, defineFeature, projection, sprite, Sprite
 | Rest node | `rest: true`, the graph waits. A gate answer whose `intent` is an outcome name, or an inbox event, ends it. `checkpoint: true` compacts the journal; `safeNode` points at one. `recover: ({ player, session, rng, fx, signal, now }) => { … }` (since 0.14.2) runs only when the runner gave up on a transition and enters this node as `safeNode`: it writes the drafts so the safe node can draw itself, and that commits as one edge with `outcome: "recover"`. So the safe node stays a pure wait. On a node that is not `safeNode` it is a warning, on a transit node an error |
 | Flow | `defineFlow(id, { nodes, start, edges, input?, outcomes? })`. One edge per outcome of every node; the compiler checks the table. A flow with `outcomes` is a node of another flow; `exit("name")` leaves it; `to("node", map)` adapts a payload; `slot("name")` is an extension point |
 | Feature | `defineFeature(name, { nodes?, flows?, contribute?, projections?, scenes?, assets?, animations?, ui?, strings?, textStyles?, emitters?, filters? })`. An ordinary plugin. `feature.logicOnly` for headless tests. A feature name is never a flow id or an engine plugin name |
-| Effect | `await fx(descriptor)` for awaited effects (`schedule`, `guide`, `popup`, `play`, `sfx`, `music`, `load`); `fx.emit(hint(kind, payload))` for cosmetic ones. In fast mode effects answer at once |
+| Effect | `await fx(descriptor)` for awaited effects (`schedule`, `guide`, `popup`, `play`, `sfx`, `music`, `load`); `fx.start(descriptor)` (since 0.14.10) starts one now and does not wait: write it in place of `void fx(...)`. It refuses a descriptor with `answers` and a `guide`, and a failure is the log entry `flow:fx-start-failed`, never a failed node. `fx.emit(hint(kind, payload))` for cosmetic ones, released after the commit. A `cosmetic` descriptor (`sfx`, `play`, `haptic`, `music`) that fails resolves `undefined` and since 0.14.12 writes the warn entry `flow:fx-cosmetic-failed`. In fast mode effects answer at once |
 | Projection | `projection({ name, layer, from: player => item(s), view: item => JSX })`. `ui` reconciles the JSX into entities and lays them out with Yoga |
 | Tags | `screen`, `layer`, `row`, `column`, `stack`, `spacer`, `panel`, `image`, `icon`, `text`, `button`, `scroll`, `input`. Every tag takes a `key` and `components` |
 | Draw a sprite | Put `apple.png` in `features/fruit/assets/`, run `bun run keys`, then `<image key="apple" texture="fruit.apple" fit="contain" style={{ width: 160, height: 160 }} />`. `texture` is a typed `AssetKey`; an unknown key does not compile. `fit` is `"contain"` (default), `"cover"` or `"fill"`. A `name{nine=l,t,r,b}.png` file draws as a nine-slice panel |
@@ -364,6 +365,9 @@ check done badly: delete the idea, keep the design check.
   `advance(ms)`, `memory()` save provider with `calls`, `saveOf(player, seed)`, `runRepro`, `stepFrames`.
   The app comes from `game.headless(seams?)` of the root `index.ts`: seed 42, `fakeClock(startMoment)`,
   a fresh `memory()` save. `isolate(feature, { flow, player, stubs })` plays one feature alone.
+  `fakeFx(options?)` (since 0.14.12) is the `fx` of a node context for a unit test that calls
+  `node.run?.({ ...context, fx: fake.fx })` itself: it returns `{ fx, awaited, started, emitted }`, and
+  `options.answer(descriptor)` gives what an awaited effect resolves with.
 - **Visual**: `defineVisualTest(name, { start: { player, checkpoint }, steps, webgl? })`. A step is a
   `/control` command by short name (`{ tap: { key: "play" } }`, `{ answer: {...} }`, `{ walk: {...} }`,
   `{ step: {...} }`) or `{ checkpoint: "name" }`. Since 0.12 the bin runs them: `moku-game visual` reads
@@ -447,7 +451,7 @@ You do not work on a game blind and you do not wait for the playtest station to 
 | A picture of the game or of one element | `moku_screenshot` (`key` crops to an element), `moku_series` for a motion | a pane screenshot of the whole tools page |
 | Tap, answer, walk, pause, step | the door tools (`game_tap`, `game_answer`, `game_walk`…) or `moku_run` | clicking pixels in the pane |
 | Wait for the game to arrive somewhere | `moku_wait` | a sleep |
-| What the person points at | `moku_selection` after their pick; `moku_select { key }` to show them an element, `moku_select { node }` to show them a node in Flow | asking them to describe it |
+| What the person points at, and the style values they changed | `moku_selection` after their pick (its `edits` are the pending style edits of the Element tab, to write into the source); `moku_select { key }` to show them an element, `moku_select { node }` to show them a node in Flow | asking them to describe it |
 | Where an id lives in the code | `moku_files_find { key }` (`node:main/home`, `jsx:tap`), `moku_project` for the keys of a prefix or of a file | a grep for the name |
 | Another device, another workspace | `moku_device { preset?, orientation?, folded? }`, `moku_show { workspace }` | resizing the pane, clicking the rail |
 | After an edit | `moku_reload`, or the hot swap, then read the state again | assuming the edit landed |
@@ -502,11 +506,16 @@ bunx moku-editor --root .          # the game's "editor" script
   a shell game never does.
 - The tools page: six workspaces, ⌘1–⌘6 (Game, Flow, Render, State, Files, Console; Game is the default),
   `⌘K` palette, `P` pause / resume, `.` step one frame while paused, `O` overlay in game, `G` preview,
-  `R` Reference mode, `H` the Hot reload switch, ⌘⇧C the element picker, `Esc` closes one thing. Captures
-  go to `.moku/captures/<yyyy-mm-dd>/`.
+  `H` the Hot reload switch, ⌘⇧C or `I` the element picker, `Esc` closes one thing. Captures
+  go to `.moku/captures/<yyyy-mm-dd>/`. Reference mode and its key `R` left in editor 0.10.9: the picker
+  is the one way to pick, and a drag of the picker picks an area.
 - A pick bookmarks the game and writes a card `.moku/captures/<yyyy-mm-dd>/<key>-f<frame>.md` with the
   element's path, `file:line`, layout, bounds in px and reference units, flow position, the JSX and style
-  snippets, and two JPEGs. It also copies one `@moku …` line naming the card.
+  snippets, and two JPEGs. It also copies one `@moku …` line naming the card. All of this only while the
+  Copy Ref switch of the Game toolbar is on (the default, editor 0.10.9); off, a pick only selects.
+- The Styles rows of the Element tab are fields (editor 0.10.9). A changed value is a pending edit: the
+  editor writes no file. `moku_selection` answers them as `edits`, `{ path, from, to }`; write the `to`
+  values into the source. The Styles tab of the Flow Inspector is gone.
 - The server binds `127.0.0.1` only and gates every socket with Host, Origin and a per-start token.
 - A save of a view file swaps in place (hot swap, no reload). A save of a logic file (Files, or an agent
   writing the file) reloads the page through Bun and restores the game where it was, in about a second.

@@ -2,6 +2,28 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.6 (2026-10-11)
+
+### Changed
+- **`moku-game` follows game 0.14.12 and editor 0.10.10.**
+
+  | Package | Was | Now | What changed |
+  |---|---|---|---|
+  | `@moku-labs/game` | 0.14.9 | 0.14.12 | the headless features default, `fx.start`, `UiNode.textStyle`, `fakeFx` |
+  | `@moku-labs/editor` | 0.10.8 | 0.10.10 | Reference mode and the Flow Styles tab are gone, Copy Ref, pending style edits |
+
+  - Behaviour change in game 0.14.10: `game.headless()` composes `logicOnly` of `features` when
+    `headless.features` is left out. `headless: { features: [] }` means none. The `moku-game-version`
+    migration names this crossing.
+  - The pack no longer teaches Reference mode, the key `R` or the `data-moku-*` proxies. An agent reads
+    the game through `game.ui`, `game.locate` and `moku_select { key }`.
+  - Nothing in the editor writes a style to a file. The agent reads `moku_selection.edits` and writes
+    the `to` values into the source.
+  - The game template pins game 0.14.12 and editor 0.10.10. Run as a bump on a copy of the 0.85.2
+    scaffold: `keys`, typecheck, lint, tests, `test:visual`, `build`, and both dev servers answered 200.
+    Not run: a scaffold written anew, a browser on either page, the MCP bridge, a native build.
+  - Registry `knownVersion`, the upgrade "currently" lines, a sync note.
+
 ## 0.85.5 (2026-10-11)
 
 ### Fixed
