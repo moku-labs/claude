@@ -148,7 +148,8 @@ folder. Read the exported functions for `state.x = …` patterns.
 - **WARNING**: `typescript` 7 in `devDependencies` with `@moku-labs/editor` installed. The editor's project
   index needs the TypeScript JS API; on 7 it runs with `files:project-off`. Fix: `typescript` `6.0.3`.
 - **INFO**: `@moku-labs/editor` below 0.8 with `@moku-labs/game` 0.10 or later, or the reverse. Editor 0.8
-  and later peer on game `>=0.10.0`. The pair the template pins is game 0.13.0 with editor 0.9.3.
+  to 0.9.4 peer on game `>=0.10.0`. Editor 0.9.5 and later peer on game `>=0.13.1` and stop at the start on
+  an older game. The pair the template pins is game 0.14.9 with editor 0.10.8.
 
 **How to check:** Grep `@moku-labs/editor` over the source; read `package.json` scripts and versions.
 

@@ -1,7 +1,7 @@
 # Pipeline: moku-ai assets into a @moku-labs/game project
 
-Verified against `@moku-labs/ai@0.16.1` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
-`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.13.0` (`src/plugins/assets/README.md`,
+Verified against `@moku-labs/ai@0.16.8` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
+`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.14.9` (`src/plugins/assets/README.md`,
 `scan/keys.ts`, `scan/scan.ts`, `scan/pack/groups.ts`, `docs/shell.md`). The worked game is the merge
 game in moku-labs/demos; it left the engine repository in game 0.8.
 
@@ -236,8 +236,8 @@ Nothing to do in moku-ai for atlases: generate single sprites, let the game pack
 | No sprite-sheet or animation task | One sprite per item. An ark group (`params.images: N`) is one item; a `$ref` to it is the first output only, so a `sprite` cannot cut frames 2..N | One `image` + one `sprite` item per frame with a shared ref (`fx/coin-spin/0` ... `fx/coin-spin/6`). The game packer builds the atlas. |
 | Nine-slice hint is the four-number form only | `buildfile/schema.ts` | Write `{nine=N,N,N,N}`; the game reads it the same as `{nine=N}`. |
 | Ids with `.` break the game scan | `scan/keys.ts`; moku-ai accepts them | Use `-` and `/`. |
-| sfx and `birefnet` prices are estimates | ElevenLabs bills credits, fal bills BiRefNet per second | `priceOverrides` with the plan's real rate. |
-| sfx and sprite not proven against the live APIs | Upstream tests mock ElevenLabs and fal | First paid run with a small `--max-cost`; check one file by ear and eye. |
+| sfx, elevenlabs music and `birefnet` prices are estimates | ElevenLabs bills credits, fal bills BiRefNet per second | `priceOverrides` with the plan's real rate. |
+| sfx, sprite and elevenlabs music not proven against the live APIs | Upstream tests mock ElevenLabs and fal | First paid run with a small `--max-cost`; check one file by ear and eye. |
 | No account pools | One key per provider (`apiKeyEnv`) | One account per provider, or a custom provider plugin. |
 | No 3D | No task | Out of scope. |
 | No bitmap fonts | No task | `msdf-bmfont-xml` from a licensed TTF, as in merge-game. |
@@ -290,7 +290,8 @@ record. The `moku run` box prints each file's cost; copy it.
 2. Images: `params.background: transparent` on fal `gpt-image-2.5`, then a `sprite` item
    (`none`); other sources go through `sprite` with `birefnet`. Final `size` and the
    `{nine=l,t,r,b}` id hint on the sprite.
-3. Sounds: `sfx` items with `durationMs`; music on fal; everything lands as mp3.
+3. Sounds: `sfx` items with `durationMs`; music on fal, or on `elevenlabs` with `provider: elevenlabs`
+   and a `music_v*` model (0.16.2); everything lands as mp3.
 4. `moku validate`, `moku estimate`, tell the total, wait for a yes.
 5. `moku run <file> --max-cost <n> --flat --out features/<f>/assets`, then
    `rm -rf features/<f>/assets/raw`.

@@ -64,7 +64,7 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
    page; the game has none of its own. A game still on `web/index.html` and `web/main.ts` is the old
    shape: say so in the report and play it with its own `dev` script, but do not migrate it here.
 4. `@moku-labs/editor` in `devDependencies` and an `editor` script that runs `moku-editor --root .`.
-   Missing: add `bun add --exact -d @moku-labs/editor@0.9.3` and the script; say so.
+   Missing: add `bun add --exact -d @moku-labs/editor@0.10.8` and the script; say so.
 
 5. **Editor tools.** `.mcp.json` names the `moku-editor` server and the `mcp__moku-editor__*` tools are
    listed (deferred: load them through ToolSearch with `moku-editor`). Then the editor's MCP tools are

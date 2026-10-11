@@ -1,6 +1,6 @@
 # @moku-labs/game — Plugin & Property Index
 
-**Synced version:** `0.13.0` (catalog from the `v0.13.0` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
+**Synced version:** `0.14.9` (catalog from the `v0.14.9` tag: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
 `docs/configuration.md`, `docs/doors.md`, `docs/shell.md`, `docs/lint.md`, `docs/testing.md`,
 `docs/hot-swap.md`, `docs/project-index.md`, `src/plugins/*/README.md`, and the export lists of
 `src/index.ts`, `src/app.ts`, `src/cli.ts`, `src/testing.ts`, `src/visual.ts`, `src/project.ts`).
@@ -8,9 +8,10 @@
 `bun add`). `pixi.js ^8.0.0` is a **peer** dependency. Optional peers: `playwright-core` (the pixel leg of the
 visual tests), `sharp` (the asset pack), `typescript >=5.5` (the project index), `@moku-labs/system ^0.3.1`
 (the system shell, the store save), `@moku-labs/native ^0.3.2` (`moku-game native`). Engines node ≥24,
-bun ≥1.3.14. ESM only.
+bun ≥1.4.2 (since 0.14.0; ≥1.3.14 before). ESM only. `"sideEffects"` lists the root entry
+`./dist/index.mjs` only (since 0.13.2; `false` before).
 
-The second half indexes **`@moku-labs/editor@0.9.3`** (peers `@moku-labs/game >=0.10.0` and
+The second half indexes **`@moku-labs/editor@0.10.8`** (peers `@moku-labs/game >=0.13.1` and
 `typescript >=5.5`).
 
 > The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). It matches the
@@ -18,6 +19,14 @@ The second half indexes **`@moku-labs/editor@0.9.3`** (peers `@moku-labs/game >=
 
 | Version | What changed for a game |
 |---|---|
+| 0.14.4 to 0.14.9 | Nothing a game meets. 0.14.5 fixes a type check inside `scenes`; the rest is CI, tests and dev dependencies |
+| 0.14.3 | After a restore or a load the picture is the one of the restored state: every view stands on its rest pose with no motion running, and every ui root is built again through the mount path, so `enter` hooks run again. Local state, scroll offsets, hover and focus start anew. The entity of an element is another one: ask `ui.find(key)` again. `world.projection.onConverged(listener)` |
+| 0.14.2 | Flow config `holdMs`: how long an answer a closed gate refused is kept for the next gate. Every node failure is an `error` entry `flow:error` in the log. `recover` on the safe node. The audio context is asked to run at start, so `audio.unlocked()` can be true with no touch |
+| 0.14.1 | CI only |
+| 0.14.0 | **Engines: Bun ≥1.4.2.** `game.restore` of a popup bookmark mounts the bookmark's scene also on a page that shows another scene. `flow.restore` also resolves when the loop ends first |
+| 0.13.3 | A bookmark taken while a popup waits for its answer names the waiting transit node and carries `rest: { path, input }`. A restore of it runs that node again and resolves once its gate is open |
+| 0.13.2 | Under `moku-game dev` an asset file saved with new bytes swaps in the running game; a new, removed or renamed one reloads the page. The dev event `assets:replaced`. `"sideEffects"` lists the root entry only, so a hot swap of a module that imports `@moku-labs/game` no longer reloads the page |
+| 0.13.1 | `moku-game dev` runs the scan of `keys` at start and on a save of an asset or a strings file, so `generated/` stays fresh. `watchKeys` in `@moku-labs/game/cli` for the editor. `dev` writes `.moku/assets-stamp.ts`, and every file answers `Cache-Control: no-store` |
 | 0.13.0 | `moku-game keys` writes the dev manifest to `generated/manifest.json`, not `<root>/manifest.json`. `dev` serves it on `/manifest.json`, so the page still fetches `manifest.json` next to itself. The project index reads it by default. The build output is unchanged: `dist/assets/manifest.json`. `moku-game-assets` keeps its own `--manifest` default |
 | 0.12.0 | `moku-game visual` runs `tests/visual/index.ts` against `tests/visual/baselines/`. `test-suffix` passes the `index.ts` of a test kind folder. A texture in an `fx/` folder packs into the `fx` atlas group. Root exports `messageArgument`, `messageDuration` (a generated strings module imports them). `parseVisualArgv` reads `--pixels` |
 | 0.11.0 | `PlatformApi.exit()`. The page bundles only the system plugins `config.ts` names |
@@ -58,17 +67,17 @@ is refused when it equals any plugin name above, or `log` / `env`.
 | `lifecycle` | Standard | time | The stack of pause reasons: `"background"`, `"devtools"`, `"system-dialog"`, `"device-lost"`, any string | `push(reason)`, `pop(reason)`, `reasons()`, `isPaused()` |
 | `model` | Very Complex | — | The `session` tree and the save document `{ player, rng }`; transactions, rest-point rollback, rng streams, migrations | `store.load()`, `store.snapshot()` (frozen `{ player, session, rng }`), `store.begin()`, `store.markRest()`, `store.markBarrier(txId)`, `store.rollback()`, `store.restore(input)`, `store.flush()`, `rng.peek(id)` |
 | `clock` | Standard | — | Trusted time: monotonic `now()`, one `elapsed` signal at the next due moment | `now()`, `scheduleAt(moment \| undefined)`, `onElapsed(listener)`, `poke()`, `dueAt()` |
-| `flow` | Very Complex | time, lifecycle, model, clock | The graph: runner, gate, inbox, effects gateway, features registry | `run()`, `onEnter("load" \| "scene", cb)`, `walk(route, { from? })`, `bookmark()`, `restore(bookmark)`, `describe()`, `state()`, `history()`, `setMode("live" \| "fast")`; `gate.answer({ intent, payload? }): boolean`, `gate.pointer(active)`, `gate.state()`; `inbox.post({ type, payload? })`; `fx.handle(kind, handler, { runInFast? })`, `fx.dispatch(descriptor)`; `features.register(name, description)`, `features.all()`, `features.contributions(slot)` |
-| `world` | Very Complex | time, model, flow | A zero-dependency ECS and the projection from committed state to entities: keyed reconcile of one `view(item)`, retarget motions, despawn queue, named layers | `ecs.spawn(owner, components)`, `ecs.query(...C)`, `ecs.system(def)`, `ecs.set(entity, C, patch)`, `ecs.changed(C)`, `ecs.snapshot()`, `ecs.mode()`; `projection.mount(names, owner)`, `projection.replace(spec)` (dev hot swap), `projection.setLayers(list)`, `projection.settle(entity)`, `projection.keyOf(entity)`, `projection.entityOf(projection, key)` |
+| `flow` | Very Complex | time, lifecycle, model, clock | The graph: runner, gate, inbox, effects gateway, features registry | `run()`, `onEnter("load" \| "scene", cb)`, `walk(route, { from? })`, `bookmark()` (the last rest node, or the transit node that waits for a popup's answer, then with `rest`), `restore(bookmark)`, `describe()`, `state()`, `history()`, `setMode("live" \| "fast")` (throws while a transit node waits at the gate); `gate.answer({ intent, payload? }): boolean` (`false` at a closed gate: the answer is held for the next gate, see `holdMs`), `gate.pointer(active)`, `gate.state()`; `inbox.post({ type, payload? })`; `fx.handle(kind, handler, { runInFast? })`, `fx.dispatch(descriptor)`; `features.register(name, description)`, `features.all()`, `features.contributions(slot)` |
+| `world` | Very Complex | time, model, flow | A zero-dependency ECS and the projection from committed state to entities: keyed reconcile of one `view(item)`, retarget motions, despawn queue, named layers | `ecs.spawn(owner, components)`, `ecs.query(...C)`, `ecs.system(def)`, `ecs.set(entity, C, patch)`, `ecs.changed(C)`, `ecs.snapshot()`, `ecs.mode()`; `projection.mount(names, owner)`, `projection.replace(spec)` (dev hot swap), `projection.setLayers(list)`, `projection.settle(entity)`, `projection.keyOf(entity)`, `projection.entityOf(projection, key)`, `projection.onConverged(listener)` (since 0.14.3: after the reconcile of a restore or a load) |
 | `renderer` | Very Complex | time, lifecycle, world | Pixi v8 host loaded lazily, one `sync` system that owns every display object, the reference viewport, frame stats | `host.ready()`, `host.kind()`, `host.canvas()`, `host.pixi()`, `host.device()`, `host.gl()`; `sync.hitTest(x, y, accept)`, `sync.hitAll(x, y)`, `sync.boundsOf(entity)`, `sync.hitBoxOf(entity)`, `sync.textures.provide(fn)`, `sync.fonts.install(key, fnt, texture)`, `sync.filters.set(entity, slots)`, `sync.displayOf(entity)`, `sync.debug.nineSlice(on)`; `viewport.toReference(x, y)`, `viewport.toScreen({ x, y })`, `viewport.size()`; `stats()`, `capture(options?)` (dev only, `{ png, legend? }`; options `legend`, `layers`, `sheet`, `against`) |
 | `input` | Standard | flow, world, renderer | Gestures as data components `Tappable`, `Pressable`, `Draggable` (`{ payload, carry }`: `carry` lists keys of the same projection that ride along, a solitaire stack), `DropTarget`, `Swipeable`, `Traceable` (a word-game path of cells), `Touchable`, `Held`, `Hovered`, `PointerOver`, `Pressed`, `Traced` (on every cell of the trace in progress), `Pointer`; the intent reaches `flow.gate`. A trace answers once on release: `{ intent, payload: { path: [payload, …] } }` | `tap(target)`, `press(target)`, `drag(from, to)`, `swipe(target, direction)`, `trace(path)`, `pressKey(key, { shift })` |
 | `assets` | Complex | flow, renderer | Manifest, five tiers, graph-driven preload, texture budget with LRU unload, typed keys from the `./assets` door | `load(bundle)`, `unload(bundle)`, `isLoaded(bundle)`, `texture(key)`, `font(key)`, `audio(key)` (`{ bytes, mime }` since 0.4.0), `usage()` |
-| `scenes` | Standard | flow, world, assets | A scene as a declaration: bundle, layers, projections, `music`. A node names its scene; the switch runs in `flow.onEnter("scene")` | `current()`, `expect(id)` (the scene the next rest node without its own `scene` mounts; the restore door calls it; an unknown id throws) |
+| `scenes` | Standard | flow, world, assets | A scene as a declaration: bundle, layers, projections, `music`. A node names its scene; the switch runs in `flow.onEnter("scene")` | `current()`, `expect(id)` (the scene the next node without its own `scene` mounts: a rest node, or a transit node in live mode; an `over` node takes it also over another mounted scene; the restore door calls it; an unknown id throws) |
 | `anim` | Complex | flow, world, renderer | The one tween core, timelines as frozen data from typed slots, `defineMotion` for enter/exit/change, the `Frames` component, the `AnimPlayer` resource a system plays through: `res(AnimPlayer).play(animation, slots)` | `play(animation, slots)`, `finishAll()`, `active()`, `onMark(fn)`, `replace(definition)` (dev hot swap), `setReducedMotion(on)`, `reducedMotion()` |
 | `i18n` | Complex | flow | Strings as data: `tr(key, params)` is a `Message`; ICU MessageFormat compiled by `compileStrings`; `Part[]` at run time | `locale()`, `setLocale(locale)` (async), `format(message, locale?)`, `plain(message)`, `has(key)`, `duration(ms, style?)`, `locales()`, `replace(locale, messages)` (dev hot swap of a generated strings file). ICU `{x, duration, short}`; a string may be `{ "text", "note" }` for translators; pseudo-locale `en-XA` |
 | `text` | Complex | time, flow, world, renderer, assets, i18n | The `Text` component, `label()`, `defineTextStyles()`, tags `<b> <i> <color=#hex> <icon=key>`, measurement from the font's advance table, BitmapText from MSDF fonts; `bind(Component, "field", { format? })` shows a numeric component field (`int`, `mm:ss`, `h:mm:ss`, `duration`); `Countdown({ until })` counts down to a `clock` moment | `measure(content, style)`, `hasGlyph(char, style)`, `styles()`, `replaceStyles(styles)` (dev hot swap) |
 | `ui` | Very Complex | input, anim, text | A screen is a projection whose `view` returns JSX; reconciled by identity into entities, one Yoga solve per change; `defineComponent` with `local` and `outcomes`, `popup` as an effect, `defineStyle`, `defineTokens`; the `input` tag is a text field; `scroll` has a windowed form `rows`, `rowHeight`, `overscan` (5), `row`; plays `change` hooks of any component in `motion`; emits the dev global event `ui:hot-swap` | `tree()` (a text node carries `content`, the words it draws after `tr()` and `bind`; a text field carries `value`), `find(key)`, `lint()`, `fill(key, value)` |
-| `audio` | Standard | lifecycle, model, flow, assets, scenes | Opt-in. Buses `master`, `music`, `sfx`; `sfx()` and `music()` descriptors; the scene's `music`; volumes from the committed player; music `"decode"` (gapless buffer) or `"stream"` (`<audio>` element, about 12 MB instead of 58 MB); the iOS audio session (`"ambient"` by default) | `setVolume(bus, value)`, `volume(bus)`, `mute(bus, on)`, `muted(bus)` (since 0.4.4), `unlocked()`, `journal()` |
+| `audio` | Standard | lifecycle, model, flow, assets, scenes | Opt-in. Buses `master`, `music`, `sfx`; `sfx()` and `music()` descriptors; the scene's `music`; volumes from the committed player; music `"decode"` (gapless buffer) or `"stream"` (`<audio>` element, about 12 MB instead of 58 MB); the iOS audio session (`"ambient"` by default) | `setVolume(bus, value)`, `volume(bus)`, `mute(bus, on)`, `muted(bus)` (since 0.4.4), `unlocked()` (since 0.14.2 true at start where the shell asks for no gesture; a browser tab unlocks on the first `pointerdown` or `touchend`), `journal()` |
 | `effects` | Complex | flow, world, renderer, assets, anim | Opt-in. Particles (`defineEmitter`, `Emitter`); filters (`defineFilter` with WGSL + GLSL twin; built-in `Glow`, `Outline`, `Blur`, `ColorMatrix`, `Noise`, `Displacement`, `Alpha`). Headless draws nothing | `stats()` |
 | `platform` | Standard | lifecycle, flow, input | The phone as a `PlatformProvider`: pause/resume → `"background"`, Back chain (Escape, then intent `back`, then `exit()`), `haptic` effect, `keepAwake`. Inert without a provider. The shell fills the provider from `config.ts` `system` | `back()`, `exit()` (since 0.11: leaves through the provider; a throw is logged; nothing without a provider) |
 
@@ -124,7 +133,7 @@ flowchart LR
 | `@moku-labs/game/app` | anywhere | `defineGameApp`, `startMoment` (`1_000_000`), types `GameConfig`, `GameDefinition`, `GameApp`, `GameHandle`, `GamePluginConfigs`, `HeadlessSeams`, `ScreenSeams`, `MemoryProvider`, `Scenario`, `PageAgent`, `SaveKind`, `SystemName`. No `node:` import, no system or native package |
 | `@moku-labs/game/app/page` | browser | `startPage(game, config, { scenarios?, system?, agents?, devModules? })`: the page `moku-game` writes calls it |
 | `@moku-labs/game/app/system` | browser, native shell | `systemShellOf`, `fromSystem`, `storeSave`, `createSystemApp`, types `SystemApp`, `SystemSlice`, `StoreSlice`, `SystemModules` |
-| `@moku-labs/game/cli` | node, bun | `runCli`, `preparePage(root, { agents?, preload?, servePlugins? })` → `{ html, bunfig }` (the editor calls it) |
+| `@moku-labs/game/cli` | node, bun | `runCli`, `preparePage(root, { agents?, preload?, servePlugins? })` → `{ html, bunfig }` (the editor calls it), `watchKeys(root, { onError? })` → `{ close() }` (since 0.13.1: the keys watch of `dev` for a server the caller runs; the editor calls it next to `preparePage`); types `PreparePageOptions`, `PreparedPage`, `WatchKeysOptions`, `KeysWatcher` |
 | bin `moku-game` | bun | `dev [--port 3000] [--packed]`, `build [--out dist/web]`, `native build|dev|doctor|clean [<target>] [--simulator]`, `keys [--check]`, `pack [--no-cache]`, `visual [--update] [--only <name>] [--no-pixels \| --pixels] [--webgl] [--dir <path>] [--tests <file>] [--url <url>]`, `help`. Every command: `--root`, `--preload`, `--serve-plugin` |
 
 | `moku-game` flag | Command | Default | What |
@@ -133,7 +142,7 @@ flowchart LR
 | `--preload <path>` | every | none | A file Bun preloads. Repeats |
 | `--serve-plugin <path>` | `dev`, `build`, `native`, `visual` | none | A Bun plugin the page bundles with, after the hot plugin. Repeats |
 | `--port <n>` | `dev` | `3000` | An integer 0-65535. `0` takes a free port |
-| `--packed` | `dev` | off | Serves `dist/assets` instead of the raw files |
+| `--packed` | `dev` | off | Serves `dist/assets` instead of the raw files, and does not watch the keys |
 | `--out <dir>` | `build` | `dist/web` | The output folder, replaced by the run. A folder that is the game, holds it, touches `dist/assets`, or lies in the game outside `dist/` is refused |
 | `--simulator` | `native build` | off | iOS: the simulator build |
 | `--check` | `keys` | off | Fails when an output is out of date |
@@ -147,15 +156,28 @@ flowchart LR
 | `--url <url>` | `visual` | the page served for the run | A page that is served already, such as `moku-game dev` |
 
 The exit code is `0` on success, else `1` and a `[game] …` line. `visual` exits `1` when a checkpoint
-differs or a test fails. What `moku-game` writes: `dev` writes `.moku/{index.html,dev.ts,main.ts,bunfig.toml}`;
+differs or a test fails. What `moku-game` writes: `dev` writes `.moku/{index.html,dev.ts,main.ts,bunfig.toml,assets-stamp.ts}`;
 `visual` writes its own page into `.moku/visual/` when the pixel leg runs without `--url`, so it runs
 while `dev` or the editor serves the game; `native` writes `.moku/tauri` and `dist-native`; `build`
 writes nothing under `.moku/`.
 
+**`dev` keeps `generated/` fresh** (since 0.13.1, on the raw files only):
+
+- At start it runs the scan of `keys` before the page is written. A game needs no `moku-game keys`
+  by hand before `dev`.
+- A save of an asset file (`.png`, `.webp`, `.fnt`, `.mp3`, `.m4a`) or of a `strings/<locale>.json`
+  scans again, 100 ms after the last file event, and prints `› keys: <path>` or `› keys: <path> and
+  <n> more`.
+- A failed scan is one warning, `[game] keys: <message>`. The server runs on.
+- A changed layer in `config.ts` needs a restart. `--packed` watches nothing. `visual` does not
+  watch: it still stops without `generated/manifest.json`.
+- Every file the dev server answers carries `Cache-Control: no-store`.
+- `keys` is for a run without the dev server, `keys --check` for CI.
+
 | `defineGameApp` key | Default | What |
 |---|---|---|
 | `flow`, `player`, `session` | required | The main flow, the new player, the session at every start |
-| `safeNode` | the start of the main flow | The checkpoint after a failed retry |
+| `safeNode` | the start of the main flow | The checkpoint after a failed retry. Since 0.14.2 its `recover` runs first, when the node has one |
 | `referenceLong`, `seed` | `1920`, `42` | Layout long side; the rng seed of a new save |
 | `shared`, `features`, `plugins` | none, `[]`, `[]` | The screen app composes them in this order, after the engine plugins |
 | `headless` | `{}` | `{ features?, plugins? }`: what `game.headless()` composes (`logicOnly` of the features) |
@@ -270,9 +292,20 @@ write, so a game sets nothing. `moku-game build` never loads it.
 | `.tsx`, `styles.ts`, `view.ts`, `animations.ts`, `effects.ts`, `generated/strings.<locale>.ts`; any `.ts` directly in `styles/`, `motion/`, `effects/`, `views/`, `world/projections/`, `world/layout/` of a feature or of `shared/` | Swaps the module in the running page: same state, same node, no reload. Logs `ui:hot-swap` and emits the global event |
 | `rules/`, `nodes/`, `flows/`, `state.ts`, `tables.ts`, `kit.ts`, a feature `index.ts`, `world/components/`, `world/systems/` | Reloads the page; the editor restores the state |
 | A view file that exports a scene, system, ECS component, filter, flow, node, feature, plugin, a new projection or a new animation | Refused: `ui` logs `ui:hot-refused` and throws, and Bun reloads the page |
+| A string value or a new key in `strings/<locale>.json` (since 0.13.1, needs the keys watch) | Swaps: the watch writes `generated/strings.<locale>.ts`, a view module |
+| An asset file saved with new bytes: a texture, a `.fnt` or its page, a sound (since 0.13.2, needs the keys watch) | Swaps in the loaded bundles, same key, no reload. `assets` emits `assets:replaced` |
+| An asset file that is new, removed or renamed, also a changed nine-slice tag in the file name | Reloads the page; the editor restores the state |
 
 - What swaps: styles, components, function components, projections of a registered name, animations,
-  text styles, emitters, strings. After a strings JSON edit run `bun run keys`: its output is what swaps.
+  text styles, emitters, strings, asset bytes.
+- The keys watch runs under `moku-game dev` on the raw files and under the editor (0.9.5 and later, through
+  `watchKeys`). Only a game with a server of its own runs `bun run keys` after a strings JSON edit.
+- The asset swap: the watch writes `.moku/assets-stamp.ts` (`{ files, changed }`), which `main.ts`
+  imports. Not with `--packed`, not in a built game, not headless. A bundle that is not loaded reads the
+  new bytes on its next load. A sound that is playing plays on with the old bytes. A running particle
+  effect of a replaced texture starts again. A file that cannot be fetched or decoded logs
+  `assets:replace-failed` and the bundle keeps the old asset. An image outside every `assets/` folder is ignored.
+- A view module may import the root `@moku-labs/game` (since 0.13.2).
 - Keep a view helper in the module of the projection that uses it. A function another module stored into
   an object at load time keeps the old version.
 - A game with a server of its own lists the plugin in its own `bunfig.toml`: `[serve.static]` `plugins =
@@ -316,7 +349,7 @@ folder (`ui.fx`) is not an fx folder.
 
 ## Events
 
-One event is global: `ui:hot-swap`, so `effects` hooks it with no `depends` on `ui`. Every other event
+One event is global: `ui:hot-swap`, so `effects` and `assets` hook it with no `depends` on `ui`. Every other event
 belongs to a plugin. `time`, `clock`, `text`, `audio`, `effects`, `platform` emit nothing; `ui` emits only
 the dev `ui:hot-swap`.
 
@@ -324,19 +357,20 @@ the dev `ui:hot-swap`.
 |---|---|---|---|
 | `lifecycle:changed` | `lifecycle` | `{ reason, action: "push" \| "pop", reasons, paused, resumed }` | The pause stack changed; `resumed` only on the change that emptied it |
 | `model:committed` | `model` | `{ roots: ("player" \| "session" \| "rng")[], cause: "edge" \| "rollback" \| "restore" \| "load" }` | Committed state changed |
-| `flow:edge` | `flow` | `{ flow, node, outcome, payload, next, patches: { doc, session }, index, now }` | After the commit of an edge |
-| `flow:rest` | `flow` | `{ path, checkpoint }` | The graph entered a rest node |
-| `flow:error` | `flow` | `{ path, error, rolledBackTo, retry }` | A node failed and the graph rolled back |
+| `flow:edge` | `flow` | `{ flow, node, outcome, payload, next, patches: { doc, session }, index, now }` | After the commit of an edge. The recovery of the safe node is an edge too: `node` and `next` are the safe node, `outcome` is `"recover"` |
+| `flow:rest` | `flow` | `{ path, checkpoint }` | The graph entered a rest node. Also once when `flow.restore` enters the node of a bookmark, for a transit node too: `path` is then no rest node and `checkpoint` is false |
+| `flow:error` | `flow` | `{ path, error, rolledBackTo, retry }` | A node failed and the graph rolled back. Since 0.14.2 the engine also writes it into the log as an `error` entry `flow:error` with `{ path, rolledBackTo, retry, error: { message, stack } }`: read it with `app.log.trace()` or `game.log` |
 | `world:reconciled` | `world` | counts per reconcile | Dev only, behind `reconciledEvent` |
 | `renderer:device-lost` | `renderer` | `{ kind, reason }` | GPU device or context lost; `lifecycle` pushed |
 | `assets:bundle-loaded` | `assets` | `{ bundle, tier, mb, reason: "boot" \| "enter" \| "request" \| "preload" }` | A bundle entered memory |
 | `assets:bundle-unloaded` | `assets` | `{ bundle, tier, mb, reason: "budget" \| "request", keys }` | A bundle left memory |
 | `assets:bundle-progress` | `assets` | `{ bundle, loaded, total }` | For a loading bar; no engine plugin listens |
+| `assets:replaced` | `assets` | `{ bundle, keys }` | Dev only, since 0.13.2: a hot swap replaced files of one loaded bundle. One event per bundle per swap. `keys` are the asset keys with new bytes; `texture(key)`, `font(key)`, `audio(key)` answer the new object. `text`, `effects` and `audio` hook it. A game plugin that built something from a key hooks it with `depends: [assetsPlugin]` |
 | `scenes:changed` | `scenes` | `{ from, to, music }` | The scene switched on entering a node |
 | `anim:mark` | `anim` | `{ animation, mark }` | A `mark` step was reached |
 | `anim:finished` | `anim` | `{ animation }` | A timeline ended or was finished; never on cancel |
 | `i18n:locale-changed` | `i18n` | `{ locale }` | The new locale's module is loaded, or `replace` swapped messages of the current locale or the fallback; never at start |
-| `ui:hot-swap` | `ui`, global | `{ file: string; module: Readonly<Record<string, unknown>> }` | Dev only: a saved view module was swapped; `module` is its new exports. `effects` replaces its emitters |
+| `ui:hot-swap` | `ui`, global | `{ file: string; module: Readonly<Record<string, unknown>> }` | Dev only: a saved view module was swapped; `module` is its new exports. `effects` replaces its emitters. For `.moku/assets-stamp.ts` it is only forwarded: `assets` replaces the changed files |
 
 ```ts
 import { createPlugin, flowPlugin } from "@moku-labs/game";
@@ -392,6 +426,7 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `flow` | `retries` | `number` | `1` | Retries before `safeNode` |
 | `flow` | `settleTimeoutMs` | `number` | `2000` | How long `onStop` waits for the active node |
 | `flow` | `journalLimit` | `number` | `500` | Journal entries between checkpoints |
+| `flow` | `holdMs` | `number` | `0` | Since 0.14.2. How long an answer a closed gate refused is kept for the next gate, in ms of game time. `0`: the frame it was given in, the first answer wins. Above `0`: the last answer wins, dropped when older. `Infinity`: until the next gate opens. Set it above the longest transit animation a tap should survive |
 | `world` | `settleMs` | `number` | `350` | Default settle motion |
 | `world` | `reconciledEvent` | `boolean` | `false` | Emit `world:reconciled` |
 | `renderer` | `mount` | `string \| undefined` | `undefined` | Selector of the mount element; `undefined` keeps the renderer inert |
@@ -465,8 +500,8 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `key` | `game.key` | `{ key, shift? }` | route | `input.pressKey` |
 | `fill` | `game.fill` | `{ key, value }` | route | `ui.fill` |
 | `walk` | `game.walk` | `{ route }` | route | `flow.walk` |
-| `bookmark` | `game.bookmark` | — | read | `flow.bookmark()`, plus `scene`, the mounted scene, when the app has `scenes` and one is mounted |
-| `restore` | `game.restore` | `{ bookmark? }` or `{ repro? }` | raw | `scenes.expect(bookmark.scene)` when the bookmark has a `scene`, then `flow.restore(bookmark)`; or a repro. A bookmark at a popup comes back with the scene under it. A `scene` that is not a string throws |
+| `bookmark` | `game.bookmark` | — | read | `flow.bookmark()`, plus `scene`, the mounted scene, when the app has `scenes` and one is mounted. Since 0.13.3, while an effect that takes answers waits (a `popup`), the bookmark names the waiting transit node and carries `rest: { path, input }` |
+| `restore` | `game.restore` | `{ bookmark? }` or `{ repro? }` | raw | `scenes.expect(bookmark.scene)` when the bookmark has a `scene`, then `flow.restore(bookmark)`; or a repro. A bookmark at a popup comes back with the scene under it, also on a page that shows another scene (0.14.0). A bookmark of a waiting transit node runs that node again; the command answers once its gate is open, with `pending.gate` in its value, and the popup shows on the next frame. A `scene` that is not a string throws, and so does a `rest` that is not `{ path, input }`. A repro starts at a rest node only |
 | `step` | `game.step` | `{ frames, deltaMs? }` | cosmetic | `time.step` n times, also while paused |
 | `pause` / `resume` | `game.pause` / `game.resume` | — | cosmetic | `lifecycle.push/pop("devtools")` |
 | `timeScale` | `game.timeScale` | `{ scale }` | cosmetic | `time.setScale`; below 0 or not finite throws |
@@ -487,16 +522,25 @@ camelCase words joined by dots, at least two (`dice.rolls`).
 
 # @moku-labs/editor — Plugin Index
 
-**Synced version:** `0.9.3` (catalog from the `v0.9.0` tag: `llms.txt`, `llms-full.txt` §6 "Configuration
-reference", `README.md`, `package.json`, and `moku-editor --help` of the published package; 0.9.1 to 0.9.3
-from the diff between the tags: `README.md`, `llms.txt`, `llms-full.txt`, `src/plugins/pages`,
-`src/plugins/capture`). Three Moku
-cores in one package. Peers `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`, `@moku-labs/game >=0.10.0`,
-`typescript >=5.5` (the project index needs the TypeScript JS API: 6.x). Deps `preact`, `elkjs`. The tools
+**Synced version:** `0.10.8` (catalog from the `v0.9.0` tag: `llms.txt`, `llms-full.txt` §6 "Configuration
+reference", `README.md`, `package.json`, and `moku-editor --help` of the published package; 0.9.1 to 0.10.8
+from the diff between the tags: `README.md`, `llms.txt`, `llms-full.txt`, `package.json`, `src/index.ts`,
+the plugin READMEs of `pages`, `bridge`, `hub`, `link`, `workspace`, `registry`, `gameView`, `flowView`,
+and `src/plugins/pages/mcp`). Three Moku
+cores in one package. Peers `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`, `@moku-labs/game >=0.13.1`
+(since 0.9.5; `>=0.10.0` before), `typescript >=5.5` (the project index needs the TypeScript JS API: 6.x).
+Engines node ≥24, bun ≥1.4.2 (since 0.10.0). Deps `preact`, `elkjs`. The tools
 page ships prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-full.txt`.
 
 | Version | What changed |
 |---|---|
+| 0.10.5 to 0.10.8 | Nothing a game meets: a test flake in `pages`, CI and dev dependencies |
+| 0.10.4 | A reload restores only a pause the developer made (`game.pause`, the reason `devtools`). A game paused because its tab was hidden runs again after the reload. The read command `editor.clock` answers `{ frame, paused, held, reasons }`; MCP lists it as the door tool `editor_clock` |
+| 0.10.3 | Five MCP tools: `moku_device`, `moku_show`, `moku_files_find`, `moku_project`, `moku_hot_reload`. `moku_select` takes `node`. In a moku-game folder the MCP bridge and `moku_start {}` start the engine page with no html. The hub relays the editor requests `editor.device`, `editor.show`, `editor.node` to the tools page. 22 generic tools |
+| 0.10.1, 0.10.2 | CI and dev dependencies only |
+| 0.10.0 | **Engines: Bun ≥1.4.2.** The MCP door tools stay over a restart of the bin (the Hot reload switch): the bridge reconnects and keeps the list for 8 s. link `reloadGraceMs` is `8000` (was `5000`). The picker selects the element under the pointer, not the bottom layer. The Hot reload switch no longer freezes the bin. A SIGINT or SIGTERM before the engine form spawned its child ends the bin with 130 or 143 |
+| 0.9.5 | **Peer `@moku-labs/game >=0.13.1`.** The engine page runs the engine's keys watch (`watchKeys`), so `generated/` is fresh before the page is served and after a save of an asset or a strings file. Game files answer `Cache-Control: no-store` |
+| 0.9.4 | A bin the MCP bridge starts for an engine page starts in the engine form, so the hot plugin is loaded. The element card shows the style of the element a component draws for an `id` prop |
 | 0.9.3 | A series takes its planned count of shots, `floor(durationMs / intervalMs)`. A late shot is taken late. A series stops early only at `durationMs + 3 s` since its start, or on Stop. Before, a slow first capture after a page load could end a short series after one shot |
 | 0.9.2 | `moku-editor e2e` runs one Playwright process per project and spec file, prints one line per run and a summary, and holds `.moku/e2e.lock` so two runs never overlap |
 | 0.9.1 | `/manifest.json` answers from `generated/manifest.json` (game 0.13), else from the game root |
@@ -532,9 +576,15 @@ moku-editor e2e -c <playwright config> [playwright args…]                     
   imports `@moku-labs/game/cli` from the game root, calls `preparePage(root, { agents:
   ["@moku-labs/editor/agent/page"], preload, servePlugins })`, then re-runs itself as `bun
   --config=<root>/.moku/bunfig.toml <bin> <root>/.moku/index.html --root <root>`, so Bun loads the engine's
-  hot plugin. The page also imports the game's `**/*.dev.ts`.
+  hot plugin. The page also imports the game's `**/*.dev.ts`. Since 0.9.5 the bin also starts the engine's
+  keys watch, `watchKeys(root, { onError })` of the same import: `generated/` is fresh before the page is
+  served, a saved string or asset is scanned again, and a failed scan is one warning. The watch stops when
+  the child exits. A game whose `@moku-labs/game/cli` lacks `preparePage` or `watchKeys` stops the bin:
+  `[moku-editor] @moku-labs/game/cli does not resolve from <root>: install @moku-labs/game >=0.13.1 in the game`.
 - **Exit codes.** `0` help, `mcp-config`, `mcp` after stdin ended, or serving. `1` a missing or bad HTML
-  file, a failed start, a port in use, an engine page that was not written (the engine's `[game] …` line).
+  file, a failed start, a port in use, an engine page that was not written (the engine's `[game] …` line)
+  or a keys watch that did not start. `130` or `143` when the engine form gets SIGINT or SIGTERM before its
+  child is spawned.
   `2` bad arguments, or no HTML file and a root that is not a moku-game folder: `[moku-editor] <root> has
   no index.ts and config.ts: pass the game HTML file, or run in a moku-game folder`.
 - **Discovery file.** After the start the bin writes `<root>/.moku/editor.json` `{ version, pid, port, url,
@@ -565,7 +615,7 @@ moku-editor e2e -c <playwright config> [playwright args…]                     
 | `@moku-labs/editor/agent/page` | — | the engine page | Default export only: the engine's `PageAgent`. It stops a previous `globalThis.editor`, starts the agent core with `bridgePlugin` and `capturePlugin` on `{ app, name, modules }` and sets `globalThis.editor`. No side effect on import | — |
 | `@moku-labs/editor/server` | `editor-server` | Bun | `files`, `hub`, `pages` | — |
 | `@moku-labs/editor/tools` | `editor-tools` | tools page | `link`, `workspace`, `panels`, `flowView`, `gameView`, `renderView`, `stateView`, `filesView`, `consoleView` | — |
-| `@moku-labs/editor` | — | anywhere | Runtime-free: wire protocol types and helpers, `definePanel`, `errorCode` (`notInstalled` = -32008), `isReloading`, `isHotSwapEntry`, the project helpers `parseProjectState`, `parseFoundList`, `projectDelta`, `firstDefinition`, `anchorKey`, the selection helpers `isSelectionInfo`, `parseSelectionInfo`, `parseSelectParams` | — |
+| `@moku-labs/editor` | — | anywhere | Runtime-free: wire protocol types and helpers, `definePanel`, `errorCode` (`notInstalled` = -32008), `isReloading`, `isHotSwapEntry`, the project helpers `parseProjectState`, `parseFoundList`, `projectDelta`, `firstDefinition`, `anchorKey`, the selection helpers `isSelectionInfo`, `parseSelectionInfo`, `parseSelectParams`, and since 0.10.3 the types of the relayed editor requests `DeviceParams`, `DeviceInfo`, `DevicePresetInfo`, `ShowParams`, `ShowInfo`, `NodeParams`, `NodeInfo`, `WorkspaceName`, `RelayedEditorMethod` | — |
 
 Each core entry exports `createApp`, `createPlugin`, its plugin instances (`registryPlugin`, `channelPlugin`,
 `overlayPlugin`, `bridgePlugin`, `capturePlugin`; `filesPlugin`, `hubPlugin`, `pagesPlugin`; `linkPlugin`,
@@ -579,18 +629,18 @@ Each core entry exports `createApp`, `createPlugin`, its plugin instances (`regi
 
 | Plugin | Core | Tier | Purpose | Key API |
 |---|---|---|---|---|
-| `registry` | agent | Complex | Wraps doors, `.dev` modules and `editor.*` commands into entries; builds the `Manifest`; probes every door source once at start and on each manifest rebuild (never `game.rect` or `game.locate`). A source that throws is listed `available: false` with a `reason`, and its reads answer -32008 `not_installed` | `manifest`, `source`, `command`, `add`, `envelope`, `clock` |
+| `registry` | agent | Complex | Wraps doors, `.dev` modules and `editor.*` commands into entries; builds the `Manifest`; probes every door source once at start and on each manifest rebuild (never `game.rect` or `game.locate`). A source that throws is listed `available: false` with a `reason`, and its reads answer -32008 `not_installed` | `manifest`, `source`, `command`, `add`, `envelope`, `clock` (`{ frame, paused, held, reasons }` since 0.10.4: `held` is true while the pause reasons include `"devtools"`) |
 | `channel` | agent | Standard | In-process `EditorChannel`, heartbeat `{ frame, paused, at, heap? }` (`heap` in Chromium) | `read`, `watch`, `run`, `status`, `heartbeat`, `onHeartbeat` |
 | `overlay` | agent | Standard | Preact card over the game; off by default; command `editor.overlay` | `open`, `close`, `isOpen` |
-| `bridge` | agent, opt-in | Complex | Websocket to the hub: hello, requests, throttled values, taps (at most one per 50 ms), backoff 1 s to 30 s; keeps a `game.bookmark` in `sessionStorage` across Bun's reload; command `editor.reload { restore? }` | `status`, `session` |
+| `bridge` | agent, opt-in | Complex | Websocket to the hub: hello, requests, throttled values, taps (at most one per 50 ms), backoff 1 s to 30 s; keeps a `game.bookmark` in `sessionStorage` across Bun's reload and pauses again only when the developer had paused the game (0.10.4); commands `editor.reload { restore? }` and `editor.clock` (read: `{ frame, paused, held, reasons }`) | `status`, `session` |
 | `capture` | agent, opt-in | Standard | `editor.capture { maxWidth?, key?, rect?, format?, quality? }` (JPEG 0.8 by default; `key` or `rect` crops plus 8 px), `editor.series`, `editor.seriesStop`, `editor.sheet { frames, everyMs, maxWidth?, format?, quality? }` (one `game.capture { sheet }`). Never captures on its own | — |
 | `files` | server | Standard | Project-root sandbox: allow and deny globs, atomic write with sha1 version, image captures under `.moku/captures/`, the project index of the root (opened on start, kept fresh by its watch) | `list`, `read`, `write`, `writeBinary`, `readBinary`, `resolve`, `root`, `find`, `project` |
-| `hub` | server | Complex | Websocket switchboard: guard (Host, Origin, token), sessions `s-xxxx` with a heartbeat readout, routing, backpressure, the `hotReload` notification, the editor page's `selection` and the `editor.select` relay; publishes `editor.project`; wraps `Bun.serve` | `serve`, `token`, `sessions`, `fetch`, `websocket`, `addRoutes`, `guard`, `publish`, `path` |
+| `hub` | server | Complex | Websocket switchboard: guard (Host, Origin, token), sessions `s-xxxx` with a heartbeat readout, routing, backpressure, the `hotReload` notification, the editor page's `selection` and the relay of `editor.select`, `editor.device`, `editor.show` and `editor.node` to the tools page; publishes `editor.project`; wraps `Bun.serve` | `serve`, `token`, `sessions`, `fetch`, `websocket`, `addRoutes`, `guard`, `publish`, `path` |
 | `pages` | server | Complex | Serves the prebuilt tools page, boot JSON, `/assets/*`, `/hello`, `/hmr`; home of the bin, of `.moku/editor.json` and of the stdio MCP bridge | `routes`, `attachServer`, `hotReload`, `setHotReload` |
-| `link` | tools | Complex | The one connection: boot JSON, socket, session choice, remote channel, files client, taps, heap, hot reload state, the project state, the selection. A -32008 watch is neither logged nor retried | `read`, `watch`, `run`, `status`, `manifest`, `onManifest`, `sessions`, `session`, `choose`, `retry`, `expectReload`, `boot`, `frameUrl`, `isOtherTab`, `onTap`, `heap`, `files` (`list`, `read`, `write`, `writeBinary`, `readBinary`, `find`), `project`, `hotReload`, `onHotReload`, `setHotReload`, `selection`, `notify`, `handle` |
+| `link` | tools | Complex | The one connection: boot JSON, socket, session choice, remote channel, files client, taps, heap, hot reload state, the project state, the selection, the handlers of the relayed editor requests (`handle("select" \| "device" \| "show" \| "node", handler)`, one per method). A -32008 watch is neither logged nor retried | `read`, `watch`, `run`, `status`, `manifest`, `onManifest`, `sessions`, `session`, `choose`, `retry`, `expectReload`, `boot`, `frameUrl`, `isOtherTab`, `onTap`, `heap`, `files` (`list`, `read`, `write`, `writeBinary`, `readBinary`, `find`), `project`, `hotReload`, `onHotReload`, `setHotReload`, `selection`, `notify`, `handle` |
 | `workspace` | tools | Complex | Shell: top bar (compact with a ⋯ menu below 900 px), rail (Game first), palette, toasts, keys, prefs (theme, density, preview, device and fold, Show taps, sound), 21 device presets (default iPhone 18 Pro), the one game iframe (`data-game-frame`) with a playable pinned preview, Reference mode, the D-07 reload and Bun hot reload | `active`, `show`, `theme`, `setTheme`, `density`, `setDensity`, `preview`, `setPreview`, `reference`, `setReference`, `device`, `setDevice`, `devices`, `gameFrame` (`reload({ restore? })`), `palette`, `toast`, `keys`, `mount`, `host`, `badge`, `previewZone`, `overlayInGame`, `setOverlayInGame`, `onPrefs`, `muted`, `setMuted`, `hotReload`, `setHotReload` |
 | `panels` | tools | Standard | Panel host for `definePanel` specs | `register`, `run`, `list`, `mountInto` |
-| `flowView` | tools | VeryComplex | Flow graph canvas with ELK, focus, Info-tab neighbours, Find current, trail, code and style inspector | `camera`, `focus`, `flows`, `layout` |
+| `flowView` | tools | VeryComplex | Flow graph canvas with ELK, focus, Info-tab neighbours, Find current, trail, code and style inspector; answers the relayed `node` request (it selects the node, it does not show Flow) | `camera`, `focus`, `flows`, `layout` |
 | `gameView` | tools | Complex | Device stage, Sound switch, element picker, style card, Code section, Reference proxies and area drags, the pick for the chat (bookmark, two JPEGs, a card file, one line), the selection published to MCP, screenshots, series, capture card, contact sheet | `pick`, `selected`, `select`, `inspect`, `scene`, `locate`, `highlight`, `manifest`, `capture`, `series`, `stopSeries`, `openSheet`, `copyReference`, `fold`, `bookmarks` |
 | `renderView` | tools | Standard | Metric tiles (JS heap in Chromium, "Effects not installed in this game"), render tree, textures, bundles, pools, release log | `refresh`, `snapshot`, `reveal`, `highlight`, `sortTextures`, `filterBundle` |
 | `stateView` | tools | Standard | Player and session trees, last commit by diffing `game.model`, runner card | `lastCommit`, `note`, `onCommit`, `tainted`, `graph`, `expanded`, `setExpanded`, `expandAll` |
@@ -612,7 +662,7 @@ on `registry`); server `files → hub → pages`; tools `link → workspace → 
 | server | `files` | `root: "."`, `allow: ["**/*.ts", "**/*.tsx", "**/*.json", "**/*.md", "**/*.css", ".moku/**"]`, `deny: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/.env*"]`, `project: true` (open the project index on start) |
 | server | `hub` | `path: "/__editor"`, `allowOrigins: []`, `callTimeoutMs: 5000`, `silentAfterMs: 6000` |
 | server | `pages` | `title: "moku editor"`, `editorUrl: "vscode://file/{path}:{line}"`, `pageDir`, `gameUrl: "/"` |
-| tools | `link` | `retryMs: 1000`, `boot: "#moku-editor-boot"`, `reloadGraceMs: 5000` |
+| tools | `link` | `retryMs: 1000`, `boot: "#moku-editor-boot"`, `role: "page"` (`"tools"` for a plain tools client that gets no relayed request), `reloadGraceMs: 8000` (`5000` before 0.10.0) |
 | tools | `workspace` | `defaultWorkspace: "game"`, `storageKey: "moku-editor"`, `reloadTimeoutMs: 15000`, `hotReloadWaitMs: 1500`, `toastMs: 2600` |
 | tools | `flowView` | `historyLast: 20`, `trailLength: 6`, `rejectedOutcomes: ["rejected"]`, `styleSaveDelayMs: 600`, `layout { file: ".moku/editor/layout.json", worker: true, saveDelayMs: 400 }`, `zoom { min: 0.08, max: 3, defaultMin: 0.8 }`, `hub { minOutcomes: 6, minReturns: 4 }` |
 | tools | `gameView` | `capturesDir: ".moku/captures"` (that folder or one under it), `captureCardMs: 10000`, `seriesDurationsMs`, `seriesIntervalsMs`, `seriesWarnShots: 200` |
@@ -660,6 +710,11 @@ off, because TypeScript 7 has no JS API.
   updated". View modules: `.tsx`, `styles.ts`, `view.ts`, `animations.ts`, `effects.ts`, generated strings,
   and since game 0.9 a `.ts` directly in `styles/`, `motion/`, `effects/`, `views/`, `world/projections/`
   or `world/layout/`. A logic module still reloads and restores.
+- The keys watch (editor 0.9.5, game 0.13.1): a saved `strings/<locale>.json` is compiled and swaps; an
+  asset file saved with new bytes swaps in the loaded bundles (game 0.13.2); a new, removed or renamed
+  asset file reloads the page. No `moku-game keys` by hand while the bin runs.
+- A reload brings back a pause only when the developer made it (0.10.4). A popup that was open comes back
+  open (game 0.13.3).
 - The Hot reload switch (key H) restarts the bin's server with HMR flipped on the same port; every socket
   drops for about a second.
 
@@ -667,12 +722,16 @@ off, because TypeScript 7 has no JS API.
 
 `claude mcp add moku-editor -- bunx moku-editor mcp --port 3000` in a moku-game folder (`moku-editor
 mcp-config` prints the `.mcp.json` snippet). The bridge is a separate process and a hub tools client. It
-uses a running bin through `.moku/editor.json`, or starts one and owns it.
+uses a running bin through `.moku/editor.json`, or starts one and owns it. In a moku-game folder it needs
+no html: it starts the engine page, at startup and on `moku_start {}` (0.10.3). After a restart of the bin
+it reconnects 0, 1, 3 and 7 s after the close and keeps its door tools for 8 s (0.10.0).
 
 | Tools | What |
 |---|---|
-| Generic (17) | `moku_status`, `moku_sessions`, `moku_manifest`, `moku_read`, `moku_wait`, `moku_run`, `moku_screenshot` (JPEG, max width 1080, `key` crops to one ui element), `moku_series`, `moku_reference` (the newest or a named pick card), `moku_selection`, `moku_select` (`{ key }` or `{ rect }`), `moku_files_list`, `moku_files_read`, `moku_files_write`, `moku_reload`, `moku_start`, `moku_stop` |
-| Door tools | One tool per command door of the selected session. Name: the id with `.` as `_` (`game.tap` is `game_tap`); cheat and raw doors carry the effect first (`cheat_game_fill`, `raw_game_restore`). No tool for the doors the generic tools cover: `game.capture`, `editor.capture`, `editor.sheet`, `editor.series`, `editor.seriesStop`, `editor.reload` |
+| Generic (22) | `moku_status`, `moku_sessions`, `moku_manifest`, `moku_read`, `moku_wait`, `moku_run`, `moku_screenshot` (JPEG, max width 1080, `key` crops to one ui element), `moku_series`, `moku_reference` (the newest or a named pick card), `moku_selection`, `moku_select` (exactly one of `{ key }`, `{ rect }`, `{ node }`), `moku_device`, `moku_show`, `moku_files_list`, `moku_files_read`, `moku_files_write`, `moku_files_find`, `moku_project`, `moku_reload`, `moku_hot_reload`, `moku_start`, `moku_stop` |
+| New in 0.10.3 | `moku_device { preset?, orientation?, folded? }`: reads or sets the device of the tools page; answers `{ preset, orientation, folded, w, h, presets }`, `w` × `h` the game viewport in CSS px; `{}` reads. `moku_show { workspace? }`: `flow`, `game`, `render`, `state`, `files` or `console`; answers `{ workspace, workspaces }`; `{}` reads. `moku_select { node }`: opens the Flow workspace and focuses the node; answers `{ id, selected, places }`, the places being the node's files and lines, no card. `moku_files_find { key }`: where a project-index key lives (`node:board/merge`, `jsx:coins`): `{ path, binding?, line, hash, broken? }`; index off: `isError` "project index off: <reason>". `moku_project { path?, prefix? }`, at most one: the key count per kind, the keys of a prefix with their files, or what one file defines and uses; `jsx:` keys are not in it. `moku_hot_reload { on }`: switches Bun hot reload; the editor restarts its server and the call returns once it is back, at most 15 s; call `moku_reload` after it; a game's own server is `isError` |
+| Need the tools page open | `moku_select`, `moku_device`, `moku_show`. No page: -32003 `no_editor_page` with the URL. A bin or a page older than the bridge reads "moku-editor or its editor page is older than the bridge; restart moku-editor and reload the page" |
+| Door tools | One tool per command door of the selected session. Name: the id with `.` as `_` (`game.tap` is `game_tap`); cheat and raw doors carry the effect first (`cheat_game_fill`, `raw_game_restore`). No tool for the doors the generic tools cover: `game.capture`, `editor.capture`, `editor.sheet`, `editor.series`, `editor.seriesStop`, `editor.reload`. `editor.clock` is a door tool, `editor_clock` (0.10.4) |
 
 Deny the cheat and raw doors with `{ "permissions": { "deny": ["mcp__moku-editor__cheat_*",
 "mcp__moku-editor__raw_*"] } }`. Pictures need the game page visible: a paused or hidden game answers
@@ -688,12 +747,18 @@ installed. Every message starts with `[moku-editor] `.
 
 ## Compatibility with the engine
 
-- Editor 0.9 peers on game `>=0.10.0`: the engine page needs `preparePage` of `@moku-labs/game/cli`.
-  Verified together, on a fresh scaffold with TypeScript 6.0.3: editor 0.9.3 with game 0.13.0 for the
-  install, `keys`, typecheck, lint, tests, `test:visual`, `build` and `moku-editor --help`; editor 0.9.1
-  with game 0.13.0 for the running editor (`files:project-on`). Editor 0.9.2 and 0.9.3 keep the peer
-  range and change only `moku-editor e2e` and the series shot count. The editor server of 0.9.3 was not
-  started on a scaffold.
+- Editor 0.9.5 and later peer on game `>=0.13.1`: the engine page needs `preparePage` and `watchKeys` of
+  `@moku-labs/game/cli`. Editor 0.8.0 to 0.9.4 peer on game `>=0.10.0` (`preparePage` alone). An editor
+  0.9.5 or later beside game 0.13.0 or older stops at the start with `install @moku-labs/game >=0.13.1`.
+- Both packages need Bun ≥1.4.2: the engine since 0.14.0, the editor since 0.10.0.
+- Verified together, on a fresh scaffold with TypeScript 6.0.3 and Bun 1.4.3: editor 0.10.8 with game
+  0.14.9, core 1.7.6 and common 0.3.10 for the install, `keys`, typecheck, lint, tests with coverage,
+  `test:visual` twice, `build`, `moku-game-index --check` and `moku-editor --help`. `moku-game dev` was
+  started and stopped: the page and a game file answer 200 with `Cache-Control: no-store`. `moku-editor
+  --root .` was started and stopped: Game and Tools answer 200, the log has `files:project-on
+  {"files":14,"keys":12}`, and a save of `strings/en.json` printed `› keys: features/hello/strings/en.json`
+  and rewrote `generated/strings.en.ts`. Not run: a browser on either page, the MCP bridge and its new
+  tools, an asset swap, `moku-editor e2e`.
 - Element rects come from `game.locate { key }` when the manifest lists it, else `game.rect`.
   `game.capture` may answer a data URL or `{ png, legend? }`; capture takes both.
 - The Sound switch runs `game.mute` when the manifest lists it. The registry does not probe commands, so in

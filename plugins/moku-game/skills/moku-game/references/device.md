@@ -22,9 +22,9 @@ export default {
 
 ```sh
 # system names a plugin, or save is "store": the package and the Tauri peers of the list above
-bun add --exact @moku-labs/system@0.3.2 @tauri-apps/api@2.12.2 @tauri-apps/plugin-haptics@2.4.1
+bun add --exact @moku-labs/system@0.3.7 @tauri-apps/api@2.12.2 @tauri-apps/plugin-haptics@2.4.1
 bun add --exact @tauri-apps/plugin-store@2.5.0   # only with "store" in system, or save: "store"
-bun add --exact -d @moku-labs/native@0.3.3       # moku-game native
+bun add --exact -d @moku-labs/native@0.3.8       # moku-game native
 ```
 
 `@moku-labs/system` declares its Tauri packages as optional peers, so Bun does not install them. The
@@ -120,7 +120,7 @@ Facts to expect on the simulator (spike P13, iOS 26 simulator):
 A device build needs Apple signing. Claude never enters Apple credentials: it guides, the user signs in.
 
 1. The user opens Xcode → Settings → Accounts and signs in with their Apple ID; the team appears.
-2. `config.ts` carries no signing in game 0.12. The user picks the team in the generated Xcode project
+2. `config.ts` carries no signing in game 0.14. The user picks the team in the generated Xcode project
    under `.moku/tauri/` (Signing & Capabilities) and runs on the device from Xcode. The
    `moku-native:moku-native` skill lists the env vars its doctor checks; never write a secret into the
    game.

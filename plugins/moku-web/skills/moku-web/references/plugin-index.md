@@ -7,7 +7,7 @@
 
 # @moku-labs/web — Plugin & Property Index
 
-**Framework:** `@moku-labs/web` · **Synced version:** `2.4.5` · **Layer:** 2 (framework) ·
+**Framework:** `@moku-labs/web` · **Synced version:** `2.4.10` · **Layer:** 2 (framework) ·
 **Depends on:** `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4` as **`peerDependencies`** since
 v2.4.4 (dev-pinned upstream at core `1.7.1` / common `0.3.4`; before that bundled exact pins, core `1.6.0` /
 common `0.3.2` at v2.3.3). Bun and npm install peers automatically, so an app still declares neither and
@@ -40,6 +40,9 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 >   and `@moku-labs/common` as peers and list the `collection` provider. The collection README imports
 >   `collectionPlugin` from the root entry. `content` types a directive node's `data` as mdast `Data` for
 >   TypeScript 7; the type is internal. No API, config or event change.
+> - **CI and dev dependencies only (v2.4.6 to v2.4.10).** A patch release on every merge to `main`,
+>   Dependabot for `@moku-labs/*`, development on Bun 1.4.3, dev pins core `1.7.5` / common `0.3.7`. No
+>   `src/`, docs or peer range change.
 >
 > **What's new in 2.3.x (vs 2.2.2) — additive, no breaking change:**
 > - **New `collectionPlugin` — static-data collection provider (v2.3.0).** The collection-keyed sibling of
@@ -145,7 +148,7 @@ construction) · **No `bin`** — the developer CLI ships as the node-only **`cl
 > `src/browser.ts` at `v2.4.5` still does NOT export it (only `collectionUrl` + `loadCollectionShard` +
 > the `Collection` types). This index is generated from `src/` — **the source is authoritative**.
 
-## 1. Framework API form (v2.4.5)
+## 1. Framework API form (v2.4.10)
 
 `@moku-labs/web` publishes **two entries** (pick by target): **`.`** for the Node SSG build (dual
 ESM+CJS, full surface) and **`@moku-labs/web/browser`** for the client bundle (ESM-only, guaranteed

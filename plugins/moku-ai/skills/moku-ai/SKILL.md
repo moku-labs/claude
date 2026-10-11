@@ -13,9 +13,11 @@ description: >
 
 # Moku AI Patterns
 
-> **Synced to `@moku-labs/ai@0.16.1`** (npm `dist-tags.latest`; catalog from the `v0.16.1` tag source).
+> **Synced to `@moku-labs/ai@0.16.8`** (npm `dist-tags.latest`; catalog from the `v0.16.8` tag source).
 > 0.15 and 0.16 change only `ark`, `fal` and `asset`: the Ark asset library, `groupName`, `fal.upload`,
 > `omni_reference_task_type`, the draft record. No task, CLI flag or build-file key of game art changed.
+> 0.16.2 adds one provider for a task: `music` on `elevenlabs` (`music_v1`, `music_v2`, `music_v2_5`). The
+> default `music` provider stays `fal`. 0.16.3 to 0.16.8 are CI, docs and dev dependencies.
 > Peers: `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`.
 > Full surface — the 24 plugins, every API, config key and event — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Provider keys:
@@ -100,7 +102,11 @@ items:
     input: { model: eleven_text_to_sound_v2, prompt: "short wooden click", durationMs: 600 }
   - id: ui/theme
     task: music
-    input: { model: elevenlabs-music-v2.5, prompt: "cozy village loop", lengthMs: 40000 }
+    input: { model: elevenlabs-music-v2.5, prompt: "cozy village loop", lengthMs: 40000 }   # fal, the default
+  - id: ui/menu
+    task: music
+    provider: elevenlabs        # 0.16.2: ElevenLabs' own Music API, needs a paid ElevenLabs plan
+    input: { model: music_v2_5, prompt: "calm menu loop", lengthMs: 30000 }
 itemsFrom: more-items.ndjson    # optional: one item per line, appended
 ```
 

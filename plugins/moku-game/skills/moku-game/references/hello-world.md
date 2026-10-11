@@ -12,16 +12,20 @@ the page, serves it, builds it and packs the art. A game writes no page, no serv
 `core/`, `shared/`, `features/`, and `game.ts` for the root flow.
 
 Derived from the engine's fixture `tests/fixtures/mini-game/`, its `docs/shell.md` and `llms.txt`, and
-the reference game `merge-game` in moku-labs/demos. Verified end to end (install, `keys`, typecheck,
-lint with the ten engine rules, tests with coverage, `keys --check`, `build`, `moku-game dev`,
-`moku-editor --root .` with the project index on, `moku-game-index --check`, `bun run test:visual` twice
-(written, then same), lefthook pre-commit) against `@moku-labs/game@0.13.0`, `@moku-labs/editor@0.9.1`,
-`pixi.js@8.22.0`, Bun 1.4.2 and the init tooling stack (`oxlint@1.86.0`, `vitest@4.0.18`,
-`typescript@6.0.3`). The pins below are one patch later, `@moku-labs/editor@0.9.3` and
-`@moku-labs/common@0.3.5`. On them the install, `keys`, typecheck, lint, tests with coverage,
-`bun run test:visual` twice, `build` and `moku-game-index --check` were run again on a fresh scaffold;
-`moku-game dev`, the editor server and the lefthook hook were not. Not run: the pixel leg of
-`moku-game visual` (it needs `playwright-core` and a browser) and `moku-game native`. When something here does not compile, read
+the reference game `merge-game` in moku-labs/demos. Verified on a fresh scaffold of these files (install,
+`keys`, typecheck, lint with the ten engine rules, tests with coverage, `keys --check`, `build`,
+`moku-game-index --check`, `bun run test:visual` twice (written, then same), `moku-editor --help`)
+against the pins below: `@moku-labs/game@0.14.9`, `@moku-labs/editor@0.10.8`, `@moku-labs/core@1.7.6`,
+`@moku-labs/common@0.3.10`, `pixi.js@8.22.0`, Bun 1.4.3 and the init tooling stack (`oxlint@1.86.0`,
+`vitest@4.0.18`, `typescript@6.0.3`). `moku-game dev` and `moku-editor --root .` were each started and
+stopped: the page, the tools page and a game file answered 200, the editor logged `files:project-on`, and
+a saved `strings/en.json` was compiled by the keys watch. No browser opened either page, so the draw, the
+hot swap in the page and the MCP tools were not seen on these pins; the last run that looked at the page
+was game 0.13.0 with editor 0.9.1. The native shell was run on the same scaffold with `@moku-labs/system@0.3.7`,
+`@moku-labs/native@0.3.8`, `@tauri-apps/api@2.12.2` and `@tauri-apps/plugin-haptics@2.4.1`: `native doctor ios`
+passed, `native build ios --simulator` built the app, and on the iPhone 17 Pro simulator (iOS 26.3) the
+page drew and two taps read "2 taps". Not run: the lefthook hook, the pixel leg of
+`moku-game visual` (it needs `playwright-core` and a browser), Android, a real iPhone and the store save. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: it is the engine in one page and always matches the
 installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_modules/@moku-labs/editor/`).
 
@@ -30,14 +34,14 @@ installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_module
 Pin exact versions. A game has no `bunfig.toml`, so pass `--exact`.
 
 ```sh
-bun add --exact @moku-labs/game@0.13.0 pixi.js@8.22.0 @moku-labs/core@1.7.1 @moku-labs/common@0.3.5
-bun add --exact -d @moku-labs/editor@0.9.3 sharp@0.34.5
+bun add --exact @moku-labs/game@0.14.9 pixi.js@8.22.0 @moku-labs/core@1.7.6 @moku-labs/common@0.3.10
+bun add --exact -d @moku-labs/editor@0.10.8 sharp@0.34.5
 ```
 
 `@moku-labs/core` and `@moku-labs/common` are peers of both packages; pin them so the game and the
 editor share one copy. `pixi.js` (`^8`) is a peer of the engine. `sharp` is an optional peer: `moku-game
-build` and `pack` need it for the asset pack. `@moku-labs/editor@0.9.3` peers on `@moku-labs/game
->=0.10.0` and `typescript >=5.5`.
+build` and `pack` need it for the asset pack. `@moku-labs/editor@0.10.8` peers on `@moku-labs/game
+>=0.13.1` and `typescript >=5.5`. Both packages need Bun ≥1.4.2.
 
 Every other dev dependency is init's tooling set of the current lint stack, at the versions
 `tooling-config.md` pins: `@types/bun`, Vitest, `@vitest/coverage-istanbul`, Biome, oxlint,
@@ -53,8 +57,8 @@ changes for a game:
 Never add `vitest@latest`: the coverage plugin must be the same version as Vitest. The engine's lint
 rules need no package of their own: they ship in `@moku-labs/game` as `@moku-labs/game/lint`.
 
-A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.2` when
-`config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.3`
+A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.7` when
+`config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.8`
 for `moku-game native`. `@moku-labs/system` alone does not build: each name in `system` needs its Tauri
 peer (`@tauri-apps/api`, `@tauri-apps/plugin-haptics`, `@tauri-apps/plugin-store`). The install lines
 and the peer of each name are in `device.md`. The hello world installs none of them.
@@ -390,7 +394,7 @@ A game is a folder at the project root. It has no `src/` and calls no `createApp
 
 A layer imports only from the layers below it: core, then shared, then features. A feature reaches
 another feature through `@features/<name>` only. Only `index.ts` and `game.ts` import `@features`.
-Run `bun run keys` after adding an asset or a message, before the typecheck.
+With no `dev` or `editor` running, run `bun run keys` after adding an asset or a message, before the typecheck.
 
 ## Working mode
 
@@ -432,14 +436,14 @@ play. After a change a player can see, look at it in the editor and show it, bef
   },
   "engines": { "node": ">=24.0.0", "bun": ">=1.4.3" },
   "dependencies": {
-    "@moku-labs/common": "0.3.5",
-    "@moku-labs/core": "1.7.1",
-    "@moku-labs/game": "0.13.0",
+    "@moku-labs/common": "0.3.10",
+    "@moku-labs/core": "1.7.6",
+    "@moku-labs/game": "0.14.9",
     "pixi.js": "8.22.0"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.16",
-    "@moku-labs/editor": "0.9.3",
+    "@moku-labs/editor": "0.10.8",
     "@types/bun": "1.4.2",
     "@vitest/coverage-istanbul": "4.0.18",
     "eslint-plugin-jsdoc": "65.1.0",
@@ -457,9 +461,9 @@ Init Step 4 adds `@moku-labs/ci` to `devDependencies`.
 
 | Script | Runs |
 |---|---|
-| `dev` | `moku-game dev`: the game page with hot reload on `http://127.0.0.1:3000/`, no tools |
-| `editor` | `moku-editor --root .`: the same page with the editor's agent, plus the tools page on `/__editor/` |
-| `keys` | `generated/assets.ts`, the compiled strings and `generated/manifest.json`, with the layers of `config.ts` |
+| `dev` | `moku-game dev`: the game page with hot reload on `http://127.0.0.1:3000/`, no tools. It runs the scan of `keys` at start and on a save of an asset or a strings file |
+| `editor` | `moku-editor --root .`: the same page with the editor's agent, plus the tools page on `/__editor/`. It runs the same keys watch |
+| `keys` | `generated/assets.ts`, the compiled strings and `generated/manifest.json`, with the layers of `config.ts`. For a run with no server up: before the first typecheck, and in CI through `build` |
 | `pack` | The production pack in `dist/assets` (WebP atlas pages, content-hashed names; needs `sharp`) |
 | `build` | `keys --check`, then the pack and the production page in `dist/web`, `__MOKU_GAME_DEV__` defined `false` |
 | `native` | One verb of `@moku-labs/native` over `config.ts`: `bun run native build ios --simulator`. Needs `native` in `config.ts` |
@@ -975,8 +979,11 @@ bun run editor           # Game http://127.0.0.1:3000/  Tools http://127.0.0.1:3
 bunx moku-game-index --root . --check    # 14 files, 12 keys: 0 broken, 0 in conflict, 0 unresolved
 ```
 
-`moku-game dev` writes the dev page into `.moku/` (`index.html`, `dev.ts`, `main.ts`, `bunfig.toml`),
-runs Bun again under that bunfig and prints the bound URL on its own line. `/` is the page,
+`moku-game dev` writes the dev page into `.moku/` (`index.html`, `dev.ts`, `main.ts`, `bunfig.toml`,
+`assets-stamp.ts`), scans the keys, runs Bun again under that bunfig and prints the bound URL on its own line.
+While it or the editor runs, a save of an asset or of a `strings/<locale>.json` is scanned again and the
+log prints `› keys: <path>`: a changed string swaps in the page, an asset saved with new bytes swaps, a new
+or removed asset reloads the page. `/` is the page,
 `/manifest.json` the dev manifest `generated/manifest.json`, any other path a file of the game; dot folders and `node_modules` answer
 404. The page sets `globalThis.game`, `globalThis.doors` and, under the editor, `globalThis.editor`.
 
@@ -1006,5 +1013,9 @@ See `editor.md`.
 - Particle textures in `shared/assets/fx/` or `features/<f>/assets/fx/`: the packer puts everything under
   an `fx` folder on one atlas page (game 0.12). A system that plays an animation uses
   `res(AnimPlayer).play(animation, slots)`.
+- A `recover` on the safe node (`home` here) once the game has more than one screen: it writes the
+  session back to what `home` draws when the runner gave up on a transition (game 0.14.2).
+- `pluginConfigs: { flow: { holdMs: <ms> } }` when a tap during a transit animation should count: above
+  the longest such animation (game 0.14.2).
 - A `.dev.ts` module with `defineSource` / `defineCommand` for the game's own cheats. The editor's page
   imports every `**/*.dev.ts` on its own; `moku-game build` imports none.

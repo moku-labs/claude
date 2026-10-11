@@ -41,7 +41,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../core",
       "layer": 1,
       "role": "kernel",
-      "knownVersion": "1.7.1",
+      "knownVersion": "1.7.6",
       "pack": "moku",
       "skill": "plugins/moku/skills/moku-core",
       "pluginIndex": null,
@@ -63,7 +63,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "2.4.5",
+      "knownVersion": "2.4.10",
       "pack": "moku-web",
       "skill": "plugins/moku-web/skills/moku-web",
       "pluginIndex": "plugins/moku-web/skills/moku-web/references/plugin-index.md",
@@ -86,7 +86,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.20.4",
+      "knownVersion": "0.20.9",
       "pack": "moku-worker",
       "skill": "plugins/moku-worker/skills/moku-worker",
       "pluginIndex": "plugins/moku-worker/skills/moku-worker/references/plugin-index.md",
@@ -109,7 +109,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../room",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.8.4",
+      "knownVersion": "0.8.9",
       "pack": "moku-room",
       "skill": "plugins/moku-room/skills/moku-room",
       "pluginIndex": "plugins/moku-room/skills/moku-room/references/plugin-index.md",
@@ -132,7 +132,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../common",
       "layer": 2,
       "role": "shared-infra",
-      "knownVersion": "0.3.5",
+      "knownVersion": "0.3.10",
       "pack": "moku-common",
       "skill": "plugins/moku-common/skills/moku-common",
       "pluginIndex": "plugins/moku-common/skills/moku-common/references/plugin-index.md",
@@ -154,7 +154,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../native",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.3.3",
+      "knownVersion": "0.3.8",
       "pack": "moku-native",
       "skill": "plugins/moku-native/skills/moku-native",
       "pluginIndex": "plugins/moku-native/skills/moku-native/references/plugin-index.md",
@@ -177,7 +177,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../system",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.3.2",
+      "knownVersion": "0.3.7",
       "pack": "moku-system",
       "skill": "plugins/moku-system/skills/moku-system",
       "pluginIndex": "plugins/moku-system/skills/moku-system/references/plugin-index.md",
@@ -200,7 +200,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../game",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.13.0",
+      "knownVersion": "0.14.9",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -223,7 +223,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../editor",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.9.3",
+      "knownVersion": "0.10.8",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -246,7 +246,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../ai",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.16.1",
+      "knownVersion": "0.16.8",
       "pack": "moku-ai",
       "skill": "plugins/moku-ai/skills/moku-ai",
       "pluginIndex": "plugins/moku-ai/skills/moku-ai/references/plugin-index.md",
@@ -265,6 +265,48 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
   ]
 }
 ```
+
+> **Family sync 2026-10-11: core 1.7.6, web 2.4.10, worker 0.20.9, room 0.8.9, common 0.3.10, native 0.3.8,
+> system 0.3.7, game 0.14.9, editor 0.10.8, ai 0.16.8** (npm `dist-tags.latest`; each read from the diff
+> between the two tags). The peer ranges stay `@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4`. The
+> core specification and the sandbox did not change: the pin stays `df76939`.
+> - **core 1.7.1 → 1.7.6, web 2.4.5 → 2.4.10, worker 0.20.4 → 0.20.9, room 0.8.4 → 0.8.9, common 0.3.5 →
+>   0.3.10, native 0.3.3 → 0.3.8, system 0.3.2 → 0.3.7:** CI and dev dependencies only. A merge to `main`
+>   releases a patch, Dependabot follows `@moku-labs/*`, the repos develop on Bun 1.4.3. No `src/`, docs,
+>   `engines` or peer range change.
+> - **ai 0.16.1 → 0.16.8:** one source change, in 0.16.2. ElevenLabs serves the `music` task over
+>   `POST /v1/music`: models `music_v1`, `music_v2`, `music_v2_5`, config `elevenlabs.musicTimeoutMs`
+>   (default 600000), price keys `music:<model>`. The default `music` provider stays `fal`. The rest is
+>   tests, docs, CI and dev dependencies. `engines` did not move.
+> - **game 0.13.0 → 0.14.9. Breaking in 0.14.0: `engines.bun >=1.4.2`.**
+>   - 0.13.1: `moku-game dev` runs the key scan at start and on a save of an asset or a strings file;
+>     `watchKeys` in `@moku-labs/game/cli`; dev files answer `no-store`.
+>   - 0.13.2: a saved asset file swaps in the running game under dev; dev event `assets:replaced`;
+>     `sideEffects` is `["./dist/index.mjs"]`.
+>   - 0.13.3 and 0.14.0: a bookmark taken while a popup waits restores with the popup open.
+>   - 0.14.2: flow config `holdMs`; a node failure is the log entry `flow:error`; `recover` on the safe
+>     node; the audio context is asked to run at start.
+>   - 0.14.3: after a restore every view stands on its rest pose and every ui root is mounted again;
+>     `world.projection.onConverged`.
+>   - 0.14.1 and 0.14.4 to 0.14.9: CI, tests and dev dependencies.
+> - **editor 0.9.3 → 0.10.8. Breaking: peer `@moku-labs/game >=0.13.1` in 0.9.5 (was `>=0.10.0`), and
+>   `engines.bun >=1.4.2` in 0.10.0.**
+>   - 0.9.5: the engine page runs the engine's `watchKeys`. On an older game the bin stops with an
+>     install hint.
+>   - 0.10.0: the MCP door tools stay over a restart of the bin; link `reloadGraceMs` is 8000.
+>   - 0.10.3: MCP tools `moku_device`, `moku_show`, `moku_files_find`, `moku_project`, `moku_hot_reload`;
+>     `moku_select` takes `{ node }`; `moku_start {}` starts the engine page in a game folder; editor
+>     requests `editor.device`, `editor.show`, `editor.node`.
+>   - 0.10.4: a reload restores only a devtools pause; read command `editor.clock`.
+>   - 0.10.1, 0.10.2 and 0.10.5 to 0.10.8: CI, tests and dev dependencies.
+> - **The game template pins game 0.14.9 with editor 0.10.8, core 1.7.6 and common 0.3.10.** A fresh
+>   scaffold on Bun 1.4.3 passed install, `keys`, typecheck, lint, tests, `test:visual` and `build`;
+>   `moku-game dev` and `moku-editor --root .` started and answered. Not run: a browser on either page, the
+>   MCP bridge and its new tools, an asset swap, `moku-editor e2e`.
+> - **The native shell of the template pins system 0.3.7 and native 0.3.8.** On the same scaffold with
+>   `system: ["lifecycle", "back", "haptics", "keepAwake"]`: `native doctor ios` passed,
+>   `native build ios --simulator` built the app, and on the iPhone 17 Pro simulator (iOS 26.3) the page
+>   drew and two taps were counted. Not run: Android, a real iPhone, the store save.
 
 > **Family sync 2026-10-09: web 2.4.5, worker 0.20.4, room 0.8.4, common 0.3.5, system 0.3.2, editor 0.9.3**
 > (npm `dist-tags.latest`; each read from the diff between the two tags). core 1.7.1, native 0.3.3, game
