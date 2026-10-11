@@ -302,8 +302,11 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
 > - **The game template pins game 0.14.9 with editor 0.10.8, core 1.7.6 and common 0.3.10.** A fresh
 >   scaffold on Bun 1.4.3 passed install, `keys`, typecheck, lint, tests, `test:visual` and `build`;
 >   `moku-game dev` and `moku-editor --root .` started and answered. Not run: a browser on either page, the
->   MCP bridge and its new tools, an asset swap, `moku-editor e2e`. The template still names system 0.3.2
->   and native 0.3.3: that pair was not run again.
+>   MCP bridge and its new tools, an asset swap, `moku-editor e2e`.
+> - **The native shell of the template pins system 0.3.7 and native 0.3.8.** On the same scaffold with
+>   `system: ["lifecycle", "back", "haptics", "keepAwake"]`: `native doctor ios` passed,
+>   `native build ios --simulator` built the app, and on the iPhone 17 Pro simulator (iOS 26.3) the page
+>   drew and two taps were counted. Not run: Android, a real iPhone, the store save.
 
 > **Family sync 2026-10-09: web 2.4.5, worker 0.20.4, room 0.8.4, common 0.3.5, system 0.3.2, editor 0.9.3**
 > (npm `dist-tags.latest`; each read from the diff between the two tags). core 1.7.1, native 0.3.3, game

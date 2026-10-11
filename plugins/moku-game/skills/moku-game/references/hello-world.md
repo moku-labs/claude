@@ -21,8 +21,11 @@ against the pins below: `@moku-labs/game@0.14.9`, `@moku-labs/editor@0.10.8`, `@
 stopped: the page, the tools page and a game file answered 200, the editor logged `files:project-on`, and
 a saved `strings/en.json` was compiled by the keys watch. No browser opened either page, so the draw, the
 hot swap in the page and the MCP tools were not seen on these pins; the last run that looked at the page
-was game 0.13.0 with editor 0.9.1. Not run: the lefthook hook, the pixel leg of
-`moku-game visual` (it needs `playwright-core` and a browser) and `moku-game native`. When something here does not compile, read
+was game 0.13.0 with editor 0.9.1. The native shell was run on the same scaffold with `@moku-labs/system@0.3.7`,
+`@moku-labs/native@0.3.8`, `@tauri-apps/api@2.12.2` and `@tauri-apps/plugin-haptics@2.4.1`: `native doctor ios`
+passed, `native build ios --simulator` built the app, and on the iPhone 17 Pro simulator (iOS 26.3) the
+page drew and two taps read "2 taps". Not run: the lefthook hook, the pixel leg of
+`moku-game visual` (it needs `playwright-core` and a browser), Android, a real iPhone and the store save. When something here does not compile, read
 `node_modules/@moku-labs/game/llms.txt` first: it is the engine in one page and always matches the
 installed version. The editor ships `llms.txt` and `llms-full.txt` (`node_modules/@moku-labs/editor/`).
 
@@ -54,8 +57,8 @@ changes for a game:
 Never add `vitest@latest`: the coverage plugin must be the same version as Vitest. The engine's lint
 rules need no package of their own: they ship in `@moku-labs/game` as `@moku-labs/game/lint`.
 
-A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.2` when
-`config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.3`
+A game in a native shell adds the optional peers later: `bun add --exact @moku-labs/system@0.3.7` when
+`config.ts` names a `system` plugin or `save: "store"`, and `bun add --exact -d @moku-labs/native@0.3.8`
 for `moku-game native`. `@moku-labs/system` alone does not build: each name in `system` needs its Tauri
 peer (`@tauri-apps/api`, `@tauri-apps/plugin-haptics`, `@tauri-apps/plugin-store`). The install lines
 and the peer of each name are in `device.md`. The hello world installs none of them.

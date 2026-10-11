@@ -28,6 +28,9 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   - The game template pins game 0.14.9, editor 0.10.8, core 1.7.6 and common 0.3.10. A fresh scaffold on
     Bun 1.4.3 passed install, `keys`, typecheck, lint, tests, `test:visual` and `build`, and both dev
     servers started. Not run: a browser on either page, the MCP bridge, an asset swap, `moku-editor e2e`.
+  - The native shell of the template pins system 0.3.7 and native 0.3.8. On that scaffold
+    `native doctor ios` passed, `native build ios --simulator` built the app, and it ran on the iPhone 17
+    Pro simulator: the page drew and two taps were counted. Not run: Android, a real iPhone, the store save.
   - Registry `knownVersion` of all ten, the upgrade "currently" lines, a 2026-10-11 sync note. The editor
     migration names the new peer range.
 - Not changed: the vendored core specification and sandbox. Upstream did not touch them.

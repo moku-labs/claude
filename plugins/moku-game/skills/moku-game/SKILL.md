@@ -545,11 +545,11 @@ A game imports no native package (L13) and writes no bridge. It names what it ne
   builds the `@moku-labs/system` app, and passes its provider to `platform`: pause and resume become the
   `"background"` reason, Back runs the Back chain, `haptic` reaches the haptics plugin, keep-awake holds
   the wake lock. A web-only game with `system: []` bundles no system code. Install
-  `@moku-labs/system@0.3.2` when the list is not empty or `save` is `"store"`, together with the Tauri
+  `@moku-labs/system@0.3.7` when the list is not empty or `save` is `"store"`, together with the Tauri
   peer of each name: without it `moku-game build` stops with `Could not resolve: "@tauri-apps/…"`. The
   install lines are in [`references/device.md`](references/device.md).
 - `native: { name, identifier, icon?, targets? }`. `moku-game native build ios --simulator` (or `android`,
-  `macos`; `native dev`, `native doctor`, `native clean`) runs `@moku-labs/native@0.3.3` (a dev
+  `macos`; `native dev`, `native doctor`, `native clean`) runs `@moku-labs/native@0.3.8` (a dev
   dependency) over it: the web build is `moku-game build`, the system rows come from `system`, the Tauri
   project lands in `.moku/tauri` and the apps in `dist-native`. See
   [`references/device.md`](references/device.md) and the `moku-native:moku-native` skill.
