@@ -72,10 +72,16 @@ What changes is the **artifact** each generator produces and the **inventory** t
   with the art direction, palette, type and the core-loop moment drawn in. No engine code: the engine
   builds the real screen later.
 - **Art:** concept art and sprites come from Astra (`moku-astra generate`) for a handful of images, or
-  from the `moku-ai` pack for batches. The person's own sketches and references go into the brief.
+  from the `moku-ai` pack for batches. The person's own sketches and references go into the brief. An
+  image is an art asset or a style reference, also when it shows a whole screen. It is never the
+  reference for layout or sizes.
+- **Measurements:** the approved HTML prototype is the single source of truth for sizes, positions, radii
+  and shadows. Game units are prototype px times the reference width over the frame width
+  (`× 1080 / 390` for the portrait frame above). Capture writes that line into the **Measurement
+  reference** table of `design-context.md`.
 - **Inventory:** scenes, popups, HUD elements, the moments of the core loop, motions and sounds.
-- **After build:** compare the chosen concept against shots of the running game in the editor
-  (`moku-game:playtest`), not against HTML.
+- **After build:** compare shots of the running game in the editor (`moku-game:playtest`) against the
+  approved prototype, converted by the same factor. An Astra image is not what the game is compared to.
 
 ### `web` (the common case)
 - **Concept artifact:** one **self-contained, runnable, clickable HTML file** per concept — inline CSS
@@ -124,4 +130,6 @@ What changes is the **artifact** each generator produces and the **inventory** t
   swapped for the medium's idioms.
 - The **re-implement-from-scratch / never-copy** instruction, forwarded by `plan`/`build` to their
   agents regardless of medium.
+- The **Measurement reference** of a `ui` design (prototype path, frame, target units, conversion),
+  forwarded the same way: the code is never copied, the numbers always are.
 - The per-design isolation, state, rounds loop, and human gates (`design-stages.md`).

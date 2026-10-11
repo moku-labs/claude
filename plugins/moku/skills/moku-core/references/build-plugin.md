@@ -160,4 +160,6 @@ registration and composes the sub-module state factories.
 
 If a Layer-3 plugin implements a screen or component from a design context, re-implement it from
 scratch per the moku-web and moku conventions. Never copy or port the demo prototype's source or its
-bugs, and pass that instruction into the builder's prompt.
+bugs, and pass that instruction into the builder's prompt. The prototype's numbers are the spec: pass the
+`## Design Reference` section (prototype path, unit conversion, art assets; `build-app.md` → "Design
+context is a spec, not source") into the same prompt. Generated images are art, never a layout reference.

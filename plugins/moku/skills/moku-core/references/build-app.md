@@ -15,7 +15,10 @@ install the pack. Do not build a game from the app steps instead.
 - **Unit of work.** One feature folder, `features/<f>/`, with the files and tests its spec lists. One
   `moku:moku-builder` per feature. Features write disjoint folders, so they run in parallel, the way
   the units of Step 3 do. A builder has no Skill tool: put the base directory of the `moku-game` skill
-  and the reference files the feature needs into its prompt, so it reads them as files.
+  and the reference files the feature needs into its prompt, so it reads them as files. A feature with
+  a screen from a design context also gets the `## Design Reference` section of
+  "Design context is a spec, not source" below: the prototype path and the conversion from prototype px
+  to game units. Images from Astra or `moku-ai` are the sprites, never the layout.
 - **Shared files.** The files the features share and the wiring are yours: you write them before the
   wave and wire the features in after it. A builder writes only inside its feature folder.
 - **Check after a wave.** The game's own scripts, in this order:
@@ -281,6 +284,22 @@ the token system, one route table, a node-free client bundle — R1–R7) and re
 instruction into every builder's prompt. Do not copy or port the prototype's CSS, JS, DOM, class names
 or bugs, and do not use it as a scaffold. The design context says what to build; the `moku-web` skill
 says how.
+
+The code is not copied; the numbers are. The approved prototype is the single source of truth for layout
+and measurements, in a web app and in a game alike. Every builder of a screen or component from the
+design gets a `## Design Reference` section in its prompt (shape in `build-wave-execution.md`), taken
+from the spec's `## Design Reference` or from the **Measurement reference** table in §5 of the design
+context:
+
+- the prototype path: `.planning/design/<slug>/index.html` and `styles.scss`,
+- the conversion from prototype px to the target's units (web `× 1`; a game
+  `× reference width / frame width`, for example `× 1080 / 390`),
+- the art assets the unit uses.
+
+A generated image, from Astra or any other tool, is an art asset or a style reference. It is never a
+reference for layout, sizes or positions, also when it shows a whole screen. When neither the spec nor
+the design context gives the conversion, read the frame size from the prototype and state the conversion
+before the wave starts; do not let a builder guess sizes or measure a picture.
 
 ## Web applications
 

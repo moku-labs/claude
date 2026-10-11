@@ -127,7 +127,8 @@ done until a screenshot or a live URL shows it.
 - Stop at every human gate. The round pick, the polish gate and the capture are the user's decisions. One
   round per invocation is fine.
 - Capture is written by this session, not an agent: `design-context.md` opens with the "spec, not source"
-  callout verbatim and carries an exhaustive inventory. See `references/design-context-template.md`.
+  callout verbatim, carries an exhaustive inventory, and names the prototype as the single source of truth
+  for layout and measurements, with the unit conversion. See `references/design-context-template.md`.
 - Design never plans or builds. After capture, recommend the plan station.
 
 ## Hand-off
@@ -137,6 +138,8 @@ When the design is captured, repeat the principle and print the next step:
 > Design captured → `.planning/design/{slug}/design-context.md`. This is a specification, not source.
 > The prototype in that folder is throwaway demo code. Build it from scratch on the real stack with all
 > the project's conventions; do not copy its CSS, JS, DOM or its bugs.
+> Its numbers are the spec: sizes, positions, radii and shadows come from the prototype, times the
+> conversion in §5. Generated images are art, not a layout reference.
 
 Then `moku-rails done design`, and hand the context path to the plan station.
 

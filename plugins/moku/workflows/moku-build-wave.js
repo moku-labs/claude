@@ -110,6 +110,14 @@ const HARD_RULES =
   '(checkout/restore/reset/stash/clean/add/commit). Scoped formatting only: ' +
   '`bunx biome format --write src/plugins/<this-plugin>/`. Report lint and format issues as hints; ' +
   'the orchestrator fixes them repo-wide after the wave.'
+// A screen from a design context: the spec's `## Design Reference` names the prototype and the unit
+// conversion. Without this line a builder sized a game from an image of the board, not from the prototype.
+const DESIGN_REFERENCE =
+  ' Design reference — when the spec has a `## Design Reference` section, the prototype it names is the ' +
+  'single source of truth for layout and measurements: read every size, position, radius and shadow ' +
+  'from its HTML and styles and convert it with the conversion the section gives. Never guess a size ' +
+  'and never measure one from an image: a generated image is an art asset, also when it shows the ' +
+  'whole screen. Read the numbers, never copy the prototype code.'
 phase('Build+Verify')
 const results = await pipeline(
   plugins,
@@ -118,6 +126,7 @@ const results = await pipeline(
       `You are building the Moku plugin "${p.name}" (${p.tier || 'tier per spec'}) using TDD ` +
         `(types → red → green → refactor). Spec: ${p.spec || `.planning/specs for ${p.name}`}. ${STYLE}` +
         HARD_RULES.replaceAll('<this-plugin>', p.name) +
+        DESIGN_REFERENCE +
         ` Return the build result.`,
       {
         label: `build:${p.name}`,

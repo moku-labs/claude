@@ -126,6 +126,17 @@ export naming (`<name>Plugin`), JSDoc, and test style.
 [Relevant entries from .planning/decisions.md matching this plugin name. These are intentional
 trade-offs — follow them rather than re-deciding. Omit the section when there are none.]
 
+## Design Reference
+[Only when the spec implements a screen or component from a design context; omit otherwise.]
+- Prototype: `.planning/design/[slug]/index.html` and `styles.scss`. The single source of truth for
+  layout and measurements: read every size, position, gap, radius, shadow and text shadow from it.
+- Units: [target unit] = prototype px × [factor, e.g. `1` for web, `1080 / 390` for a portrait game].
+- Art: [asset files or keys this unit uses]. Art assets only. An image, also one that shows the whole
+  screen, is never a reference for layout or sizes. Where an image and the prototype disagree, the
+  prototype wins.
+- Read the numbers; do not copy the prototype's CSS, JS, DOM, class names or bugs. Do not guess a size:
+  a measurement the prototype does not hold goes into `blockers`.
+
 ## Filesystem safety (parallel builders)
 Sibling builders run concurrently, so a repo-wide command from you corrupts their work.
 - Write only under `src/plugins/[name]/` and its `__tests__/`. Leave `src/config.ts`,
@@ -188,6 +199,9 @@ tests for the new behavior only → implement until the new tests pass and the o
 
 ## New Behavior Spec
 [The change description / ## Changes section from the spec]
+
+## Design Reference
+[Same as the normal prompt; omit when the change has no screen from a design context]
 
 ## Filesystem safety + scoped checks
 [Same as the normal prompt]

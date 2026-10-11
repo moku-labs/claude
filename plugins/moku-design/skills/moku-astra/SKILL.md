@@ -118,6 +118,15 @@ measured about 16k tokens against about 3.5k for a text-only one. So asset gener
 separate step the user agrees to — one batched `generate` call for the whole set, never one call per icon,
 and never folded silently into a polish pass.
 
+## Art is not a layout reference
+
+What Astra draws is an art asset (a sprite, an icon, a texture) or concept art that shows a style. It is
+never a reference for layout, sizes, positions, radii or shadows, also when the image shows a whole
+screen: she draws a picture of a screen, she does not measure one. The single source of truth for layout
+and measurements is the approved prototype in `.planning/design/<slug>/`, read through the
+**Measurement reference** table of its `design-context.md`. When an image and the prototype disagree, the
+prototype wins. Say so in every hand-off that passes her images on: "art only, layout from the prototype".
+
 ## The asset manifest
 
 Generated art lives under `assets/**/` with a `manifest.json` beside it, matching

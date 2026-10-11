@@ -25,6 +25,7 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 - `framework` — the framework name.
 - `spec` — config, state, api, events, dependencies, verification.
 - `skeleton` — the stub files already created for this plugin.
+- `design` — only for a screen or component from a design context: the prototype path, the conversion from prototype px to the target's units, and the art assets. The prototype is the single source of truth for layout and measurements: read every size, position, radius and shadow from its HTML and styles and convert it. Never guess one, and never measure one from an image: a generated image is an art asset, also when it shows the whole screen. Read the numbers, never copy the prototype's code. A spec that names a design context while your prompt has no prototype path or no conversion: stop and report it in `blockers`.
 - `MODE` — `greenfield` or `delta`. If unstated, infer: a `src/plugins/{name}/` with real implementation and tests is a delta, otherwise greenfield.
 
 ## Filesystem isolation
