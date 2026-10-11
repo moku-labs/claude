@@ -163,7 +163,13 @@ A game is not ready until the person has seen it. After the checklist is green:
    - none of them: give the person the url and ask what they see. Their "it works" counts as the
      screenshot. Do not stop init to ask for a browser permission.
 3. Check the hello-world scene drew and the console or server log has no error, and show the shot.
-4. Say in one line that the setup works, and leave the server running.
+4. Check the Claude Code files of the template are there: `.mcp.json` with the `moku-editor` server and
+   `.claude/launch.json` with `game-editor` (`hello-world.md` → "Claude Code files"). If the
+   `mcp__moku-editor__*` tools are listed in this session, call `moku_status` and read `game.position`
+   once, as the proof that the tools reach the game. If they are not, that is expected right after the
+   file was written: tell the person in one line to approve the `moku-editor` server and restart the
+   session, and that from then on the game is read and played through it.
+5. Say in one line that the setup works, and leave the server running.
 
 If the page stays blank, read the server log and the browser console, fix the cause, and repeat.
 The marker waits until the game draws.

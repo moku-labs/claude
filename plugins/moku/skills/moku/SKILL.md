@@ -85,7 +85,8 @@ When the person brings an idea without a clear task, offer the discussion page o
 After the hello world runs, the route is the usual one, with game material in it:
 
 - **brainstorm**: the game idea, the core loop, the feel. Ask for anything the person already has: sketches, references, screenshots of games they like, their own art. Read every image they send.
-- **design**: screens and the look. Shots come from the running game in the editor, not from HTML mockups.
+- **every station**: the editor is the working mode. It runs from the first session, the person watches the game in the browser pane, and you read and drive the game through the `moku-editor` MCP tools (state, position, screen, render, screenshots), by script in the pane when they are not connected. At the start of a game session run the set-up check of the `moku-game` skill ("The editor is the working mode"): `.mcp.json`, `.claude/launch.json`, `moku_status`. Tests prove the logic; the editor is where every visible change is looked at and shown.
+- **design**: screens and the look, as an HTML prototype at the game's frame. The approved prototype is the reference for layout and sizes; after the build, shots of the running game in the editor are compared to it by the design check.
 - **plan** and **build** follow the game layout, not the app layout: one spec and one unit of work per feature folder, no `src/`, no `createApp`. The steps are the "Game" section of `moku-core/references/build-app.md`. The layout is the `moku-game` skill. A game cannot be planned or built without the `moku-game` pack: when it is missing, say so and ask the person to install it.
 - **verify** as for any app. Delta specs for later changes.
 - **e2e** runs as playtest (`moku-game:playtest`): headless walks, visual tests, play in the editor, and the phone when the change needs it.

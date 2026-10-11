@@ -26,6 +26,12 @@ install the pack. Do not build a game from the app steps instead.
   bun run keys --check && bun run typecheck && bun run lint && bun run test && bun run test:visual
   ```
   A red `keys --check` means the generated files are stale: run `bun run keys` and run the line again.
+- **Look after a wave.** Green scripts are not a look. The editor runs for the whole build
+  (`moku-game` skill → "The editor is the working mode"). After each wave that changes what a player
+  sees, read the game through the editor's MCP tools (`moku_status`, `moku_read` `game.position` and
+  `game.ui`, one `moku_screenshot` per touched screen; by script in the pane when the tools are not
+  connected) and show the person the shots with the wave report. A screen that does not draw, or draws
+  off the design, is fixed in this wave, not found in the playtest.
   `moku-verify-artifacts` does not apply to a game. It looks for `src/plugins/<name>` and fails.
 - **Steps that change.** Step 1: the shape to build to is the game layout, not the app shape of
   `moku-idioms.md`. Step 3: replaced by the unit of work above. Step 4: does not apply, a game has no

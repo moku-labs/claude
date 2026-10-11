@@ -66,6 +66,12 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
 4. `@moku-labs/editor` in `devDependencies` and an `editor` script that runs `moku-editor --root .`.
    Missing: add `bun add --exact -d @moku-labs/editor@0.9.3` and the script; say so.
 
+5. **Editor tools.** `.mcp.json` names the `moku-editor` server and the `mcp__moku-editor__*` tools are
+   listed (deferred: load them through ToolSearch with `moku-editor`). Then the editor's MCP tools are
+   the way you read and drive the game in Step 3 and in the design check. Missing file: write it and
+   `.claude/launch.json` (`hello-world.md` → "Claude Code files"), say that the tools come with the next
+   session, and play this run by script. The report names the way that was used.
+
 ## Step 1 — headless proof
 
 ```bash
@@ -120,6 +126,13 @@ The baselines land in `tests/visual/baselines/<test>/<checkpoint>/`; commit them
 --no-pixels"` (`hello-world.md` → tests/visual/).
 
 ## Step 3 — play it in the editor
+
+The editor is where a game is played and checked; the headless suite of Step 1 is the proof of logic, not
+a replacement for this step. With the MCP tools connected (Step 0): `moku_status`, then for each flow the
+door tools or `moku_run` to play, `moku_read` (`game.position`, `game.model`, `game.ui`, `game.render`)
+after each step, `moku_wait` in place of a pause, `moku_screenshot` per screen and `moku_series` per
+animation. Keep the pane open on `/__editor/` so the person watches, and so pictures have a visible page.
+Without the tools, the same steps by script, as written below.
 
 Follow `references/editor.md`:
 
