@@ -430,7 +430,7 @@ play. After a change a player can see, look at it in the editor and show it, bef
     "test:visual": "moku-game visual --no-pixels",
     "deploy": "echo 'No deploy target yet: the release station picks one.'"
   },
-  "engines": { "node": ">=24.0.0", "bun": ">=1.4.2" },
+  "engines": { "node": ">=24.0.0", "bun": ">=1.4.3" },
   "dependencies": {
     "@moku-labs/common": "0.3.5",
     "@moku-labs/core": "1.7.1",

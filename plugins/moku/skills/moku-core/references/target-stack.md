@@ -65,8 +65,8 @@ The rest equals the current stack. Full bodies: `tooling-config.md`, section
 | Field | Value |
 |-------|-------|
 | `engines.node` | `>=24.0.0` |
-| `engines.bun` | `>=1.4.2` |
-| `.bun-version` | `1.4.2` |
+| `engines.bun` | `>=1.4.3` |
+| `.bun-version` | `1.4.3` |
 
 The Node floor follows the upstream moku-family engines: `@moku-labs/core@0.1.3` raised its floor
 to `node >=24.0.0` (PR #9) and `@moku-labs/web@1.6.2` already requires `node >=24` — see the
@@ -103,7 +103,7 @@ Detect the lint stack first (`lint-stacks.md`). A project is **below** its targe
   `typescript-eslint` `< 8.58.0`, or `tsdown` `< 0.22.1`. TypeScript 6 is the legacy target, not a gap.
 - `tsconfig.json` → `compilerOptions.types` is absent (TS6 needs it explicit).
 - `tsconfig.build.json` → `compilerOptions.rootDir` is absent.
-- `.bun-version` `< 1.4.2` (freshness, advisory).
+- `.bun-version` `< 1.4.3` (freshness, advisory).
 - `package.json` → `engines.node` floor `< 24.0.0`, or `engines.node` absent (Stack 3 signature).
 
 ---

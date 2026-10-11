@@ -135,7 +135,7 @@ Moku Project Diagnostic Report
 Project type:  Framework (Layer 2) — my-framework
 Rails:         initialized · 1 change open · 0 debts
 
-Environment:   [PASS] moku-rails on PATH · node 24.4.0 · bun 1.4.2
+Environment:   [PASS] moku-rails on PATH · node 24.4.0 · bun 1.4.3
 Packs:         [INFO] moku-web suggested (@moku-labs/web in dependencies)
 Tooling:       [PASS] all config files and the script contract present
 Planning:      [ACTIVE] Phase: stage2/approved (3 specs)
