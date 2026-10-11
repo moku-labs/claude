@@ -37,7 +37,7 @@ Exact configurations from moku_core. Use these as the reference when scaffolding
   "repository": { "type": "git", "url": "git+https://github.com/<owner>/<repo>.git" },
   "homepage": "https://github.com/<owner>/<repo>#readme",
   "bugs": { "url": "https://github.com/<owner>/<repo>/issues" },
-  "engines": { "node": ">=24.0.0", "bun": ">=1.4.2" },
+  "engines": { "node": ">=24.0.0", "bun": ">=1.4.3" },
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.3",
     "@arethetypeswrong/core": "0.18.3",
@@ -764,7 +764,7 @@ exact = true
 ## .bun-version
 
 ```
-1.4.2
+1.4.3
 ```
 
 Bun 1.4 reads `bunfig.toml` as strict TOML: a string without quotes or an integer too large throws.

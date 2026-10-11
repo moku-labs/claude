@@ -2,6 +2,18 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.1 (2026-10-11)
+
+### Changed
+- **The target stack is Bun 1.4.3.** It was 1.4.2. A new project gets `.bun-version` `1.4.3` and
+  `engines.bun` `>=1.4.3`, and `/moku:upgrade` offers the same to an existing one through the
+  `tooling-freshness` migration.
+  - Why: 1.4.3 brings the built-in type checker `bun check`, lower idle CPU, and the TLS and HTTP/2
+    security fixes.
+  - `@types/bun` stays `1.4.2`: npm has no `1.4.3` yet.
+- Not changed: the game template's verification note. The hello world was run on Bun 1.4.2 and was not
+  run again on 1.4.3.
+
 ## 0.85.0 (2026-10-11)
 
 ### Changed
