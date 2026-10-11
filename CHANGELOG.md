@@ -2,6 +2,21 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.0 (2026-10-11)
+
+### Changed
+- **A merge to `main` of a package releases a patch by itself, and the plugin waits for it.**
+  - The rule is one table in `moku-release`: a merge gives a patch, a person gives a minor, a person
+    gives a major for a milestone. The agent never picks the version and never runs `release minor` or
+    `release major` unasked.
+  - New command `bun run release wait` from `@moku-labs/ci`. It waits for the first release tag that
+    holds the merged commit, then for npm to serve that version.
+  - The conductor closes a merged package change only after `release wait` is green, on every route.
+    The version goes into `outcome.md`. A red release keeps the change open.
+  - When a next step needs the new version, the agent waits for it and installs the version printed.
+  - A Dependabot auto-merge releases a patch too: `dependabot-automerge.yml` dispatches it after the merge.
+- Not changed: the rails. The wait is a rule of the skills, not a gate of `moku-rails close`.
+
 ## 0.84.0 (2026-10-09)
 
 ### Changed

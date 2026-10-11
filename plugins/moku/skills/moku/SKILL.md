@@ -130,7 +130,7 @@ The person never needs a station name or a command. Do not hand them one ("say `
 | build | `moku:build` | For S: reproduce the bug with a failing test first when practical. |
 | verify | `moku:verify` | Scope it to what the change touched. |
 | e2e | `moku-web:e2e`, or `moku-game:playtest` for a game | Only when the change has UI. A game always has. |
-| release | `moku:moku-release` | Packages, and a game that ships. First cycle of a package needs a green `release:doctor`. A game picks a target, web or stores: the "A game" section of the skill. |
+| release | `moku:moku-release` | Packages, and a game that ships. First cycle of a package needs a green `release:doctor`. A merge to `main` of a package releases a patch by itself; minor and major are the person's. A game picks a target, web or stores: the "A game" section of the skill. |
 
 A skill from a pack that is not installed is not a dead end. Say which pack is missing, and offer to continue without that optional station.
 
@@ -149,6 +149,12 @@ A commit through a pre-commit hook that runs the whole test script is that green
 
 When `moku-rails close` prints a `Slow tests:` line, tell the person which tests are slow and offer to speed them up as a change of its own. On a no, or a "later", keep it with `moku-rails idea`. Never change a test for speed without a yes.
 
+In a package, a change that was merged to `main` closes only after its release is out. The merge
+ships a patch by itself, on every route, also Q and S where the route has no release station. Run
+`bun run release wait` on `main` before `moku-rails close`, and put the version it prints into
+`outcome.md`. A red release keeps the change open: say what failed, from the `moku:moku-release`
+skill. You never pick the version and never run `release minor` or `release major` unasked.
+
 Then move `.planning/changes/<id>/` to `.planning/archive/changes/<id>/` with a short `outcome.md`: what changed, what was decided and why. History is annotated, never deleted.
 
 ## What bends and what does not
@@ -160,6 +166,7 @@ Then move `.planning/changes/<id>/` to `.planning/archive/changes/<id>/` with a 
 | The person's language and pace | No close with red tests, no verify, or stale docs |
 | When the checks run for quick edits: once, at the end | That they run: a size Q change still passes verify before it closes |
 | Parking work, keeping ideas for later | No new change while another sits abandoned inside a station |
+| | No close of a merged package change before `release wait` is green |
 
 ## Gotchas
 

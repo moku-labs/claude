@@ -3,20 +3,26 @@
 How releases work, why they are built this way, and the traps already paid for. The workflow logic
 itself lives in one place, the `moku-labs/ci` repository. Projects carry two thin caller files (see
 `node_modules/@moku-labs/ci/examples/` in a project that installed it). Read this file when a release misbehaves or when the model itself is in question;
-for day-to-day releases the three commands in `SKILL.md` are enough.
+for day-to-day releases the commands in `SKILL.md` are enough.
 
 ## The model in one picture
 
 ```mermaid
 flowchart LR
-  D["release patch<br/>(moku-release)"] --> PF["preflight<br/>PR merged, HEAD == origin/main"]
-  PF --> W["publish.yml (thin caller)"]
+  M["merge to main<br/>always patch"] --> W["publish.yml (thin caller)"]
+  D["release minor | major<br/>(a person, moku-release)"] --> PF["preflight<br/>PR merged, HEAD == origin/main"]
+  PF --> W
   W --> C["check<br/>lint, types, test, build"]
   C --> R["release<br/>next version from latest v* tag,<br/>push the TAG only, GitHub release"]
   R --> P["package<br/>build + npm pack, no token in scope"]
   P --> PUB["publish<br/>OIDC Trusted Publishing"]
-  PUB --> V["verify on npm<br/>version, dist-tag"]
+  PUB --> V["verify on npm<br/>release wait, or the release command"]
 ```
+
+- **Auto-release.** `publish.yml` runs on every push to `main` and the central workflow cuts a patch.
+  The bump of that path is fixed in the workflow; no commit message, label or input changes it. A
+  dispatch by a person carries the bump they chose: minor, or major for a milestone. Both paths
+  share one concurrency group, so two releases never derive a version from the same tag.
 
 - **Tag-only.** `main` is PR-only, so the release never writes `refs/heads/main`. The next version is
   derived from the latest `v*` tag. `package.json` `version` on `main` is informational and drifts
@@ -66,6 +72,22 @@ publish (Trusted Publishing cannot be configured for a package that does not exi
 publish is an ordinary authenticated `npm publish` without provenance), tag that version (without the
 tag the workflow would start from `0.0.0`), register the trusted publisher with `npm trust github`,
 apply the branch ruleset, run `release:doctor`.
+
+## What `release wait` automates
+
+The end of the auto-release. It dispatches nothing. It checks that `origin/main` holds `HEAD`, waits
+for the first `v*` tag that holds it, then asks npm for that exact version. It asks the tags and not
+one run, because GitHub replaces a waiting run with the run of a later merge, and then the later
+version holds the commit. It stops early when the run that covers the commit failed, and when no run
+started within two minutes: a `publish.yml` without the `push` trigger, or a merge made by
+`GITHUB_TOKEN`, which starts no push run.
+
+## Dependabot merges
+
+GitHub starts no workflow for an event that `GITHUB_TOKEN` caused, and the auto-merge of a Dependabot
+PR is such an event: no push run, no auto-release. `workflow_dispatch` is the exception. So
+`dependabot-automerge.yml` turns auto-merge on, waits until the PR is merged, and dispatches
+`publish.yml` with `patch`. It needs `actions: write`. No token is added.
 
 ## What `release <type>` automates
 

@@ -9,7 +9,8 @@ effort: medium
 
 # Releases for moku projects
 
-Every moku package releases the same way: three commands, two thin workflow files, no tokens. The
+Every moku package releases the same way: a merge to `main` ships a patch, a person ships a minor
+or a major, and two thin workflow files with no tokens do the work. The
 logic lives once, in the `moku-labs/ci` repository, so a fix there reaches every project. Do not
 write or paste workflow YAML by hand; hand-written copies are what drifted apart before.
 
@@ -17,13 +18,54 @@ On the rails this is the `release` station: `moku-rails enter release` first, `m
 last. It is optional for a change, and required once: the first cycle of a package closes only with a
 green `release:doctor`.
 
-## The three commands
+## Who releases what
+
+| Who releases | Version | How |
+|---|---|---|
+| a merge to `main` | patch, always | `publish.yml` runs on the push. Nobody dispatches it. |
+| a Dependabot auto-merge | patch, always | `dependabot-automerge.yml` dispatches `publish.yml` after its merge. |
+| a person | minor | `bun run release minor` |
+| a person, for a milestone | major | `bun run release major` |
+
+- You never choose the version. A merge gives a patch, and that is the only release you cause.
+- Run `release minor` or `release major` only when the person asks for that release in their own
+  words. Never propose a major yourself.
+- Do not run `release patch` after a merge: the merge already released it. It stays for one case, a
+  failed auto-release that the person asks you to repeat.
+
+## Wait for the release before you close
+
+A change to a package is not finished at the merge. It is finished when npm serves a version that
+holds the commit.
+
+```bash
+git checkout main && git pull
+bun run release wait
+```
+
+`release wait` refuses a commit that `origin/main` does not hold. Then it waits for the first
+release tag that holds `HEAD` and for npm to serve that version. It prints the version.
+
+- Run it after every merge of a package change, before `moku-rails close` and before you say the
+  work is done. Report the version it printed.
+- Run it when the next step needs the new version: a consumer app or another package that has to
+  install it. Do not install `latest` and hope; wait, then install the version it printed.
+- A red result is not a close. Read `gh run view <id> --log-failed`, then `release:doctor`. Tell the
+  person what failed. The change stays open until a version is out or the person says to close anyway.
+- "no publish.yml run started" has two causes. `publish.yml` has no `push: branches: [main]` yet:
+  `release:doctor` warns about it, and the fix is that one trigger. Or the PR was merged by
+  `GITHUB_TOKEN`, and GitHub starts no push run for such a merge. A Dependabot merge is covered:
+  `dependabot-automerge.yml` waits for its merge and dispatches the patch itself. An old copy of that
+  file has no such step; take the current one from `node_modules/@moku-labs/ci/examples/package/`.
+
+## The commands
 
 | Command | When | What it does |
 |---|---|---|
 | `bun run release:setup` | once per project | Idempotent wizard: thin workflows, `package.json` contract, first publish, first tag, trusted publisher (`npm trust github`), branch ruleset, then doctor. |
 | `bun run release:doctor` | any time, and before every release | Read-only. One line per check, and for every red line the exact fix. |
-| `bun run release patch` | every release (`patch`, `minor`, `major`, `prerelease`) | Refuses unless the PR is merged and `HEAD == origin/main`, dispatches the workflow, watches it, verifies the version and dist-tag on npm. |
+| `bun run release wait` | after every merge to `main` | Dispatches nothing. Waits for the auto-release of `HEAD` and verifies the version on npm. |
+| `bun run release minor` | a release the person asks for (`minor`, `major`, `prerelease`) | Refuses unless the PR is merged and `HEAD == origin/main`, dispatches the workflow, watches it, verifies the version and dist-tag on npm. |
 
 They come from the `moku-release` bin in `@moku-labs/ci`, a dev dependency of every moku project (`bun add -d @moku-labs/ci`). The same package holds the workflows the thin callers point at.
 
@@ -155,7 +197,8 @@ last. A game has no `release:doctor`, so the station stays optional for it in ev
 
 1. New package: run `bun run release:doctor` and read it together. Usually the two logins come first.
 2. `bun run release:setup`, staying with the person through the confirmations.
-3. From then on: merge the PR, then `bun run release patch`. Nothing else.
+3. From then on: merge the PR, then `bun run release wait`. The patch ships by itself. The person
+   runs `bun run release minor` when they decide the work is a release, and `major` for a milestone.
 4. A red release: start with `release:doctor`, then the failed job's log (`gh run view --log-failed`),
    then `references/release-model.md`, which lists the known traps with their causes.
 
@@ -171,6 +214,10 @@ either move inside a contract script, or stay as an additional local job next to
 - `package.json` `version` on `main` lags behind the tags. That is by design: tags and npm are the truth.
 - Dispatching before the PR is merged publishes the old code under a new version. `release` refuses
   to do it; do not bypass it with a raw `gh workflow run`.
+- Two merges close together give one run each, and GitHub keeps only the newest waiting run. The
+  later version then holds both commits. `release wait` handles it: it asks which tag holds the commit.
+- A minor right after a merge comes after the patch of that merge, so the same code has two versions.
+  That is expected.
 - Required checks are named `ci / lint`, `ci / types`, `ci / test`, `ci / build`. Renaming the job in
   `ci.yml` without updating the ruleset blocks every PR.
 - An OIDC identity mismatch on publish means npm did not accept the central workflow as publisher.
