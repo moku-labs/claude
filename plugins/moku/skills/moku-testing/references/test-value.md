@@ -24,8 +24,10 @@ piece". If you cannot name one, there is no test to write.
 | A loop over data that asserts its shape | `it.each(names)("is a whole number")` | The type |
 | A test that passes on a stub | green before the code exists | It asserts nothing about behaviour: rewrite it or drop it |
 
-A constant that encodes a rule (the eight winning lines, a price table) is tested through the behaviour
-that reads it: "three in the right column wins". Never by repeating the table in the test.
+A constant that encodes a rule (the eight winning lines, a price table, a threshold the spec names) is
+tested through the behaviour that reads it: "three in the right column wins", "an order of exactly 50.00
+ships free". Never by repeating the value in the test: `expect(FREE_SHIPPING_FROM).toBe(5000)` fails only
+when someone edits the constant on purpose, and then the behaviour test at the boundary fails too.
 
 ## The floor: every promised behaviour has a test
 

@@ -42,6 +42,12 @@ Read the change size from `moku-rails status --json`.
 | S | No skeleton, no waves. Reproduce the bug with a failing test when practical, fix inside the one plugin it belongs to, run lint and tests scoped to that plugin, hand over to `moku:verify`. |
 | M, L | Skeleton, then dependency-ordered waves, then final verification and documentation. |
 
+On the S route you write the tests yourself, so `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-value.md`
+is yours to read first: every behaviour line of the spec's `## Verification` gets a test that fails when it
+breaks, a constant is never compared with its own value, the green tests are checked by breaking the
+code once per logic file, no existing test is deleted and no coverage setting is changed without the
+person's word.
+
 The S route ends here: report what changed, the test that now passes, and run `moku-rails done build`.
 Everything below is the M/L route.
 

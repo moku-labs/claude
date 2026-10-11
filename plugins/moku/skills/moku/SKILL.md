@@ -113,6 +113,17 @@ The person never needs a station name or a command. Do not hand them one ("say `
 | "where are we", "what is next" | `moku:status` |
 | "clean up after yourself" | `moku:clean` |
 
+## Tests: the rule every station follows
+
+Whoever writes, changes or removes a test follows `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-value.md`. Read it before the first test of a session. It applies to you as much as to a builder: on the S route and in a tweak there is no builder, so the rule has no other reader.
+
+- Name the bug a test catches before you write it. No bug to name: no test.
+- Not a test: a constant compared with its own value (`expect(SHIPPING).toBe(490)`), what `tsc` proves (a function exists, a type), the same scenario at a second level, a test of plain data.
+- Every behaviour line of the spec's `## Verification` has one test that fails when it breaks, the exact boundary included. Say which test guards which line.
+- Green tests are checked by breaking the code: one break per logic file, on a copy or with a restore. No test fails: close the hole.
+- An existing test is deleted only on the person's word, after you listed it with the reason. "Make it faster" is not that word.
+- The coverage threshold, `include`, `exclude` and ignore comments are not yours to change. Under the threshold: a real test for real behaviour; for a line no input reaches, ask. An ignore the person allowed carries the reason, their name and the date.
+
 ## Walk a station
 
 1. Propose it in one or two sentences and wait for a yes.
