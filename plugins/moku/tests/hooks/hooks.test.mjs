@@ -759,6 +759,86 @@ describe("a report handed back through SubagentHandback", () => {
   });
 });
 
+describe("the stop of an agent, by where its report is", () => {
+  const contract = 'Done.\n```json\n{"agent":"moku-builder-deep","verdict":"PASS","blockers":[],"warnings":[]}\n```';
+  const stop = (root, extra = {}) => hook("on-subagent-stop.mjs", { cwd: root, agent_id: "agent-1", agent_type: "moku:moku-builder-deep", stop_hook_active: false, ...extra });
+  const log = (root) => readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8");
+
+  /** A project in build, and a transcript with the entries the desktop app writes for a background agent. */
+  function desktopRun(tail) {
+    const root = project({ initialized: true });
+    writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
+
+    const entries = [
+      { type: "user", message: { role: "user", content: "Delta build on an existing plugin." } },
+      { type: "user", isMeta: true, message: { role: "user", content: "<system-reminder>\nYour final report is delivered through SubagentHandback.\n</system-reminder>" } },
+      { type: "attachment", attachment: { type: "deferred_tools_record", entries: [] } },
+      { type: "assistant", message: { id: "m-1", content: [{ type: "thinking", thinking: "" }] } },
+      ...tail,
+    ];
+    const transcript = join(root, "agent.jsonl");
+    writeFileSync(transcript, `${entries.map((entry) => JSON.stringify(entry)).join("\n")}\n`);
+
+    return { root, transcript };
+  }
+
+  const handback = { type: "assistant", message: { id: "m-2", content: [{ type: "tool_use", id: "toolu_1", name: "SubagentHandback", input: { message: contract } }] } };
+  const delivered = { type: "user", message: { role: "user", content: [{ type: "tool_result", tool_use_id: "toolu_1", content: [{ type: "text", text: '{"success":true,"message":"Report delivered to your caller."}' }] }] } };
+  const coordinator = { type: "user", isMeta: true, origin: { kind: "coordinator" }, message: { role: "user", content: "The coordinator sent a message while you were working:\nNew work assigned by the coordinator. Apply finding 1." } };
+
+  it("in the last message: no block, the verdict is logged", () => {
+    const { root } = desktopRun([]);
+
+    const result = stop(root, { last_assistant_message: contract });
+
+    assert.equal(result.out, "");
+    assert.match(log(root), /moku:moku-builder-deep \| PASS B:0 W:0/);
+  });
+
+  it("in a hand-back, as the desktop app writes it: no block, with an empty last message and with none", () => {
+    for (const extra of [{ last_assistant_message: "" }, {}]) {
+      const { root, transcript } = desktopRun([handback, delivered, { type: "attachment", attachment: { type: "deferred_tools_record", entries: [] } }]);
+
+      const result = stop(root, { agent_transcript_path: transcript, ...extra });
+
+      assert.equal(result.out, "");
+      assert.match(log(root), /moku:moku-builder-deep \| PASS B:0 W:0/);
+    }
+  });
+
+  it("nowhere, first stop: blocked once, and the reminder leaves a new assignment standing", () => {
+    const { root, transcript } = desktopRun([handback, delivered, coordinator, { type: "assistant", message: { id: "m-3", content: [{ type: "text", text: "I will look at it." }] } }]);
+
+    const { decision, reason } = JSON.parse(stop(root, { agent_transcript_path: transcript, last_assistant_message: "I will look at it." }).out);
+
+    assert.equal(decision, "block");
+    assert.match(reason, /output contract \(fenced json\)/);
+    assert.match(reason, /assignment .* still stands/);
+    assert.doesNotMatch(reason, /no more work/i);
+    assert.equal(existsSync(join(root, ".planning", "build", "agent-log.md")), false, "a blocked stop is not a completion");
+  });
+
+  it("nowhere, second stop: not blocked again, logged as no report, and the person sees the resume instruction", () => {
+    const { root, transcript } = desktopRun([{ type: "assistant", message: { id: "m-3", content: [{ type: "text", text: "All done." }] } }]);
+
+    const out = JSON.parse(stop(root, { stop_hook_active: true, agent_transcript_path: transcript, last_assistant_message: "All done." }).out);
+
+    assert.equal(out.decision, undefined);
+    assert.match(out.systemMessage, /no report.*Resume the agent exactly once/);
+    assert.match(log(root), /moku:moku-builder-deep \| no report/);
+  });
+
+  it("an agent that is not moku's: silent, with or without a report", () => {
+    const { root, transcript } = desktopRun([]);
+
+    const result = stop(root, { agent_type: "general-purpose", agent_transcript_path: transcript, last_assistant_message: "x" });
+
+    assert.equal(result.code, 0);
+    assert.equal(result.out, "");
+    assert.equal(existsSync(join(root, ".planning", "build", "agent-log.md")), false);
+  });
+});
+
 describe("an agent that could not start", () => {
   const ERROR = 'Shell command permission check failed for pattern "!`test -f .planning/STATE.md`"';
   const start = (root, id, type, session = "s1") => hook("on-subagent-start.mjs", { cwd: root, session_id: session, agent_id: id, agent_type: type });
