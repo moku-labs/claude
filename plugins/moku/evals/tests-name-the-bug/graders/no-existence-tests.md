@@ -1,4 +1,5 @@
 ---
+weight: 2
 type: regex
 # What the compiler proves is not a test: "is a function", "is defined", a constant against its own copy.
 target: { source: file, path: src/plugins/cart/__tests__/unit/rules.test.ts }

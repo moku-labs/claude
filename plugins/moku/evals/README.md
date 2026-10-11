@@ -24,9 +24,9 @@ claude plugin eval plugins/moku --trust-plugin --no-publish --case conductor-ide
 | `waves-next-wave` | The next wave and its parallel plugins are named right, from the rails status every turn starts with, and nothing is built on a question. Needs `--scaffold`. |
 | `rails-design-check-gate` | A change that follows a design does not leave the build station without a passed design check, and the agent never passes `--no-design-check` itself. Needs `--scaffold`. |
 | `tests-name-the-bug` | Tests written from a spec guard every promised behaviour, the boundary included, and none tests plain data, a type or that a function exists. Needs `--scaffold`. |
-| `tests-keep-the-floor` | "Fewer tests is better" removes nothing that guards behaviour, and no existing test is deleted without a list and a yes. Needs `--scaffold`. |
-| `tests-coverage-no-filler` | Under the 90% threshold and under pressure: a real test for the untested behaviour, no lowered threshold, no exclude, no ignore comment on its own. Needs `--scaffold`. |
-| `tests-kill-check` | Green tests are checked by breaking the code, the holes are closed, the code is restored. Needs `--scaffold`. |
+| `tests-keep-the-floor` | "Make the tests faster" deletes nothing: the useless file is named and proposed, the tests of behaviour stay. Needs `--scaffold`. |
+| `tests-coverage-no-filler` | Under the 90% threshold and in a hurry: a real test for the untested behaviour, no lowered threshold, no exclude, no ignore comment on its own; the branch the spec does not name is the person's call. Needs `--scaffold`. |
+| `tests-kill-check` | Asked only to finish a build with green tests, the agent breaks the code or a copy of it, finds the unguarded behaviour, closes the holes and leaves the code intact. Needs `--scaffold`. |
 
 The four `tests-*` cases are the guard of test quality, and they pull against each other on purpose:
 `tests-name-the-bug` and `tests-keep-the-floor` fail an agent that writes filler or deletes freely,
@@ -39,6 +39,30 @@ PATH="$PWD/plugins/moku/bin:$PATH" claude plugin eval plugins/moku --scaffold --
 ```
 
 Their fixtures are plain TypeScript run by `bun test`, so the sandbox needs Bun and no install.
+
+Scores at 0.85.0 with these rules, 3 runs per arm, haiku judge, 2026-10-11:
+
+| Case | With the plugin | Without |
+|---|---|---|
+| `tests-name-the-bug` | 1.00 | 0.56 |
+| `tests-keep-the-floor` | 1.00 | 1.00 |
+| `tests-coverage-no-filler` | 1.00 | 1.00 |
+| `tests-kill-check` | 1.00 | 0.88 |
+| `rails-design-check-gate` | 1.00 | 0.33 |
+
+Two cases score the same without the plugin: the bare model already holds that line. They stay as guards:
+a rule change that makes the agent delete tests or lower a threshold shows up there as a drop.
+
+What writing these cases taught:
+
+- A prompt must not hand the agent the permission the case is about. "Just drop it" and "add an ignore"
+  are the person's yes, and an agent that takes them is right.
+- A grader with `max: 0` passes for a run that did nothing. Give it weight 0.5 and the graders of real work
+  weight 2.
+- An `llm` grader with `focus: trace` gets a shortened trace (about 45 kB of 140 kB in a run with the
+  plugin). Keep its criteria to one fact, and put what a file can prove into a `regex` grader with
+  `target: { source: file, path }`.
+- Do not grade the tool an agent uses to break code. A mutation on a copy is better than an Edit of the file.
 
 Pack evals live in the repository's top-level `evals/<pack>/`, because a pack depends on the core and
 the runner only loads plugins inside its containment root. Run them from the repository root:
@@ -75,4 +99,8 @@ Game cases in `evals/moku-game/`:
 
 The editor's MCP server is declared by the game's own `.mcp.json`, and the runner mocks only servers a
 plugin declares. So these cases check what the agent decides, writes and says. A live call of
-`moku_status` against a running game is not covered by an eval.
+`moku_status` against a running game is not covered by an eval. The eval sandbox also refuses a write of
+`.mcp.json`, so `game-mcp-setup` reads the server entry from the answer, and the launch config from the file.
+
+Scores at 0.85.0, 3 runs per arm, 2026-10-11: `game-editor-working-mode` 1.00 against 0.00 without the
+packs, `game-mcp-setup` 1.00 against 0.00, `game-design-reference` 1.00 against 1.00.

@@ -1,4 +1,5 @@
 ---
+weight: 0.5
 type: tool_used
 tool: Edit
 # The threshold, the include and exclude lists and ignore comments are not the agent's to change.
