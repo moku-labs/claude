@@ -2,6 +2,40 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.2 (2026-10-11)
+
+### Changed
+- **Every pack follows today's npm.** All ten family packages moved since the last sync.
+
+  | Package | Was | Now | What changed |
+  |---|---|---|---|
+  | `@moku-labs/core` | 1.7.1 | 1.7.6 | CI and dev dependencies |
+  | `@moku-labs/web` | 2.4.5 | 2.4.10 | CI and dev dependencies |
+  | `@moku-labs/worker` | 0.20.4 | 0.20.9 | CI and dev dependencies |
+  | `@moku-labs/room` | 0.8.4 | 0.8.9 | CI and dev dependencies |
+  | `@moku-labs/common` | 0.3.5 | 0.3.10 | CI and dev dependencies |
+  | `@moku-labs/native` | 0.3.3 | 0.3.8 | CI and dev dependencies |
+  | `@moku-labs/system` | 0.3.2 | 0.3.7 | CI and dev dependencies |
+  | `@moku-labs/ai` | 0.16.1 | 0.16.8 | ElevenLabs serves the `music` task |
+  | `@moku-labs/game` | 0.13.0 | 0.14.9 | Bun `>=1.4.2`, the keys watch in `dev`, asset swap, popup bookmarks, `holdMs`, `recover` |
+  | `@moku-labs/editor` | 0.9.3 | 0.10.8 | peer game `>=0.13.1`, Bun `>=1.4.2`, five new MCP tools, `editor.clock` |
+
+  - `moku-ai`: the ElevenLabs music handler (`music_v1`, `music_v2`, `music_v2_5`,
+    `elevenlabs.musicTimeoutMs`, price keys `music:<model>`). The default `music` provider stays `fal`.
+  - `moku-game`: both halves of the plugin index, the skill, `editor.md` and the validator follow game
+    0.14.9 and editor 0.10.8. The MCP table gains `moku_device`, `moku_show`, `moku_files_find`,
+    `moku_project` and `moku_hot_reload`.
+  - The game template pins game 0.14.9, editor 0.10.8, core 1.7.6 and common 0.3.10. A fresh scaffold on
+    Bun 1.4.3 passed install, `keys`, typecheck, lint, tests, `test:visual` and `build`, and both dev
+    servers started. Not run: a browser on either page, the MCP bridge, an asset swap, `moku-editor e2e`.
+  - Registry `knownVersion` of all ten, the upgrade "currently" lines, a 2026-10-11 sync note. The editor
+    migration names the new peer range.
+- Not changed: the vendored core specification and sandbox. Upstream did not touch them.
+
+### Fixed
+- `moku-native`: the stale-docs table said upstream `llms-full.txt` reads `Version: 0.1.0`. It reads
+  `Version: 0.3.2`, and its peer line is right.
+
 ## 0.85.1 (2026-10-11)
 
 ### Changed
