@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.10.8` beside a game on `@moku-labs/game@0.14.9` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`, and to the changes of 0.9.1 to 0.10.8; the start in section 1 was run on a fresh scaffold with editor 0.10.8 and game 0.14.9 (the bin started, both pages answered, no browser opened them). When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
+How Claude runs `@moku-labs/editor@0.10.10` beside a game on `@moku-labs/game@0.14.12` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`, and to the changes of 0.9.1 to 0.10.10; the start in section 1 was run on the template scaffold with editor 0.10.10 and game 0.14.12 (the bin started, both pages answered, no browser opened them). The tools page of 0.10.9 and later was not opened: what this file says about its new controls is read from the editor's source and docs. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
@@ -69,7 +69,8 @@ resize_window({ preset: "desktop" })         // back to the pane's own size when
 ```
 
 At 480 the rail collapses and side panels overlay; at 720 they dock. Below 900 px the top bar is compact:
-Pause, Step, Reference mode and Hot reload are icons, the rest sits in the ⋯ menu (`data-action="more"`).
+Pause, Step and Hot reload are icons, the rest sits in the ⋯ menu (`data-action="more"`). The bar starts
+with the game mark: the initials of the game name on a small tile (`span[data-mark]`).
 The game iframe follows the device of the Game workspace: 21 presets, the iPhone 18 Pro by default.
 
 ## 3. Find your way on the tools page
@@ -82,10 +83,9 @@ The game iframe follows the device of the Game workspace: 21 presets, the iPhone
 | `.` | Step one frame, only while paused |
 | `O` | Overlay in game on / off |
 | `G` | Show / hide the preview of the current workspace |
-| `R` | Reference mode on / off |
 | `H` | Hot reload switch: restarts the bin's server with hot reload flipped (see section 4) |
 | `M` | Sound, in Game. Runs `game.mute`: works with game ≥0.4.4, dimmed on an older game |
-| ⌘⇧C | Element picker (Game workspace) |
+| ⌘⇧C or `I` | Element picker: the Select icon button of the Game toolbar |
 | ← → `b` | Previous / next shot, mark a bug, while the contact sheet is open |
 | Esc | Closes one thing, outermost first |
 
@@ -97,9 +97,11 @@ The link pill in the top bar goes `connecting` → `live · frame N` once the ga
 countdown, `empty` when no game page is open. Prefer `read_page` and `find` over screenshots to read
 State, Console and the Element tab: they are plain DOM.
 
-**Pick an element.** Click "Select element" (or ⌘⇧C), then click the element on the stage. The Element tab
-shows its path, bounds, style, the Code section (JSX and `defineStyle` block with `file:line`) and the
-reference block. The pick also bookmarks the game and writes three files to today's folder
+**Pick an element.** Click the Select icon button of the Game toolbar (`button[data-part="pick"]`, or
+⌘⇧C, or `I`), then click the element on the stage. The picker is the one way to pick. The Element tab
+shows its path, bounds, the Styles fields and the Code section (JSX and `defineStyle` block with
+`file:line`). It does not show the reference block: that is in the card file. Its footer has "Copy
+reference" and "Show in render tree". The pick also bookmarks the game and writes three files to today's folder
 `.moku/captures/<yyyy-mm-dd>/`: the crop `<key>-f<frame>-crop.jpg` (the element plus 8 px), the frame
 `f<frame>-full.jpg` and the card `<key>-f<frame>.md`. Read the card with the Read tool: it is the whole
 reference, ready for a fix. Older captures sit flat in `.moku/captures/`; they stay.
@@ -124,10 +126,43 @@ the clipboard write fails (toast "Copy failed", console warn `gameView: copy ref
 finding: the card file and the Element tab hold the same text. When the user pastes such a line, open the
 card it names; `<name>` is the element key for `doors.sources.locate`.
 
-**Reference mode** (`R`) lays invisible `data-moku-*` proxies over the game elements, so `read_page` and
-`find` see them by name. A click on a proxy is a pick. A drag of 4 px or more picks an area and writes
-`area-f<frame>.md`: the elements inside it, each with its child tree, text and bounds. The game gets no
-input while it is on.
+**The Copy Ref switch** (editor 0.10.9) sits in the Game toolbar after Safe area and Sound
+(`[data-game=toolbar] [data-part=copy-on-select]`). It is the preference "Copy reference on select", on by
+default and saved with the others. On: a pick writes the bookmark, the two pictures and the card, and
+copies the line. Off: a pick only selects the element for the Element tab. No file, no capture card, no
+clipboard, and a drag picks nothing. "Copy reference" in the Element tab writes the card either way.
+`moku_select` does not ask the preference: it writes the card unless `card: false`. Before you rely on a
+card after the person's pick, check that the switch is on.
+
+**An area.** With the picker on, a drag of 4 px or more picks an area and writes `area-f<frame>.md`: the
+elements inside it, each with its child tree, text and bounds. `moku_select { rect }` does the same.
+
+**Reference mode is gone** (editor 0.10.9): key `R`, its toggle in the top bar, the palette command and
+the `data-moku-*` proxies over the game. `read_page` and `find` do not see game elements any more. The
+editor gives no replacement for the proxies. Read the elements as data instead: `moku_read` `game.ui`
+for the tree with keys, `game.locate { key }` for a rect, `moku_select { key }` to pick one by name.
+
+**Pending style edits** (editor 0.10.9). The Styles rows of the Element tab are fields. A value the
+person changes there is a pending edit. The editor writes no file and sends no command, so the game does
+not change. The edits reach you in two ways: `moku_selection` answers them as `edits`, `{ path, from,
+to }` each, and "Copy for agent" in the tab puts a text block on the clipboard.
+
+```text
+@moku homePlay · features/stage/views/home-screen.tsx:199
+minWidth: 556 -> 600
+padding.top: 25 -> 30
+```
+
+Write the `to` values into the source at the `file:line` of the selection. An edit leaves the tab by
+itself when a scene snapshot shows its `to` value. For a `text` given a text style key the tab also has
+a "Text style · <key>" section with the fields of that key's `defineTextStyles` block (it needs game
+0.14.11, which reports `textStyle` on the node). Such an edit belongs to the key, not to the node. In
+`edits` its path is `textStyle:<key>#<field>`, for example `textStyle:ui.button#size`; in the copied
+text it is a block of its own, `@moku textStyle ui.button · shared/styles/text.ts:88`. Write it into the
+text styles file.
+
+The Flow Inspector has two tabs, Info and Code. Its Styles tab left in 0.10.9 with the palette group
+"Styles". Nothing in the editor writes a style into a file now: edit the file, or apply the pending edits.
 
 ## 4. Read and drive the game by script
 
@@ -252,10 +287,13 @@ Every capture goes to today's folder, `.moku/captures/<yyyy-mm-dd>/` (local date
   `<day>/<hhmm>-<flow>.jpg`, written through the server's `files` sandbox (only `.moku/captures/` takes
   binary writes).
 - A pick: `<day>/<key>-f<frame>-crop.jpg` (the element plus 8 px), `<day>/f<frame>-full.jpg` and the card
-  `<day>/<key>-f<frame>.md`. An area drag in Reference mode writes `<day>/area-f<frame>.md`.
+  `<day>/<key>-f<frame>.md`. An area drag of the picker writes `<day>/area-f<frame>.md`. Both only while
+  the Copy Ref switch is on.
 - Palette → "Record a series…": pick a duration (1 s … 20 s) and an interval (16 … 1000 ms). The result is
   `<day>/series-<hhmm>/` with numbered PNGs plus `index.json` (`{ label, durationMs, intervalMs, fromFrame,
-  shots: [{ file, frame, atMs, bug }], device, stoppedEarly }`), and the contact sheet opens.
+  shots: [{ file, frame, atMs, bug }], device, stoppedEarly }`). Since editor 0.10.9 a series ends like a
+  Shot: the capture card of its first shot and the toast "✓ N shots saved". The contact sheet opens only
+  on request: "Open contact sheet" in Files, or Open on the series card.
 - Claude's own `computer({ action: "screenshot" })` of the pane is the quickest proof for a report; it
   shows the tools page, not the raw canvas.
 

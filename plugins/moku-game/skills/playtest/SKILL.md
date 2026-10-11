@@ -64,7 +64,7 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
    page; the game has none of its own. A game still on `web/index.html` and `web/main.ts` is the old
    shape: say so in the report and play it with its own `dev` script, but do not migrate it here.
 4. `@moku-labs/editor` in `devDependencies` and an `editor` script that runs `moku-editor --root .`.
-   Missing: add `bun add --exact -d @moku-labs/editor@0.10.8` and the script; say so.
+   Missing: add `bun add --exact -d @moku-labs/editor@0.10.10` and the script; say so.
 
 5. **Editor tools.** `.mcp.json` names the `moku-editor` server and the `mcp__moku-editor__*` tools are
    listed (deferred: load them through ToolSearch with `moku-editor`). Then the editor's MCP tools are
@@ -151,9 +151,10 @@ Follow `references/editor.md`:
    (`find("Take a screenshot")`, then click it). It writes `.moku/captures/<yyyy-mm-dd>/<hhmm>-<flow>.jpg`.
    For every animation the change touched record a series
    (palette → "Record a series…", or `editor.channel.run("editor.series", …)` through the game frame); the
-   palette writes the PNG frames and `index.json` under `.moku/captures/<yyyy-mm-dd>/series-<hhmm>/` and
-   opens the contact sheet; flatten a PNG on the page colour before you look at it. When a finding needs to point at an element, pick it (⌘⇧C, then click) and cite the card
-   `<key>-f<frame>.md` the pick writes; `capture { legend: true }` gives the rects of every keyed view as
+   palette writes the PNG frames and `index.json` under `.moku/captures/<yyyy-mm-dd>/series-<hhmm>/`. Since
+   editor 0.10.9 no contact sheet opens at the end: open it from the series card when you need it. Flatten a PNG on the page colour before you look at it. When a finding needs to point at an element, pick it (⌘⇧C, then click) and cite the card
+   `<key>-f<frame>.md` the pick writes. The card is written only while the Copy Ref switch of the Game
+   toolbar is on (the default); `moku_select { key }` writes it either way. `capture { legend: true }` gives the rects of every keyed view as
    data. Copy what the report cites into `.planning/e2e/game/` (`<flow>-<node>.jpg`,
    `<animation>-sheet.png`, or `<animation>.mp4` from a series via the ffmpeg line of `editor.md`).
 5. Read Console at level `warn` after the playthrough (`doors.sources.log`). A warning the change
@@ -184,7 +185,8 @@ How to read the game's side:
    state it names, from a scenario or by `doors.run`.
 2. Bounds: `capture { legend: true }` gives the rects of every keyed view as data; the element card of a
    pick gives `ref x,y w×h` in reference units. Compare the reference units to prototype px × conversion.
-3. Fonts first: for every text element read its text style from the card and its `defineTextStyles`
+3. Fonts first: for every text element read its text style from the card (since game 0.14.11 `game.ui`
+   also names it: `textStyle` on a text node given a style key) and its `defineTextStyles`
    entry: the font key, the size, the weight of the face behind the key. The face is the design's face,
    not the body font the package ships. The font has the glyphs of every locale of `strings/`.
 4. Text is text: every word of the design's copy is a text element with a string key

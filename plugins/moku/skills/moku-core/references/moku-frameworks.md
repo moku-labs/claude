@@ -200,7 +200,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../game",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.14.9",
+      "knownVersion": "0.14.12",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -223,7 +223,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../editor",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.10.8",
+      "knownVersion": "0.10.10",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -265,6 +265,30 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
   ]
 }
 ```
+
+> **Game and editor sync 2026-10-11, second pass: game 0.14.12, editor 0.10.10** (npm `dist-tags.latest`;
+> each read from the diff between the two tags). Peer ranges and engines did not move.
+> - **game 0.14.10. Behaviour change:** `game.headless()` composes `logicOnly` of `features` when
+>   `headless.features` is left out; `headless: { features: [] }` means none. `fx.start(descriptor)`
+>   starts an effect and does not wait; its failure is the log entry `flow:fx-start-failed`. A rollback
+>   settles every projection view the failed node moved.
+> - **game 0.14.11:** `UiNode.textStyle` on `ui.tree()` and the door `game.ui`.
+> - **game 0.14.12:** an equal JSX description costs only the comparison; `UiCounters` adds `styled` and
+>   `written`; a failed cosmetic effect writes `flow:fx-cosmetic-failed`; `fakeFx` in
+>   `@moku-labs/game/testing`.
+> - **editor 0.10.9. Removed:** Reference mode (key `R`, `workspace.reference()`,
+>   `workspace.setReference()`, the event `workspace:reference`), the `data-moku-*` proxies over the game,
+>   the Flow Inspector Styles tab and the config key `flowView.styleSaveDelayMs`. Nothing in the editor
+>   writes a style to a file. New: the Copy Ref switch (`workspace.copyOnSelect()`), pending style edits
+>   in the Element tab (`gameView.editStyle`, `SelectionInfo.edits`, answered by `moku_selection`), the
+>   fields of a text style key (needs game 0.14.11). The 22 `moku_*` tools, the doors and the bin flags
+>   are unchanged.
+> - **editor 0.10.10:** docs and the editor's own e2e specs.
+> - **The game template pins game 0.14.12 with editor 0.10.10.** Run as a bump on a copy of the morning
+>   scaffold: `keys`, typecheck, lint, tests, `test:visual`, `build`; `moku-game dev` and
+>   `moku-editor --root .` started and answered 200. Not run: a scaffold written anew, a browser on either
+>   page, the MCP bridge, a native build. The tools page of 0.10.9 and later was not opened: Copy Ref and
+>   the style fields are read from source and docs.
 
 > **Family sync 2026-10-11: core 1.7.6, web 2.4.10, worker 0.20.9, room 0.8.9, common 0.3.10, native 0.3.8,
 > system 0.3.7, game 0.14.9, editor 0.10.8, ai 0.16.8** (npm `dist-tags.latest`; each read from the diff

@@ -1,7 +1,7 @@
 # Pipeline: moku-ai assets into a @moku-labs/game project
 
 Verified against `@moku-labs/ai@0.16.8` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
-`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.14.9` (`src/plugins/assets/README.md`,
+`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.14.12` (`src/plugins/assets/README.md`,
 `scan/keys.ts`, `scan/scan.ts`, `scan/pack/groups.ts`, `docs/shell.md`). The worked game is the merge
 game in moku-labs/demos; it left the engine repository in game 0.8.
 

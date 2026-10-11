@@ -477,7 +477,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/game` AND its
-  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.14.9`).
+  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.14.12`).
 - **Apply:**
   1. Read `frameworks[game].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/game` dependency to that version (preserve the range operator
@@ -489,6 +489,8 @@ the block below.
   `skills/moku-game/references/plugin-index.md`, never weaken types.
 - **Risk:** pre-1.0, minors may break. Read the release notes (`frameworks[game].releaseSource`) and the
   installed `llms.txt` / README before applying; `moku-sync game` records breaking crossings here.
+  Crossing 0.14.10: `game.headless()` composes `logicOnly` of `features` when `headless.features` is left
+  out. Before it composed none. A headless test that relied on no feature sets `headless: { features: [] }`.
 - **Rollback:** `git checkout -- package.json bun.lock && bun install`.
 
 ---
@@ -500,7 +502,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/editor` AND its
-  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.10.8`).
+  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.10.10`).
 - **Apply:**
   1. Read `frameworks[editor].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/editor` dependency to that version (preserve the range operator
