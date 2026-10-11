@@ -84,6 +84,7 @@ uses the style `digits` brings `ui.font-digits` itself. For another face, build 
 
 ```
 package.json  tsconfig.json  vitest.config.ts  biome.json  .oxlintrc.json  lefthook.yml  .gitignore
+.mcp.json  .claude/launch.json
 .github/workflows/ci.yml
 index.ts  config.ts  game.ts
 core/{state.ts, kit.ts}
@@ -290,6 +291,46 @@ This is the app variant of the tooling hook. The package hook runs `validate`, `
 when every staged file is ignored, for example `generated/`. The `visual` job is the headless leg: it
 needs no browser and takes under a second here.
 
+## Claude Code files
+
+Two files make the editor the working mode from the first session. Both are committed.
+
+`.mcp.json` registers the editor's MCP server. `bunx moku-editor mcp-config --port 3000` prints it,
+followed by a `claude mcp add` line: write the JSON object only, never redirect the output into the file.
+
+```json
+{
+  "mcpServers": {
+    "moku-editor": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": ["moku-editor", "mcp", "--port", "3000"]
+    }
+  }
+}
+```
+
+`.claude/launch.json` starts the editor and opens the pane in one step (`preview_start` with
+`game-editor`):
+
+```json
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "game-editor",
+      "runtimeExecutable": "bun",
+      "runtimeArgs": ["run", "editor"],
+      "port": 3000,
+      "url": "http://127.0.0.1:3000"
+    }
+  ]
+}
+```
+
+Claude Code asks the person once to approve a project MCP server, and reads `.mcp.json` when a session
+starts. A session that wrote the file does not have the tools yet: say so, and the next session has them.
+
 ## CLAUDE.md
 
 The template of `tooling-config.md` describes a package: "Build with tsdown", `test:unit`, TypeScript 7,
@@ -346,6 +387,13 @@ A game is a folder at the project root. It has no `src/` and calls no `createApp
 A layer imports only from the layers below it: core, then shared, then features. A feature reaches
 another feature through `@features/<name>` only. Only `index.ts` and `game.ts` import `@features`.
 Run `bun run keys` after adding an asset or a message, before the typecheck.
+
+## Working mode
+
+The editor runs for the whole session: `bun run editor`, tools on http://127.0.0.1:3000/__editor/ in the
+browser pane. Read and drive the game through the `moku-editor` MCP tools (`.mcp.json`): `moku_status`
+first, `moku_read` for position, state and screen, `moku_screenshot` for a picture, the door tools to
+play. After a change a player can see, look at it in the editor and show it, before any report.
 
 ## Testing
 
