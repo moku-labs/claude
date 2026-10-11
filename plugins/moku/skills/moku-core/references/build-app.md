@@ -290,8 +290,9 @@ Package publishing is a different station — the `moku:moku-release` skill.
 
 ## Step 10: Report
 
-Cover: custom plugins created, entry point structure, validation results, integration test count and
-coverage, the runtime smoke test (the command, the surface, the status — state plainly that the app was
+Cover: custom plugins created, entry point structure, validation results, the numbers of the tests in
+one line (`tests`, `time`, `coverage`, `behaviours N of N`, `killed N of N`, `ignores`;
+`moku-testing/references/test-value.md`), the runtime smoke test (the command, the surface, the status — state plainly that the app was
 booted and served, or that the gate was skipped for a pure library), whether the e2e gate ran and what
 it found, the design check (the verdict line, the rows open or by decision, the path of the report; or
 "no design context"), README and deployment output, and issues found and fixed. Then update `.planning/STATE.md`.

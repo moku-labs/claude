@@ -74,6 +74,11 @@ summaries they return.
 verification result, and the integration result. In lean mode collapse that to one line per wave
 (`W2: router,content → PASS. Verified. Integration OK.`) and expand only on failure.
 
+Every wave report ends with the numbers of the tests, so a drop is seen the day it happens:
+`tests: 379   time: 41 s   coverage: 93%   behaviours: 24 of 24   killed: 6 of 6   ignores: 0`.
+The test count going down is not a problem and going up is not a merit; an unguarded behaviour, a
+survived break and a new ignore are.
+
 ### Picking the builder
 
 `moku-builder` by default. `moku-builder-deep` for a plugin of tier Complex or VeryComplex, and for
@@ -179,11 +184,18 @@ Sibling builders run concurrently, so a repo-wide command from you corrupts thei
 
 ## TDD Protocol — RED → GREEN → REFACTOR
 Full protocol: `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/tdd-protocol.md`.
+What earns a test: `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-value.md`. Read it first.
 1. TYPES: types.ts + skeleton index.ts (stubs only, enough for test imports).
-2. RED: write every unit and integration test. Run them — they fail. If one passes on stubs, strengthen it.
+2. RED: write the tests of behaviour: one for every behaviour line of the spec's Verification, plus the
+   branches of each rule, each state change and each event. Not a test: a constant compared with its
+   copy, what tsc proves, a scenario already asserted at another level. Run them — they fail. One that
+   passes on stubs asserts no behaviour: rewrite it or drop it.
 3. GREEN: implement state.ts, api.ts, handlers.ts, finish index.ts. Run tsc and the tests until green.
    Fix the implementation, not the tests.
-4. REFACTOR: index.ts back to ~30 lines, README.md placeholder.
+4. KILL CHECK: per logic file, break one line the way a bug would, run that file's tests once, restore.
+   A test must fail; none fails: close the hole and break it again. At most eight per plugin.
+5. REFACTOR: index.ts back to ~30 lines, README.md placeholder.
+Never delete an existing test, never edit the coverage config, never add an ignore comment: report it.
 
 ## Files to Create
 [List from tier: types.ts, index.ts (skeleton), tests, state.ts, api.ts, handlers.ts, index.ts (final), README.md]
@@ -227,6 +239,9 @@ End your response with a fenced `json` code block:
   "plugin": "[plugin-name]",
   "verdict": "PASS | FAIL | PARTIAL",
   "tdd": { "redPhaseTests": 12, "redPhaseFailing": 12, "greenPhaseTests": 12, "greenPhasePassing": 12 },
+  "behaviours": [{ "criterion": "navigate() to an unknown path changes nothing", "test": "__tests__/unit/api.test.ts:42" }],
+  "killed": { "of": 3, "killed": 3, "pairs": [{ "file": "api.ts", "line": 31, "break": "=== to !==", "test": "api.test.ts:42" }] },
+  "coverageIgnores": 0,
   "intent": {
     "types.ts": "Defines Config with basePath/trailingSlash, State with routes Map and currentPath, Api with navigate/current/back, Events with router:navigated payload",
     "api.ts": "navigate() updates currentPath, pushes the old path to history, emits router:navigated. current() returns currentPath. back() pops history."
@@ -240,6 +255,11 @@ End your response with a fenced `json` code block:
 - `verdict`: PASS (files created, tests pass, lint clean), FAIL (critical files missing or errors you
   could not resolve), PARTIAL (hit the turn limit or left issues open).
 - `tdd`: red == failing and green == passing means the protocol was followed.
+- `behaviours`: every behaviour line of the spec's Verification with its test. A line without a test,
+  or a missing list, makes the build FAIL: send the builder back for that test, do not accept the wave.
+- `killed`: `killed` below `of` is a hole in the tests. Same answer. Repeat one pair yourself per wave,
+  or have the code reviewer do it: break the line, run the test, restore.
+- `coverageIgnores`: above zero needs the person's yes on each, with the reason.
 - `intent`: one sentence per source file (not test files) saying what it does and why it is shaped
   that way. The code reviewer compares these against the spec; a mismatch is a high-confidence bug.
 - `issues`: anything that went wrong, empty array if nothing did.

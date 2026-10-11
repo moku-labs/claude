@@ -36,28 +36,30 @@ Create the type foundation and a minimal skeleton so test imports resolve:
 
 ### Phase 2: RED (write failing tests)
 
-Write tests that describe the EXPECTED behavior from the spec. Tests reference `types.ts` for type assertions and import from domain files that don't exist yet (or are stubs).
+Write tests that describe the EXPECTED behavior from the spec. Which tests are worth writing, and which
+are not, is `test-value.md` next to this file: read it first. Start from the spec's `## Verification`
+list: each behaviour in it gets the one test that fails when it breaks. Tests reference `types.ts` for type assertions and import from domain files that don't exist yet (or are stubs).
 
 #### Unit Tests (`__tests__/unit/`)
 
-One test file per domain file. Follow the patterns from `test-patterns.md` and mock contexts from `mock-context.md`:
+One test file per domain file that has logic. Follow the patterns from `test-patterns.md` and mock contexts from `mock-context.md`:
 
-- **`state.test.ts`** — Test `createState`:
-  - Initial state shape matches spec's `## State` section
+- **`state.test.ts`** — Test `createState` when it computes something:
   - Config values flow into initial state
-  - Edge cases: empty config, boundary values
+  - Edge cases where the result changes: an empty config, a boundary value
+  - A `createState` that returns a literal has no test: the type is its check
   - Use MinimalContext factory (NO emit/require/has)
 
-- **`api.test.ts`** — Test every API method from spec's `## API` section:
-  - Each method exists and has correct signature
+- **`api.test.ts`** — Test the behaviour of every API method from spec's `## API` section:
   - Return values match spec
   - State mutations happen correctly
-  - Events are emitted with correct payloads (check `ctx.emit` mock)
-  - Edge cases: empty input, missing data, boundary values
+  - Events are emitted with correct payloads (check `ctx.emit` mock), and are not emitted on the path
+    that must do nothing
+  - Edge cases where the behaviour changes: empty input, missing data, a boundary
+  - That a method exists and has its signature is `tsc`'s check, not a test
   - Use PluginContext factory
 
 - **`handlers.test.ts`** (if plugin has hooks) — Test each hook handler:
-  - Handler exists for each event listed in spec's `## Hooks` section
   - Handler produces expected state changes
   - Handler emits expected response events
   - Use PluginContext factory
@@ -127,7 +129,8 @@ Each test command below runs once per edit. Keep its output in a file and read t
 the tests again to see another part of what they printed (`test-runs.md`, next to this file).
 
 - Tests MUST fail at this point (stubs return wrong values, methods don't exist yet)
-- If any test passes on stubs, the test is too weak — add assertions that verify real behavior
+- If any test passes on stubs, the test is too weak — make it assert real behavior, or drop it when it
+  only restates a constant or a type (`test-value.md`)
 - Record the total test count and failing count for the output contract
 
 **Phase 2 output**: All test files written. All tests failing. This is the RED state.
@@ -163,6 +166,15 @@ Now write the real implementation to make tests pass. Fix the implementation, NO
 
 **Phase 3 output**: All domain files written. All tests passing. This is the GREEN state.
 
+### Phase 3.5: KILL CHECK (do the tests bite)
+
+For each logic file you wrote or changed: break one line the way a bug would, run that file's tests once,
+restore the line. A test must fail. No test fails: there is a hole, close it and break the line again.
+One break per logic file, at most eight per plugin. The full rule and the report shape are in
+`test-value.md` → "The kill check". The last test run of the plugin happens after the last restore.
+
+**Phase 3.5 output**: every logic file has one recorded pair of a broken line and the test that failed.
+
 ### Phase 4: REFACTOR (clean up)
 
 13. **Review index.ts** — Must be ~30 lines of wiring, no inline logic. If logic leaked in during Phase 3, extract to domain files.
@@ -182,7 +194,10 @@ The builder agent's output contract includes TDD metrics:
     "redPhaseFailing": 12,
     "greenPhaseTests": 12,
     "greenPhasePassing": 12
-  }
+  },
+  "behaviours": [{ "criterion": "navigate() to an unknown path changes nothing", "test": "__tests__/unit/api.test.ts:42" }],
+  "killed": { "of": 3, "killed": 3, "pairs": [{ "file": "api.ts", "line": 31, "break": "=== to !==", "test": "api.test.ts:42" }] },
+  "coverageIgnores": 0
 }
 ```
 
@@ -191,6 +206,12 @@ The builder agent's output contract includes TDD metrics:
 - **`greenPhaseTests`**: Total tests after Phase 3 (may be ≥ redPhaseTests if implementation revealed needed tests)
 - **`greenPhasePassing`**: Tests that passed after Phase 3 (should equal greenPhaseTests)
 
+- **`behaviours`**: every behaviour line of the spec's `## Verification` with the test that guards it. A line with no test is a FAIL
+- **`killed`**: the kill check, one pair per logic file. `killed` below `of` is a FAIL until the hole is closed
+- **`coverageIgnores`**: ignore comments in the plugin. A new one needs the person's yes
+
+The test count is not a metric. More tests is not better; the three fields above are.
+
 The wave judge uses these metrics: if `redPhaseFailing < redPhaseTests * 0.8`, tests are too weak (too many pass on stubs). If `greenPhasePassing < greenPhaseTests`, implementation is incomplete.
 
 ## TDD for Core Plugins (Nano/Micro)
@@ -198,7 +219,7 @@ The wave judge uses these metrics: if `redPhaseFailing < redPhaseTests * 0.8`, t
 Core plugins are simpler but still follow TDD:
 
 1. **Types**: May be inline in index.ts (no separate types.ts for Nano)
-2. **RED**: Write a single unit test file + integration test. Fewer tests needed (1-3 per file).
+2. **RED**: Write a single unit test file + integration test, for the behaviour the plugin has. A core plugin with no logic of its own has the integration test only.
 3. **GREEN**: Implement the core plugin. Often a single file change.
 4. **REFACTOR**: Verify `createCorePlugin` (NOT `createPlugin`), no depends/events/hooks.
 

@@ -156,6 +156,9 @@ For cycle `1..ITERATIONS`:
    `import type` get added.
 5. **Re-check.** `bun run format`, `bun run typecheck`, `bun run lint`, `bun run test`. Skip a script
    that does not exist. A fix that regressed a check is corrected or reverted before the next cycle.
+   A finding "this test cannot catch a bug" is never auto-fixed: an existing test is deleted only on
+   the person's word, so collect those findings into one list and ask once, after the cycles. A test
+   you write for a gap follows `moku-testing/references/test-value.md`: it names the bug it catches.
    The tests run once per cycle, after its last fix, never once per fix, and a cycle that fixed
    nothing does not run them again: the validator's run stands
    (`${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`).
