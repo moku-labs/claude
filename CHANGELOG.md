@@ -2,6 +2,23 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.5 (2026-10-11)
+
+### Fixed
+- **The stop hook's reminder no longer tells an agent to ignore a new assignment.**
+  - The reminder ended with "Do no more work". An agent that got new work from the coordinator in the
+    same turn read it as "do not start the assignment", reported it as not started and ended.
+  - Now it says: report the work you have done, start no new work of your own, and an assignment from
+    the coordinator that arrived since still stands.
+  - It still fires for a report with no contract. In 850 recorded blocks, 26 were such reports.
+  - The instruction the orchestrator sends to a silent agent keeps "Do no more work": there it is meant.
+
+### Tests
+- The stop hook has one test per place a report can be, on the entries the desktop app writes: the last
+  message, a hand-back, nowhere on the first stop, nowhere on the second stop, an agent that is not
+  moku's.
+- Checked on recorded transcripts: of 850 stops the 0.84.0 hook blocked, 824 pass since 0.85.4.
+
 ## 0.85.4 (2026-10-11)
 
 ### Fixed

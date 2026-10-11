@@ -32,7 +32,7 @@ const contract = extractContract(String(payload.last_assistant_message ?? "")) ?
 
 // No report yet, first stop: the agent gets one instruction to deliver it before it ends
 if (!contract && payload.stop_hook_active !== true) {
-  console.log(JSON.stringify({ decision: "block", reason: "You are ending without your report. Deliver it now: the output contract (fenced json) with an honest verdict on what is done and what is not. Do no more work." }));
+  console.log(JSON.stringify({ decision: "block", reason: "You are ending without your report. Deliver it now: the output contract (fenced json) with an honest verdict on what is done and what is not. Report the work you have done and start no new work of your own. An assignment from the coordinator that arrived since still stands: do it, then report on it too." }));
   process.exit(0);
 }
 
