@@ -11,7 +11,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { runningAgents } from "../lib/hooks/agents.mjs";
+import { forgetFinished, runningAgents } from "../lib/hooks/agents.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
 import { loadLedger } from "../lib/rails/ledger.mjs";
@@ -22,6 +22,9 @@ const root = rootForSession(payload);
 
 // Off the rails: stopping is nobody's business
 if (!root) process.exit(0);
+
+// The turn of the main session ended: a record of an agent the harness no longer lists has no agent behind it
+if (!payload.agent_id) forgetFinished(root, payload.session_id, payload.background_tasks);
 
 // Already continuing because of this hook: never block twice, that would loop
 if (payload.stop_hook_active === true) process.exit(0);

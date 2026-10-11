@@ -29,7 +29,9 @@ description: >
 > skill with the Skill tool and read `references/moku-frameworks.md` under the base directory it prints.
 
 ## Current Project State
-!`test -f package.json && grep -E '"@moku-labs/(game|editor)"' package.json 2>/dev/null || true`
+
+Nothing is read for you at load time. Read `package.json` and see whether `@moku-labs/game` and
+`@moku-labs/editor` are dependencies of the project.
 
 ## What it is
 

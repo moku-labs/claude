@@ -57,7 +57,9 @@ file by path — `${CLAUDE_PLUGIN_ROOT}` resolves per plugin. The layout of a ga
 it. Every validator ends with the JSON output contract in `agent-preamble.md`.
 
 ## Project configuration
-!`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
+
+Read `.claude/moku.local.md` with the Read tool before Step 0. The file is optional: when it is
+absent, every setting has its default.
 
 ## Step 0 — guards, scope and arguments
 
@@ -128,6 +130,15 @@ verdict on what is done. Do no more work." Take what comes back. A validator tha
 verdict did not run, which means the project was not fully checked — that is a `FAIL` (`no report`),
 not a shrug, and not a reason to wait. The same one resume applies to a skeptic; a silent skeptic
 counts as "upheld", never as "refuted". The rule is `agent-preamble.md` → "For the orchestrator".
+
+A validator that cannot start is a different failure: a **launch failure**. The `Agent` call returns an
+error instead of a result (a permission check, an unknown agent type, a model that is not available),
+or the task notification of a background launch carries one. There is nothing to resume, so
+`SendMessage` is the wrong tool. Spawn the validator again once, the same way. A second launch error
+ends it: list the validator in the report as **not run** with the error text word for word, and count
+the cycle as `FAIL` (`launch failure`), because its axes were not checked. Do not do the validator's
+work yourself in its place, and do not retry a third time. The same holds for a skeptic that cannot
+start: its findings count as "upheld".
 
 ## The loop
 

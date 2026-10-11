@@ -1,7 +1,8 @@
 /**
  * Repository check: every plugin manifest parses, versions agree with the marketplace,
  * every SKILL.md and agent file starts with parseable-looking frontmatter, and every agent's
- * turn-budget line agrees with its `maxTurns` (or says "no limit" when there is none).
+ * turn-budget line agrees with its `maxTurns` (or says "no limit" when there is none), and no skill an
+ * agent preloads carries a dynamic shell line.
  *
  * Runs in CI where the `claude` CLI is not installed. `npm run validate` is the full local check.
  */
@@ -45,6 +46,28 @@ for (const file of markdownWithFrontmatter("plugins").filter((path) => /\/agents
   if (limit && !/#\s*\S/.test(limit[2])) problems.push(`${file}: maxTurns ${limit[1]} has no "# why" comment`);
   if (limit && budget && budget[1] !== limit[1]) problems.push(`${file}: Turn budget ${budget[1]} != maxTurns ${limit[1]}`);
   if (limit && budget && Number(budget[2]) !== Math.round(Number(limit[1]) * 0.8)) problems.push(`${file}: stop turn ${budget[2]} is not 80 % of ${limit[1]}`);
+}
+
+// A skill an agent preloads through `skills:` is rendered when the agent starts, and a dynamic shell line
+// in it (`!` and backticks, or a "```!" block) must pass the harness permission check right then. When the
+// check does not answer "allow", the agent dies before its first turn. Such a skill says "read the file".
+const skillFiles = markdownWithFrontmatter("plugins").filter((path) => /\/SKILL\.md$/.test(path));
+for (const file of markdownWithFrontmatter("plugins").filter((path) => /\/agents\//.test(path))) {
+  const frontmatter = /^---\n([\s\S]*?)\n---\n/.exec(readFileSync(file, "utf8"))?.[1] ?? "";
+  const preloaded = /^skills:\n((?:[ \t]+-.*\n?)+)/m.exec(frontmatter)?.[1] ?? "";
+
+  for (const name of [...preloaded.matchAll(/-\s*([\w:-]+)/g)].map((match) => match[1].replace(/^.*:/, ""))) {
+    const skill = skillFiles.find((path) => path.endsWith(join("skills", name, "SKILL.md")));
+    if (!skill) {
+      problems.push(`${file}: preloads skill "${name}", which no plugin has`);
+      continue;
+    }
+
+    const lines = readFileSync(skill, "utf8").split("\n");
+    lines.forEach((line, index) => {
+      if (/(^|\s)!`[^`]/.test(line) || /^\s*```!/.test(line)) problems.push(`${skill}:${index + 1}: dynamic shell line in a skill that ${file} preloads; write "read the file" instead`);
+    });
+  }
 }
 
 if (problems.length > 0) {
