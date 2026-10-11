@@ -59,11 +59,16 @@ played them.
 
 ## Reading settings
 
-In a skill body:
+In a skill body, as a plain instruction:
 
 ```markdown
-!`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
+Read `.claude/moku.local.md` with the Read tool. The file is optional.
 ```
+
+Never as a dynamic shell line (`!` and backticks). Such a line runs when the skill loads and must pass
+the permission check of the harness. When the check does not answer "allow", the load is aborted, and
+for a skill an agent preloads through `skills:` the agent dies before its first turn.
+`scripts/check-manifests.mjs` refuses such a line in every skill an agent preloads.
 
 In a hook script:
 

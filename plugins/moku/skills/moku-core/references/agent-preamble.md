@@ -68,6 +68,13 @@ The skills that spawn agents (build, verify, e2e, design) apply the same rule fr
   "Deliver your report now: the output contract with an honest verdict on what is done. Do no more
   work." Take what comes back. If it still has no report, record the agent as `FAIL` (`no report`),
   use what it left on disk, and go on. Never wait open-ended, never send a second reminder.
+- **A launch failure is not a missing report.** The agent never had a turn: the `Agent` call, or the
+  task notification of a background launch, returns an error (a permission check, an unknown agent
+  type, a model that is not available). There is nothing to resume. Spawn the agent again once, the
+  same way. A second error: record `FAIL` (`launch failure`) with the error text word for word, report
+  the agent as not run, and go on. Its work is not done and not checked, so never report it as clean
+  and never do its work in its place. The `Agent` PostToolUseFailure hook prints this instruction and
+  drops the record the failed launch left under `.planning/agents/`.
 - The hooks make the pattern visible and mechanical. `SubagentStop` tells an agent that stops without
   its contract to deliver it, once, and logs `no report (turn limit: N/N)` when the transcript shows the
   budget was used up. The prompt hook prints this resume instruction when a hand-back or task

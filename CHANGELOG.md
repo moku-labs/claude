@@ -2,6 +2,45 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.3 (2026-10-11)
+
+### Fixed
+- **An agent no longer dies at start because of a shell line in a skill it preloads.**
+  - Seen at 0.85.1 in a worktree of `@moku-labs/game`: `moku-architecture-validator` failed twice
+    before its first turn with `Shell command permission check failed for pattern` on the `STATE.md`
+    line of `moku-core`.
+  - A dynamic shell line (`!` and backticks) runs when the skill loads. The Claude Code docs say the
+    load is aborted when the permission check answers anything but "allow". A skill listed under
+    `skills:` of an agent loads when the agent starts.
+  - Removed all seven lines of the core plugin (`moku-core`, `moku-plugin`,
+    `moku-common-conventions`, `verify`, `build`) and the one line each of `moku-web` and `moku-game`,
+    which their validators preload. Each is now a plain instruction to read the file.
+  - `scripts/check-manifests.mjs` refuses a dynamic shell line in any skill an agent preloads. CI runs it.
+  - Not known: why the check refused this agent and not the three validators that preload the same
+    skill. The harness withholds the reason, and the docs do not say how `tools`, `model` or `effort`
+    of an agent change the check.
+  - Not changed: the shell lines of `moku-ai`, `moku-common`, `moku-native`, `moku-room`,
+    `moku-system` and `moku-worker`. No agent preloads these skills.
+- **A crashed agent no longer stays "running" in `moku-rails status`.** An agent that dies before its
+  first turn gets a `SubagentStart` and no `SubagentStop`, so its record under `.planning/agents/` stayed
+  until someone deleted the file. Now three things drop it:
+
+  | When | What is dropped |
+  |---|---|
+  | The `Agent` call fails (`PostToolUseFailure`, new hook `on-agent-failure.mjs`) | the record of that agent type in this session, when it is the only one |
+  | The turn of the session ends (`Stop`) | every record of this session whose agent the payload's `background_tasks` no longer lists |
+  | The records are read | every record older than six hours |
+
+  The record now names its session. A stop payload without `background_tasks` drops nothing.
+  Not verified live: that the harness fires `PostToolUseFailure` for an agent that fails to launch. If
+  it does not, the stop hook and the age limit still drop the record.
+
+### Added
+- **A launch failure has a name and a rule.** `verify`, `build` and `agent-preamble.md` covered only an
+  agent that returns without a report. An agent that cannot start is spawned again once; a second error
+  is `FAIL` (`launch failure`), reported as not run with the error text word for word. The new hook
+  hands the orchestrator the same instruction with the error.
+
 ## 0.85.2 (2026-10-11)
 
 ### Changed

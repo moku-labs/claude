@@ -11,8 +11,9 @@ description: >
 # Moku Plugin Structure
 
 ## Current Project State
-!`test -f .planning/STATE.md && grep -A2 '## Phase:' .planning/STATE.md 2>/dev/null || true`
-!`test -d src/plugins && echo "Existing plugins:" && ls src/plugins/ 2>/dev/null || true`
+
+Nothing is read for you at load time. When the work depends on it, read the `## Phase:` field of
+`.planning/STATE.md` and list `src/plugins/` with the Read and Glob tools. Either may be absent.
 
 Follow the Moku plugin structure specification. Every source file carries full JSDoc coverage. Be creative within these guidelines.
 

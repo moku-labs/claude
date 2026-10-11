@@ -12,8 +12,9 @@ description: >
 # Moku Common Conventions (`@moku-labs/common`, rules MC1–MC3)
 
 ## Current Project State
-!`test -f package.json && grep -E '"@moku-labs/common"' package.json 2>/dev/null || true`
-!`test -f package.json && grep -E '"(logPlugin|envPlugin)"' package.json 2>/dev/null || true`
+
+Nothing is read for you at load time. Before you judge MC1–MC3, read `package.json` and see whether
+`@moku-labs/common` is a dependency of the project.
 
 Family-level conventions for consuming `@moku-labs/common`: CLI output stays branded, logging
 structured, and env access validated. These are **family conventions** (how

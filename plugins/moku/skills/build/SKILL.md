@@ -59,7 +59,9 @@ plugin structure, read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/spec-i
 `.planning/` is local state — it is never staged or committed.
 
 ## Project configuration
-!`test -f .claude/moku.local.md && head -20 .claude/moku.local.md || true`
+
+Read `.claude/moku.local.md` with the Read tool before Step 0. The file is optional: when it is
+absent, every setting has its default.
 
 Values come from the YAML frontmatter of `.claude/moku.local.md`. Ignore invalid values and unknown keys.
 
@@ -188,6 +190,7 @@ Only this session spawns agents; no agent spawns another.
 | Filter Sonnet validators' findings | `moku-skeptic` — a finding that does not survive it does not count |
 | Decide continue / stop-for-review / retry after a wave | You do, with the table in `build-wave-execution.md` |
 | An agent returns without its report | You resume it exactly once ("Deliver your report now"), then record `FAIL` (`no report`) and go on. Never an open-ended wait: `agent-preamble.md` → "For the orchestrator" |
+| An agent cannot start at all (the `Agent` call or the task notification returns a launch error) | A launch failure, not a missing report: nothing to resume. You spawn it again once, the same way. A second error: record `FAIL` (`launch failure`) with the error text word for word, report the agent as not run, and go on. A wave whose builder never started is not built; a wave whose reviewer or validator never started is unreviewed, not clean |
 
 ## Error recovery (`fix`)
 

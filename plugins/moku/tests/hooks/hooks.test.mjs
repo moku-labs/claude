@@ -718,6 +718,103 @@ describe("agents running inside a station", () => {
   });
 });
 
+describe("an agent that could not start", () => {
+  const ERROR = 'Shell command permission check failed for pattern "!`test -f .planning/STATE.md`"';
+  const start = (root, id, type, session = "s1") => hook("on-subagent-start.mjs", { cwd: root, session_id: session, agent_id: id, agent_type: type });
+  const failed = (root, type, more = {}) => hook("on-agent-failure.mjs", { cwd: root, session_id: "s1", hook_event_name: "PostToolUseFailure", tool_name: "Agent", tool_input: { subagent_type: type, prompt: "validate" }, error: ERROR, is_interrupt: false, ...more });
+
+  it("is named to the orchestrator with the error text and one retry, and its record is dropped", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-1", "moku:moku-architecture-validator");
+    start(root, "agent-2", "moku:moku-style-validator");
+
+    const context = JSON.parse(failed(root, "moku:moku-architecture-validator").out).hookSpecificOutput.additionalContext;
+
+    assert.match(context, /moku:moku-architecture-validator could not start/);
+    assert.ok(context.includes(ERROR), "the error text is passed on word for word");
+    assert.match(context, /Spawn it again exactly once/);
+    assert.match(context, /FAIL \(launch failure\)/);
+    assert.doesNotMatch(context, /SendMessage/);
+    assert.match(rails(root, "status").stdout, /Agents: 1 agent\(s\) running: moku:moku-style-validator\./);
+  });
+
+  it("keeps every record when several agents of the type run: nobody can tell which launch failed", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-1", "moku:moku-builder");
+    start(root, "agent-2", "moku:moku-builder");
+
+    failed(root, "moku:moku-builder");
+
+    assert.match(rails(root, "status").stdout, /moku:moku-builder ×2/);
+  });
+
+  it("leaves the record of another session alone, and says nothing for an agent that is not moku's or an interrupt", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-1", "moku:moku-skeptic", "s2");
+
+    assert.equal(failed(root, "Explore").out, "");
+    assert.equal(failed(root, "moku:moku-skeptic", { is_interrupt: true }).out, "");
+    assert.match(rails(root, "status").stdout, /Agents: 1 agent\(s\) running: moku:moku-skeptic/);
+  });
+});
+
+describe("a record with no live agent behind it", () => {
+  const start = (root, id, type = "moku:moku-builder", session = "s1") => hook("on-subagent-start.mjs", { cwd: root, session_id: session, agent_id: id, agent_type: type });
+  const turnEnds = (root, tasks, more = {}) => hook("on-stop.mjs", { cwd: root, session_id: "s1", stop_hook_active: true, background_tasks: tasks, ...more });
+
+  it("is dropped when the turn of its session ends and the harness lists no such agent", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-1", "moku:moku-architecture-validator");
+    start(root, "agent-2", "moku:moku-builder");
+    start(root, "agent-3", "moku:moku-builder", "s2");
+
+    turnEnds(root, [{ type: "subagent", agent_type: "moku-builder", id: "x" }]);
+
+    assert.match(rails(root, "status").stdout, /Agents: 2 agent\(s\) running: moku:moku-builder ×2\./);
+
+    turnEnds(root, []);
+
+    assert.match(rails(root, "status").stdout, /Agents: 1 agent\(s\) running: moku:moku-builder\./, "the other session's agent stays");
+  });
+
+  it("stays when the harness cannot say: no task list, a subagent without a type, or a stop inside a subagent", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-1");
+
+    hook("on-stop.mjs", { cwd: root, session_id: "s1", stop_hook_active: true });
+    turnEnds(root, [{ type: "subagent", id: "x" }]);
+    turnEnds(root, [], { agent_id: "agent-1" });
+
+    assert.match(rails(root, "status").stdout, /Agents: 1 agent\(s\) running/);
+  });
+
+  it("no longer holds the turn open: the stop hook blocks an abandoned station once the record is gone", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-1", "moku:moku-architecture-validator");
+
+    assert.match(hook("on-stop.mjs", { cwd: root, session_id: "s1", background_tasks: [] }).out, /"decision":"block"/);
+    assert.equal(rails(root, "may-stop").status, 2);
+  });
+
+  it("is dropped by age when its session is gone, and the file is deleted", () => {
+    const root = project({ initialized: true });
+    building(root);
+    start(root, "agent-old");
+    start(root, "agent-new");
+    const old = join(root, ".planning", "agents", "agent-old.json");
+    writeFileSync(old, `${JSON.stringify({ ...JSON.parse(readFileSync(old, "utf8")), startedAt: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString() })}\n`);
+
+    assert.match(rails(root, "status").stdout, /Agents: 1 agent\(s\) running: moku:moku-builder\./);
+    assert.equal(existsSync(old), false);
+  });
+});
+
 describe("the Agent hook reads the response the harness really passes", () => {
   // Shapes captured from a live PostToolUse payload (Claude Code 2.1.280), trimmed
   const prompt = 'Build the streak plugin.\nEnd with your contract:\n```json\n{"agent":"moku-builder","verdict":"PASS|FAIL"}\n```';

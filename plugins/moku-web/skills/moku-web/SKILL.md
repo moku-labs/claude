@@ -10,7 +10,9 @@ description: >
 # Moku Web Patterns
 
 ## Current Project State
-!`test -f package.json && grep -E '"(@moku-labs/web|preact)"' package.json 2>/dev/null || true`
+
+Nothing is read for you at load time. Read `package.json` and see whether `@moku-labs/web` and `preact`
+are dependencies of the project.
 
 Enforce the established Moku web patterns; keep structure clear, documented, and simple. The
 framework-level **specification, rules, and recommendations for any web project** (static site,

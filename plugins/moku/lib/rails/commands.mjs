@@ -342,7 +342,7 @@ export function pause({ root, flags }) {
   // Agents still running inside the station are not stopped by the pause; their reports are still to come
   const agents = runningAgents(root);
   const lines = [`Paused ${change.id}${flags.reason ? `: ${flags.reason}` : ""}.`];
-  if (agents.length > 0) lines.push(`Warning: ${describeAgents(agents)} inside the station (started ${agents[0].startedAt}). The pause does not stop them and does not close their gate; take their reports when they arrive. A record left behind by an agent that crashed is a file under .planning/agents/; delete it.`);
+  if (agents.length > 0) lines.push(`Warning: ${describeAgents(agents)} inside the station (started ${agents[0].startedAt}). The pause does not stop them and does not close their gate; take their reports when they arrive. A record left by an agent that crashed is dropped when this session's turn ends.`);
 
   return { code: 0, lines };
 }

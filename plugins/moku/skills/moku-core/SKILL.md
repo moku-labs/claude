@@ -10,8 +10,11 @@ description: >
 # Moku Core Architecture
 
 ## Current Project State
-!`test -f .planning/STATE.md && head -20 .planning/STATE.md || true`
-!`test -f src/config.ts && echo "Framework config: src/config.ts exists" || true`
+
+Nothing is read for you at load time. When the work depends on where the project stands, read
+`.planning/STATE.md` (the first 20 lines carry the phase, the verb and the next action) and check for
+`src/config.ts` with the Read and Glob tools. Either file may be absent: a fresh project and a git
+worktree often have no `STATE.md`. An agent takes the standing from its spawn prompt first.
 
 Follow the Moku Core specification when generating, reviewing, or modifying code. Biome and quality-linter warnings are fixed, not skipped. Every source file carries full JSDoc coverage.
 
