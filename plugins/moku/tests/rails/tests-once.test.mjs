@@ -26,14 +26,16 @@ function git(cwd, ...args) {
  * script red live outside the project, so a run never touches the tree. With `repo`, everything is
  * committed, the ledger included: the rails write it on every command, and that must not dirty the tree.
  * With `ignored`, `.planning/` is in `.gitignore` instead, the way a project with worktrees keeps it.
+ * With `loud`, the script prints 2 MB first, as a large suite's reporter does.
  */
-function project({ repo = true, ignored = false } = {}) {
+function project({ repo = true, ignored = false, loud = false } = {}) {
   const root = realpathSync(mkdtempSync(join(tmpdir(), "moku-once-")));
   const outside = realpathSync(mkdtempSync(join(tmpdir(), "moku-once-runs-")));
   const count = join(outside, "runs");
   const red = join(outside, "red");
 
-  const script = `const fs = require("node:fs"); fs.appendFileSync(${JSON.stringify(count)}, "x"); process.exit(fs.existsSync(${JSON.stringify(red)}) ? 1 : 0);`;
+  const print = loud ? `fs.writeSync(1, "x".repeat(2 * 1024 * 1024));` : "";
+  const script = `const fs = require("node:fs"); ${print} fs.appendFileSync(${JSON.stringify(count)}, "x"); process.exit(fs.existsSync(${JSON.stringify(red)}) ? 1 : 0);`;
   writeFileSync(join(root, "test.cjs"), script);
   writeFileSync(join(root, "package.json"), JSON.stringify({ name: "habits", scripts: { test: "node test.cjs" } }));
 
@@ -167,6 +169,14 @@ describe("moku-rails check tests: one green run per tree", () => {
     assert.equal(again.code, 0);
     assert.doesNotMatch(again.text, /not run again/);
     assert.equal(runs(), 3);
+  });
+
+  it("a green script that prints more than 1 MB is green, not a timeout", () => {
+    const { root, runs } = project({ loud: true });
+    built(root, "2026-10-20-loud");
+    const tests = close(root, "2026-10-20-loud");
+    assert.equal(runs(), 1);
+    assert.match(tests.text, /Checklist "tests" confirmed for 2026-10-20-loud/);
   });
 
   it("runs the script every time outside a git repository", () => {

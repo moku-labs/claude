@@ -2,6 +2,15 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.7 (2026-10-20)
+
+### Fixed
+- **`moku-rails check tests` called a green suite red.** It ran the test script with Node's default
+  `maxBuffer` of 1 MB. A suite that prints more (studio: 1.18 MB, 782 files, 133 s) was killed by Node,
+  and the check said `red (exit timeout)`. The run now takes up to 64 MB of output (`TEST_MAX_BUFFER`).
+
+Rails and hooks: 342 tests pass, 1 of them new.
+
 ## 0.85.6 (2026-10-11)
 
 ### Changed

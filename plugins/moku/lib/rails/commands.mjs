@@ -652,6 +652,9 @@ export function mayStop({ root }) {
 /** Longest the test script may run before the check gives up. */
 const TEST_TIMEOUT_MS = 15 * 60 * 1000;
 
+/** Most output the test script may print. Node's default of 1 MB killed a large suite, reported as a timeout. */
+const TEST_MAX_BUFFER = 64 * 1024 * 1024;
+
 /** The rails' test run, as the test-run log names it. */
 const TEST_COMMAND = "node --run test";
 
@@ -666,7 +669,7 @@ const TEST_COMMAND = "node --run test";
 function runTests(root) {
   const tree = treeKey(root);
   const started = Date.now();
-  const run = spawnSync(process.execPath, ["--run", "test"], { cwd: root, encoding: "utf8", timeout: TEST_TIMEOUT_MS });
+  const run = spawnSync(process.execPath, ["--run", "test"], { cwd: root, encoding: "utf8", timeout: TEST_TIMEOUT_MS, maxBuffer: TEST_MAX_BUFFER });
   const output = `${run.stdout ?? ""}${run.stderr ?? ""}`;
 
   const kept = saveOutput(root, output);
