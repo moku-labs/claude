@@ -276,6 +276,25 @@ and (if it changes the scaffold) update `tooling-config.md`.
 
 ---
 
+## Stack version 5 migrations (Biome stays out of `.planning`)
+
+### biome-ignore-planning
+- **Title:** Force-ignore `.planning` in `biome.json`
+- **Stack:** 5
+- **Applies to:** all
+- **Default:** on
+- **Depends on:** —
+- **Detect:** `biome.json` exists and `files.includes` has no `!!**/.planning` entry.
+- **Apply:**
+  1. `files.includes` exists: append `"!!**/.planning"` as its last entry.
+  2. `files.includes` is absent: set it to `["**", "!!**/.planning"]`.
+  3. Format the file: `bunx biome format --write biome.json`.
+- **Verify:** `bun run lint` prints no `Dereferenced symlink` warning.
+- **Risk:** none for source files. Only `.planning` leaves the walk.
+- **Rollback:** `git checkout -- biome.json`.
+
+---
+
 ## Moku-family framework versions (registry-driven)
 
 These migrations bump a **depended-on Moku-family package** to the version recorded in

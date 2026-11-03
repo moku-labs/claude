@@ -2,6 +2,13 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.9 (2026-11-03)
+
+### Fixed
+- **Existing projects and games kept the `.planning` warnings.** Stack 5 adds the migration
+  `biome-ignore-planning`, so `/moku:upgrade` adds `"!!**/.planning"` to `biome.json`. The game template in
+  `hello-world.md` has the same entry now.
+
 ## 0.85.8 (2026-11-03)
 
 ### Fixed

@@ -22,7 +22,7 @@ section id in your output. `.planning/` is local-only state and is never staged 
 
 The target is hardcoded and there are no version arguments: `upgrade` migrates the project to whatever the installed plugin's target stack is.
 
-- **Target stack:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md` (current: **Stack version 4**).
+- **Target stack:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/target-stack.md` (current: **Stack version 5**).
 - **Lint stacks:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/lint-stacks.md`. Detect the stack first. A legacy project (`eslint.config.*`) is not below target because of its linter.
 - **Migration registry:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/upgrade-migrations.md`.
 - **Canonical configs:** `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md`.

@@ -12,9 +12,9 @@ When you change the prescribed stack, do all three in the same release:
 
 ---
 
-## Current target — Stack version 4 (current lint stack: Biome + oxlint · TypeScript 7 · Node 24 floor)
+## Current target — Stack version 5 (current lint stack: Biome + oxlint · TypeScript 7 · Node 24 floor)
 
-Stack 4 makes the current lint stack the default (`lint-stacks.md`). Biome + oxlint replaces
+Stack 5 keeps Biome out of `.planning` (`biome-ignore-planning`). Stack 4 made the current lint stack the default (`lint-stacks.md`). Biome + oxlint replaces
 Biome + ESLint, and TypeScript moves to 7, the native compiler. The Node 24 floor of Stack 3 is
 unchanged. The hardcoded target for `/moku:upgrade` ships with the installed plugin version.
 
@@ -104,6 +104,7 @@ Detect the lint stack first (`lint-stacks.md`). A project is **below** its targe
 - `tsconfig.json` → `compilerOptions.types` is absent (TS6 needs it explicit).
 - `tsconfig.build.json` → `compilerOptions.rootDir` is absent.
 - `.bun-version` `< 1.4.3` (freshness, advisory).
+- `biome.json` → `files.includes` has no `!!**/.planning` entry (Stack 5 signature).
 - `package.json` → `engines.node` floor `< 24.0.0`, or `engines.node` absent (Stack 3 signature).
 
 ---
@@ -124,6 +125,7 @@ maintainer skill.
 
 | Stack | moku Claude | Headline | Migration id(s) |
 |-------|-------------|----------|-----------------|
+| **5** | v0.85.9 | Biome force-ignores `.planning`; broken lane links in a worktree failed verify | `biome-ignore-planning` |
 | **4** | v0.79.0 | Current lint stack is the default: Biome + oxlint, TypeScript 7.0.2, tsdown 0.23.0; legacy ESLint + TS 6 kept | `moku-lint-oxlint` (opt-in) |
 | **3** | v0.45.0 | Node 24 runtime floor — `engines.node` `>=22` → `>=24`, aligning with `@moku-labs/core@0.1.3` / `@moku-labs/web@1.6.2` engines | `node24-floor` |
 | **2** | v0.30.0 | TypeScript 6 baseline + tooling freshness; opt-in `tsgo` fast-check | `ts6-core`, `tooling-freshness`, `tsgo-fastcheck` (opt-in) |

@@ -161,7 +161,7 @@ override goes, and one override comes. A JSX `<button>` here is a game tag, not 
 stay out: their writers own the format.
 
 ```json
-"files": { "includes": ["*.ts", "{core,shared,features,plugins,tests}/**"] },
+"files": { "includes": ["*.ts", "{core,shared,features,plugins,tests}/**", "!!**/.planning"] },
 ```
 
 ```json
