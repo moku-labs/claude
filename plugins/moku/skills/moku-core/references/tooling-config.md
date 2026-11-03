@@ -114,7 +114,7 @@ The three `release:*` scripts come from the `moku-release` bin of `@moku-labs/ci
 {
   "$schema": "https://biomejs.dev/schemas/2.4.16/schema.json",
   "files": {
-    "includes": ["src/**", "tests/**", "*.config.ts"]
+    "includes": ["src/**", "tests/**", "*.config.ts", "!!**/.planning"]
   },
   "formatter": {
     "enabled": true,

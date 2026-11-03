@@ -2,6 +2,14 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.8 (2026-11-03)
+
+### Fixed
+- **Biome warned on broken links in `.planning`.** The rails link `.planning` to a lane, and the lane links
+  shared files that may not exist yet. `biome check .` walked into them and printed "Dereferenced symlink",
+  and any lint warning makes verify end FAIL. The `biome.json` template in `tooling-config.md` now force-ignores
+  `.planning` with `"!!**/.planning"`.
+
 ## 0.85.7 (2026-10-20)
 
 ### Fixed
