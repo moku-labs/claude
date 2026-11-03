@@ -181,7 +181,9 @@ search-result text); keep purely decorative UI chrome locale-invariant if that's
 
 ## 9. SEO & social cards
 
-`head` composes `<title>`/meta/canonical/hreflang/OG/Twitter/JSON-LD from each route's `.head()`.
+`head` composes `<title>`/meta/canonical/hreflang/OG/Twitter/JSON-LD from each route's `.head()`. Put these
+tags there, not in `src/index.html`: since `@moku-labs/web` v2.4.19 a client DATA navigation syncs the whole head
+and removes a matching tag placed statically in the shell.
 For social cards, the `og/` dir holds Preact components rendered at build (Satori) and wired via
 `pluginConfigs.build.ogImage` (`render` per-detail card, `defaultCard` site fallback, `fonts`,
 `fontDir`); set `head.defaultOgImage` for the non-detail fallback. Optional but recommended for any

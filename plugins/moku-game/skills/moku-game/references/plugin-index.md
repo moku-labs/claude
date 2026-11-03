@@ -1,18 +1,18 @@
 # @moku-labs/game — Plugin & Property Index
 
-**Synced version:** `0.14.12` (catalog from the `v0.14.9` tag, and 0.14.10 to 0.14.12 from the diff between
-the tags: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
+**Synced version:** `0.15.92` (catalog from the `v0.14.9` tag, and 0.14.10 to 0.15.92 from the diff between
+the tags and the bodies of the PRs: `llms.txt`, `docs/plugins.md`, `docs/events.md`,
 `docs/configuration.md`, `docs/doors.md`, `docs/shell.md`, `docs/lint.md`, `docs/testing.md`,
 `docs/hot-swap.md`, `docs/project-index.md`, `src/plugins/*/README.md`, and the export lists of
 `src/index.ts`, `src/app.ts`, `src/cli.ts`, `src/testing.ts`, `src/visual.ts`, `src/project.ts`).
 `@moku-labs/core ^1.7.1` and `@moku-labs/common ^0.3.4` are **peer** dependencies (Bun installs them on
-`bun add`). `pixi.js ^8.0.0` is a **peer** dependency. Optional peers: `playwright-core` (the pixel leg of the
+`bun add`). `pixi.js ^8.22.0` is a **peer** dependency (`^8.0.0` before 0.14.13). Optional peers: `playwright-core` (the pixel leg of the
 visual tests), `sharp` (the asset pack), `typescript >=5.5` (the project index), `@moku-labs/system ^0.3.1`
-(the system shell, the store save), `@moku-labs/native ^0.3.2` (`moku-game native`). Engines node ≥24,
+(the system shell, the store save), `@moku-labs/native ^0.3.13` (`moku-game native`). Engines node ≥24,
 bun ≥1.4.2 (since 0.14.0; ≥1.3.14 before). ESM only. `"sideEffects"` lists the root entry
 `./dist/index.mjs` only (since 0.13.2; `false` before).
 
-The second half indexes **`@moku-labs/editor@0.10.10`** (peers `@moku-labs/game >=0.13.1` and
+The second half indexes **`@moku-labs/editor@0.10.20`** (peers `@moku-labs/game >=0.15.0` and
 `typescript >=5.5`).
 
 > The package ships `llms.txt` since 0.4.0 (`node_modules/@moku-labs/game/llms.txt`). It matches the
@@ -20,6 +20,31 @@ The second half indexes **`@moku-labs/editor@0.10.10`** (peers `@moku-labs/game 
 
 | Version | What changed for a game |
 |---|---|
+| 0.15.85 to 0.15.92 | Store builds: `native.signing`, `native.ios`, `moku-game native build <ios\|android> --store --build-number <n>` (0.15.85). The store-signed test app `native.dev` with `--store --dev`, and `native build ios --debug` (0.15.87). A door toggle takes `choices` and `choice` (0.15.87). A game's own number format: `defineTextFormats`, the feature key `textFormats`, `GameTypes.textFormats` (0.15.88). `pluginConfigs.renderer.shots` and `app.renderer.shots.take(key)`, `has(key)`: a small soft picture of the frame just drawn, for a loader (0.15.90). A line also breaks after a hyphen and at a soft hyphen (0.15.91). 0.15.92 is a test only |
+| 0.15.57 to 0.15.84 | The leave loader `leave.loader.projection` is kept built and hidden, and is fed the switch with its load progress as `SceneSwitch`; `enter.cover` of the scene being entered sets the veil's colour and alpha (0.15.57). `page.boot` of `config.ts` shows a picture before the canvas and fades it into the first scene (0.15.58). `sync.debug.kept()` without a boolean switches nothing and warns `renderer:debug-kept-needs-boolean` (0.15.68). `leave.loader.holdMs` is a floor on the swap (0.15.82). Filter and kept-picture work in the renderer changes no API |
+| 0.15.56 | **Behaviour: a guide owns Back.** While a guide narrows the open gate, Back is offered as `back` and counts as taken: `provider.exit()` is not called, and Escape is not pressed. A press the narrow refuses answers `blocked`, also inside the window. A fast walk that ends on a guided node shows the guide |
+| 0.15.52 | **Behaviour: changes awaited guides in every game.** `defineNode({ guide: state => GuideOptions \| undefined })` derives the guide on a rest node. New `target`, `pad`, `veil`, `blocked`; `hand`, `text`, `highlight` are deprecated, the engine never drew them. **A guide now locks input outside its window**, through `app.input.lock.window(rect \| null \| undefined)`. A guide with no target, or a target that never shows, locks every press and soft-locks the step. Give every guide a shown `target`, or a `blocked: { intent }` the node accepts. The dev warning is `ui:guide-target-missing` |
+| 0.15.54 | `lineHeight` on a text style. An `<anchor>` on a point. An image of no size draws nothing |
+| 0.15.48 | `<anchor to={target} pad={n}>` sits on another element's drawn rect; `app.ui.rectOf(target)` answers that rect. Types `AnchorTarget` |
+| 0.15.47 | Warm windows: `projection({ warm: (player, session) => item })` keeps one item built and hidden, so the window opens in the frame after the tap |
+| 0.15.46 | **Look of every game: the scene veil fades in over 50 ms** (`scenes.leave.cover.inMs`, was 150). `schedule` resumes its node at once |
+| 0.15.43 | The stage `flow.onEnter("begin", cb)`, before `"load"`. The veil goes up there, before the downloads |
+| 0.15.41 | `slot("name", { shop: type<{ tab: string }>() })` declares named outcomes; a contribution that exits one leaves the slot at once. `contribution(slot, { flow, order, when? })` checks it at compile time |
+| 0.15.38 to 0.15.40 | **Look of every game: a live scene switch dims the scene it leaves** (`scenes.leave`, default black 0.45) and shows a loader past 400 ms. Turn it off with `defineScene(id, { leave: false })` or `scenes.leave`. The scene is built in parts and applied in parts |
+| 0.15.37 | `projection({ initialOnly: [[Shape, ["sweep"]]] })`: a view field another writer keeps |
+| 0.15.31 | `tween` takes `segments` and `repeat` in a timeline; `repeat: "forever"` tracks |
+| 0.15.29 | **Behaviour: a live scene switch builds the next scene aside and swaps it in one frame**, in the budget `scenes.buildMs` (`"auto"`). Until the swap `scenes.current()` answers the old scene and the new one is not drawn, hit or found by `ui.find`. `scenes:changed` is emitted at the swap. A fast walk and a headless app mount in one block as before |
+| 0.15.27 | Named sfx: `sfx(key, { id, fadeMs })`, `fx.start(stopSfx(id, { fadeMs }))`, `app.audio.stop(id)`, config `audio.sfxFadeMs`. `blend: "add" \| "screen"` on `Sprite`, `NineSlice` and `style.blend` |
+| 0.15.26 | A live switch warms the bundles the scene names before it mounts |
+| 0.15.22 | The effect `ready(bundles)` lets a node rest on a load and stay answerable. `assets.warm(bundle)` and the upload budget `renderer.uploads` |
+| 0.15.16 | `wrap: "box"` on a text style wraps at the laid-out width |
+| 0.15.11 | `Overlay({ hold: true })` holds the endless loops under a sheet |
+| 0.15.9 | `kind: "arc"` on `Shape`, `shape: "arc"` with `sweep`, `cap` in a style |
+| 0.15.8 | Horizontal scroll: `<scroll axis="x">`, fling, `snap`, `offset`, `ScrollState`, `app.ui.scroll(key, to)`, door `game.scroll`. Fixed at spawn; the windowed form stays on `y` |
+| 0.15.7 | `renderer.adaptiveScale`, backdrop filters |
+| 0.15.4 | **Breaking: `systemsRun`, `ecs.hold`, `ecs.isActive` are gone.** A system with a `query` does not run while a term of its query has no entity. Work a system did outside its rows (a cleanup, a budget, a press that ends) moves to a system with `query: []`, or resets on `ctx.resumed`. `system({ scenes: ["board"] })` limits a system to mounted or leaving scenes. Distance-field text is batched |
+| 0.15.0 | The version number only. The break came in with 0.14.13 and 0.15.4 |
+| 0.14.13 | **Peer `pixi.js ^8.22.0`. Reserved names `debug`, `OverlayLevel` and the resource `Now`.** Nested features (`defineFeature(name, { features })`, `flattenFeatures`, the lint rule `moku-game/sub-features`, keys named by the sub-feature). `defineBundles` options `release: "leave"`, `mipmaps`. `defineScene(id, { bundles: state => [...] })`. `app.assets.has`, `companions`. Render on demand (`renderer.onDemand`, `app.renderer.invalidate(entity)`). Kept pictures (`renderer.keptMb`, `cache` on a filter, `canvasPixel(uv)`). `Overlay`, `HudPart`, layers `{ above: "overlays" }`. Adaptive frame rate (`time.adaptive`, `time.rate()`, `setRate`, events `time:rate`, `time:thermal`). Debug builds: `moku-game build --debug`, `native build android --debug`, `app.debug.overlay`, `DebugTrigger`, the agent telemetry `app.renderer.monitor`. Typed effects: `defineEffect`, `Flow.Answer`; **`NodeFx` is generic, so a hand-made `vi.fn` fx spy no longer fits: use `fakeFx`.** Behaviour: a finger that has not started a gesture gives way to the next finger, `Pointer.id` is added; **the `ui` layer sorts by `Order`**, a JSX child's `Order` is composite; enter and exit hooks get a `MotionCause`; `ecs.snapshot()` returns copies; a test that `toEqual`s `stats()` or `snapshot().resources` adds the new fields; a text baseline may differ about 0.3 % at glyph edges |
 | 0.14.12 | A JSX description that says what the last one said costs the comparison only: no style pass, no layout, no write. `ui` compares prop by prop, by value, so an inline `style` object is fine. A style object changed in place is not seen: build a new one. A function, a `Set`, a `Map` and a class instance compare by identity. `UiCounters` adds `styled` and `written`. A `cosmetic` effect (`sfx`, `play`, `haptic`, `music`) that fails writes the warn entry `flow:fx-cosmetic-failed` with `{ kind, message }`; it still resolves `undefined`. `fakeFx` and the types `FakeFx`, `FakeFxOptions` in `@moku-labs/game/testing` |
 | 0.14.11 | A node of `ui.tree()` and of the door `game.ui` carries `textStyle`: the text style key of a `text` whose `style` prop is a key. `describe.json` of a visual test leaves it out, so baselines stay |
 | 0.14.10 | **Behaviour: `game.headless()` composes `logicOnly` of `features` when `headless.features` is left out** (nothing before). `headless: { features: [] }` composes none; `shared` and `plugins` are never taken by default. `fx.start(descriptor)` in a node and in `recover`: starts an effect and does not wait; refuses `answers` and a `guide`; a failure is the error entry `flow:fx-start-failed` with `{ path, kind }`. A rollback settles every view of a mounted projection the failed node moved off its rest pose; ui elements are not settled. The `loop` of a view that entered on a mount, a load or a restore starts on the next live frame. A projection may build a new item object on every commit: a view whose components did not change keeps its motions. `TweenDriver.offsetsOf(entity, component)`, optional, for a custom tween driver |
@@ -56,34 +81,35 @@ createApp({ plugins: [...screen, audioPlugin, effectsPlugin, platformPlugin, sha
 
 | Set | Plugins | How |
 |---|---|---|
-| logic | `time`, `lifecycle`, `model`, `clock`, `flow` | always registered, in this order |
+| logic | `time`, `lifecycle`, `model`, `clock`, `flow`, and `debug` (since 0.14.13: the name is reserved, a game never lists it) | always registered |
 | screen | `world`, `renderer`, `input`, `assets`, `scenes`, `anim`, `i18n`, `text`, `ui` | the exported list `screen` |
 | opt-in | `effects`, `audio`, `platform` | append; `platform` last |
 
 `log` and `env` from `@moku-labs/common` sit on every context as `ctx.log` and `ctx.env`. A feature name
 is refused when it equals any plugin name above, or `log` / `env`.
 
-## The 17 plugins
+## The 18 plugins
 
 | Plugin | Tier | Depends on | Owns | App API (`app.<name>`) |
 |---|---|---|---|---|
-| `time` | Standard | — | One `requestAnimationFrame` loop, six phases `input, animate, layout, sync, signals, render`, the `Time` resource `{ delta, elapsed, scale, frame, idle }`. Idle cap after `idleAfterMs` | `onFrame(phase, cb): () => void`, `snapshot()`, `setScale(scale)`, `pause()`, `resume()`, `isPaused()`, `isRunning()`, `step(deltaMs)`, `wake()` |
+| `time` | Standard | — | One `requestAnimationFrame` loop, six phases `input, animate, layout, sync, signals, render`, the `Time` resource `{ delta, elapsed, scale, frame, idle }`. Idle cap after `idleAfterMs` | `onFrame(phase, cb): () => void`, `snapshot()`, `setScale(scale)`, `pause()`, `resume()`, `isPaused()`, `isRunning()`, `step(deltaMs)`, `wake()`, `rate()`, `setRate("auto" \| 30 \| 60 \| 120)` (since 0.14.13) |
+| `debug` | Micro | — | The editor's overlay from the game, in every app. Nothing in a release build | `overlay.open({ mode?: "pill" \| "card" })`, `close()`, `toggle()`, `isOpen()`: each answers `false` without the agent flag |
 | `lifecycle` | Standard | time | The stack of pause reasons: `"background"`, `"devtools"`, `"system-dialog"`, `"device-lost"`, any string | `push(reason)`, `pop(reason)`, `reasons()`, `isPaused()` |
 | `model` | Very Complex | — | The `session` tree and the save document `{ player, rng }`; transactions, rest-point rollback, rng streams, migrations | `store.load()`, `store.snapshot()` (frozen `{ player, session, rng }`), `store.begin()`, `store.markRest()`, `store.markBarrier(txId)`, `store.rollback()`, `store.restore(input)`, `store.flush()`, `rng.peek(id)` |
 | `clock` | Standard | — | Trusted time: monotonic `now()`, one `elapsed` signal at the next due moment | `now()`, `scheduleAt(moment \| undefined)`, `onElapsed(listener)`, `poke()`, `dueAt()` |
-| `flow` | Very Complex | time, lifecycle, model, clock | The graph: runner, gate, inbox, effects gateway, features registry | `run()`, `onEnter("load" \| "scene", cb)`, `walk(route, { from? })`, `bookmark()` (the last rest node, or the transit node that waits for a popup's answer, then with `rest`), `restore(bookmark)`, `describe()`, `state()`, `history()`, `setMode("live" \| "fast")` (throws while a transit node waits at the gate); `gate.answer({ intent, payload? }): boolean` (`false` at a closed gate: the answer is held for the next gate, see `holdMs`), `gate.pointer(active)`, `gate.state()`; `inbox.post({ type, payload? })`; `fx.handle(kind, handler, { runInFast? })`, `fx.dispatch(descriptor)` (the `fx` of a node context is another thing: `await fx(descriptor)`, `fx.start(descriptor)` since 0.14.10, `fx.emit(hint)`); `features.register(name, description)`, `features.all()`, `features.contributions(slot)` |
-| `world` | Very Complex | time, model, flow | A zero-dependency ECS and the projection from committed state to entities: keyed reconcile of one `view(item)`, retarget motions, despawn queue, named layers | `ecs.spawn(owner, components)`, `ecs.query(...C)`, `ecs.system(def)`, `ecs.set(entity, C, patch)`, `ecs.changed(C)`, `ecs.snapshot()`, `ecs.mode()`; `projection.mount(names, owner)`, `projection.replace(spec)` (dev hot swap), `projection.setLayers(list)`, `projection.settle(entity)`, `projection.keyOf(entity)`, `projection.entityOf(projection, key)`, `projection.onConverged(listener)` (since 0.14.3: after the reconcile of a restore or a load) |
-| `renderer` | Very Complex | time, lifecycle, world | Pixi v8 host loaded lazily, one `sync` system that owns every display object, the reference viewport, frame stats | `host.ready()`, `host.kind()`, `host.canvas()`, `host.pixi()`, `host.device()`, `host.gl()`; `sync.hitTest(x, y, accept)`, `sync.hitAll(x, y)`, `sync.boundsOf(entity)`, `sync.hitBoxOf(entity)`, `sync.textures.provide(fn)`, `sync.fonts.install(key, fnt, texture)`, `sync.filters.set(entity, slots)`, `sync.displayOf(entity)`, `sync.debug.nineSlice(on)`; `viewport.toReference(x, y)`, `viewport.toScreen({ x, y })`, `viewport.size()`; `stats()`, `capture(options?)` (dev only, `{ png, legend? }`; options `legend`, `layers`, `sheet`, `against`) |
-| `input` | Standard | flow, world, renderer | Gestures as data components `Tappable`, `Pressable`, `Draggable` (`{ payload, carry }`: `carry` lists keys of the same projection that ride along, a solitaire stack), `DropTarget`, `Swipeable`, `Traceable` (a word-game path of cells), `Touchable`, `Held`, `Hovered`, `PointerOver`, `Pressed`, `Traced` (on every cell of the trace in progress), `Pointer`; the intent reaches `flow.gate`. A trace answers once on release: `{ intent, payload: { path: [payload, …] } }` | `tap(target)`, `press(target)`, `drag(from, to)`, `swipe(target, direction)`, `trace(path)`, `pressKey(key, { shift })` |
-| `assets` | Complex | flow, renderer | Manifest, five tiers, graph-driven preload, texture budget with LRU unload, typed keys from the `./assets` door | `load(bundle)`, `unload(bundle)`, `isLoaded(bundle)`, `texture(key)`, `font(key)`, `audio(key)` (`{ bytes, mime }` since 0.4.0), `usage()` |
-| `scenes` | Standard | flow, world, assets | A scene as a declaration: bundle, layers, projections, `music`. A node names its scene; the switch runs in `flow.onEnter("scene")` | `current()`, `expect(id)` (the scene the next node without its own `scene` mounts: a rest node, or a transit node in live mode; an `over` node takes it also over another mounted scene; the restore door calls it; an unknown id throws) |
+| `flow` | Very Complex | time, lifecycle, model, clock | The graph: runner, gate, inbox, effects gateway, features registry | `run()`, `onEnter("begin" \| "load" \| "scene", cb)` (`"begin"` since 0.15.43, must not wait), `walk(route, { from? })`, `bookmark()` (the last rest node, or the transit node that waits for a popup's answer, then with `rest`), `restore(bookmark)`, `describe()`, `state()`, `history()`, `setMode("live" \| "fast")` (throws while a transit node waits at the gate); `gate.answer({ intent, payload? }): boolean` (`false` at a closed gate: the answer is held for the next gate, see `holdMs`), `gate.pointer(active)`, `gate.state()` (`{ open, allowed, narrowed, blocked? }`); `inbox.post({ type, payload? })`; `fx.handle(kind, handler, { runInFast? })`, `fx.dispatch(descriptor)` (the `fx` of a node context is another thing: `await fx(descriptor)`, `fx.start(descriptor)` since 0.14.10, `fx.emit(hint)`); `features.register(name, description)`, `features.all()`, `features.contributions(slot)` |
+| `world` | Very Complex | time, model, flow | A zero-dependency ECS and the projection from committed state to entities: keyed reconcile of one `view(item)`, retarget motions, despawn queue, named layers | `ecs.spawn(owner, components)`, `ecs.query(...C)`, `ecs.system(def)`, `ecs.set(entity, C, patch)`, `ecs.changed(C)`, `ecs.snapshot()`, `ecs.mode()`; `projection.mount(names, owner)`, `projection.replace(spec)` (dev hot swap), `projection.setLayers(list)`, `projection.settle(entity)`, `projection.keyOf(entity)`, `projection.entityOf(projection, key)`, `projection.onConverged(listener)` (since 0.14.3: after the reconcile of a restore or a load), `projection.causeOf(entity)`, `projection.feed(name, sw)`. `ecs.hold` and `ecs.isActive` are gone since 0.15.4. A view takes `initialOnly` and `warm` on `projection()` |
+| `renderer` | Very Complex | time, lifecycle, world | Pixi v8 host loaded lazily, one `sync` system that owns every display object, the reference viewport, frame stats | `host.ready()`, `host.kind()`, `host.canvas()`, `host.pixi()`, `host.device()`, `host.gl()`; `sync.hitTest(x, y, accept)`, `sync.hitAll(x, y)`, `sync.boundsOf(entity)`, `sync.hitBoxOf(entity)`, `sync.textures.provide(fn)`, `sync.fonts.install(key, fnt, texture)`, `sync.filters.set(entity, slots)`, `sync.displayOf(entity)`, `sync.debug.nineSlice(on)`; `viewport.toReference(x, y)`, `viewport.toScreen({ x, y })`, `viewport.size()`; `stats()`, `capture(options?)` (dev only, `{ png, legend? }`; options `legend`, `layers`, `sheet`, `against`); since 0.14.13 `invalidate(entity)`, `sync.debug.kept(on)` (needs a boolean), `sync.debug.overdraw(on)`, `sync.debug.why()`, `monitor` (agent builds; `monitor.setResolution(n)` in every build); `shots.take(key)`, `shots.has(key)` (0.15.90) |
+| `input` | Standard | flow, world, renderer | Gestures as data components `Tappable`, `Pressable`, `Draggable` (`{ payload, carry }`: `carry` lists keys of the same projection that ride along, a solitaire stack), `DropTarget`, `Swipeable`, `Traceable` (a word-game path of cells), `Touchable`, `Held`, `Hovered`, `PointerOver`, `Pressed`, `Traced` (on every cell of the trace in progress), `Pointer`; the intent reaches `flow.gate`. A trace answers once on release: `{ intent, payload: { path: [payload, …] } }` | `tap(target)`, `press(target)`, `drag(from, to)`, `swipe(target, direction)`, `trace(path)`, `pressKey(key, { shift })`, `lock.window(rect \| null \| undefined)` (0.15.52: what a guide sets; the doors are never locked) |
+| `assets` | Complex | flow, renderer | Manifest, five tiers, graph-driven preload, texture budget with LRU unload, typed keys from the `./assets` door | `load(bundle)`, `warm(bundle)` (0.15.22), `unload(bundle)`, `isLoaded(bundle)`, `has(bundle)`, `companions.add(...)`, `texture(key)`, `font(key)`, `audio(key)` (`{ bytes, mime }` since 0.4.0), `usage()` |
+| `scenes` | Standard | flow, world, assets | A scene as a declaration: bundle, `bundles` (from state), layers, projections, `music`, `leave`, `enter`. A node names its scene; the switch runs in `flow.onEnter("scene")`, builds the next scene aside and swaps it in one frame (0.15.29) | `current()`, `expect(id)` (the scene the next node without its own `scene` mounts: a rest node, or a transit node in live mode; an `over` node takes it also over another mounted scene; the restore door calls it; an unknown id throws) |
 | `anim` | Complex | flow, world, renderer | The one tween core, timelines as frozen data from typed slots, `defineMotion` for enter/exit/change, the `Frames` component, the `AnimPlayer` resource a system plays through: `res(AnimPlayer).play(animation, slots)` | `play(animation, slots)`, `finishAll()`, `active()`, `onMark(fn)`, `replace(definition)` (dev hot swap), `setReducedMotion(on)`, `reducedMotion()` |
 | `i18n` | Complex | flow | Strings as data: `tr(key, params)` is a `Message`; ICU MessageFormat compiled by `compileStrings`; `Part[]` at run time | `locale()`, `setLocale(locale)` (async), `format(message, locale?)`, `plain(message)`, `has(key)`, `duration(ms, style?)`, `locales()`, `replace(locale, messages)` (dev hot swap of a generated strings file). ICU `{x, duration, short}`; a string may be `{ "text", "note" }` for translators; pseudo-locale `en-XA` |
-| `text` | Complex | time, flow, world, renderer, assets, i18n | The `Text` component, `label()`, `defineTextStyles()`, tags `<b> <i> <color=#hex> <icon=key>`, measurement from the font's advance table, BitmapText from MSDF fonts; `bind(Component, "field", { format? })` shows a numeric component field (`int`, `mm:ss`, `h:mm:ss`, `duration`); `Countdown({ until })` counts down to a `clock` moment | `measure(content, style)`, `hasGlyph(char, style)`, `styles()`, `replaceStyles(styles)` (dev hot swap) |
-| `ui` | Very Complex | input, anim, text | A screen is a projection whose `view` returns JSX; reconciled by identity into entities, one Yoga solve per change; `defineComponent` with `local` and `outcomes`, `popup` as an effect, `defineStyle`, `defineTokens`; the `input` tag is a text field; `scroll` has a windowed form `rows`, `rowHeight`, `overscan` (5), `row`; plays `change` hooks of any component in `motion`; emits the dev global event `ui:hot-swap` | `tree()` (a text node carries `content`, the words it draws after `tr()` and `bind`, and since 0.14.11 `textStyle` when its `style` is a text style key; a text field carries `value`), `find(key)`, `lint()`, `fill(key, value)` |
-| `audio` | Standard | lifecycle, model, flow, assets, scenes | Opt-in. Buses `master`, `music`, `sfx`; `sfx()` and `music()` descriptors; the scene's `music`; volumes from the committed player; music `"decode"` (gapless buffer) or `"stream"` (`<audio>` element, about 12 MB instead of 58 MB); the iOS audio session (`"ambient"` by default) | `setVolume(bus, value)`, `volume(bus)`, `mute(bus, on)`, `muted(bus)` (since 0.4.4), `unlocked()` (since 0.14.2 true at start where the shell asks for no gesture; a browser tab unlocks on the first `pointerdown` or `touchend`), `journal()` |
-| `effects` | Complex | flow, world, renderer, assets, anim | Opt-in. Particles (`defineEmitter`, `Emitter`); filters (`defineFilter` with WGSL + GLSL twin; built-in `Glow`, `Outline`, `Blur`, `ColorMatrix`, `Noise`, `Displacement`, `Alpha`). Headless draws nothing | `stats()` |
-| `platform` | Standard | lifecycle, flow, input | The phone as a `PlatformProvider`: pause/resume → `"background"`, Back chain (Escape, then intent `back`, then `exit()`), `haptic` effect, `keepAwake`. Inert without a provider. The shell fills the provider from `config.ts` `system` | `back()`, `exit()` (since 0.11: leaves through the provider; a throw is logged; nothing without a provider) |
+| `text` | Complex | time, flow, world, renderer, assets, i18n | The `Text` component, `label()`, `defineTextStyles()`, tags `<b> <i> <color=#hex> <icon=key>`, measurement from the font's advance table, BitmapText from MSDF fonts; `bind(Component, "field", { format? })` shows a numeric component field (`int`, `mm:ss`, `h:mm:ss`, `duration`, or a key of `defineTextFormats`, 0.15.88); a style takes `wrap: "box"` (0.15.16) and `lineHeight` (0.15.54); `Countdown({ until })` counts down to a `clock` moment | `measure(content, style)`, `hasGlyph(char, style)`, `styles()`, `replaceStyles(styles)` (dev hot swap) |
+| `ui` | Very Complex | input, anim, text | A screen is a projection whose `view` returns JSX; reconciled by identity into entities, one Yoga solve per change; `defineComponent` with `local` and `outcomes`, `popup` as an effect, `defineStyle`, `defineTokens`; the `input` tag is a text field; `anchor` sits on another element's drawn rect (0.15.48); `scroll` has `axis`, `snap`, `offset` (0.15.8) and a windowed form on `y`: `rows`, `rowHeight`, `overscan` (5), `row`; draws a guide's veil (0.15.52); plays `change` hooks of any component in `motion`; emits the dev global event `ui:hot-swap` | `tree()` (a text node carries `content`, the words it draws after `tr()` and `bind`, and since 0.14.11 `textStyle` when its `style` is a text style key; a text field carries `value`), `find(key)`, `lint()`, `fill(key, value)`, `scroll(key, to)` (0.15.8), `rectOf(target)` (0.15.48: `{ x, y, w, h }` in screen reference units, `undefined` when none is shown) |
+| `audio` | Standard | lifecycle, model, flow, assets, scenes | Opt-in. Buses `master`, `music`, `sfx`; `sfx()` and `music()` descriptors; the scene's `music`; volumes from the committed player; music `"decode"` (gapless buffer) or `"stream"` (`<audio>` element, about 12 MB instead of 58 MB); the iOS audio session (`"ambient"` by default) | `setVolume(bus, value)`, `volume(bus)`, `mute(bus, on)`, `muted(bus)` (since 0.4.4), `stop(id, { fadeMs? })` (0.15.27), `unlocked()` (since 0.14.2 true at start where the shell asks for no gesture; a browser tab unlocks on the first `pointerdown` or `touchend`), `journal()` |
+| `effects` | Complex | flow, world, renderer, assets, anim | Opt-in. Particles (`defineEmitter`, `Emitter`); filters (`defineFilter` with WGSL + GLSL twin; built-in `Glow`, `Outline`, `Blur`, `ColorMatrix`, `Noise`, `Displacement`, `Alpha`). Headless draws nothing | `stats()`, `diagnostics.kinds()`, `disable(kind)`, `enable(kind)`, `disabled()` (a dev or agent page only) |
+| `platform` | Standard | lifecycle, flow, input | The phone as a `PlatformProvider`: pause/resume → `"background"`, Back chain (a guide takes it first since 0.15.56; then Escape, then intent `back`, then `exit()`), `haptic` effect, `keepAwake`. Inert without a provider. The shell fills the provider from `config.ts` `system` | `back()`, `exit()` (since 0.11: leaves through the provider; a throw is logged; nothing without a provider) |
 
 ### Dependency graph
 
@@ -110,24 +136,25 @@ flowchart LR
 | Export | Kind | Purpose |
 |---|---|---|
 | `createApp`, `createPlugin` | functions | The game app; a game plugin bound to the engine's config and events |
-| `defineGame<Types>()` | function | Returns the typed kit: `defineNode`, `defineFlow`, `defineFeature`, `projection`, `sprite`, `Sprite`, `NineSlice`, `defineBundles`, `load`, `defineScene`, `tr`, `label`, `defineTextStyles`, `defineComponent`, `defineStyle`, `defineTokens`, `popup`, `defineAnimation`, `frames`, `sfx`, `play`, `music`, `Frames`, `defineEmitter`, `Emitter`, `Displacement`. `Types = { player; session; assets: string; bundles?: string; scenes?: string; strings: Record<string, unknown>; textStyles?: string; emitters?: string }` |
-| `defineFeature` | function | Untyped twin of the kit's. Keys: `nodes`, `flows`, `contribute`, `projections`, `systems`, `components`, `scenes`, `assets`, `animations`, `ui`, `strings`, `textStyles`, `emitters`, `filters` |
-| `type`, `exit`, `to`, `slot` | functions | Payload type tag; the three edge helpers |
-| `schedule`, `guide`, `hint` | functions | Effect descriptors: next due moment, tutorial narrowing of the gate, cosmetic hint |
+| `defineGame<Types>()` | function | Returns the typed kit: `defineNode`, `defineFlow`, `defineFeature`, `projection`, `sprite`, `Sprite`, `NineSlice`, `defineBundles`, `load`, `defineScene`, `tr`, `label`, `bind`, `defineTextStyles`, `defineTextFormats`, `defineComponent`, `defineStyle`, `defineTokens`, `popup`, `defineAnimation`, `frames`, `sfx`, `play`, `music`, `Frames`, `defineEmitter`, `Emitter`, `Displacement`, `system` (typed `ctx.snapshot`), `volumes`, `key`. `Types = { player; session; assets: string; bundles?: string; scenes?: string; strings: Record<string, unknown>; textStyles?: string; textFormats?: string; emitters?: string }`, and `hud` for `HudPart` keys |
+| `defineFeature` | function | Untyped twin of the kit's. Keys: `nodes`, `flows`, `contribute`, `projections`, `systems`, `components`, `scenes`, `assets`, `animations`, `ui`, `strings`, `textStyles`, `textFormats`, `emitters`, `filters`, `features` (sub-features). `systemsRun` is refused since 0.15.4 |
+| `flattenFeatures` | function | The flat plugin list of a feature tree, a parent before its children. `defineGameApp` calls it; a `createApp` by hand calls it |
+| `type`, `exit`, `to`, `slot`, `contribution` | functions | Payload type tag; the three edge helpers; `slot(name, outcomes?)` declares named outcomes since 0.15.41; `contribution(slot, { flow, order, when? })` builds a `contribute` entry and checks it at compile time |
+| `schedule`, `guide`, `hint`, `defineEffect` | functions | Effect descriptors: next due moment, tutorial narrowing of the gate, cosmetic hint. `defineEffect<Input, Result>(kind, { fast: "run" })` declares a game's own typed effect |
 | `SaveUnreadableError` | class | From `model.store.load()`: `savedVersion`, `schemaVersion` |
-| `component`, `tag`, `resource`, `mut`, `system`, `projection`, `Layer`, `Order`, `Exiting`, `Tree` | ECS vocabulary | From `world`. `resource(name, defaults)` clones plain defaults into every world; `resource(name, () => value)` calls the factory once per world, so the value may hold a `Map` or a function |
-| `Transform`, `Sprite`, `NineSlice`, `Shape`, `Parent`, `Display`, `sprite` | components | From `renderer` |
+| `component`, `tag`, `resource`, `mut`, `system`, `projection`, `Layer`, `Order`, `Exiting`, `Tree`, `Now` | ECS vocabulary | From `world`. `res(Now).now` is the frame's moment (reserved names: `Now`, `Pointer`, `AnimPlayer`, `UiCounters`). `resource(name, defaults)` clones plain defaults into every world; `resource(name, () => value)` calls the factory once per world, so the value may hold a `Map` or a function |
+| `Transform`, `Sprite`, `NineSlice`, `Shape`, `Parent`, `Display`, `Overlay`, `HudPart`, `sprite` | components | From `renderer`. `Overlay({ dim, dimColor, cover, hud, fade, hold })` on an overlay's root keeps what is under it as one picture |
 | `Tappable`, `Pressable`, `Draggable`, `DropTarget`, `Swipeable`, `Traceable`, `Touchable`, `Held`, `Hovered`, `PointerOver`, `Pressed`, `Pointer`, `Traced` | components | From `input` |
-| `defineBundles`, `load`, `defineScene` | functions | Bundles and scenes |
-| `defineAnimation`, `sequence`, `parallel`, `stagger`, `tween`, `set`, `wait`, `mark`, `frames`, `sfx`, `haptic`, `use`, `spawn`, `spawned`, `play`, `external`, `defineMotion`, `Animation`, `Frames`, `AnimPlayer` | anim | Choreography as frozen data; `play(animation, slots)` is the effect a node awaits; `spawn` makes a temporary entity the timeline despawns. A system cannot `require` a plugin, so it plays through the resource: `res(AnimPlayer).play(animation, slots)`. Before `anim` starts it throws `[game] AnimPlayer is not ready: anim has not started.` |
+| `defineBundles`, `load`, `ready`, `defineScene` | functions | Bundles and scenes. `await fx(ready(bundles))` answers `false` and posts `{ type: "ready" }` once they settled, so a node rests on a load and stays answerable |
+| `defineAnimation`, `sequence`, `parallel`, `stagger`, `tween`, `set`, `wait`, `mark`, `frames`, `sfx`, `haptic`, `use`, `spawn`, `spawned`, `play`, `external`, `defineMotion`, `Animation`, `Frames`, `AnimPlayer`, `cubicBezier`, `stopSfx` | anim | Choreography as frozen data; `play(animation, slots)` is the effect a node awaits; `spawn` makes a temporary entity the timeline despawns. A system cannot `require` a plugin, so it plays through the resource: `res(AnimPlayer).play(animation, slots)`. Before `anim` starts it throws `[game] AnimPlayer is not ready: anim has not started.` |
 | `tr` | function | `tr(key, params?)` → frozen `Message` |
 | `messageArgument`, `messageDuration` | functions | What a generated `strings.<locale>.ts` imports since 0.12: `messageArgument(value, intl)` formats one argument, `messageDuration(ms)` splits a duration (`95_000` gives `{ minutes: 1, seconds: 35 }`). A game never calls them |
-| `Text`, `label`, `defineTextStyles`, `bind`, `Countdown`; types `BindOptions`, `CountdownValue`, `TextFormat` | text | Words on screen; `bind` and `Countdown` show numbers and timers |
-| `defineComponent`, `popup`, `defineStyle`, `defineTokens`, `resolve`, `Box`, `LocalWrite` | ui | Components, the popup effect, the style vocabulary |
+| `Text`, `label`, `defineTextStyles`, `defineTextFormats`, `bind`, `Countdown`; types `BindOptions`, `CountdownValue`, `TextFormat`, `TextFormats`, `TextFormatAnswer`, `TextFormatFunction`, `FormattedNumber` | text | Words on screen; `bind` and `Countdown` show numbers and timers |
+| `defineComponent`, `popup`, `defineStyle`, `defineTokens`, `resolve`, `Box`, `LocalWrite`, `DebugTrigger`, `ScrollState` | ui | Components, the popup effect, the style vocabulary |
 | `music` | function | `music(key \| null, { fadeMs? })` |
 | `defineEmitter`, `Emitter`, `defineFilter`, `Glow`, `Outline`, `Blur`, `ColorMatrix`, `Noise`, `Displacement`, `Alpha` | effects | Particles and filters as data |
 | `PlatformProvider`, `BackResult`, `HapticKind`, `HAPTIC_KINDS` | types, constant | The seam a game fills for `platform` |
-| `timePlugin` … `platformPlugin`, `screen` | plugin instances | For `depends` and `ctx.require`. All 17 are named exports: `timePlugin`, `lifecyclePlugin`, `modelPlugin`, `clockPlugin`, `flowPlugin`, `worldPlugin`, `rendererPlugin`, `inputPlugin`, `assetsPlugin`, `scenesPlugin`, `animPlugin`, `i18nPlugin`, `textPlugin`, `uiPlugin`, `audioPlugin`, `effectsPlugin`, `platformPlugin` |
+| `timePlugin` … `platformPlugin`, `screen` | plugin instances | For `depends` and `ctx.require`. All 18 are named exports: `debugPlugin`, `timePlugin`, `lifecyclePlugin`, `modelPlugin`, `clockPlugin`, `flowPlugin`, `worldPlugin`, `rendererPlugin`, `inputPlugin`, `assetsPlugin`, `scenesPlugin`, `animPlugin`, `i18nPlugin`, `textPlugin`, `uiPlugin`, `audioPlugin`, `effectsPlugin`, `platformPlugin` |
 | `Time`, `Lifecycle`, `Model`, `Clock`, `Flow`, `World`, `Renderer`, `Input`, `Assets`, `Scenes`, `Anim`, `I18n`, `TextTypes`, `Ui`, `Audio`, `Effects`, `Platform` | type namespaces | `import type { Flow } from "@moku-labs/game"` then `Flow.RouteStep`, `Flow.NodeContext`, `Model.Json`, `Model.PlayerStateProvider`, `Clock.ClockSource`, `Anim.Target`. `Text` is the component, so its types are `TextTypes` |
 
 ## Game shell
@@ -137,8 +164,8 @@ flowchart LR
 | `@moku-labs/game/app` | anywhere | `defineGameApp`, `startMoment` (`1_000_000`), types `GameConfig`, `GameDefinition`, `GameApp`, `GameHandle`, `GamePluginConfigs`, `HeadlessSeams`, `ScreenSeams`, `MemoryProvider`, `Scenario`, `PageAgent`, `SaveKind`, `SystemName`. No `node:` import, no system or native package |
 | `@moku-labs/game/app/page` | browser | `startPage(game, config, { scenarios?, system?, agents?, devModules? })`: the page `moku-game` writes calls it |
 | `@moku-labs/game/app/system` | browser, native shell | `systemShellOf`, `fromSystem`, `storeSave`, `createSystemApp`, types `SystemApp`, `SystemSlice`, `StoreSlice`, `SystemModules` |
-| `@moku-labs/game/cli` | node, bun | `runCli`, `preparePage(root, { agents?, preload?, servePlugins? })` → `{ html, bunfig }` (the editor calls it), `watchKeys(root, { onError? })` → `{ close() }` (since 0.13.1: the keys watch of `dev` for a server the caller runs; the editor calls it next to `preparePage`); types `PreparePageOptions`, `PreparedPage`, `WatchKeysOptions`, `KeysWatcher` |
-| bin `moku-game` | bun | `dev [--port 3000] [--packed]`, `build [--out dist/web]`, `native build|dev|doctor|clean [<target>] [--simulator]`, `keys [--check]`, `pack [--no-cache]`, `visual [--update] [--only <name>] [--no-pixels \| --pixels] [--webgl] [--dir <path>] [--tests <file>] [--url <url>]`, `help`. Every command: `--root`, `--preload`, `--serve-plugin` |
+| `@moku-labs/game/cli` | node, bun | `runCli`, `preparePage(root, { agents?, preload?, servePlugins? })` → `{ html, bunfig, engine }` (the editor calls it), `watchKeys(root, { onError? })` → `{ close() }` (since 0.13.1: the keys watch of `dev` for a server the caller runs; the editor calls it next to `preparePage`), `watchEngine(root, { onChange?, onError? })` (since 0.14.13: tells when the installed engine changed); types `PreparePageOptions`, `PreparedPage`, `WatchKeysOptions`, `KeysWatcher`, `WatchEngineOptions`, `EngineWatcher`, `EngineChange`, `EngineFingerprint` |
+| bin `moku-game` | bun | `dev [--port 3000] [--packed]`, `build [--out dist/web] [--debug[=read\|full]] [--editor host:port]`, `native build|dev|doctor|clean [<target>] [--simulator] [--debug] [--store --build-number <n> [--dev]]`, `keys [--check]`, `pack [--no-cache]`, `visual [--update] [--only <name>] [--no-pixels \| --pixels] [--webgl] [--dir <path>] [--tests <file>] [--url <url>]`, `help`. Every command: `--root`, `--preload`, `--serve-plugin` |
 
 | `moku-game` flag | Command | Default | What |
 |---|---|---|---|
@@ -148,6 +175,11 @@ flowchart LR
 | `--port <n>` | `dev` | `3000` | An integer 0-65535. `0` takes a free port |
 | `--packed` | `dev` | off | Serves `dist/assets` instead of the raw files, and does not watch the keys |
 | `--out <dir>` | `build` | `dist/web` | The output folder, replaced by the run. A folder that is the game, holds it, touches `dist/assets`, or lies in the game outside `dist/` is refused |
+| `--debug[=read\|full]` | `build`, `native build` | off | A debug page, never shipped: the release page plus the editor's agent and the `.dev` modules. Needs `@moku-labs/editor` in the game. `native build android --debug` and `ios --debug` (0.15.87) install beside the store app. `=read` runs read and cosmetic commands only |
+| `--editor <host:port>` | `build --debug`, `native build --debug` | `127.0.0.1:47600` | Where the debug page's agent dials |
+| `--store` | `native build` | off | A store build for `ios` or `android` (0.15.85): an `.ipa` or an `.aab`. Needs `--build-number` and a signing block; every problem is one `[game] native --store: …` error before anything compiles. Refuses `--debug`, `--editor`, `--simulator` |
+| `--build-number <n>` | `native build --store` | none | An integer from 1 to 2100000000 |
+| `--dev` | `native build --store` | off | The store-signed test app of `native.dev` (0.15.87): `.moku/tauri-dev`, `dist-native-dev`. Needs `@moku-labs/editor` 0.10.19 or later |
 | `--simulator` | `native build` | off | iOS: the simulator build |
 | `--check` | `keys` | off | Fails when an output is out of date |
 | `--no-cache` | `pack` | off | A cold pack |
@@ -160,7 +192,7 @@ flowchart LR
 | `--url <url>` | `visual` | the page served for the run | A page that is served already, such as `moku-game dev` |
 
 The exit code is `0` on success, else `1` and a `[game] …` line. `visual` exits `1` when a checkpoint
-differs or a test fails. What `moku-game` writes: `dev` writes `.moku/{index.html,dev.ts,main.ts,bunfig.toml,assets-stamp.ts}`;
+differs or a test fails. What `moku-game` writes: `dev` writes `.moku/{index.html,script.ts,dev.ts,main.ts,bunfig.toml,assets-stamp.ts}` and prints `› engine <id>`, and restarts when the installed engine changes;
 `visual` writes its own page into `.moku/visual/` when the pixel leg runs without `--url`, so it runs
 while `dev` or the editor serves the game; `native` writes `.moku/tauri` and `dist-native`; `build`
 writes nothing under `.moku/`.
@@ -183,7 +215,9 @@ writes nothing under `.moku/`.
 | `flow`, `player`, `session` | required | The main flow, the new player, the session at every start |
 | `safeNode` | the start of the main flow | The checkpoint after a failed retry. Since 0.14.2 its `recover` runs first, when the node has one |
 | `referenceLong`, `seed` | `1920`, `42` | Layout long side; the rng seed of a new save |
-| `shared`, `features`, `plugins` | none, `[]`, `[]` | The screen app composes them in this order, after the engine plugins |
+| `orientation`, `referenceSide` | `"portrait"`, `1080` | Since 0.14.13 |
+| `strings` | none | `type<Strings>()`: types `app.i18n.isKey` |
+| `shared`, `features`, `plugins` | none, `[]`, `[]` | The screen app composes them in this order, after the engine plugins. `features` lists the top level only: a parent brings its sub-features. A feature listed twice in the tree, or a `shared` with sub-features, throws |
 | `headless` | `{}` | `{ features?, plugins? }`: what `game.headless()` composes (`logicOnly` of the features). Since 0.14.10 `features` left out takes the `features` of the game; `[]` means none. `shared` is not composed |
 | `pluginConfigs` | `{}` | Every plugin config but the shell's keys: `model` `playerProvider`, `initialPlayer`, `initialSession`, `seed`; all of `clock`, `platform`; `flow` `mainFlow`, `safeNode`; `renderer.mount`; `assets` `manifest`, `io`; `audio.context` |
 
@@ -192,9 +226,15 @@ Screen only: `manifest` (a URL or the parsed file), `io`, `platform`, `keepAwake
 `audio { context?, journal? }`, `renderer { mount?, loadPixi?, preference? }`. Both return
 `{ app, clock, provider }`, the app not started.
 
-`GameConfig` (`config.ts`): `page { title, lang?, background?, orientation?, icons?, head? }`,
-`native? { name, identifier, icon?, targets? }`, `system?` (`lifecycle`, `back`, `haptics`, `keepAwake`,
-`store`), `save?` (`"memory"`, `"local"`, `"store"`), `assets? { layers? }`.
+`GameConfig` (`config.ts`): `page { title, lang?, background?, orientation?, icons?, head?, boot? }`,
+`native? { name, identifier, icon?, targets?, signing?, ios?, dev? }`, `system?` (`lifecycle`, `back`, `haptics`, `keepAwake`,
+`store`), `save?` (`"memory"`, `"local"`, `"store"`), `assets? { layers? }`, `debug? { overlay? }`.
+
+- `page.boot` (0.15.58): `{ image, width?, fadeMs? }`. An `<img id="moku-boot">` over the canvas from the first paint until the first scene drew, then faded over `fadeMs` (`300`). `width` defaults to `"40vmin"`.
+- `native.signing` (0.15.85): `android: { keystorePath, keystorePasswordEnv, keyPasswordEnv?, keyAlias }`, the passwords by env var name only; `apple: { teamId }`. An iOS store build signs with the Tauri env vars `APPLE_API_ISSUER`, `APPLE_API_KEY`, `APPLE_API_KEY_PATH`.
+- `native.ios` (0.15.85): `{ minimumVersion?, infoPlist?, privacyManifest? }`, the minimum `"26.0"` by default.
+- `native.dev` (0.15.87): `{ identifier, name?, icon? }`, the test app of `--store --dev`.
+- `debug.overlay` (0.14.13): `"closed"`, `"pill"` or `"open"`, read only on a page with the agent.
 
 ## Other entries
 
@@ -205,9 +245,9 @@ Screen only: `manifest` (a URL or the parsed file), `io`, `platform`, `keepAwake
 | `@moku-labs/game/assets` | node, bun | `scanAssets`, `emitKeys`, `emitManifest`, `compileStrings`, `checkStrings`, `packAssets`, `exportStrings`, `importStrings`, `runCli(argv, { compile: compileStrings, exportStrings, importStrings })`. Flags: `--root <dir>` (default `.`), `--manifest <file>` (default `<root>/manifest.json`), `--keys <file>` (default `<root>/generated/assets.ts`), `--pack <dir>`, `--check`, `--no-cache`, `--pseudo` (en-XA), `--export <dir>`, `--import <dir>`, `--source <locale>` (default `en`). `--layer <folder>[=<name>]`. Audio `.mp3` or `.m4a`. Bin `moku-game-assets` (Bun shebang); a game with `config.ts` runs `moku-game keys` and `pack` instead |
 | `@moku-labs/game/fonts/*` | files | `font-body.fnt`, `font-body.png` (Pangolin Regular MSDF, one 512×512 page), `LICENSE.txt` (SIL OFL 1.1). Copy into `shared/assets/` (scanned as the layer `ui`) for the key `ui.font-body` |
 | `@moku-labs/game/inspect` | anywhere | `read`, `watch`, `defineSource`, `sources`, types `Source`, `InputSchema`, `InputOf` |
-| `@moku-labs/game/control` | dev builds | `run`, `defineCommand`, `controlRefused`, `commands`, types `Command`, `Ran` |
+| `@moku-labs/game/control` | dev builds | `run`, `defineCommand`, `controlRefused`, `controlReadOnly`, `commands`, types `Command`, `ChoiceInput`, `ToggleInput`, `Ran`, `ControlReadOnlyError` |
 | `@moku-labs/game/jsx-runtime`, `/jsx-dev-runtime` | anywhere | What `"jsxImportSource": "@moku-labs/game"` resolves to |
-| `@moku-labs/game/lint` | oxlint 1.86.0+ (`jsPlugins`) | Default export: the plugin `moku-game` with ten rules; `aliasTargetsOf`. See "Lint rules" below |
+| `@moku-labs/game/lint` | oxlint 1.86.0+ (`jsPlugins`) | Default export: the plugin `moku-game` with eleven rules (`sub-features` since 0.14.13); `aliasTargetsOf`. See "Lint rules" below |
 | `@moku-labs/game/hot` | the Bun dev server | Default export: the Bun plugin that hot swaps views; `hot({ include?, exclude? })` for another layout. `moku-game dev` lists it first in `.moku/bunfig.toml`; `moku-game build` never loads it. See "Hot swap" below |
 | `@moku-labs/game/project` | node, bun | `openProject({ root, manifest?, tsconfig?, debounceMs? })` → `ProjectApi` (`index`, `find(key)`, `watch(onIndex)`, `changed(path)`, `close()`); types `Anchor`, `Found`, `IndexUi`, `JsxKind`, `ProjectApi`, `ProjectChange`, `ProjectIndex`, `ProjectOptions`. Needs the optional peer `typescript`. Bin `moku-game-index`. See "Project index" below |
 
@@ -226,6 +266,7 @@ Screen only: `manifest` (a URL or the parsed file), `io`, `platform`, `keepAwake
     "moku-game/static-keys": "error",
     "moku-game/layer-imports": "error",
     "moku-game/feature-door": "error",
+    "moku-game/sub-features": "error",
     "moku-game/test-suffix": "error"
   }
 }
@@ -241,7 +282,8 @@ Screen only: `manifest` (a URL or the parsed file), `io`, `platform`, `keepAwake
 | `rules-siblings` | L4 | An import that is not a sibling, `@core/types` or `@shared/rules` | `**/rules/**` |
 | `static-keys` | keys | A JSX `key` the project index cannot follow | `**/*.tsx` |
 | `layer-imports` | layers | An import above its own layer: core ← shared ← features ← `game.ts`; plugins import core and shared | `**`, not `generated/` |
-| `feature-door` | doors | A deep import of another feature, a barrel below `game.ts`, a feature's own door, a relative import out of a feature | `**/{core,shared,features,plugins}/**` |
+| `feature-door` | doors | A deep import of another feature, a barrel below `game.ts`, a feature's own door, a relative import out of a feature. At any depth since 0.14.13: a sub-feature never imports a feature it lives in | `**/{core,shared,features,plugins}/**` |
+| `sub-features` | doors | A parent's door that does not import and list every sub-feature folder, lists anything else, or a sub-feature's door that does not register a feature named like its folder. A flat game reports nothing | `**/features/**/index.{ts,tsx}` |
 | `test-suffix` | tests | A file in a test kind folder without the folder's suffix: `tests/e2e/` `.e2e.ts`, `tests/visual/` `.visual.ts`, `tests/editor/` `.editor.ts`, `__tests__/`, `__tests__/unit/`, `__tests__/integration/` `.test.ts`, `__tests__/isolated/` `.isolated.ts`, `__tests__/visual/` `.visual.ts`; a `.tsx` file adds an `x`. Since 0.12 the folder's `index.ts` passes (`tests/visual/index.ts`). Helpers go to `tests/helpers/` or `__tests__/fixtures/` | `**/tests/**`, `**/__tests__/**` |
 
 - The logic = the root `index.ts`, `**/state.ts`, `**/tables.ts`, `**/game.ts`,
@@ -270,8 +312,9 @@ export default { app: { app: () => game.screen().app }, tests: [home] };
 - The default export is the two arguments of `runVisualTests`: `app`, a `VisualSetup` `{ app, page? }`,
   and `tests`, the list of `defineVisualTest` results. A bare app factory is refused: `[game] visual:
   tests/visual/index.ts must export default { app, tests }.`
-- A step is a `/control` command by its short name (`answer`, `tap`, `drag`, `key`, `fill`, `walk`,
-  `restore`, `step`, `pause`, `resume`, `reducedMotion`) with that command's input, or `{ checkpoint: "name" }`.
+- A step is a `/control` command by its short name (`answer`, `tap`, `drag`, `key`, `fill`, `scroll`, `walk`,
+  `restore`, `step`, `pause`, `resume`, `reducedMotion`) with that command's input, or `{ checkpoint: "name", finish?: boolean }`.
+  A checkpoint lands every motion before its snapshot; `finish: false` (0.15.32) keeps them running. The pixel leg runs on the same fake clock as the headless one.
 - A checkpoint writes `tests/visual/baselines/<test>/<checkpoint>/state.json`, `describe.json` and
   `screen.webp`. A missing file is written, `--update` rewrites, any other file is compared.
 - The headless leg plays in plain Bun and compares `state.json` and `describe.json` exactly. The pixel
@@ -324,7 +367,7 @@ numbers; `find` reads the line from the file on disk at the call. It follows the
 | Key | Names |
 |---|---|
 | `flow:<id>`, `node:<flow>/<node>` | A flow; every entry of a `nodes` table (node, sub-flow, slot) |
-| `feature:<id>`, `scene:<id>`, `projection:<name>`, `emitter:<id>`, `textStyle:<key>` | The definer call of that id |
+| `feature:<id>`, `scene:<id>`, `projection:<name>`, `system:<name>`, `emitter:<id>`, `textStyle:<key>` | The definer call of that id. `index.features` holds every feature's folder and parent |
 | `style:<path>#<binding>`, `style:<path>#<function>`, `style:<path>#<function>.<property>` | A `defineStyle` const, or the calls inside a module-level function |
 | `component:<Name>` | An upper-case function in a `.tsx` file, or `defineComponent("Name", …)`; `uses` are the files that render it |
 | `jsx:<key>` | A JSX `key`. A key-carrying prop (`id`, or a name that ends in `Key`) is a hole: `` key={`${props.id}Close`} `` reads `jsx:{id}Close` |
@@ -354,11 +397,13 @@ folder (`ui.fx`) is not an fx folder.
 ## Events
 
 One event is global: `ui:hot-swap`, so `effects` and `assets` hook it with no `depends` on `ui`. Every other event
-belongs to a plugin. `time`, `clock`, `text`, `audio`, `effects`, `platform` emit nothing; `ui` emits only
+belongs to a plugin. `clock`, `text`, `audio`, `effects`, `platform` emit nothing; `ui` emits only
 the dev `ui:hot-swap`.
 
 | Event | Emitted by | Payload | When |
 |---|---|---|---|
+| `time:rate` | `time` | `{ from, to, reason, mode, displayHz, thermal, window, dwellMs }` | The loop's frame rate or its mode changed. Never per frame, never at start |
+| `time:thermal` | `time` | `{ status, headroom, at, android }` | The native shell's thermal reading, in an agent build or with `adaptive` |
 | `lifecycle:changed` | `lifecycle` | `{ reason, action: "push" \| "pop", reasons, paused, resumed }` | The pause stack changed; `resumed` only on the change that emptied it |
 | `model:committed` | `model` | `{ roots: ("player" \| "session" \| "rng")[], cause: "edge" \| "rollback" \| "restore" \| "load" }` | Committed state changed |
 | `flow:edge` | `flow` | `{ flow, node, outcome, payload, next, patches: { doc, session }, index, now }` | After the commit of an edge. The recovery of the safe node is an edge too: `node` and `next` are the safe node, `outcome` is `"recover"` |
@@ -367,10 +412,10 @@ the dev `ui:hot-swap`.
 | `world:reconciled` | `world` | counts per reconcile | Dev only, behind `reconciledEvent` |
 | `renderer:device-lost` | `renderer` | `{ kind, reason }` | GPU device or context lost; `lifecycle` pushed |
 | `assets:bundle-loaded` | `assets` | `{ bundle, tier, mb, reason: "boot" \| "enter" \| "request" \| "preload" }` | A bundle entered memory |
-| `assets:bundle-unloaded` | `assets` | `{ bundle, tier, mb, reason: "budget" \| "request", keys }` | A bundle left memory |
+| `assets:bundle-unloaded` | `assets` | `{ bundle, tier, mb, reason: "budget" \| "request" \| "leave", keys }` | A bundle left memory |
 | `assets:bundle-progress` | `assets` | `{ bundle, loaded, total }` | For a loading bar; no engine plugin listens |
 | `assets:replaced` | `assets` | `{ bundle, keys }` | Dev only, since 0.13.2: a hot swap replaced files of one loaded bundle. One event per bundle per swap. `keys` are the asset keys with new bytes; `texture(key)`, `font(key)`, `audio(key)` answer the new object. `text`, `effects` and `audio` hook it. A game plugin that built something from a key hooks it with `depends: [assetsPlugin]` |
-| `scenes:changed` | `scenes` | `{ from, to, music }` | The scene switched on entering a node |
+| `scenes:changed` | `scenes` | `{ from, to, music }` | The scene switched on entering a node: at the swap, since 0.15.29 |
 | `anim:mark` | `anim` | `{ animation, mark }` | A `mark` step was reached |
 | `anim:finished` | `anim` | `{ animation }` | A timeline ended or was finished; never on cancel |
 | `i18n:locale-changed` | `i18n` | `{ locale }` | The new locale's module is loaded, or `replace` swapped messages of the current locale or the fallback; never at start |
@@ -413,7 +458,8 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 
 | Plugin | Key | Type | Default | Meaning |
 |---|---|---|---|---|
-| `time` | `maxFps` | `30 \| 60 \| 120` | `60` | Frame rate cap |
+| `time` | `maxFps` | `30 \| 60 \| 120` | `60` | Frame rate cap; the top of the ladder with `adaptive` |
+| `time` | `adaptive` | `false \| { floor: 30 \| 60 }` | `false` | Adaptive frame rate. Off in a headless app and on a fake clock |
 | `time` | `maxDeltaMs` | `number` | `50` | Upper bound of one frame's delta |
 | `time` | `idleFps` | `0 \| 30` | `30` | Cap of an idle screen; `0` turns it off |
 | `time` | `idleAfterMs` | `number` | `2000` | Idle after this long without a `wake()` |
@@ -435,8 +481,19 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `world` | `reconciledEvent` | `boolean` | `false` | Emit `world:reconciled` |
 | `renderer` | `mount` | `string \| undefined` | `undefined` | Selector of the mount element; `undefined` keeps the renderer inert |
 | `renderer` | `preference` | `"webgpu" \| "webgl"` | `"webgpu"` | Preferred backend; Pixi falls back to WebGL |
-| `renderer` | `background`, `antialias`, `maxResolution`, `aspect`, `poolLimit`, `unsupportedMessage`, `loadPixi` | | see README | Host, viewport, pool; `loadPixi` is the lazy loader a test fakes |
-| `renderer` | `debug` | `{ nineSlice: boolean }` | `{ nineSlice: false }` | Outline every nine-slice |
+| `renderer` | `background`, `antialias`, `aspect`, `poolLimit`, `unsupportedMessage`, `loadPixi` | | see README | Host, viewport, pool; `loadPixi` is the lazy loader a test fakes |
+| `renderer` | `maxResolution` | `number` | `2` | Cap of `devicePixelRatio`. A player's setting goes through `renderer.monitor.setResolution` |
+| `renderer` | `debug` | `{ nineSlice?, verifyFrames?, kept?, overdraw? }` | `{ nineSlice: false, verifyFrames: false, kept: true, overdraw: false }` | Debug drawing and checks at start |
+| `renderer` | `onDemand` | `boolean` | `false` | Draw a frame only when something changed. A game that writes into its own `Display` calls `app.renderer.invalidate(entity)` first |
+| `renderer` | `keptMb` | `number` | `64` | MiB for kept pictures of still filtered views. `0` keeps none |
+| `renderer` | `poolTrim` | `{ restMs, aboveMb } \| false` | `{ restMs: 1000, aboveMb: 16 }` | Gives back idle render targets between frames |
+| `renderer` | `warm` | `number` | `1` | Pipeline warm-up probes per drawn frame while a game loads, 0 to 16 |
+| `renderer` | `uploads` | `number` | `1` | Textures a live switch and `assets.warm` send to the GPU per drawn frame |
+| `renderer` | `adaptiveScale` | `AdaptiveScale` | none | `{ floor: 0.75, devices: "phone" }`: the render scale `adaptive` may lower first |
+| `renderer` | `shots` | `{ width, height, blur, keep? } \| undefined` | `undefined` | The pictures `renderer.shots.take(key)` keeps (0.15.90) |
+| `renderer` | `monitor` | `{ budgetMs: number \| "rate", frames }` | `{ budgetMs: "rate", frames: 1024 }` | Agent builds: the spike budget and the frame ring |
+| `scenes` | `buildMs` | `number \| "auto"` | `"auto"` | Budget per frame of a scene built aside: two thirds of the frame interval. `0` throws |
+| `scenes` | `leave` | `SceneLeave` | `{ cover: { color: 0x000000, alpha: 0.45, inMs: 50, outMs: 150 }, loader: { afterMs: 400 } }` | The look of a live switch. A scene's `leave` merges over it field by field, `false` turns a part off. `loader` also takes `texture`, `projection`, `holdMs` (0). A scene's `enter: { cover }` sets the veil's colour and alpha |
 | `input` | `tapSlopPx`, `longPressMs`, `dragStartPx`, `swipeMinPx`, `swipeMaxMs` | `number` | `12`, `450`, `8`, `48`, `300` | Gesture thresholds |
 | `input` | `cursor` | `{ control, idle }` | `{ control: "pointer", idle: "" }` | CSS cursors |
 | `input` | `heldScale` | `number` | | Scale of a held view (fixture uses `1.08`) |
@@ -445,7 +502,7 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `assets` | `manifest` | `string \| Manifest \| undefined` | `undefined` | Manifest URL, or the parsed file in a test |
 | `assets` | `textureBudgetMb` | `number` | `192` | LRU budget |
 | `assets` | `preloadDepth` | `number` | `2` | Graph edges walked for preload |
-| `assets` | `baseUrl`, `io` | | `undefined` | CDN seam; fetch/decode/texture seam a test replaces |
+| `assets` | `baseUrl`, `io` | | `undefined` | CDN seam; fetch/decode/texture seam a test replaces. A bundle's own options sit in the feature's `assets.ts`: `defineBundles({ ep01: { tier: "feature", release: "leave", mipmaps: ["items/**"] } })` |
 | `anim` | `maxTracks` | `number` | `2000` | Dev warning threshold |
 | `i18n` | `locale`, `fallback` | `string` | `"en"`, `"en"` | Start locale; fallback for a missing key |
 | `i18n` | `locales` | `Record<string, module \| loader>` | `{}` | Compiled modules outside features |
@@ -455,6 +512,7 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `ui` | `focusRing`, `textInput` | objects | | Keyboard focus ring; caret and selection of the `input` tag |
 | `audio` | `buses` | `{ master, music, sfx }` | `{ master: 1, music: 0.6, sfx: 1 }` | Start gains |
 | `audio` | `musicFadeMs` | `number` | `600` | Cross-fade |
+| `audio` | `sfxFadeMs` | `number` | `120` | Fade of a named sound, in real ms, when its id is replaced or a stop names no `fadeMs` |
 | `audio` | `volumes` | `(player) => Partial<Record<Bus, number>> \| undefined` | `undefined` | Reads the player's choice on every commit |
 | `audio` | `context` | `() => AudioContext \| undefined` | `undefined` | Test seam |
 | `audio` | `journal` | `number` | `0` | Started sounds kept for `game.sounds` |
@@ -463,6 +521,7 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `effects` | `maxParticles`, `maxPasses` | `number` | `3000`, `24` | Budgets that warn once per crossing |
 | `effects` | `phone` | `boolean \| "auto"` | `"auto"` | Coarse pointer and short side ≤ 820 CSS px |
 | `effects` | `blur` | `{ quality, phoneResolution }` | `{ quality: 2, phoneResolution: 0.5 }` | What `Blur` defaults resolve to |
+| `debug` | — | | | No config. The start mode of the overlay is `config.ts` `debug.overlay` |
 | `platform` | `provider` | `PlatformProvider \| undefined` | `undefined` | The engine page passes the system shell's provider when `config.ts` names `system` plugins. Absent: inert, `back()` answers `"none"` |
 | `platform` | `keepAwake` | `boolean` | `false` | Keep the screen on while the game runs |
 
@@ -484,6 +543,7 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `locate` | `game.locate` | `{ key: "string?", target: "json?" }`, exactly one | frame | Page rect `{ x, y, w, h }` in CSS px of a ui element or a view `{ projection, key }`; `undefined` off screen. Replaces `game.rect` |
 | `render` | `game.render` | — | frame | `renderer.stats()` |
 | `effects` | `game.effects` | — | frame | `effects.stats()`; without `effectsPlugin` it throws `[game] The source game.effects needs effectsPlugin.` |
+| `filters` | `game.filters` | — | frame | `{ kinds, off }` of `effects.diagnostics` |
 | `sounds` | `game.sounds` | `{ last: "number?" }` | frame | `audio.journal()`; without `audioPlugin` it throws `[game] The source game.sounds needs audioPlugin.` |
 | `audioMuted` | `game.audioMuted` | — | frame | `audio.muted("master")`, since 0.4.4; without `audioPlugin` it throws `[game] The source game.audioMuted needs audioPlugin.` |
 | `assets` | `game.assets` | — | frame | `assets.usage()` |
@@ -503,6 +563,10 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `trace` | `game.trace` | `{ path }`, a list of `{ projection, key }` | route | `input.trace` |
 | `key` | `game.key` | `{ key, shift? }` | route | `input.pressKey` |
 | `fill` | `game.fill` | `{ key, value }` | route | `ui.fill` |
+| `scroll` | `game.scroll` | `{ key, to }` | route | `ui.scroll`, since 0.15.8 |
+| `saveExport` / `saveImport` | `game.saveExport` / `game.saveImport` | — / `{ save }` | read / raw | The committed `{ player, session, rng }`; restores it at the main flow's start and flushes the store |
+| `frameRate` | `game.frameRate` | `{ fps? }` | cosmetic | `time.setRate(fps ?? "auto")` |
+| `filter` | `game.filter` | `{ kind, on }` | cosmetic | Switches a filter kind through `effects.diagnostics` |
 | `walk` | `game.walk` | `{ route }` | route | `flow.walk` |
 | `bookmark` | `game.bookmark` | — | read | `flow.bookmark()`, plus `scene`, the mounted scene, when the app has `scenes` and one is mounted. Since 0.13.3, while an effect that takes answers waits (a `popup`), the bookmark names the waiting transit node and carries `rest: { path, input }` |
 | `restore` | `game.restore` | `{ bookmark? }` or `{ repro? }` | raw | `scenes.expect(bookmark.scene)` when the bookmark has a `scene`, then `flow.restore(bookmark)`; or a repro. A bookmark at a popup comes back with the scene under it, also on a page that shows another scene (0.14.0). A bookmark of a waiting transit node runs that node again; the command answers once its gate is open, with `pending.gate` in its value, and the popup shows on the next frame. A `scene` that is not a string throws, and so does a `rest` that is not `{ path, input }`. A repro starts at a rest node only |
@@ -510,12 +574,17 @@ seams are not in that type (see "Game shell"); the table lists them because `cre
 | `pause` / `resume` | `game.pause` / `game.resume` | — | cosmetic | `lifecycle.push/pop("devtools")` |
 | `timeScale` | `game.timeScale` | `{ scale }` | cosmetic | `time.setScale`; below 0 or not finite throws |
 | `capture` | `game.capture` | `{ legend?, layers?, sheet?, diff? }` | read (raw with `diff`) | `{ png, legend? }`. `legend` numbers keyed views; `layers` draws only those; `sheet: { frames, everyMs }` a contact sheet of 2–12 frames; `diff: bookmark` red where pixels differ |
-| `debug` | `game.debug` | `{ nineSlice }` | cosmetic | Nine-slice outlines |
+| `debug` | `game.debug` | `{ nineSlice?, kept?, overdraw? }` | cosmetic | Nine-slice outlines, kept pictures, the overdraw heat map |
 | `reducedMotion` | `game.reducedMotion` | `{ on }` | cosmetic | `anim.setReducedMotion` |
 | `mute` | `game.mute` | `{ muted }` | cosmetic | `audio.mute("master", muted)`, since 0.4.4. Music and sfx go silent, the stored volumes stay. Value: `audio.muted("master")`. Without `audioPlugin` it throws `[game] The command game.mute needs audioPlugin.` |
 
 The catalogue is data shaped for MCP tools (each descriptor is `{ id, title, input, … }`); an editor or
 an MCP layer lists `Object.values(sources)` and `Object.values(commands)`. `moku-editor mcp` does so.
+
+Commands run in dev builds and debug builds. `__MOKU_GAME_DEV__` or `__MOKU_GAME_CONTROL__` (`--debug`) runs
+all; `__MOKU_GAME_AGENT__` alone (`--debug=read`) runs `read` and `cosmetic` and refuses the rest with
+`controlReadOnly(id)`. `defineCommand` takes `overlay: "toggle"` (`value`, and `choices` with `choice`, 0.15.87)
+or `overlay: "button"`: only such commands show in the editor's overlay.
 
 `run(app, command, input?)` resolves `{ value, state: { path, frame, tainted } }`. Input schema kinds:
 `"string"`, `"number"`, `"boolean"`, `"json"`, with a trailing `?` for optional. A game's own ids are
@@ -526,18 +595,26 @@ camelCase words joined by dots, at least two (`dice.rolls`).
 
 # @moku-labs/editor — Plugin Index
 
-**Synced version:** `0.10.10` (catalog from the `v0.9.0` tag: `llms.txt`, `llms-full.txt` §6 "Configuration
-reference", `README.md`, `package.json`, and `moku-editor --help` of the published package; 0.9.1 to 0.10.10
+**Synced version:** `0.10.20` (catalog from the `v0.9.0` tag: `llms.txt`, `llms-full.txt` §6 "Configuration
+reference", `README.md`, `package.json`, and `moku-editor --help` of the published package; 0.9.1 to 0.10.20
 from the diff between the tags: `README.md`, `llms.txt`, `llms-full.txt`, `package.json`, `src/index.ts`,
 the plugin READMEs of `pages`, `bridge`, `hub`, `link`, `workspace`, `registry`, `gameView`, `flowView`,
 and `src/plugins/pages/mcp`). Three Moku
-cores in one package. Peers `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`, `@moku-labs/game >=0.13.1`
-(since 0.9.5; `>=0.10.0` before), `typescript >=5.5` (the project index needs the TypeScript JS API: 6.x).
+cores in one package. Peers `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`, `@moku-labs/game >=0.15.0`
+(since 0.10.12; `>=0.13.1` from 0.9.5, `>=0.10.0` before), `typescript >=5.5` (the project index needs the TypeScript JS API: 6.x).
 Engines node ≥24, bun ≥1.4.2 (since 0.10.0). Deps `preact`, `elkjs`. The tools
 page ships prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-full.txt`.
 
 | Version | What changed |
 |---|---|
+| 0.10.20 | Dev dependency only: the editor is developed against game 0.15.90 |
+| 0.10.19 | `__MOKU_GAME_EDITOR__ === "off"`: an agent with no link, no socket and no retry (the store-signed test app). A door toggle draws `choices` under its switch |
+| 0.10.18 | `moku-editor --packed` serves `dist/assets`, starts no keys watch, and stops with `no packed build in "<root>/dist/assets"` when there is no pack. New art shows only after `moku-game pack`. `moku-editor mcp --packed` passes it on; `mcp-config --packed` is an error |
+| 0.10.17 | A warning when two tools pages drive one game save |
+| 0.10.15, 0.10.16 | Device safe insets on the game page: the overlay reads `--moku-device-safe-*` after `--moku-safe-*` |
+| 0.10.13, 0.10.14 | The picker picks what is drawn inside a scroll. Faster `toWireValue` |
+| 0.10.12 | **Peer `@moku-labs/game >=0.15.0`. Mission control:** the Render workspace reads one source, the local preview or a phone by wire (adb) or on the network (pairing code); a 2-minute frame timeline, cards, Record, Monitoring; `moku-editor perf`; plugins `perf`, `recorder`, `connect`, `collector`, `activeSource`; the overlay gets tabs Frames, Game, Record, Link; door `editor.record`, MCP `editor_record`; error -32009 for a command the build refuses. The local preview pauses while a phone is the source |
+| 0.10.11 | CI only |
 | 0.10.10 | Docs and the editor's own e2e specs only: `README.md`, `llms.txt` and `llms-full.txt` describe 0.10.9 |
 | 0.10.9 | **Breaking: Reference mode is gone**: key `R`, the top-bar toggle, the palette command, `workspace.reference()`, `setReference()`, the event `workspace:reference` and the `data-moku-*` proxies. The element picker (Select, ⇧⌘C, `I`) is the one way to pick; its drag picks an area. **Breaking: the Styles tab of the Flow Inspector is gone**, with the palette group "Styles" and the config key `flowView.styleSaveDelayMs`. New: the Copy Ref switch of the Game toolbar (`workspace.copyOnSelect()`, `setCopyOnSelect(on)`, on by default): off, a pick only selects and writes nothing. The Styles rows of the Element tab are fields that record pending edits (`gameView.editStyle`, `clearEdits`, `edits`, `copyEdits`); `SelectionInfo.edits` and `moku_selection` carry them; a text node shows the fields of its text style key (needs game 0.14.11). The Element tab has no reference block and no "Pick another". A series no longer opens the contact sheet. The top bar starts with the game mark. Types `StyleEdit`, `StyleValue` |
 | 0.10.5 to 0.10.8 | Nothing a game meets: a test flake in `pages`, CI and dev dependencies |
@@ -562,11 +639,13 @@ The rows below 0.8.0 are read from the commit subjects between the tags and from
 ## Bin (Bun only)
 
 ```
-moku-editor [--root DIR] [--preload FILE]… [--serve-plugin FILE]… [--port 3000] [--no-hmr]   # a moku-game folder
-moku-editor <game-html> [--port 3000] [--root .] [--no-hmr] [--help]                         # a game with its own page
-moku-editor mcp [<game-html>] [--port N] [--root DIR] [--no-hmr]                              # stdio MCP for Claude Code
+moku-editor [--root DIR] [--preload FILE]… [--serve-plugin FILE]… [--port 3000] [--no-hmr] [--packed]   # a moku-game folder
+moku-editor <game-html> [--port 3000] [--root .] [--no-hmr] [--packed] [--help]              # a game with its own page
+moku-editor mcp [<game-html>] [--port N] [--root DIR] [--no-hmr] [--packed]                   # stdio MCP for Claude Code
 moku-editor mcp-config [<game-html>] [--port N]                                               # prints .mcp.json
 moku-editor e2e -c <playwright config> [playwright args…]                                     # the editor specs of a game
+moku-editor perf [--lan] [--port 47600] [--out DIR] [--every 10] [--no-ui]                    # phones: JSONL logs, tools page on the port
+moku-editor perf mark "<label>" | perf summary <log.jsonl> | perf compare <a.jsonl> <b.jsonl>
 ```
 
 | Flag | Short | Default | Rule |
@@ -574,6 +653,7 @@ moku-editor e2e -c <playwright config> [playwright args…]                     
 | `--port` | `-p` | `3000` | 0–65535. `0` picks a free port |
 | `--root` | `-r` | `.` | The project root the editor reads and writes; the moku-game folder of the engine page |
 | `--no-hmr` | | hot reload on | Serves the game without Bun hot reload. The Hot reload switch flips it while the bin runs |
+| `--packed` | | off | Serves `dist/assets` and its `manifest.json`, no keys watch (0.10.18). Loose game files answer 404 |
 | `--preload` | | none | A file Bun preloads in the serving process. Repeats. Engine page only |
 | `--serve-plugin` | | none | A Bun plugin the engine page bundles with, after the engine's hot plugin. Repeats. Engine page only |
 | `--help` | `-h` | | Prints usage, exit 0 |
@@ -617,44 +697,49 @@ moku-editor e2e -c <playwright config> [playwright args…]                     
 
 | Entry | Core | Runtime | Default plugins | Opt-in |
 |---|---|---|---|---|
-| `@moku-labs/editor/agent` | `editor-agent` | game page, or headless Bun | `registry`, `channel`, `overlay` | `bridgePlugin`, `capturePlugin` |
+| `@moku-labs/editor/agent` | `editor-agent` | game page, or headless Bun | `registry`, `channel`, `perf`, `recorder`, `overlay` | `bridgePlugin`, `capturePlugin` |
 | `@moku-labs/editor/agent/page` | — | the engine page | Default export only: the engine's `PageAgent`. It stops a previous `globalThis.editor`, starts the agent core with `bridgePlugin` and `capturePlugin` on `{ app, name, modules }` and sets `globalThis.editor`. No side effect on import | — |
-| `@moku-labs/editor/server` | `editor-server` | Bun | `files`, `hub`, `pages` | — |
-| `@moku-labs/editor/tools` | `editor-tools` | tools page | `link`, `workspace`, `panels`, `flowView`, `gameView`, `renderView`, `stateView`, `filesView`, `consoleView` | — |
+| `@moku-labs/editor/server` | `editor-server` | Bun | `files`, `hub`, `connect`, `collector`, `pages` | — |
+| `@moku-labs/editor/tools` | `editor-tools` | tools page | `link`, `activeSource`, `workspace`, `panels`, `flowView`, `gameView`, `renderView`, `stateView`, `filesView`, `consoleView` | — |
 | `@moku-labs/editor` | — | anywhere | Runtime-free: wire protocol types and helpers, `definePanel`, `errorCode` (`notInstalled` = -32008), `isReloading`, `isHotSwapEntry`, the project helpers `parseProjectState`, `parseFoundList`, `projectDelta`, `firstDefinition`, `anchorKey`, the selection helpers `isSelectionInfo`, `parseSelectionInfo`, `parseSelectParams`, and since 0.10.3 the types of the relayed editor requests `DeviceParams`, `DeviceInfo`, `DevicePresetInfo`, `ShowParams`, `ShowInfo`, `NodeParams`, `NodeInfo`, `WorkspaceName`, `RelayedEditorMethod`, and since 0.10.9 `StyleEdit` (`{ path, from, to }`) and `StyleValue` (`number \| string \| boolean`) of `SelectionInfo.edits` | — |
 
 Each core entry exports `createApp`, `createPlugin`, its plugin instances (`registryPlugin`, `channelPlugin`,
-`overlayPlugin`, `bridgePlugin`, `capturePlugin`; `filesPlugin`, `hubPlugin`, `pagesPlugin`; `linkPlugin`,
-`workspacePlugin`, `panelsPlugin`, `flowViewPlugin`, `gameViewPlugin`, `renderViewPlugin`,
+`overlayPlugin`, `perfPlugin`, `recorderPlugin`, `bridgePlugin`, `capturePlugin`; `filesPlugin`, `hubPlugin`, `connectPlugin`, `collectorPlugin`, `pagesPlugin`; `linkPlugin`,
+`activeSourcePlugin`, `workspacePlugin`, `panelsPlugin`, `flowViewPlugin`, `gameViewPlugin`, `renderViewPlugin`,
 `stateViewPlugin`, `filesViewPlugin`, `consoleViewPlugin`) and a type namespace per plugin (`Registry`,
-`Channel`, `Overlay`, `Bridge`, `Capture`, `Files`, `Hub`, `Pages`, `Link`, `Workspace`, `Panels`,
+`Channel`, `Perf`, `Recorder`, `Overlay`, `Bridge`, `Capture`, `Files`, `Hub`, `Connect`, `Collector`, `Pages`, `Link`, `ActiveSource`, `Workspace`, `Panels`,
 `FlowView`, `GameView`, `RenderView`, `StateView`, `FilesView`, `ConsoleView`). `logPlugin` and
 `envPlugin` of `@moku-labs/common` are on every core.
 
-## The 17 plugins
+## The 22 plugins
 
 | Plugin | Core | Tier | Purpose | Key API |
 |---|---|---|---|---|
 | `registry` | agent | Complex | Wraps doors, `.dev` modules and `editor.*` commands into entries; builds the `Manifest`; probes every door source once at start and on each manifest rebuild (never `game.rect` or `game.locate`). A source that throws is listed `available: false` with a `reason`, and its reads answer -32008 `not_installed` | `manifest`, `source`, `command`, `add`, `envelope`, `clock` (`{ frame, paused, held, reasons }` since 0.10.4: `held` is true while the pause reasons include `"devtools"`) |
 | `channel` | agent | Standard | In-process `EditorChannel`, heartbeat `{ frame, paused, at, heap? }` (`heap` in Chromium) | `read`, `watch`, `run`, `status`, `heartbeat`, `onHeartbeat` |
-| `overlay` | agent | Standard | Preact card over the game; off by default; command `editor.overlay` | `open`, `close`, `isOpen` |
+| `perf` | agent | Complex | Since 0.10.12. Reads the engine monitor's frame ring into a 6 s window, ranks spike causes; off without a monitor. Sources `editor.perf.second`, `editor.perf.window`, `editor.perf.spikes`, `editor.perf.spike`, `editor.spikes` and Mission control's feeds | `status`, `readWindow`, `second`, `spikes`, `spike`, `monitor` |
+| `recorder` | agent | Complex | Since 0.10.12. The performance log on the device, off until someone starts it (`autoStart: false`). `editor.record { on?, label?, mark? }`, `editor.mark`, source `editor.recorder` | `start`, `stop`, `mark`, `command`, `status`, `marks`, `files`, `share`, `remove` |
+| `overlay` | agent | Complex | The editor's window over the game: hidden, pill or card (tabs Frames, Game, Record, Link). The Game tab lists only commands the game marked `overlay`. Sets `globalThis.__MOKU_GAME_OVERLAY__` for `app.debug.overlay`; command `editor.overlay { mode }` | `open`, `close`, `toggle`, `isOpen`, `mode`, `commands` |
 | `bridge` | agent, opt-in | Complex | Websocket to the hub: hello, requests, throttled values, taps (at most one per 50 ms), backoff 1 s to 30 s; keeps a `game.bookmark` in `sessionStorage` across Bun's reload and pauses again only when the developer had paused the game (0.10.4); commands `editor.reload { restore? }` and `editor.clock` (read: `{ frame, paused, held, reasons }`) | `status`, `session` |
 | `capture` | agent, opt-in | Standard | `editor.capture { maxWidth?, key?, rect?, format?, quality? }` (JPEG 0.8 by default; `key` or `rect` crops plus 8 px), `editor.series`, `editor.seriesStop`, `editor.sheet { frames, everyMs, maxWidth?, format?, quality? }` (one `game.capture { sheet }`). Never captures on its own | — |
 | `files` | server | Standard | Project-root sandbox: allow and deny globs, atomic write with sha1 version, image captures under `.moku/captures/`, the project index of the root (opened on start, kept fresh by its watch) | `list`, `read`, `write`, `writeBinary`, `readBinary`, `resolve`, `root`, `find`, `project` |
 | `hub` | server | Complex | Websocket switchboard: guard (Host, Origin, token), sessions `s-xxxx` with a heartbeat readout, routing, backpressure, the `hotReload` notification, the editor page's `selection` and the relay of `editor.select`, `editor.device`, `editor.show` and `editor.node` to the tools page; publishes `editor.project`; wraps `Bun.serve` | `serve`, `token`, `sessions`, `fetch`, `websocket`, `addRoutes`, `guard`, `publish`, `path` |
+| `connect` | server | Complex | Since 0.10.12. Connects a phone from the tools page: the device directory, the pairing confirm, CDP and telemetry for a phone by wire. Runs `adb` only from an allowlist | `directory`, `telemetry` |
+| `collector` | server | Complex | Since 0.10.12. One JSONL file per phone log, `adb reverse` every 2 s, the mark route, `collector/report` | `sessions`, `mark`, `adb`, `settled` |
 | `pages` | server | Complex | Serves the prebuilt tools page, boot JSON, `/assets/*`, `/hello`, `/hmr`; home of the bin, of `.moku/editor.json` and of the stdio MCP bridge | `routes`, `attachServer`, `hotReload`, `setHotReload` |
 | `link` | tools | Complex | The one connection: boot JSON, socket, session choice, remote channel, files client, taps, heap, hot reload state, the project state, the selection, the handlers of the relayed editor requests (`handle("select" \| "device" \| "show" \| "node", handler)`, one per method). A -32008 watch is neither logged nor retried | `read`, `watch`, `run`, `status`, `manifest`, `onManifest`, `sessions`, `session`, `choose`, `retry`, `expectReload`, `boot`, `frameUrl`, `isOtherTab`, `onTap`, `heap`, `files` (`list`, `read`, `write`, `writeBinary`, `readBinary`, `find`), `project`, `hotReload`, `onHotReload`, `setHotReload`, `selection`, `notify`, `handle` |
+| `activeSource` | tools | Standard | Since 0.10.12. One source per tools page: the local preview, a phone or another page. It pauses the local preview while a phone is the source | `current`, `preview`, `useDevice`, `useLocal`, `onChange`, `connectWire`, `connectNetwork`, `connectDevice`, `confirmPairing`, `refusePairing`, `stopDevices`, `telemetry`, `notice`, `label`, `health` |
 | `workspace` | tools | Complex | Shell: top bar with the game mark (compact with a ⋯ menu below 900 px), rail (Game first), palette, toasts, keys, prefs (theme, density, preview, device and fold, Show taps, sound, Copy on select), 21 device presets (default iPhone 18 Pro), the one game iframe (`data-game-frame`) with a playable pinned preview, the D-07 reload and Bun hot reload. No Reference mode since 0.10.9 | `active`, `show`, `theme`, `setTheme`, `density`, `setDensity`, `preview`, `setPreview`, `copyOnSelect`, `setCopyOnSelect` (0.10.9; `reference` and `setReference` are gone), `device`, `setDevice`, `devices`, `gameFrame` (`reload({ restore? })`), `palette`, `toast`, `keys`, `mount`, `host`, `badge`, `previewZone`, `overlayInGame`, `setOverlayInGame`, `onPrefs`, `muted`, `setMuted`, `hotReload`, `setHotReload` |
 | `panels` | tools | Standard | Panel host for `definePanel` specs | `register`, `run`, `list`, `mountInto` |
 | `flowView` | tools | VeryComplex | Flow graph canvas with ELK, focus, Info-tab neighbours, Find current, trail, the Inspector with its Info and Code tabs (no Styles tab since 0.10.9); answers the relayed `node` request (it selects the node, it does not show Flow) | `camera`, `focus`, `flows`, `layout` |
 | `gameView` | tools | Complex | Device stage, Sound and Copy Ref switches, element picker (the Select icon button) with area drags, style card, Code section, Styles fields with pending style edits for the agent, the pick for the chat (bookmark, two JPEGs, a card file, one line; only while Copy Ref is on), the selection published to MCP, screenshots, series, capture card, contact sheet (on request) | `pick`, `selected`, `select`, `inspect`, `scene`, `locate`, `highlight`, `manifest`, `capture`, `series`, `stopSeries`, `openSheet`, `copyReference`, `fold`, `bookmarks`, and since 0.10.9 `editStyle(path, to)`, `clearEdits(scope?: "selected" \| "all")`, `edits()`, `copyEdits()` |
-| `renderView` | tools | Standard | Metric tiles (JS heap in Chromium, "Effects not installed in this game"), render tree, textures, bundles, pools, release log | `refresh`, `snapshot`, `reveal`, `highlight`, `sortTextures`, `filterBundle` |
+| `renderView` | tools | Complex | Render workspace, Mission control, since 0.10.12: connection bar, 2-minute frame timeline, range inspector, cards (FPS, frame time, draws, textures, GPU passes, memory, device load), Record, Monitoring, and Scene details (render tree, textures, bundles, pools, release log; never read from a phone) | `mission`, `inspect`, `pause`, `live`, `setSpan`, `seek`, `select`, `step`, `jump`, `setRate`, `setSection`, `setOverdraw`, `record`, `mark`, `refresh`, `snapshot`, `reveal`, `highlight`, `sortTextures`, `filterBundle` |
 | `stateView` | tools | Standard | Player and session trees, last commit by diffing `game.model`, runner card | `lastCommit`, `note`, `onCommit`, `tainted`, `graph`, `expanded`, `setExpanded`, `expandAll` |
 | `filesView` | tools | Complex | Tree, tabs, viewer, in-place editor, previews, conflict bar, Used by | `open`, `close`, `activate`, `tabs`, `active`, `edit`, `setBuffer`, `setMode`, `save`, `resolveConflict`, `refresh`, `files`, `fileOf`, `flowFileOf`, `usedBy`, `editorUrl`, `subscribe` |
 | `consoleView` | tools | Standard | `game.log` as a table, level filter, search, Preserve log, command errors | `lines`, `visible`, `counts`, `filter`, `setFilter`, `clear`, `preserve`, `setPreserve`, `select`, `selected`, `refresh`, `focusFrame`, `subscribe` |
 
-Init order: agent `registry → channel → overlay` (`bridge` depends on `registry` and `channel`, `capture`
-on `registry`); server `files → hub → pages`; tools `link → workspace → panels`, then the six views.
+Init order: agent `registry → channel → perf → recorder → overlay` (`bridge` depends on `registry`, `channel` and `recorder`, `capture`
+on `registry`); server `files → hub → connect → collector → pages`; tools `link → activeSource → workspace → panels`, then the six views.
 
 ## Configuration
 
@@ -665,6 +750,8 @@ on `registry`); server `files → hub → pages`; tools `link → workspace → 
 | agent | `overlay` | `open: false`, `corner: "top-right"`, `mount` (default `document.body`) |
 | agent | `bridge` | `hello: "/__editor/hello"`, `retryMs: 1000`, `callTimeoutMs: 5000` |
 | agent | `capture` | `maxDurationMs: 20000`, `minIntervalMs: 16` |
+| agent | `recorder` | `autoStart: false` (`true`, or `"device"` for a debug build only), `maxLogMb`. The rest is in `llms-full.txt` |
+| server | `hub`, `collector`, `pages` (device mode) | `hub.devicePort`, `hub.deviceLan`, `collector.out`, `collector.everyS`, `pages.toolsPage`: what `moku-editor perf` sets. The rest is in `llms-full.txt` |
 | server | `files` | `root: "."`, `allow: ["**/*.ts", "**/*.tsx", "**/*.json", "**/*.md", "**/*.css", ".moku/**"]`, `deny: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/.env*"]`, `project: true` (open the project index on start) |
 | server | `hub` | `path: "/__editor"`, `allowOrigins: []`, `callTimeoutMs: 5000`, `silentAfterMs: 6000` |
 | server | `pages` | `title: "moku editor"`, `editorUrl: "vscode://file/{path}:{line}"`, `pageDir`, `gameUrl: "/"` |
@@ -685,7 +772,8 @@ Declared per core in `src/config.ts`; no plugin declares its own.
 
 | Core | Event | Payload |
 |---|---|---|
-| agent | `bridge:status` | `{ status: LinkStatus; session? }` |
+| agent | `bridge:status` | `{ status: LinkStatus; session?; link? }` |
+| agent | `overlay:changed`, `overlay:connect` | `{ mode, tab }`, `{ address }` |
 | server | `hub:session` | `{ id, game, open, reason?: "bye" \| "game_reloaded" }` |
 | server | `files:written` | `{ path, bytes, kind: "code" \| "style" \| "layout" \| "capture" \| "other" }` |
 | server | `files:project` | `ProjectState`: the project index opened, changed or went off |
@@ -694,6 +782,10 @@ Declared per core in `src/config.ts`; no plugin declares its own.
 | tools | `workspace:changed`, `workspace:ran`, `workspace:density` | `{ ws }`, `RanEvent`, `{ density }`. `workspace:reference` is gone since 0.10.9 |
 | tools | `workspace:open-file`, `workspace:select-node`, `workspace:focus-frame` | `{ path, line? }`, `{ id }`, `{ frame }` |
 | tools | `workspace:reveal`, `workspace:inspect`, `workspace:open-sheet` | `{ ref }`, `{ ref }`, `{ index }` |
+
+Per-plugin events since 0.10.12, for a plugin that lists the emitter in `depends`: `registry:command`,
+`recorder:status`, `hub:device`, `connect:telemetry`, `collector:session`, `activeSource:changed`,
+`activeSource:connect-requested`.
 
 `LinkStatus` is `connecting · live { frame } · paused { frame } · silent { since, lastFrame } · lost
 { reason, lastFrame, retryInMs } · empty`.
@@ -730,14 +822,15 @@ off, because TypeScript 7 has no JS API.
 mcp-config` prints the `.mcp.json` snippet). The bridge is a separate process and a hub tools client. It
 uses a running bin through `.moku/editor.json`, or starts one and owns it. In a moku-game folder it needs
 no html: it starts the engine page, at startup and on `moku_start {}` (0.10.3). After a restart of the bin
-it reconnects 0, 1, 3 and 7 s after the close and keeps its door tools for 8 s (0.10.0).
+it reconnects 0, 1, 3 and 7 s after the close and keeps its door tools for 8 s (0.10.0). `moku-editor mcp --packed`
+hands the flag to the bin it starts (0.10.18).
 
 | Tools | What |
 |---|---|
 | Generic (22) | `moku_status`, `moku_sessions`, `moku_manifest`, `moku_read`, `moku_wait`, `moku_run`, `moku_screenshot` (JPEG, max width 1080, `key` crops to one ui element), `moku_series`, `moku_reference` (the newest or a named pick card), `moku_selection` (since 0.10.9 its JSON has `edits` when the element has pending style edits: `{ path, from, to }` each, to write into the source; the edit of a text style key has the path `textStyle:<key>#<field>`), `moku_select` (exactly one of `{ key }`, `{ rect }`, `{ node }`), `moku_device`, `moku_show`, `moku_files_list`, `moku_files_read`, `moku_files_write`, `moku_files_find`, `moku_project`, `moku_reload`, `moku_hot_reload`, `moku_start`, `moku_stop` |
 | New in 0.10.3 | `moku_device { preset?, orientation?, folded? }`: reads or sets the device of the tools page; answers `{ preset, orientation, folded, w, h, presets }`, `w` × `h` the game viewport in CSS px; `{}` reads. `moku_show { workspace? }`: `flow`, `game`, `render`, `state`, `files` or `console`; answers `{ workspace, workspaces }`; `{}` reads. `moku_select { node }`: opens the Flow workspace and focuses the node; answers `{ id, selected, places }`, the places being the node's files and lines, no card. `moku_files_find { key }`: where a project-index key lives (`node:board/merge`, `jsx:coins`): `{ path, binding?, line, hash, broken? }`; index off: `isError` "project index off: <reason>". `moku_project { path?, prefix? }`, at most one: the key count per kind, the keys of a prefix with their files, or what one file defines and uses; `jsx:` keys are not in it. `moku_hot_reload { on }`: switches Bun hot reload; the editor restarts its server and the call returns once it is back, at most 15 s; call `moku_reload` after it; a game's own server is `isError` |
 | Need the tools page open | `moku_select`, `moku_device`, `moku_show`. No page: -32003 `no_editor_page` with the URL. A bin or a page older than the bridge reads "moku-editor or its editor page is older than the bridge; restart moku-editor and reload the page" |
-| Door tools | One tool per command door of the selected session. Name: the id with `.` as `_` (`game.tap` is `game_tap`); cheat and raw doors carry the effect first (`cheat_game_fill`, `raw_game_restore`). No tool for the doors the generic tools cover: `game.capture`, `editor.capture`, `editor.sheet`, `editor.series`, `editor.seriesStop`, `editor.reload`. `editor.clock` is a door tool, `editor_clock` (0.10.4) |
+| Door tools | One tool per command door of the selected session. Name: the id with `.` as `_` (`game.tap` is `game_tap`); cheat and raw doors carry the effect first (`cheat_game_fill`, `raw_game_restore`). No tool for the doors the generic tools cover: `game.capture`, `editor.capture`, `editor.sheet`, `editor.series`, `editor.seriesStop`, `editor.reload`. `editor.clock` is a door tool, `editor_clock` (0.10.4). Since 0.10.12 `editor.record` is `editor_record`: `{ on?, label?, mark? }` answers `{ on, file, startedBy, marked }`. The generic tools stay 22 |
 
 Deny the cheat and raw doors with `{ "permissions": { "deny": ["mcp__moku-editor__cheat_*",
 "mcp__moku-editor__raw_*"] } }`. Pictures need the game page visible: a paused or hidden game answers
@@ -749,28 +842,29 @@ JSON-RPC 2.0 over `{path}/ws?token=<t>&kind=agent|tools`; hello is `GET {path}/h
 Error codes: -32600 invalid request, -32601 unknown method or id, -32602 invalid input, -32000 command
 failed, -32001 game reloaded (retryable), -32002 timeout or link closed (retryable), -32003 no session,
 -32004 forbidden path, -32005 version conflict, -32006 not JSON, -32007 unauthorized, -32008 not
-installed. Every message starts with `[moku-editor] `.
+installed, -32009 `read_only` or `dev_only` (the page's build refuses the command, 0.10.12). Every message starts with `[moku-editor] `.
 
 ## Compatibility with the engine
 
-- Editor 0.9.5 and later peer on game `>=0.13.1`: the engine page needs `preparePage` and `watchKeys` of
+- Editor 0.10.12 and later peer on game `>=0.15.0`: the phone tools need the build flags, `app.renderer.monitor`
+  and `app.debug.overlay`. Pass owners, the `shader` and `problem` events and control on `--debug` need game 0.15.1.
+  `--store --dev` needs editor 0.10.19 or later.
+- Editor 0.9.5 to 0.10.11 peer on game `>=0.13.1`: the engine page needs `preparePage` and `watchKeys` of
   `@moku-labs/game/cli`. Editor 0.8.0 to 0.9.4 peer on game `>=0.10.0` (`preparePage` alone). An editor
-  0.9.5 or later beside game 0.13.0 or older stops at the start with `install @moku-labs/game >=0.13.1`.
+  0.9.5 to 0.10.11 beside game 0.13.0 or older stops at the start with `install @moku-labs/game >=0.13.1`.
 - Both packages need Bun ≥1.4.2: the engine since 0.14.0, the editor since 0.10.0.
 - The text style section of the Element tab (editor 0.10.9) needs game 0.14.11, which reports
   `textStyle` on a text node. The peer range did not move: on an older game the section is absent.
-- Verified together with TypeScript 6.0.3 and Bun 1.4.3: editor 0.10.10 with game 0.14.12, core 1.7.6
-  and common 0.3.10. The run was on a copy of the template scaffold that had passed on game 0.14.9 and
-  editor 0.10.8, with the two packages moved by `bun add --exact` (the copy also had
-  `@moku-labs/system` 0.3.7, `@moku-labs/native` 0.3.8 and a `native` section in `config.ts`): `keys`,
-  typecheck, lint, tests, tests with coverage, `test:visual` once (the baselines written on 0.14.9
-  read "same"), `build`, `moku-game-index --root . --check` (14 files, 12 keys) and `moku-editor
-  --help`. `moku-game dev --port 0` was started and stopped: the page and `/manifest.json` answer 200.
-  `moku-editor --root . --port 0` was started and stopped: Game and Tools answer 200, `/manifest.json`
-  answers 200 with `Cache-Control: no-store`, and the log has `files:project-on {"files":14,"keys":12}`.
-  Not run on these pins: a scaffold written anew from `hello-world.md`, a save of a strings file under
-  the keys watch, a browser on either page (so no control of the tools page of 0.10.9 was seen), the
-  MCP bridge and its tools, an asset swap, `moku-editor e2e`, a native build.
+- Verified together with TypeScript 6.0.3 and Bun 1.4.3: editor 0.10.20 with game 0.15.92, core 1.7.6
+  and common 0.3.11, on a scaffold written anew from `hello-world.md`: install, `keys`, tests, typecheck,
+  lint with the eleven rules, tests with coverage, `test:visual` twice (written, then same), `build`,
+  `moku-game-index --root . --check` (14 files, 12 keys) and `moku-editor --help`. `moku-game dev --port 0`
+  was started and stopped: the page and `/manifest.json` answer 200. `moku-editor --root . --port 0` was
+  started and stopped: Game and Tools answer 200, the log has `files:project-on {"files":14,"keys":12}`. In
+  a browser pane, on the page under the editor: WebGPU and `?renderer=webgl` drew through `game.capture`,
+  `game.tap` moved `taps` from 0 to 1, and it survived a reload. The tools page opened on Render (Mission
+  control), no console error. Not run on these pins: the MCP bridge and its tools, a save under the keys
+  watch, an asset swap, the pixel leg, `moku-editor e2e`, `moku-editor perf`, a phone, a native build.
 - Element rects come from `game.locate { key }` when the manifest lists it, else `game.rect`.
   `game.capture` may answer a data URL or `{ png, legend? }`; capture takes both.
 - The Sound switch runs `game.mute` when the manifest lists it. The registry does not probe commands, so in

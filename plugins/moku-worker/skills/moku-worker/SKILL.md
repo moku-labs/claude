@@ -9,7 +9,7 @@ description: >
 
 # Moku Worker Patterns
 
-> **Synced to `@moku-labs/worker@0.20.9`** (npm `dist-tags.latest`; surface from the `v0.20.9` git tag
+> **Synced to `@moku-labs/worker@0.20.11`** (npm `dist-tags.latest`; surface from the `v0.20.11` git tag
 > source). Full surface — every plugin, its API/config/events, the
 > dependency graph, and the runtime-vs-node-only boundary — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -63,14 +63,15 @@ plugins, so the config it generates is missing the bindings, and keeping two com
 hand is where it goes wrong. When someone proposes that split, say so and compose `deploy` and `cli`
 into the one runtime app. Reference: `tracker/src/server.ts`.
 
-## Framework API (@moku-labs/worker v0.20.9)
+## Framework API (@moku-labs/worker v0.20.11)
 
 One entry: **`@moku-labs/worker`**. The node-only deploy/CLI plugins (`deployPlugin`/`cliPlugin`) ship from
 the same root export and are tree-shaken out unless you list them, so they stay out of the runtime bundle.
 (The `./cli` back-compat subpath was removed in 0.11.0.) `createApp` is **synchronous** (built once per
 isolate, frozen). Bindings are threaded as a **call argument** (`env`), not stored. There is **no stage
 plugin** (removed in 0.12.0): deployment stage is plain global config — set `config.stage`, read it via
-`ctx.global.stage`.
+`ctx.global.stage`. Since 0.20.10 `dist` is one file per module, so a Worker that lists neither `deployPlugin`
+nor `cliPlugin` bundles no Node built-ins and starts without `nodejs_compat` (peer `@moku-labs/common@^0.3.11`).
 
 ```tsx
 import { createApp, endpoint, kvPlugin } from "@moku-labs/worker";
@@ -86,6 +87,7 @@ export const app = createApp({
 });
 // app.kv.get(env, key)            → default instance
 // app.kv.use("cache").get(env, k) → named-instance selector
+// app.bindings.require<KVNamespace>(env, "MY_KV") → throws when the binding is missing
 // worker.ts (hand-assembled — no plugin produces it):
 export default { fetch: (r, env, ctx) => app.server.handle(r, env, ctx) } satisfies ExportedHandler;
 ```
@@ -93,7 +95,9 @@ export default { fetch: (r, env, ctx) => app.server.handle(r, env, ctx) } satisf
 **Resource plugins** (`@moku-labs/worker`): `kvPlugin`, `d1Plugin`, `queuesPlugin`, `storagePlugin` (R2),
 `durableObjectsPlugin` — each env-first, configured as a keyed map of named instances, with `app.<kind>.get`
 on the default and `app.<kind>.use("key")` for the rest. Defaults `bindingsPlugin` + `serverPlugin` are
-pre-wired; core `log`/`env` are flat-injected on `ctx`. Helpers: `endpoint(path)`,
+pre-wired; core `log`/`env` are flat-injected on `ctx`. `bindings` has no config: `bindings.required` was
+removed in 0.20.11 (no code read it, and it is now a type error), so call `require` where you need a binding.
+Helpers: `endpoint(path)`,
 `defineDurableObject(name)`. Author consumer plugins with `createPlugin` (generics inferred), typing context
 via `WorkerPluginCtx<Config, State, Events?>`. **Deploy** (from the package root): `deployPlugin` +
 `cliPlugin` — `deploy.run()`/`cli.deploy()` resolve to a structured `DeployReport`; `cli.deploy({ delete:
@@ -108,11 +112,12 @@ off `env`. List `turnPlugin` next to `deployPlugin` in the one worker app (`depl
 `ctx.has("turn")`, it is not in `deploy`'s `depends`):
 
 ```ts
-import { cliPlugin, createApp, deployPlugin, turnPlugin } from "@moku-labs/worker";
+import { cliPlugin, createApp, d1Plugin, deployPlugin, durableObjectsPlugin, kvPlugin, queuesPlugin, storagePlugin, turnPlugin } from "@moku-labs/worker";
 
 export const server = createApp({
   config: { name: "myapp", compatibilityDate: "2026-06-17" },
-  plugins: [turnPlugin, deployPlugin, cliPlugin],
+  // deploy depends on all five resource plugins: createApp throws when one is missing.
+  plugins: [storagePlugin, kvPlugin, d1Plugin, queuesPlugin, durableObjectsPlugin, turnPlugin, deployPlugin, cliPlugin],
   pluginConfigs: {
     // defaults: keyIdBinding "TURN_KEY_ID", apiTokenBinding "TURN_KEY_API_TOKEN", verifyPath "/api/ice"
     turn: { relay: { name: "myapp-turn" } }

@@ -6,20 +6,22 @@ description: >
   and prompt text out, through the `moku` CLI with a cost estimate, a budget gate and a resumable
   cache. Triggers on: "moku ai", "@moku-labs/ai", "generate assets", "game art", "sprites",
   "sound effects", "sfx", "music for the game", "voiceover", "moku.yaml", "moku.config.ts",
-  "moku run / estimate", "add a provider", "api key for fal/openai/elevenlabs", "спрайты", "звуки",
+  "moku run / estimate", "add a provider", "api key for fal/openai/anthropic/elevenlabs", "спрайты", "звуки",
   "музыка для игры", "озвучка", "ассеты для игры", "сгенерируй картинки", or producing a
   batch of AI assets for a Moku project.
 ---
 
 # Moku AI Patterns
 
-> **Synced to `@moku-labs/ai@0.16.8`** (npm `dist-tags.latest`; catalog from the `v0.16.8` tag source).
+> **Synced to `@moku-labs/ai@0.16.13`** (npm `dist-tags.latest`; catalog from the `v0.16.13` tag source).
 > 0.15 and 0.16 change only `ark`, `fal` and `asset`: the Ark asset library, `groupName`, `fal.upload`,
 > `omni_reference_task_type`, the draft record. No task, CLI flag or build-file key of game art changed.
 > 0.16.2 adds one provider for a task: `music` on `elevenlabs` (`music_v1`, `music_v2`, `music_v2_5`). The
 > default `music` provider stays `fal`. 0.16.3 to 0.16.8 are CI, docs and dev dependencies.
+> 0.16.9 to 0.16.13 touch `prompt-gen` and one fal image model: a new `anthropic` provider, openai prompt-gen on
+> the Responses API, `nano-banana-2.1`, `cacheTtl`, and long fal calls no longer cut by Bun's idle timer.
 > Peers: `@moku-labs/core ^1.7.1`, `@moku-labs/common ^0.3.4`.
-> Full surface — the 24 plugins, every API, config key and event — is in
+> Full surface — the 25 plugins, every API, config key and event — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Provider keys:
 > [`references/setup.md`](references/setup.md). Providers, models and custom plugins:
 > [`references/providers.md`](references/providers.md). Pipeline into a `@moku-labs/game` project:
@@ -40,7 +42,7 @@ by content key, so a second run bills nothing that already exists.
 
 Tasks: `image`, `sprite` (cut an image into a trimmed, transparent PNG), `sfx` (short sound
 effect, mp3), `video`, `music`, `voiceover`, `translate`, `prompt-gen`, `asset` (a registered
-portrait for Ark video). Providers: `elevenlabs`, `openai`, `fal`, `apimodels`, `ark` (API keys),
+portrait for Ark video). Providers: `elevenlabs`, `openai`, `anthropic`, `fal`, `apimodels`, `ark` (API keys),
 `codex`, `claude` (local CLIs, billed to the user's plan, cost $0).
 
 It is not a chat SDK. There is no MCP server, no account pools yet, and no task for sprite sheets,
@@ -144,7 +146,8 @@ Exit codes: `0` ok, `1` failure, `2` invalid build file, `3` usage or a project 
 not load, `4` paused by Ctrl-C, `5` budget stop. `moku status --follow` watches a run from another terminal. `moku compose "<text>"`
 writes a build file from a sentence, through the `prompt-gen` provider (costs a little, needs a key).
 
-A fal model without a price fails the estimate instead of counting as $0. An OpenAI model missing
+A fal model without a price fails the estimate instead of counting as $0. An Anthropic model without a
+complete price is a terminal 400 before any call. An OpenAI model missing
 from the price table estimates as $0: add `priceOverrides` for custom models.
 
 ## Caching and resume
@@ -178,7 +181,7 @@ json`, else `bin`. A multi-output image item (`params.images: N` on ark) writes 
 `<label>-2.png`, and so on. Labels that would escape `--out` (`..`, absolute) are skipped and listed.
 
 Watch the image format: fal `gpt-image-2.5` returns **jpeg** unless `params.output_format: png`
-or `params.background: transparent` (which sends png); `nano-banana-pro` is always png; codex
+or `params.background: transparent` (which sends png); `nano-banana-pro` and `nano-banana-2.1` are always png; codex
 writes `output.png`. `sprite` is always an RGBA png, `sfx` always mp3. Voiceover defaults to mp3.
 
 ## Programmatic use
@@ -205,6 +208,16 @@ const draft = app.ark.draftRecord(draftSha256);              // { taskId, model,
 
 `app.ark.deleteAsset(assetId)` and `app.ark.deleteAssetGroup(groupId)` delete for good; a group goes
 with its assets. Ask before either.
+
+Prompt text goes through the `promptGen` facade. Since 0.16.10 a call moves between `fal`, `anthropic` and
+`openai` by the provider name, with the same request:
+
+```ts
+const answer = await app.promptGen.generate(
+  { prompt, system, cacheSystem: true, cacheTtl: "1h", params: { reasoning: "medium", max_tokens: 64_000 } },
+  { provider: "anthropic" } // cacheTtl (0.16.13) is sent only here; every other provider ignores it
+);
+```
 
 The `moku` bin loads `moku.config.ts` (or `.mts`, `.js`, `.mjs`) from the working directory and
 passes its default export to `createApp`. `--config <path>` on any command picks another file.

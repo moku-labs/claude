@@ -46,7 +46,8 @@ runs `bun run lint`, so do not report what lint reports.
 Read `.oxlintrc.json` once. The game is **lint-covered** when `jsPlugins` lists `"@moku-labs/game/lint"`
 and `rules` sets the `moku-game/*` rules to `"error"`: the six of game 0.4.6 (`lazy-imports`,
 `native-imports`, `dev-imports`, `no-module-state`, `determinism`, `rules-siblings`), and on game 0.11
-and later also `static-keys`, `layer-imports`, `feature-door`, `test-suffix`. Then skip every check marked
+and later also `static-keys`, `layer-imports`, `feature-door`, `test-suffix`, and on game 0.14.13 and later
+`sub-features`. Then skip every check marked
 **[lint: `<rule id>`]** below. Otherwise (a legacy `eslint.config.ts`, or game below 0.4.6) check them by
 reading, as written. A game on 0.11 or later with only the six rules on: **WARNING**, turn the other four on
 (`hello-world.md`).
@@ -148,8 +149,8 @@ folder. Read the exported functions for `state.x = …` patterns.
 - **WARNING**: `typescript` 7 in `devDependencies` with `@moku-labs/editor` installed. The editor's project
   index needs the TypeScript JS API; on 7 it runs with `files:project-off`. Fix: `typescript` `6.0.3`.
 - **INFO**: `@moku-labs/editor` below 0.8 with `@moku-labs/game` 0.10 or later, or the reverse. Editor 0.8
-  to 0.9.4 peer on game `>=0.10.0`. Editor 0.9.5 and later peer on game `>=0.13.1` and stop at the start on
-  an older game. The pair the template pins is game 0.14.12 with editor 0.10.10.
+  to 0.9.4 peer on game `>=0.10.0`. Editor 0.9.5 to 0.10.11 peer on game `>=0.13.1` and stop at the start on
+  an older game. Editor 0.10.12 and later peer on game `>=0.15.0`. The pair the template pins is game 0.15.92 with editor 0.10.20.
 
 **How to check:** Grep `@moku-labs/editor` over the source; read `package.json` scripts and versions.
 
@@ -287,6 +288,25 @@ writes into `.moku/`. The reference is the pack's `hello-world.md` and the engin
 `tests/visual/*`, `tests/visual/baselines/**`. Grep
 `createApp\(`, `flow\.run\(`, `createGame`, `createScreenGame` outside `tests/`.
 
+### 12. API drift against game 0.15
+
+A game on `@moku-labs/game` 0.14.13 or later. `SKILL.md` → "A game that moves to 0.15" has the fix of each.
+
+- **BLOCKER**: `systemsRun` on a feature, `ecs.hold` or `ecs.isActive` (0.15.4). The type refuses the key and it throws at run time.
+- **BLOCKER**: a plugin or feature named `debug`, a component named `OverlayLevel`, a resource named `Now` (0.14.13).
+- **WARNING**: `pixi.js` below `8.22.0` in `package.json` (0.14.13). The engine's peer range is `^8.22.0`.
+- **WARNING**: a `guide` with neither `target` nor `blocked` (0.15.52). It locks every press, so the step can wait
+  forever. Also a `target` whose key is not rendered by the node's scene: read the view and name what you checked.
+- **WARNING**: `hand`, `text` or `highlight` in a guide (0.15.52). The engine never drew them and they are deprecated.
+- **WARNING**: a system with a `query` that does work outside its rows: a reset before the loop, a press that ends
+  after it (0.15.4). It no longer runs while the query has no entity. Fix: a system with `query: []`, or `ctx.resumed`.
+- **WARNING**: a hand-written fx spy for a node's `fx` in a test (0.14.13). `NodeFx` is generic. Fix: `fakeFx`.
+- **INFO**: a game that reads `scenes.current()` or `ui.find` right after asking for a live switch: until the swap
+  they answer the old scene (0.15.29).
+
+**How to check:** Grep `systemsRun|ecs\.hold|ecs\.isActive|guide\(|guide:|hand:|highlight:|vi\.fn\(.*fx` over the source and
+tests; read `package.json`; read the system files that have a `query`.
+
 ## Severity Levels
 
 - **BLOCKER**: `Math.random` / `Date.now` / timers in logic (§1); an impure rule import (§2); a static
@@ -294,7 +314,7 @@ writes into `.moku/`. The reference is the pack's `hello-world.md` and the engin
   dev flag (§5); the editor imported from game source (§6); untyped asset keys in the kit (§7);
   `defineNode` from the root (§8); a native package in game source (§9); a 0.4.0 breaking change left in
   the source (§10); a game without `index.ts` / `config.ts`, a `createApp` in the game, or a shell-owned
-  `pluginConfigs` key (§11).
+  `pluginConfigs` key (§11); `systemsRun`, `ecs.hold`, `ecs.isActive` or a reserved name (§12).
 - **WARNING**: everything named WARNING above.
 - On a lint-covered game the checks marked [lint: …] are oxlint's errors, not yours.
 - **INFO**: naming, order and tsconfig notes.
@@ -356,6 +376,11 @@ writes into `.moku/`. The reference is the pack's `hello-world.md` and the engin
 - index.ts defineGameApp, config.ts plain data: [YES / list]
 - Old-shape files left: [none / list]
 - Shell-owned pluginConfigs keys: [none / list]
+
+### API drift 0.15 (§12)
+- Removed or reserved names: [none / list with file:line]
+- Guides with no target and no blocked: [none / list]
+- Systems working outside their rows: [none / list]
 
 ### Summary
 - Blockers: N

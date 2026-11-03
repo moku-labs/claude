@@ -1,9 +1,9 @@
 # @moku-labs/room — Plugin & Property Index
 
-**Synced version:** `0.8.9` (catalog generated from the `v0.8.9` git tag **source** — `src/index.ts`,
+**Synced version:** `0.8.18` (catalog generated from the `v0.8.18` git tag **source** — `src/index.ts`,
 `src/server.ts`, `src/config.ts`, `src/plugins/*`, `package.json`. `v0.8.3 → v0.8.4` touched only
 `README.md`, `llms.txt`, `llms-full.txt`, `package.json`, `bun.lock` and a CI workflow: **no `src/` change**.
-Upstream `llms.txt`/`llms-full.txt` and the README are current for the API surface through 0.8.0, and since
+Upstream `llms.txt`/`llms-full.txt` and the README teach the 0.8.18 event and config changes, and since
 `v0.8.4` their dependency lines are right too: core and common are required peers. `llms-full.txt` still
 says `Version: 0.8.3`. Per the registry's "source wins" policy the tag source is authoritative). Since 0.8.3 `@moku-labs/core@^1.7.1` +
 `@moku-labs/common@^0.3.4` are **`peerDependencies`** (dev-pinned upstream at core `1.7.1` / common `0.3.4`);
@@ -13,6 +13,37 @@ only `trystero@~0.25.2` (signaling) and `qrcode@^1.5.4` (join QR).
 pin `0.20.3`) — needed **only** by the `./server` tier (its `hubPlugin` is a `@moku-labs/worker` plugin);
 pure-client apps install nothing extra. Engines node ≥24, bun ≥1.3.14.
 
+> **BREAKING in 0.8.17 (`#34`):** `RosterEntry.reconnectToken` is removed. It was always `""` and every phone
+> received it. An app that reads it no longer compiles: delete the read.
+>
+> **New since 0.8.13:**
+> - **0.8.18 (`#35`, review round):** `leave()` resets `sync`, so a new room no longer keeps the old slices. A frame
+>   from a peer with no seat is acked and dropped. Each app stamps a `run` on its intents, so a same-app `rejoin`
+>   applies a frame once. A hub-refused reclaim no longer hangs the reloaded host: it joins again with no token.
+> - **0.8.17 (`#34`, phone reload):** the phone's `selfId` lives in `sessionStorage` per room, so a reload keeps its
+>   seat on `inMemory` and the hub, also at the cap. See §5.
+> - **0.8.16 (`#33`, host reload):** a stage reload restores the slices and `sSeq`. `intent` buffers while the host is
+>   away. New event **`room:host-back`**, new `session.onRoomEnded(cb)` and `session.reentryRecord()`.
+> - **0.8.15 (`#32`, join result):** `joinRoom` settles on the host's verdict: over the cap it gives `full`. New export
+>   **`RoomFullError`**, new frame `RoomFullFrame`. A failed `joinRoom` resets the role, so a retry on the same app works.
+> - **0.8.14 (`#31`, reload record):** `leave()` deletes the record, new config **`session.reentryMaxAgeMs`**
+>   (`1800000`), and the first `createRoom()` after a reload returns the resumed room. It used to throw.
+> - **Peer ranges do not change across 0.8.14 to 0.8.18.** Dev pins at 0.8.18: core `1.7.6` / common `0.3.10` /
+>   worker `0.20.9`.
+>
+> **New since 0.8.9:**
+> - **0.8.13 (`#30`, stage + intent):** `app.stage` gains **`registerSlice`** and **`register`**, one-line
+>   delegations to `sync` and `intent`. **`onIntent` on an unregistered name now throws** and stores nothing
+>   (`[room] intent.onIntent: "<name>" is not registered.`); before, it returned and the handler never fired.
+>   Call `register(name, schema)` first.
+> - **0.8.12 (`#29`, packaging):** `@moku-labs/room/server` ships type declarations: `exports["./server"].import`
+>   gains `types: "./dist/server.d.mts"`. Still ESM only.
+> - **0.8.11 (`#28`, test only):** no `src/` change.
+> - **0.8.10 (`#27`, docs only):** the worker example lists all five resource plugins, because `deployPlugin`
+>   depends on them. No `src/` change.
+> - **Peer ranges do not change across 0.8.10 to 0.8.13.** Dev pins at 0.8.13: core `1.7.6` / common `0.3.10` /
+>   worker `0.20.9`.
+>
 > **New since 0.3.1 (no breaking change, `0.3.2` → `0.8.2`):**
 > - **0.3.2 (`#7`, sync fix)** — a unicast snapshot (`sync.broadcast(peerId)`) is stamped at the CURRENT `sSeq`
 >   and consumes no shared sequence; a replica that detects a delta gap reports it over the wire with the new
@@ -90,7 +121,7 @@ accounts, no lobby servers.
 > P2P DataChannels (a hostile-NAT pair may ride a Cloudflare TURN relay, never the DO). A consumer may also
 > inject its own STUN/TURN via `transport.iceServers` (array or provider, 0.6.0).
 
-## 1. Client core API form (v0.8.9)
+## 1. Client core API form (v0.8.18)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **core defaults** — already wired. An app
 adds exactly one role facade and its own game plugin; there are no `roomPlugins` arrays. Select the
@@ -99,7 +130,7 @@ signaling adapter via `pluginConfigs.transport.signaling`.
 ```ts
 import { createApp, createPlugin, stagePlugin } from "@moku-labs/room";
 
-// Game logic depends on the facade so the six room:* events are visible in one edge.
+// Game logic depends on the facade so the seven room:* events are visible in one edge.
 const game = createPlugin("game", {
   depends: [stagePlugin],
   hooks: (ctx) => ({
@@ -115,6 +146,10 @@ const { code, joinUrl } = app.stage.createRoom(); // SYNCHRONOUS — returns the
 const qr = await app.stage.qr();                   // QR is async (descriptor.qr is always null)
 if (qr) renderJoinQr(qr);
 
+// Declare first: onIntent throws on an unregistered name, mutate on an unregistered slice (0.8.13).
+// The same code runs on a reload: createRoom returns the restored room, registerSlice keeps the saved cells (0.8.16).
+app.stage.registerSlice("scores", {});
+app.stage.register("score", { fields: {}, additionalFields: false });
 app.stage.onIntent("score", (payload, peerId) =>
   app.stage.mutate("scores", (draft) => ({ ...draft, [peerId]: ((draft[peerId] as number) ?? 0) + 1 }))
 );
@@ -134,7 +169,7 @@ const pad = createPlugin("pad", {
 
 const app = createApp({ plugins: [controllerPlugin, pad] });
 await app.start();
-await app.controller.joinRoom("K7P2Q9"); // throws on "full" | "not-found" | "unreachable"
+await app.controller.joinRoom("K7P2Q9"); // resolves when the host admits it; throws on "full" | "not-found" | "unreachable"
 await app.controller.requestWakeLock();  // keep the phone awake (iOS Safari 16.4+)
 const off = app.controller.on("round", (round) => render(round)); // read-only replica
 app.controller.intent("move", { dx: 1, dy: 0 });                  // typed input over the Wire (never emit);
@@ -154,31 +189,33 @@ the old `ctx.global`-keyed teardown registry is gone).
 | # | Plugin | Tier | Wiring | Depends on | Role / key API | Events |
 |---|--------|------|--------|-----------|----------------|--------|
 | 1 | `transportPlugin` | Complex | client default | — | WebRTC DataChannels: signaling handshake, chunking/backpressure, mandatory heartbeat, capped ICE recovery; owns the typed `Wire`. ICE servers resolve lazily at `connect()` (array / `IceServersProvider` / `"auto"`, 0.6.0–0.8.0). API: `connect`, `wire`, `disconnect`, `peers`, `close`. | `room:network-warning` |
-| 2 | `sessionPlugin` | Complex | client default | transport | Room code + QR + roster; star topology (`hostId()`); client-side host-reload recovery. API: `createRoom`, `qr`, `joinRoom`, `leave`, `rejoin`, `roster`, `self`, `hostToken`, `recoveryPhase`. | `room:peer-joined`, `room:peer-left`, `room:host-reconnecting` |
+| 2 | `sessionPlugin` | Complex | client default | transport | Room code + QR + roster; star topology (`hostId()`); client-side host-reload recovery. API: `createRoom`, `qr`, `joinRoom`, `leave`, `rejoin`, `roster`, `self`, `hostId`, `persistSnapshot`, `recoveryPhase`, `reentryRecord` (0.8.16), `onRoomEnded` (0.8.16). | `room:peer-joined`, `room:peer-left`, `room:host-reconnecting`, `room:host-back` |
 | 3 | `intentPlugin` | Standard | client default | transport, session | Controller→host typed inputs (`IntentFrame`, per-controller `cSeq` idempotent de-dup). **At-least-once since 0.4.0:** the host receipt-acks every frame (`IntentAckFrame`), the controller retransmits the same `cSeq` stop-and-wait (bounded, doubling backoff). API: `register`, `onIntent`, `intent`. | `room:intent-undeliverable` |
 | 4 | `syncPlugin` | Complex | client default | transport, session | Host→controller authoritative state: full snapshot + throttled op-list deltas. Gap heal over the wire (`SyncResyncFrame`, 0.3.2) + not-ready baseline retry (0.5.0) — the host re-baselines the one reporting peer automatically. API: `registerSlice`, `mutate`, `broadcast`, `onResyncRequest`, `read`, `subscribe`, `applyFrame`. | `room:sync-ready` |
-| 5 | `stagePlugin` | Standard (facade) | app-added (host) | all four engines | **Host-role facade** → `app.stage` (`StageApi`). Re-declares all six `room:*` events. | (re-declares all 6) |
-| 6 | `controllerPlugin` | Standard (facade) | app-added (controller) | all four engines | **Controller-role facade** → `app.controller` (`ControllerApi`). Re-declares all six `room:*` events. | (re-declares all 6) |
+| 5 | `stagePlugin` | Standard (facade) | app-added (host) | all four engines | **Host-role facade** → `app.stage` (`StageApi`). Re-declares all seven `room:*` events. | (re-declares all 7) |
+| 6 | `controllerPlugin` | Standard (facade) | app-added (controller) | all four engines | **Controller-role facade** → `app.controller` (`ControllerApi`). Re-declares all seven `room:*` events. | (re-declares all 7) |
 | 7 | `hubPlugin` | Standard | **`./server` tier** — a **`@moku-labs/worker` plugin** (`createPlugin` from `@moku-labs/worker`); compose into your own worker `createApp` | — | The `@moku-labs/room/server` signaling tier: a WS-Hibernation **DO-per-room** over the native Cloudflare `env` (DO + KV) — handshake broker + in-band discovery + host-reload reclaim. **No gameplay relay** (D2). Since 0.8.0 `handle` also answers **`GET /api/ice`** (TURN-credential mint, fail-open). API: `app.hub.handle(request, env, ctx): Promise<Response>`. | — |
 
-Facades **re-declare** all six `room:*` events for *compile-time visibility only* — a downstream game
+Facades **re-declare** all seven `room:*` events for *compile-time visibility only* — a downstream game
 plugin (`depends: [stagePlugin]` / `[controllerPlugin]`) then sees the complete typed hook surface in one
 edge. They install **no forwarding hooks** (Moku's event bus is global; the engines' `emit("room:*")`
 already reaches every hook regardless of `depends`), delegate API, and own no state.
 
-### Facade API surfaces (re-verified at `v0.8.4` — `StageApi` / `ControllerApi` signatures are unchanged since `v0.2.0`)
+### Facade API surfaces (re-verified at `v0.8.18`: `register` and `registerSlice` are new in `0.8.13`, the other signatures are unchanged since `v0.2.0`)
 
 ```ts
 type StageApi = {
-  createRoom(): RoomDescriptor;                          // SYNCHRONOUS
+  createRoom(): RoomDescriptor;                          // SYNCHRONOUS; after a reload the first call returns the restored room
   qr(): Promise<QrMatrix | null>;
-  mutate(ns: Namespace, recipe: (draft: Cells) => Cells): void;
+  registerSlice(ns: Namespace, initial: Cells): void;    // before the first mutate and before phones join
+  mutate(ns: Namespace, recipe: (draft: Cells) => Cells): void;  // throws on an unregistered slice
   broadcast(): void;
-  onIntent(name: string, handler: (payload: unknown, peerId: PeerId) => void): () => void;
+  register(name: string, schema: IntentSchema): void;    // before onIntent; last schema wins, handler kept
+  onIntent(name: string, handler: (payload: unknown, peerId: PeerId) => void): () => void;  // throws on an unregistered name
   roster(): readonly RosterEntry[];
 };
 type ControllerApi = {
-  joinRoom(code: string): Promise<void>;                 // throws on "full" | "not-found" | "unreachable"
+  joinRoom(code: string): Promise<void>;                 // resolves on admission; throws on "full" | "not-found" | "unreachable", then in no room
   read(ns: Namespace): Readonly<Record<string, JsonValue>> | undefined;
   on(ns: Namespace, cb: (value: Readonly<Record<string, JsonValue>>) => void): () => void;
   intent(name: string, payload: JsonValue): void;
@@ -187,6 +224,8 @@ type ControllerApi = {
 };
 // RoomDescriptor = { code, joinUrl, qr: QrMatrix | null, hostToken }
 // JoinResult     = { ok: true; selfId: PeerId } | { ok: false; reason: "full" | "not-found" | "unreachable" }
+// RosterEntry    = { id, name?, joinedAt }   // reconnectToken removed in 0.8.17
+// Neither facade has leave(): call app.session.leave().
 ```
 
 ## 3. Signaling adapters (the `transport.signaling` seam)
@@ -209,18 +248,24 @@ Opt-in tier for running the rendezvous yourself: one **Durable Object per room**
 `./server` is **not** a core — it exports **`hubPlugin`** (a `@moku-labs/worker` plugin) + the **`Hub`**
 Durable Object class. You compose `hubPlugin` into your **own** `@moku-labs/worker` `createApp` — the
 **one-worker composition idiom** (`moku-idioms.md §I6`): a single worker app composing the resource plugins
-the hub needs + `hubPlugin` + `deploy`/`cli`. Your app keeps full control of its composition + `wrangler.jsonc`
-(D26). `@moku-labs/worker` is an **optional peer** you install yourself; `./server` ships **no `types`
-condition** (import-only) — type its export in a `declarations.d.ts` ambient until upstream adds types.
+the hub needs + `hubPlugin` + `deploy`/`cli`. List all five resource plugins: `deployPlugin` depends on them, and
+`createApp` throws `Plugin "deploy" depends on "storage", but "storage" is not registered` otherwise. Your app
+keeps full control of its composition + `wrangler.jsonc` (D26). `@moku-labs/worker` is an **optional peer** you
+install yourself. Since 0.8.12 `./server` ships type declarations (ESM only), so an ambient `declarations.d.ts`
+for it can go. They use the Cloudflare global types (`ExecutionContext`), so the app needs
+`@cloudflare/workers-types`.
 
 ```ts
 // src/server.ts — ROOT composition: ONE @moku-labs/worker app composing room's hubPlugin.
-import { cliPlugin, createApp, deployPlugin, durableObjectsPlugin, kvPlugin } from "@moku-labs/worker";
+import { cliPlugin, createApp, d1Plugin, deployPlugin, durableObjectsPlugin, kvPlugin, queuesPlugin, storagePlugin } from "@moku-labs/worker";
 import { hubPlugin } from "@moku-labs/room/server";
 
 export const server = createApp({
-  plugins: [kvPlugin, durableObjectsPlugin, hubPlugin, deployPlugin, cliPlugin],
-  pluginConfigs: { durableObjects: { hub: { binding: "ROOM_HUB", className: "Hub" } } },
+  plugins: [storagePlugin, kvPlugin, d1Plugin, queuesPlugin, durableObjectsPlugin, hubPlugin, deployPlugin, cliPlugin],
+  pluginConfigs: {
+    durableObjects: { hub: { binding: "ROOM_HUB", className: "Hub" } },
+    kv: { rateLimit: { name: "ratelimit", binding: "RATE_LIMIT" } },
+  },
 }); // server.hub.handle = the runtime fetch; server.cli.{dev,deploy} generate wrangler.jsonc
 
 // src/cloudflare/worker.ts — Cloudflare entry: delegate fetch to the composed app.
@@ -256,23 +301,59 @@ on public STUN. Real failures are `405` (not GET), `429` (over the mint budget),
 + the `"auto"` default do the fetch. Upstream's hub README says the secrets are provisioned by
 `@moku-labs/worker`'s `turnPlugin` (`pluginConfigs.turn = { relay: { name: "myapp-turn" } }`, worker ≥ 0.16),
 or by hand with `wrangler secret put TURN_KEY_ID` / `TURN_KEY_API_TOKEN`. The `moku-worker` pack
-teaches `turnPlugin` (worker `0.20.2`). Since 0.8.3 Room's optional peer range is `@moku-labs/worker@>=0.15.0 <1.0.0`,
+teaches `turnPlugin` (worker `0.20.11`). Since 0.8.3 Room's optional peer range is `@moku-labs/worker@>=0.15.0 <1.0.0`,
 which admits every worker with `turnPlugin` (the old `^0.15.0` meant `<0.16.0` and warned).
 
 ## 5. Events (`room:*` — coarse lifecycle only)
 
 | Event | Payload | Emitted by | Meaning |
 |-------|---------|-----------|---------|
-| `room:peer-joined` | `{ peerId }` | session | A controller's channel reached `connected` + was added to the roster. |
+| `room:peer-joined` | `{ peerId }` | session | A controller's channel reached `connected` + was added to the roster. A known id coming back fires it again, with its entry kept and no `room:peer-left` (0.8.17). |
 | `room:peer-left` | `{ peerId }` | session | A controller left / was declared dead by the heartbeat; removed from roster. |
-| `room:host-reconnecting` | `{}` | session | Host tab reloaded; client-side recovery in flight — show "reconnecting" UX. |
-| `room:sync-ready` | `{}` | sync | First authoritative frame (snapshot, or gap-free delta) applied; the synced replica is readable. |
+| `room:host-reconnecting` | `{}` | session | The host is away. On a phone: its channel was lost, or a different host appeared. Show "reconnecting" UX; intents buffer. On the host: this tab reloaded. |
+| `room:host-back` | `{}` | session | **0.8.16.** A phone adopted the host after an absence. Its buffered intents go out in `cSeq` order. Hide the "reconnecting" UX. |
+| `room:sync-ready` | `{}` | sync | First authoritative frame (snapshot, or gap-free delta) applied; the synced replica is readable. A controller hears it once per room. |
 | `room:intent-undeliverable` | `{ name: string; cSeq: number }` | intent | **0.4.0.** A LIVE controller intent exhausted its retransmit budget with no host receipt — the wire is dead for this controller's intent stream; every intent queued behind it drops with its own event. Not fired for intents captured by the reconnect buffer during a known host absence. Surface retry UX. |
 | `room:network-warning` | `{ reason: "ice-failed" \| "rendezvous-unreachable" \| "channel-closed" \| "room-evicted" }` | transport | A connectivity hard-failure surfaced for failure UX (D2). `room-evicted` is **`./server` tier only** — the `serverSignaling` DO's idle Alarm tore the room down. |
 
-> **Reload-path timing.** `room:host-reconnecting` is emitted during `session` init, before downstream
-> consumer hooks register. On the reload path, poll `app.session.recoveryPhase()` (a non-`"stable"` phase
-> means recovery is in flight) rather than relying on the event; the event remains useful for steady-state.
+> **The reload path, on the host (0.8.16).** `session` restores the room during init and `sync` restores the slices
+> and `sSeq` right after it. Hooks register before any init, so a plugin's hook hears the host's
+> `room:host-reconnecting`. The host's `recoveryPhase()` stays `"stable"`, so do not poll it there. `registerSlice` on a
+> restored slice keeps the saved cells, whatever its initial. Only a broadcast writes a record: a host that never
+> broadcast has nothing to resume.
+>
+> **The reload path, on a phone (0.8.16).** The phone hears `room:host-reconnecting`, `recoveryPhase()` leaves
+> `"stable"` and `intent` buffers. There is nothing to call. On `room:host-back` the buffer goes out. An intent older
+> than `intent.bufferMaxAgeMs` is dropped.
+>
+> **Reload vs leave (0.8.14, 0.8.18).** `app.stop()` or a hidden page keeps the record, and the first `createRoom()` on
+> the next load returns that room; a later call throws. `app.session.leave()` deletes the record and resets `sync`:
+> `createRoom()` then opens a new room on the same app. The host's slices stay registered, back at their initial. A
+> phone's replica empties and `room:sync-ready` fires again in its next room. A record older than `reentryMaxAgeMs` is
+> removed on load; the age counts from the host's last write.
+>
+> **A phone reload (0.8.17).** `joinRoom` keeps this tab's `selfId` in `sessionStorage`, key
+> `<storageKeyPrefix>.self.<code>`. `leave()` and a `full` result remove it. The host keeps the entry, admits it at the
+> cap and fires `room:peer-joined` again, so count players by id. A phone away longer than `heartbeatTimeoutMs` was
+> already declared dead, so it joins as a new entry or gets `full`.
+>
+> **How a join ends (0.8.15).** `joinRoom` resolves on the host's first `roster` frame, not on the open channel. Over
+> the cap the host sends `room-full` and closes 250 ms later. On the hub `transport.connect` rejects with
+> `RoomFullError`, with no `room:network-warning`; `joinRoom` still reports `full`. After a failed `joinRoom` the role is
+> `"none"`, so call it again to retry. A failed `rejoin` keeps the room.
+>
+> **Limits.**
+> - `publicRendezvous`, the default, is not fixed. Trystero mints a new id per page load, so a reloaded phone never gets
+>   its old slot. It takes a new slot only while the host is in signaling, and otherwise ends `unreachable`. It finds a
+>   reloaded host after `heartbeatTimeoutMs` + `reconnectTimeoutMs`, 16 s by default, past the 10 s intent age.
+> - A duplicated tab copies `sessionStorage`: both tabs hold one id and the host sees one player.
+> - Hub trust: a phone can read another id from the roster frame, and a `join` with it retires that phone's socket.
+> - A restarted host has an empty `lastApplied`, so a frame the old host applied but never acked applies twice.
+> - A phone flushes when the channel opens, and a host drops an intent kind it has not registered: register intents
+>   before anything slow in the boot code.
+> - A lost `room-full` frame ends `unreachable` at the timeout. A retry inside the 250 ms gets `full`.
+> - After `leave()` resets `sync`, a phone's `controller.on(ns, cb)` keeps the old value until a frame touches `ns`.
+>   `read(ns)` is correct.
 
 ## 6. Configuration (couch-profile defaults — zero overrides needed)
 
@@ -291,8 +372,10 @@ every knob lives on the engine that owns the concern (wake-lock is the opt-in `r
   `maxMessageBytes` (`14336`).
 - **`session`:** `joinUrlBase` (`""` → `location.origin`), `generateQr` (`true`), `maxControllers` (`8`),
   `snapshotDebounceMs` (`500`), `reconnectTimeoutMs` (`10000`), `intentBufferMax` (`256`),
-  `intentBufferMaxAgeMs` (`8000`), `storageKeyPrefix` (`"moku.room"`), `codeLength?` (`6` =
+  `intentBufferMaxAgeMs` (`8000`), `storageKeyPrefix` (`"moku.room"`), `reentryMaxAgeMs` (`1800000`, 30 minutes, 0.8.14,
+  the same as `hub.roomTtlMs`: the oldest host record a reload may restore), `codeLength?` (`6` =
   `ROOM_CODE_LENGTH`; **set `8` for `serverSignaling`** — ~57 bits, resists room-code enumeration, D24).
+  `intentBufferMax*` are not on the reload path: the buffer that runs is `intent.bufferCap` + `intent.bufferMaxAgeMs`.
 - **`intent`:** `bufferCap` (`256`; also caps the live send queue), `bufferMaxAgeMs` (`10000`),
   `ackTimeoutMs` (`1000`, 0.4.0 — wait before the first retransmit, doubles per attempt; must be `>= 1`),
   `maxRetransmits` (`3`, 0.4.0 — `0` = track + signal, never re-send; ~15 s total silence budget at defaults).
@@ -322,8 +405,8 @@ client core (@moku-labs/room):
 
 Engines are client-core defaults (init order = the wired default order; `intent` and `sync` are parallel
 siblings); an app adds exactly one facade + its game plugin. The wire/signaling protocol (`Signaling`,
-`Wire`, every `Frame` — including `IntentAckFrame` (0.4.0) and `SyncResyncFrame` (0.3.2) — `Snapshot`, `Op`,
-`RosterEntry`, `MAX_CONTROLLERS`, `ROOM_CODE_LENGTH`, …) lives in [`src/plugins/transport/protocol.ts`] and is
+`Wire`, every `Frame` — including `IntentAckFrame` (0.4.0), `SyncResyncFrame` (0.3.2) and `RoomFullFrame` (0.8.15) —
+`RoomFullError` (0.8.15), `Snapshot`, `Op`, `RosterEntry`, `MAX_CONTROLLERS`, `ROOM_CODE_LENGTH`, …) lives in [`src/plugins/transport/protocol.ts`] and is
 re-exported from the package root; the `RoomEvents` contract in `src/config.ts`. The root also exports the
 plugin-owned types `IceServersProvider`, `TransportConfig` (0.6.0), `RoomDescriptor`, `JoinResult`,
 `QrMatrix`, `StageApi`, `ControllerApi`.
@@ -332,7 +415,7 @@ plugin-owned types `IceServersProvider`, `TransportConfig` (0.6.0), `RoomDescrip
 
 A room app is a **Layer-3 app** that `createApp`s **from Room** for the client (`@moku-labs/room`), and — if
 it runs the opt-in signaling tier — adds a **single `@moku-labs/worker` `createApp`** that composes room's
-`hubPlugin` (+ `durableObjects`/`deploy`/`cli`) for the server, never `createCoreConfig`/`createCore` or a
+`hubPlugin` (+ the five resource plugins and `deploy`/`cli`) for the server, never `createCoreConfig`/`createCore` or a
 direct `@moku-labs/core` dependency (I1). It's the same "compose the frameworks you need" shape as
 `demos/tracker`: multiple `createApp` instances across **distinct** runtimes (a Room client app + a worker
 server app) and folder splits by concern (a thin `cloudflare/worker.ts` entry, logic in plugins) remain

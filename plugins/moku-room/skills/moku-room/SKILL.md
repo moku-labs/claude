@@ -11,10 +11,10 @@ description: >
 
 # Moku Room Patterns
 
-> **Synced to `@moku-labs/room@0.8.9`** (catalog from the `v0.8.9` tag source; peer deps `@moku-labs/core@^1.7.1`
+> **Synced to `@moku-labs/room@0.8.18`** (catalog from the `v0.8.18` tag source; peer deps `@moku-labs/core@^1.7.1`
 > + `@moku-labs/common@^0.3.4`, optional peer `@moku-labs/worker@>=0.15.0 <1.0.0`). Full surface — the 7 plugins, the client core (`.`) + the opt-in `./server`
 > tier (a **`hubPlugin` + `Hub` DO** export, **not** a core — compose into your own `@moku-labs/worker` app), the
-> three signaling adapters, config, the six events, and the dependency graph — is in
+> three signaling adapters, config, the seven events, and the dependency graph — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
 > (`frameworks[room]`): load the `moku:moku-core` skill with the Skill tool and read
 > `references/moku-frameworks.md` under the base directory it prints.
@@ -31,6 +31,19 @@ authoritative host) plus up to 8 phone controllers, over **direct WebRTC DataCha
 itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, not from `@moku-labs/web` or
 `@moku-labs/core`.
 
+> **Breaking in 0.8.17:** `RosterEntry.reconnectToken` is removed. It was always `""`, so delete any read of it.
+>
+> **New in 0.8.14 → 0.8.18:** a stage reload restores the room and its sync state, and a phone reload keeps its seat
+> on `inMemory` and `serverSignaling` (not on the default `publicRendezvous`). Phones buffer intents while the host
+> is away. New event `room:host-back`, so there are seven. `joinRoom` settles on the host's verdict: over the cap it
+> gives `full`, and after a failure the phone is in no room. `session.leave()` ends the room for good. New config
+> `session.reentryMaxAgeMs`, new export `RoomFullError`. See "Reload and leave" below.
+>
+> **New in 0.8.10 → 0.8.13:** `app.stage` gains `register` and `registerSlice`, and `onIntent` now throws on an
+> unregistered name, so call `register` first (0.8.13). A dead handler is now an error. `@moku-labs/room/server`
+> ships type declarations (0.8.12). The worker example lists all five resource plugins, because `deployPlugin`
+> depends on them (0.8.10, docs).
+>
 > **New in 0.8.3 (packaging only, no API change):** `@moku-labs/core` + `@moku-labs/common` moved from bundled
 > `dependencies` to `peerDependencies` (`^1.7.1` / `^0.3.4`). Bun and npm install peers automatically, so an app
 > still declares neither. The optional `@moku-labs/worker` peer widened to `>=0.15.0 <1.0.0`, which now admits
@@ -67,7 +80,7 @@ itself**; `createApp`/`createPlugin` come from `@moku-labs/room`, not from `@mok
 
 A room app is a **Layer-3 app**: `createApp` from `@moku-labs/room` for the client (and that framework's
 re-exported `createPlugin`); for the opt-in signaling tier, a **single `@moku-labs/worker` `createApp`** that
-composes room's `hubPlugin` (+ `durableObjects`/`deploy`/`cli`) — not `createCoreConfig`/`createCore`, and no
+composes room's `hubPlugin` (+ the five resource plugins and `deploy`/`cli`) — not `createCoreConfig`/`createCore`, and no
 direct `@moku-labs/core` dependency (I1). For app shape, follow the `moku-idioms.md` rubric —
 load the `moku:moku-core` skill with the Skill tool and read `references/moku-idioms.md` under the base
 directory it prints — and the worked reference **`demos/tracker`**:
@@ -78,7 +91,7 @@ patterns underneath. Shared-screen vs phone roles, the WebRTC peer mesh, and syn
 reach them via `ctx.require(plugin)`. Keep the Cloudflare entry (`cloudflare/worker.ts`) thin: it delegates
 `fetch` to the composed worker app's `server.hub.handle`.
 
-## Framework API (@moku-labs/room v0.8.9)
+## Framework API (@moku-labs/room v0.8.18)
 
 The four engines (`transport`, `session`, `intent`, `sync`) are **client-core defaults** — already wired. An
 app adds exactly one role facade (`stagePlugin` host / `controllerPlugin` phone) + its game plugin; there are
@@ -90,16 +103,27 @@ import { createApp, createPlugin, stagePlugin } from "@moku-labs/room";
 const app = createApp({ plugins: [stagePlugin, game] }); // engines are defaults; add the host facade + game
 await app.start();
 const { code, joinUrl } = app.stage.createRoom();  // synchronous; QR via `await app.stage.qr()`
+// Declare first: onIntent throws on an unregistered name, mutate on an unregistered slice (0.8.13).
+// The same code runs on a reload: createRoom returns the restored room, registerSlice keeps the saved cells (0.8.16).
+app.stage.registerSlice("scores", {});
+app.stage.register("score", { fields: {}, additionalFields: false });
 app.stage.onIntent("score", (payload, peerId) => app.stage.mutate("scores", draft => ({ ... })));
 ```
 
-- **`stagePlugin`** → `app.stage` (`StageApi`: `createRoom`, `qr`, `mutate`, `broadcast`, `onIntent`,
-  `roster`). **`controllerPlugin`** → `app.controller` (`ControllerApi`: `joinRoom`, `read`, `on`, `intent`,
+- **`stagePlugin`** → `app.stage` (`StageApi`: `createRoom`, `qr`, `registerSlice`, `mutate`, `broadcast`,
+  `register`, `onIntent`, `roster`). **`controllerPlugin`** → `app.controller` (`ControllerApi`: `joinRoom`, `read`, `on`, `intent`,
   `requestWakeLock`, `releaseWakeLock`).
-- 6 `room:*` lifecycle events; **all gameplay rides the `Wire`**, never `emit`. Signaling: `publicRendezvous()`
+- 7 `room:*` lifecycle events; **all gameplay rides the `Wire`**, never `emit`. Signaling: `publicRendezvous()`
   (default) / `inMemory()` (tests) / `serverSignaling(url)` (opt-in, the `./server` tier). **No TURN on the
   default tier** (D2 — the design target is the home LAN); the `./server` tier adds it with zero app code
   (next bullets).
+- **Reload and leave (0.8.14 to 0.8.18).** `app.stop()` or a hidden page keeps the host's record. The next load
+  restores the room and its slices, and the first `createRoom()` returns that room. `app.session.leave()` deletes
+  the record and resets `sync`: the next `createRoom()` opens a new room. A record older than
+  `session.reentryMaxAgeMs` (30 minutes) is removed on load. A phone hears `room:host-reconnecting`, its intents
+  buffer with nothing to call, and it hears `room:host-back` when the host returns. Keep `room:peer-joined`
+  idempotent: a reloaded phone with a known id fires it again, with no `room:peer-left`. Limits are in
+  `references/plugin-index.md` §5.
 - **Intents are at-least-once (0.4.0).** `app.controller.intent(name, payload)` is receipt-acked by the host and
   retransmitted (same `cSeq`, stop-and-wait, `intent.ackTimeoutMs` `1000` / `intent.maxRetransmits` `3`). When
   the budget runs out the controller app gets `room:intent-undeliverable { name, cSeq }` — hook it for retry
@@ -111,8 +135,9 @@ app.stage.onIntent("score", (payload, peerId) => app.stage.mutate("scores", draf
   (`"all"`) can force `"relay"`; `?ice=relay` on the page URL is the diagnostic toggle.
 - **Opt-in `./server` tier (a plugin, not a core — 0.3.1):** `import { hubPlugin, Hub } from
   "@moku-labs/room/server"` and compose `hubPlugin` (a `@moku-labs/worker` plugin) into your **own** single
-  `@moku-labs/worker` `createApp` — alongside `durableObjectsPlugin` (the `Hub` DO) + `deployPlugin`/`cliPlugin`
-  (the one-worker idiom, `moku-idioms.md §I6`). `server.hub.handle` is the runtime fetch a thin
+  `@moku-labs/worker` `createApp` — alongside all five resource plugins (`storage`, `kv`, `d1`, `queues` and
+  `durableObjects` for the `Hub` DO; `deployPlugin` depends on all five) + `deployPlugin`/`cliPlugin` (the
+  one-worker idiom, `moku-idioms.md §I6`). `./server` ships type declarations since 0.8.12. `server.hub.handle` is the runtime fetch a thin
   `cloudflare/worker.ts` delegates to; re-export `Hub` so wrangler binds `ROOM_HUB`. `@moku-labs/worker` is an
   optional peer. Signaling only — no gameplay relay (D2 holds). Since 0.8.0 `handle` also answers
   `GET /api/ice` with short-lived Cloudflare TURN credentials when the worker has the `TURN_KEY_ID` /

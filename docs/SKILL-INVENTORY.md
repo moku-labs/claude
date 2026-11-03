@@ -137,14 +137,14 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
 
 ## `moku-worker` — the `@moku-labs/worker` pack
 
-- **Skills (1):** `moku-worker` — the Cloudflare Workers backend framework, synced to `0.20.9`
+- **Skills (1):** `moku-worker` — the Cloudflare Workers backend framework, synced to `0.20.11`
   (10 plugins: bindings, server, kv, d1, queues, storage, durableObjects, turn, deploy, cli; `endpoint.new`
   guards; stage is plain global config since 0.12.0). Full catalog in `references/plugin-index.md`.
 - **Evals (1):** `worker-one-app` — one worker app composing deploy and cli, no facade (idiom I6).
 
 ## `moku-room` — the `@moku-labs/room` pack
 
-- **Skills (1):** `moku-room` — couch multiplayer, synced to `0.8.9`. A standalone `@moku-labs/core`
+- **Skills (1):** `moku-room` — couch multiplayer, synced to `0.8.18`. A standalone `@moku-labs/core`
   framework, sibling to web and worker, not built on them: 7 plugins, three signaling adapters, and
   an opt-in `./server` tier exporting `hubPlugin` + the `Hub` Durable Object. Full catalog in
   `references/plugin-index.md`.
@@ -153,19 +153,19 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
 ## `moku-game` — the `@moku-labs/game` and `@moku-labs/editor` pack
 
 - **Skills (2):** `moku-game` (knowledge: the 2D puzzle game engine on PixiJS v8 and its dev tools, synced
-  to game `0.14.12` and editor `0.10.10`; full catalog in `references/plugin-index.md`), `playtest`
+  to game `0.15.92` and editor `0.10.20`; full catalog in `references/plugin-index.md`), `playtest`
   (fable / medium — the e2e station of a project whose `.planning/moku.md` says `type: game`).
 - **Agents (1):** `moku-game-validator` (sonnet / medium).
 
 ## `moku-ai` — the `@moku-labs/ai` pack
 
-- **Skills (1):** `moku-ai` — the asset build system, synced to `0.16.8`: `*.moku.yaml` build files in,
+- **Skills (1):** `moku-ai` — the asset build system, synced to `0.16.13`: `*.moku.yaml` build files in,
   generated assets out through the `moku` CLI, with a cost estimate, a budget gate and a resumable cache.
   Full catalog in `references/plugin-index.md`.
 
 ## `moku-native` — the `@moku-labs/native` pack
 
-- **Skills (1):** `moku-native` — the Node-only native packager, synced to `0.3.8`. A standalone
+- **Skills (1):** `moku-native` — the Node-only native packager, synced to `0.3.15`. A standalone
   `@moku-labs/core` framework that drives Tauri 2: 5 default plugins (project, tauri, build, doctor, cli),
   a second `createApp` beside the web app, permission codegen from `config.system`, five targets, typed
   CLI verbs with no argv parser. Full catalog in `references/plugin-index.md`.
@@ -184,7 +184,7 @@ Not wired into `hooks.json`, called by the scripts above or by skills:
 
 ## `moku-common` — the `@moku-labs/common` pack
 
-- **Skills (1):** `moku-common` — the shared package, synced to `0.3.10`: `logPlugin` and `envPlugin` as
+- **Skills (1):** `moku-common` — the shared package, synced to `0.3.11`: `logPlugin` and `envPlugin` as
   core plugins a framework registers in `createCoreConfig`, the env providers per runtime (`processEnv`,
   `dotenv`, `cloudflareBindings`, `browserEnv`, `workerSafeProcessEnv`), the branded `./cli` kit and the
   `./browser` entry. The rules MC1–MC3 stay in the core skill `moku-common-conventions`. Full catalog in

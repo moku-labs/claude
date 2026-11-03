@@ -1,7 +1,7 @@
 # Pipeline: moku-ai assets into a @moku-labs/game project
 
-Verified against `@moku-labs/ai@0.16.8` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
-`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.14.12` (`src/plugins/assets/README.md`,
+Verified against `@moku-labs/ai@0.16.13` (`runner/export.ts`, `buildfile/schema.ts`, the `sfx` and
+`sprite` plugins, `fal/image/models.ts`) and `@moku-labs/game@0.15.92` (`src/plugins/assets/README.md`,
 `scan/keys.ts`, `scan/scan.ts`, `scan/pack/groups.ts`, `docs/shell.md`). The worked game is the merge
 game in moku-labs/demos; it left the engine repository in game 0.8.
 
@@ -159,7 +159,7 @@ Keep a style reference image per project under `refs/` and attach it to every im
 | Source | Sprite `model` | Cost |
 |---|---|---|
 | fal `gpt-image-2.5` with `params.background: transparent` | `none` | image $0.05, sprite $0 |
-| Any opaque source: `nano-banana-pro`, `seedream-4.5-edit`, `codex`, ark, a `$file` | `birefnet` | image + $0.002 (estimate) |
+| Any opaque source: `nano-banana-pro`, `nano-banana-2.1`, `seedream-4.5-edit`, `codex`, ark, a `$file` | `birefnet` | image + $0.002 (estimate) |
 
 `background` is sent only on `gpt-image-2.5`; `transparent` with `output_format: jpeg` is a
 terminal 400. For `birefnet`, ask for a "flat colour background" in the image prompt; it matters

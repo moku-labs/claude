@@ -42,7 +42,7 @@ the root-config inventory, the data-layer strategies, routing patterns, the hard
 | Tests | Vitest (unit/integration, coverage on `lib/`+`i18n/`) + Playwright (e2e + visual, frozen fixture corpus) |
 | Deploy | Cloudflare Pages (`deploy` plugin + `wrangler`); GitHub Actions CI gates deploy |
 
-## Framework API (@moku-labs/web v2.4.10)
+## Framework API (@moku-labs/web v2.4.19)
 
 `@moku-labs/web` is the Layer-2 framework these web patterns sit on. It publishes **two entry
 points**: **`.`** for the Node SSG build (dual ESM+CJS, full surface) and **`@moku-labs/web/browser`**
@@ -101,6 +101,15 @@ await app.start();
 // boundary the SPA can't swap. Per-route: route(...).transition("morph") / .scroll("preserve").
 // replace: true (v2.4.3) swaps the current history entry, so Back skips the page you left (e.g. a language switch).
 // A later navigation (link, back, another navigate) aborts a programmatic one still loading (v2.4.2).
+// A script's location.replace(url) to another page loads a new document; the spa does not swap it (v2.4.11).
+
+// Faster navigation, both opt-in.
+// HTML-path routes: preload the linked page's HTML before the tap (v2.4.16). A DATA-path route is never preloaded.
+//   pluginConfigs: { spa: { prefetch: "intent" } }   // or "visible": also links entering the viewport; default false
+// DATA-path routes on a small static site: load all page data once, in one file, when idle (v2.4.14).
+// Set it in the Node app AND the browser app. If only the browser sets it, the fetch 404s and navigation stays lazy.
+//   pluginConfigs: { data: { preload: "all" } }      // writes _data/_all.json; default "none"
+// data.at(path) shares one request per path and never waits for that bundle (v2.4.13, v2.4.15).
 
 // Static-data collections (v2.3.0). Node build app: add collectionPlugin (exported from "@moku-labs/web"
 // ONLY, not from ./browser), then after the build:
@@ -129,6 +138,10 @@ The render mode is **global** `config.mode` (no longer router config), and `conf
 `pluginConfigs.router.routes` only (`app.router.set()` removed). `content` became an isomorphic
 shell + composable providers (`fileSystemContent`).
 
+**Head on a client DATA navigation (v2.4.19):** the whole head syncs from `head.render`, not only the title.
+**A tag the sync selectors match must come from `.head()`:** description, canonical, `og:*`, `twitter:*`, JSON-LD
+and hreflang placed statically in a custom shell template are removed on the first DATA navigation.
+
 **SSG → DATA → SPA:** the route is the contract — `route(pattern).load(ctx→D)?.layout((ctx,
 children)→VNode).render(ctx→VNode).head(ctx→HeadConfig).generate(ctx→params[]).meta(bag)`. At
 build, the SAME `load`/`render` produce static HTML *and* (when `mode !== "ssg"` + `dataPlugin`
@@ -140,14 +153,17 @@ paths** for `{lang:?}` routes. Since v1.7.0 **`preact` + `preact-render-to-strin
 peerDependencies** — the app installs them. Since v2.4.4 `@moku-labs/core@^1.7.1` + `@moku-labs/common@^0.3.4`
 are peers too (bun and npm install them automatically; the app still declares neither). Since v1.8.0 **bundle filenames are content-hashed**
 (`assets/main-<hash>.css`) and the build emits Cloudflare `_headers` cache rules
-(`build.cacheHeaders`, default on; immutable per-bundle + revalidate catch-all) — never hardcode a
+(`build.cacheHeaders`, default on; immutable per-bundle + revalidate catch-all; since v2.4.12 the injected tags
+also `modulepreload` the entry's static chunks) — never hardcode a
 bundle URL (a custom 404/shell uses the `<!--moku:assets-->` placeholders, incl. the split
 `<!--moku:assets:css-->`/`<!--moku:assets:js-->` variants). **v1.9.0–v1.12.0 add three opt-in
 build-time `content` directives** on the node `fileSystemContent` provider, each requiring
 `trustedContent: true`: `mermaid` (fenced ` ```mermaid ` → static inline SVG; optional peer dep
 `mermaid-isomorphic`), `::embed` (lazy click-to-activate iframe facades — pair the built-in
 `lazyEmbed` island), and `::gallery` (co-located folder galleries via `GalleryTrack` or a custom
-component). See `references/plugin-index.md` §2.1.
+component). See `references/plugin-index.md` §2.1. Since v2.4.17 `fileSystemContent({ shikiLanguages: ["ts",
+"bash", "json"] })` loads only those grammars and saves about 2 s per process; a fence in another language renders
+as plain code.
 
 Ships 5 isomorphic default plugins — `site, i18n, router, head, spa` — plus the explicit-compose
 `content` (isomorphic shell), node-only `build, deploy, cli` (the developer CLI:

@@ -187,4 +187,5 @@ export const islands = [myWidget, myGallery, lazyEmbed /* … */];
   `openLightbox(...)`) that several islands import + call; islands never message each other directly.
 - **Persistent perf islands** mount on a node OUTSIDE the swap region (e.g. `<body>`) so they survive
   navigation — a useful one to adopt: a link-prefetch island that warms a page's `_data` JSON on
-  `pointerover`/`touchstart` before the click.
+  `pointerover`/`touchstart` before the click. Since v2.4.13 `data.at` shares one request per path, so the
+  warm-up and the click cost one fetch. `spa.prefetch` (v2.4.16) covers only HTML-path routes, not `_data`.
