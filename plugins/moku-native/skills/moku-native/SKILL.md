@@ -13,7 +13,7 @@ description: >
 
 # Moku Native Patterns
 
-> **Synced to `@moku-labs/native@0.3.8`** (npm `dist-tags.latest`; catalog from the `v0.3.8` tag source).
+> **Synced to `@moku-labs/native@0.3.15`** (npm `dist-tags.latest`; catalog from the `v0.3.15` tag source).
 > Full surface — the 5 plugins, every API method, the global config, the 3 events, the build pipeline,
 > the capability registry and the dependency graph — is in
 > [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -82,11 +82,12 @@ What NOT to do:
 `native: { name, identifier, icon?, targets? }` and `system`, and the engine bin runs this framework:
 `moku-game native build ios --simulator`, `native dev <target>`, `native doctor`, `native clean`. The
 engine maps `config.ts` to the native config (`web.build` is `moku-game build`, `projectDir` is
-`.moku/tauri`, `outDir` is `dist-native`, a system row per `back`, `haptics`, `store`). The game adds
+`.moku/tauri`, `outDir` is `dist-native`, a system row per name in `config.ts` `system`, plus `store` when
+`save` is `store`, and `shell` on every Android build). The game adds
 `@moku-labs/native` as a dev dependency and imports nothing of it. See the `moku-game:moku-game` skill,
 `references/device.md`.
 
-## Framework API (@moku-labs/native v0.3.8)
+## Framework API (@moku-labs/native v0.3.15)
 
 All five plugins are **framework defaults** — already wired. An app passes `config` and nothing else in the
 common case. `createApp` also accepts `plugins`, `pluginConfigs` and `onReady` / `onError` / `onStart` /
@@ -116,44 +117,71 @@ export const native = createApp({
 await native.start();
 await native.cli.build({ target: "macos" });                // installers → dist-native/macos/
 await native.cli.build({ target: "ios", simulator: true }); // unsigned .app → dist-native/ios/
+await native.cli.build({ target: "android", debug: true }); // debug profile → dist-native/android-debug/
+await native.cli.build({ target: "android", aab: true, dev: true }); // store-signed test build → dist-native/android/
 await native.stop();
 ```
 
-- **`cliPlugin`** → `app.cli`: `build({ target?, all?, simulator?, aab? })`, `dev({ target? })`,
+- **`cliPlugin`** → `app.cli`: `build({ target?, all?, simulator?, aab?, debug?, dev? })`, `dev({ target? })`,
   `doctor({ target? })` → `Promise<boolean>` (caller sets `process.exitCode`), `clean({ target? })` (no
   target = confirm-gated full wipe). Typed verbs, **no argv parsing**. Hooks all three events for live output.
-- **`buildPlugin`** → `app.build`: `prepare({ target })`, `run({ target, simulator?, aab? })`,
-  `runAll({ targets?, simulator?, aab? })`. Pipeline `scaffold → codegen → icons → compile → bundle →
+- **`buildPlugin`** → `app.build`: `prepare({ target, debug? })`, `run({ target, simulator?, aab?, debug?, dev? })`,
+  `runAll({ targets?, simulator?, aab?, debug?, dev? })`. Pipeline `scaffold → codegen → icons → compile → bundle →
   collect` (`PHASE_ORDER`). `runAll` is **sequential** and stops at the first failing target. Emits the
   global events `native:phase` and `native:complete`.
-- **`projectPlugin`** → `app.project`: `generate`, `getCompleteness`, `patchMobile`, `clean`,
+- **`projectPlugin`** → `app.project`: `generate`, `getCompleteness`, `setAsideStaleTree`, `patchMobile`,
+  `patchMobileIcons`, `detectPageAgent`, `checkShellLinked`, `getDebugKeystore`, `clean`,
   `clearMobileBuildOutput`, `ensureIconSource`, `getBundleLayout`, `resolveDerivedPath`, `resolve`,
   `isKnownCapability`, `getRegistryRows`, `getRequiredFiles`. Owns the generated tree **as files; never
   spawns**. `onInit` validates the global config at `createApp` time, including `app.backgroundColor`
   (`#rrggbb` / `#rrggbbaa`) and `app.orientation`. `patchMobile` is the idempotent post-init pass: Android
-  gets release signing, the main-activity `android:screenOrientation`, the `MainActivity.kt` status-bar
-  style and the `BuildTask.kt` runner rewrite. iOS gets the Xcode entitlements setting and the runner rewrite.
+  gets the profile patches, release signing, the main-activity `android:screenOrientation`, the
+  `MainActivity.kt` status-bar style, the window and splash colour and the `BuildTask.kt` runner rewrite.
+  iOS gets the Xcode entitlements setting, the deployment target, the privacy manifest and the runner rewrite.
 - **`tauriPlugin`** → `app.tauri`: `icon`, `build`, `mobileInit`, `dev`, `getVersion`, `getRunner`.
   ⚠️ **The only plugin that spawns `@tauri-apps/cli`** (explicit PATH-walked `node` + resolved `tauri.js`).
   Every output line is **secret-scrubbed** before it reaches a log, a callback or an error. One-shot verbs
   throw a classified **`TauriError`** (`kind`, `exitCode`, scrubbed `stderrTail`). No `onStop`: dev teardown
   is owned by the `DevHandle`.
-- **`doctorPlugin`** → `app.doctor`: `run({ target? })` → `{ ok, checks }`. 13 checks run in parallel,
+- **`doctorPlugin`** → `app.doctor`: `run({ target? })` → `{ ok, checks }`. 15 checks run in parallel,
   never throws on a failed check, a timeout is a `warn`, and `warn` never flips `ok`. Declares and emits
   **`doctor:check`**. Signing checks read env-var **presence and counts, never values**.
 - **Events (3):** global `native:phase`, `native:complete` (hookable without a `depends` edge) and the
-  per-plugin `doctor:check` (needs `depends: [doctorPlugin]`).
-- **Capability registry (7 rows):** `store`, `notification`, `clipboard-manager`, `tray`, `deep-link`,
-  `back`, `haptics`. An unknown `config.system` name throws at `createApp`. `deep-link` requires
+  per-plugin `doctor:check` (needs `depends: [doctorPlugin]`). `native:complete` and `BuildResult` carry
+  `profile` since 0.3.9.
+- **Capability registry (8 rows):** `store`, `notification`, `clipboard-manager`, `tray`, `deep-link`,
+  `back`, `haptics`, `shell`. An unknown `config.system` name throws at `createApp`. `deep-link` requires
   `capabilities["deep-link"] = { mode: "scheme", scheme }`. `tray` is a cargo feature and is desktop-only.
   `back` is Android-only core permission `core:app:allow-exit`. `haptics` is `tauri-plugin-haptics`, iOS and
-  Android only.
+  Android only. `shell` is a crate this framework generates, Android only.
+- **Page bridge (`shell`, since 0.3.9):** `system: [{ name: "shell" }]` installs `globalThis.__MOKU_NATIVE__`
+  on Android: `display`, `thermal`, `insets`, `device`, `ready`, and `share()` in a debug build. A browser, iOS
+  or an app without the shell has none, so feature-detect it. Since 0.3.10 the system insets land as
+  `--moku-device-safe-*` on the root, never as `--moku-safe-*`. Read
+  `var(--moku-safe-top, var(--moku-device-safe-top, env(safe-area-inset-top)))`, so a page's own rule wins.
+- **Build profiles:** `BuildProfile` is `"store"` (default), `"debug"` or `"dev"`. All three are release
+  builds. `debug` (Android 0.3.9, iOS 0.3.13) installs beside the store app and lands in
+  `<outDir>/<target>-debug/`. On Android native adds the `.debug` id, the `(debug)` name, the SDK debug keystore,
+  cleartext and page console in logcat, and composes `shell` even when unnamed. On iOS the config names the app, and
+  native adds the local-network keys and Web Inspector. `dev` (0.3.13) is the store build a tester
+  installs: same signing and delivery, the editor agent is allowed. `debug` with `dev` throws. A `store`
+  build whose page carries the editor agent is refused before collect. `MOKU_NATIVE_PROFILE` reaches the web build.
+- **Store builds (0.3.12):** `app.buildNumber` is also the Android `versionCode`, a whole number from 1 to
+  2100000000. `ios.infoPlist` merges any key (`app.orientation` wins a shared key), and `ios.privacyManifest` is an
+  absolute path. Every `Cargo.toml` carries a size `[profile.release]`. A store build sets
+  `build.removeUnusedCommands`. A kept `gen/apple` follows the config on every build.
+- **Changed `app.identifier` (0.3.14 Android, 0.3.15 iOS):** a kept tree made for another id is renamed to
+  `gen/<platform>.old-<old id>`, never deleted, and `init` writes a fresh one. One warn line says so. The fresh
+  tree does not carry over a hand edit or keystore from the old one.
 - **Mobile presentation (since 0.3.0):** `app.orientation` writes the iOS `Info.ios.plist` orientation keys
   and the Android `android:screenOrientation`. There is no runtime lock. On iOS the generated `lib.rs`
   sets the WKWebView scroll view's content-inset adjustment to `.never`, so the page gets the full screen
-  (tauri-apps/tauri#8166). `app.backgroundColor` → `app.windows[0].backgroundColor`.
-- **Other exports:** `createPlugin`, `hostTargets`, `TARGETS`, `PHASE_ORDER`, `TauriError`, the `Orientation`
-  type, and type-only
+  (tauri-apps/tauri#8166). `app.backgroundColor` → `app.windows[0].backgroundColor`, and since 0.3.11 it also
+  paints the Android window and icon splash, so no dark frame shows before the first paint.
+  `app.adaptiveIconInset` (0.3.9, percent per side, `0 < n ≤ 30`, `19.44` keeps the 66 dp safe zone) insets the Android
+  adaptive icon. `app.keepScreenOn` (0.3.12) turns the iOS idle timer off.
+- **Other exports:** `createPlugin`, `hostTargets`, `TARGETS`, `PHASE_ORDER`, `TauriError`, the `Orientation`,
+  `BuildProfile` and `PlistValue` types, and type-only
   namespaces `Project`, `Tauri`, `Build`, `Doctor`, `Cli` (for example `Build.BuildResult`, `Tauri.DevHandle`).
 
 Full catalog (5 plugins, every API/config/event, pipeline phases, capability registry, targets, dependency

@@ -1,6 +1,6 @@
 # Providers, tasks, models, and custom plugins
 
-Verified against `@moku-labs/ai@0.16.8` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
+Verified against `@moku-labs/ai@0.16.13` source: `src/index.ts`, `src/plugins/<task>/contract.ts`,
 `src/plugins/<provider>/README.md`, `src/plugins/cli/project-config.ts`. Prices are the bundled
 tables; `priceOverrides` replaces them.
 
@@ -15,7 +15,7 @@ tables; `priceOverrides` replaces them.
 | `music` | `fal`, `elevenlabs` (0.16.2) | mp3 |
 | `voiceover` | `elevenlabs`, `openai` | mp3, wav or ogg |
 | `translate` | `openai` | text |
-| `prompt-gen` | `openai`, `codex`, `claude`, `fal` | text (fal: also tool calls) |
+| `prompt-gen` | `openai`, `anthropic` (0.16.10), `codex`, `claude`, `fal` | text (`openai`, `anthropic`, `fal`: also tool calls) |
 | `asset` | `ark` | an `AssetRecord` json that video items `$ref` |
 
 The default is the task plugin's `defaultProvider` config (`image: codex`, `sprite: fal`,
@@ -36,7 +36,7 @@ The runner hands a handler `{ ...input, params }`. Field names below are the con
 | `music` | `model`, `prompt`, `lengthMs`, `chunks?: [{ text, durationMs, styles, avoid? }]`, `seed?` | `model` is required, no default. The model id belongs to the provider: `music_v2_5` on `elevenlabs`, `elevenlabs-music-v2.5` on `fal` |
 | `voiceover` | `text`, `voice`, `language?`, `model?`, `format?` (`mp3` \| `wav` \| `ogg`) | ElevenLabs `voice` is a voice id; OpenAI `voice` is `alloy` and friends |
 | `translate` | `text`, `targetLang`, `sourceLang?`, `model?` | |
-| `prompt-gen` | `prompt`, `system?`, `model?`, `temperature?`, `messages?`, `tools?`, `toolChoice?`, `cacheSystem?` | `messages`/`tools` only on `fal` |
+| `prompt-gen` | `prompt`, `system?`, `model?`, `temperature?`, `messages?`, `tools?`, `toolChoice?`, `cacheSystem?`, `cacheTtl?` | `messages`/`tools` on `fal`, `anthropic`, `openai` (0.16.10); `codex` and `claude` refuse them. `cacheTtl` (0.16.13) is `"5m"` or `"1h"`, sent only by `anthropic` |
 | `asset` | `image: { $file }`, `url?`, `group?`, `groupName?` | ark needs a public https `url` of the same bytes; `app.fal.upload(file)` gives one. `groupName` (0.15, 1 to 64 characters) picks the Ark asset group; absent uses `ark.groupName` |
 
 `params` is free per provider and part of the cache key. Common ones: `params.output_format`
@@ -49,8 +49,9 @@ The runner hands a handler `{ ...input, params }`. Field names below are the con
 draft), `params.model` and `params.operating_resolution`
 (fal sprite `birefnet`), `params.output_format` (elevenlabs sfx and music, `mp3_*` only), `params.force_instrumental`
 (elevenlabs music, boolean, default `true`),
-`params.reasoning` (codex, claude, fal prompt-gen),
-`params.responseSchema` (prompt-gen JSON answer), `params.generation` (any value; changes the key to
+`params.reasoning` (codex, claude, fal, anthropic, openai prompt-gen),
+`params.responseSchema` (prompt-gen JSON answer), `params.strictSchema` (openai prompt-gen, default `false`),
+`params.generation` (any value; changes the key to
 force a re-render).
 
 ## Models and prices
@@ -62,6 +63,7 @@ force a re-render).
 | `codex` | `gpt-6-astra` (default) | $0 (ChatGPT plan) | `codex exec` writes `output.png`; sizes 1024×1536 / 1536×1024 / 1024×1024 by `aspect` |
 | `fal` | `gpt-image-2.5` (default) | $0.05, `@2K` $0.06 | returns **jpeg** unless `params.output_format: png`; up to 16 refs |
 | `fal` | `nano-banana-pro` | $0.15 (`1K`, `2K`), $0.30 (`4K`) | always png; 10 aspects; 14 refs |
+| `fal` | `nano-banana-2.1` (0.16.11) | $0.15 (`1K`, `2K`), $0.30 (`4K`), an upper bound | always png; Pro's aspects plus `4:1 1:4 8:1 1:8`; 14 refs. fal lists no per-image price, so the bundled one is Pro's. Set the real one with `fal.priceOverrides["image:nano-banana-2.1@2K"]`. `thinking_level`, `safety_tolerance`, `seed` and `system_prompt` pass through `params` |
 | `fal` | `seedream-4.5-edit` | $0.04 | 10 refs |
 | `ark` | `seedream-5-0-lite-260128` (default) | $0.035 per image | `intl`; sizes by aspect; `params.images: N` for a consistent group |
 
@@ -188,9 +190,58 @@ attempt. A band name, an artist name or known lyrics end the item as `flagged`.
 | Provider | Model | Price (in / out per 1M tokens) |
 |---|---|---|
 | `openai` | `gpt-4o-mini` (default), `gpt-4o` | $0.15 / $0.60; $2.50 / $10 |
+| `openai`, prompt-gen only (0.16.10) | `gpt-6-astra`, `gpt-6.1-sol`, `gpt-6-sol`, `gpt-6-luna` | $10 / $50; $2 / $10; $2 / $10; $0.10 / $0.50 |
+| `anthropic`, prompt-gen only (0.16.10) | `claude-opus-5-5` (default), `claude-sonnet-5-5`, `claude-sonnet-5`, `claude-haiku-5-5`, `claude-fable-5-1` | $4 / $20; $2 / $10; $2 / $10; $0.10 / $0.50; $10 / $50 |
 | `fal` | `anthropic/claude-opus-5.5` (default), `anthropic/claude-sonnet-5`, `openai/gpt-6-sol`, `openai/gpt-6-astra`, `google/gemini-3.8-flash`, `x-ai/grok-4.7` | $4 / $20; $2 / $10; $2 / $10; $10 / $50; $0.75 / $3.75; $2 / $6 |
 | `codex` | codex default, or `textModel` | $0 |
 | `claude` | CLI default, or `textModel`; `anthropic/claude-opus-5.5` maps to `claude-opus-5-5` | $0 |
+
+### prompt-gen on `anthropic` and `openai` (0.16.10)
+
+Both read the same request as fal's prompt-gen, so a call moves by the provider name. `anthropic` takes the fal ids
+as aliases (`anthropic/claude-opus-5.5` → `claude-opus-5-5`); `openai` drops the `openai/` prefix. An unset key is
+`PromptGenUnavailableError` with `reason: "auth"`, so `promptGen` tries its next `fallback` provider.
+
+Cache rates, USD per 1M tokens:
+
+| `anthropic` | Read | Write 5m | Write 1h |
+|---|---|---|---|
+| `claude-opus-5-5` | $0.20 | $5 | $8 |
+| `claude-sonnet-5-5`, `claude-sonnet-5` | $0.20 | $2.50 | $4 |
+| `claude-haiku-5-5` | $0.01 | $0.125 | $0.20 |
+| `claude-fable-5-1` | $0.25 | $12.50 | $20 |
+
+| `openai` | Cached input | Write 30m | Write 12h |
+|---|---|---|---|
+| `gpt-6-astra` | $1 | $12.50 | $25 |
+| `gpt-6.1-sol` | $0.10 | $2.50 | $5 |
+| `gpt-6-sol` | $0.20 | $2.50 | $5 |
+| `gpt-6-luna` | $0.01 | $0.125 | $0.25 |
+| `gpt-4o-mini`, `gpt-4o` | $0.075; $1.25 | none | none |
+
+Long context: `claude-haiku-5-5` above 100 000 input tokens pays ×5 in and ×5 out. A GPT-6 request above 272K input
+tokens pays ×2 on the input side and ×1.5 on output.
+
+| | `anthropic` | `openai` |
+|---|---|---|
+| API | Messages, always streamed | Responses, `store: false` |
+| Output cap | `params.max_tokens`, else `anthropic.maxTokens` (32000) | `params.max_tokens`, else 32000 |
+| `params.reasoning` | `output_config.effort`; `off` → low; unset → medium. No `thinking` field | `reasoning.effort`, GPT-6 only; unset → medium. `off` → `low` on `gpt-6-astra` and `gpt-6.1-sol`, `none` on `gpt-6-sol` and `gpt-6-luna` |
+| `params.responseSchema` | `output_config.format` | `text.format` json_schema, `strict` from `params.strictSchema` |
+| `params.images` | image blocks; jpeg, png, gif, webp | `input_image` data URLs |
+| Cache marks | `cacheSystem`, part `cache: true`; first 4 kept; `cacheTtl` | `prompt_cache_breakpoint` on GPT-6 only; first 4 kept; `cacheTtl` ignored |
+| `temperature` | never sent | never on GPT-6, forwarded on the gpt-4o family |
+| Model with no price | terminal 400 before any call; needs all five rates | costs $0, logs `openai:prompt-gen:unpriced` once per model |
+| Timeout | `anthropic.timeoutMs` (900000) | `openai.promptGenTimeoutMs` (900000) |
+
+- `cacheTtl: "1h"` (0.16.13) is for calls that share a prefix but start more than 5 minutes apart. Closer calls keep
+  the 5-minute cache warm, so `"1h"` only adds write cost. One TTL covers every mark of a request. `fal` sends no `ttl`.
+- On `anthropic`, `toolChoice: "required"` or `{ name }` on Opus 5.5, Sonnet 5.5 and Fable 5.1 is a terminal 400.
+- A tool with `oneOf`, `anyOf` or `allOf` at the top of its schema is flattened into one object (0.16.12). The tool's
+  own schema still checks the input.
+- A custom `openai.baseUrl` must serve `/v1/responses` for prompt-gen. tts and translate keep their old endpoints.
+- Bun's socket idle timer is off for `fal` (0.16.9), `anthropic` and `openai`, so only the timeout or the caller ends
+  a silent long call. Raise `fal.timeoutMs` for a long thinking model.
 
 ## Env vars
 
@@ -198,6 +249,7 @@ attempt. A band name, an artist name or known lyrics end the item as `flagged`.
 |---|---|
 | `fal` | `FAL_KEY` (also sfx and `birefnet` sprites; a `none` sprite needs no key) |
 | `openai` | `OPENAI_API_KEY` |
+| `anthropic` | `ANTHROPIC_API_KEY` |
 | `elevenlabs` | `ELEVENLABS_API_KEY` (voiceover, sfx, music) |
 | `apimodels` | `APIMODELS_API_KEY` |
 | `ark` | `ARK_API_KEY`, plus `ARK_ACCESS_KEY` and `ARK_SECRET_KEY` for assets |

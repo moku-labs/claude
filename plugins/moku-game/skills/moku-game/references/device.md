@@ -24,7 +24,7 @@ export default {
 # system names a plugin, or save is "store": the package and the Tauri peers of the list above
 bun add --exact @moku-labs/system@0.3.7 @tauri-apps/api@2.12.2 @tauri-apps/plugin-haptics@2.4.1
 bun add --exact @tauri-apps/plugin-store@2.5.0   # only with "store" in system, or save: "store"
-bun add --exact -d @moku-labs/native@0.3.8       # moku-game native
+bun add --exact -d @moku-labs/native@0.3.15      # moku-game native; the engine peers on ^0.3.13
 ```
 
 `@moku-labs/system` declares its Tauri packages as optional peers, so Bun does not install them. The
@@ -57,7 +57,10 @@ plugin answers with `ctx.require(platformPlugin).exit()`.
 | `web.devCommand`, `web.devUrl` | `moku-game dev --port 5173`, `http://127.0.0.1:5173` |
 | `system` | One row per name that needs a Tauri capability: `back`, `haptics`, `store` |
 | `targets` | `native.targets`, else the target of the command |
-| `projectDir`, `outDir` | `.moku/tauri`, `dist-native` |
+| `app.version` | `package.json`, a valid `x.y.z` (else native's `0.1.0`) |
+| `app.keepScreenOn` | `keepAwake` in `system` |
+| `iosMinimumSystemVersion` | `native.ios.minimumVersion`, else `"26.0"` |
+| `projectDir`, `outDir` | `.moku/tauri`, `dist-native`. A debug app: `.moku/tauri-debug`, and on iOS `dist-native/ios-debug`. The test app: `.moku/tauri-dev`, `dist-native-dev` |
 
 With the template's `"native": "moku-game native"` script: `bun run native build ios --simulator`,
 `bun run native build android`, `bun run native dev ios`, `bun run native doctor`, `bun run native clean`.
@@ -120,8 +123,9 @@ Facts to expect on the simulator (spike P13, iOS 26 simulator):
 A device build needs Apple signing. Claude never enters Apple credentials: it guides, the user signs in.
 
 1. The user opens Xcode → Settings → Accounts and signs in with their Apple ID; the team appears.
-2. `config.ts` carries no signing in game 0.14. The user picks the team in the generated Xcode project
-   under `.moku/tauri/` (Signing & Capabilities) and runs on the device from Xcode. The
+2. For a device build the user picks the team in the generated Xcode project under `.moku/tauri/`
+   (Signing & Capabilities) and runs on the device from Xcode. `native.signing.apple` in `config.ts` is the
+   store build's: see "Store builds" below. The
    `moku-native:moku-native` skill lists the env vars its doctor checks; never write a secret into the
    game.
 3. `bun run native build ios` builds the device archive; the first run may need the user to accept the
@@ -133,12 +137,64 @@ A device build needs Apple signing. Claude never enters Apple credentials: it gu
    Also check `audio.session` there: the player's music keeps playing with `"ambient"` and the silent
    switch mutes the game.
 
-## The editor on a device: not yet
+## Store builds (game 0.15.85)
 
-The editor hub binds `127.0.0.1` and gates every socket with Host, Origin and a per-start token. A game
-page running on a phone or in a simulator cannot open the bridge to the tools page on the Mac, so the
-Game, State and Flow workspaces show `empty` for a device session. What works today: the simulator panel
-and `adb` for pictures and input, `doors` on a dev build through Safari Web Inspector or Chrome
-`chrome://inspect` if the user wants to read state by hand, and the headless and visual tests on the Mac
-for the proof. `adb reverse tcp:3000 tcp:3000` makes the device reach the hub's port, but the bridge from
-a device is untested; do not promise it.
+```ts
+// config.ts: names only, never a secret
+native: {
+  name: "My Game",
+  identifier: "com.example.mygame",
+  signing: {
+    android: { keystorePath: "~/keys/mygame.jks", keystorePasswordEnv: "MYGAME_STORE_PASS", keyAlias: "upload" },
+    apple: { teamId: "ABCDE12345" }
+  },
+  ios: { privacyManifest: "ios/PrivacyInfo.xcprivacy", infoPlist: { ITSAppUsesNonExemptEncryption: false } },
+  dev: { identifier: "com.example.mygame.dev" }
+}
+```
+
+```sh
+bun run native build android --store --build-number 12    # an .aab
+bun run native build ios --store --build-number 12        # an .ipa, exportMethod app-store-connect
+bun run native build android --store --dev --build-number 12   # the store-signed test app of native.dev
+```
+
+- `app.version` comes from `package.json`, the build number from the flag: an integer from 1 to 2100000000.
+- Every problem comes at once, before anything compiles, in one `[game] native --store: …` error: no signing
+  block, a keystore that is not a file, an unset password variable, a version that is not `x.y.z`, an identifier
+  that ends in `.soak`, `.debug`, `.dev`, `.test` or `.staging`. `--store` refuses `--debug`, `--editor`, `--simulator`.
+- An iOS store build signs from the command line with an App Store Connect team key, in Tauri's env vars
+  `APPLE_API_ISSUER`, `APPLE_API_KEY`, `APPLE_API_KEY_PATH` (the `.p8` kept outside the repo). An Xcode account
+  sign-in is not seen: `xcodebuild` fails with "No Accounts". Claude never enters these; the user sets them.
+- `--store --dev` needs `native.dev` and editor 0.10.19 or later. Its page carries the overlay with no link
+  (`__MOKU_GAME_EDITOR__` is `"off"`), its save stays under `native.identifier`, its apps go to `dist-native-dev`.
+- Not run in this sync: no store build was made. The steps above come from the engine's `docs/shell.md`.
+
+## The editor on a device
+
+A plain dev page on a phone still cannot reach the tools page. A **debug build** can (game 0.14.13, editor 0.10.12).
+
+```sh
+bun run native build android --debug      # installs beside the store app; carries the editor's agent
+adb install -r <the debug apk>            # the app <identifier>.debug
+bun run editor                            # then Render → Connect device → By wire
+bunx moku-editor perf                     # or: no game on the computer, logs to .moku/perf/*.jsonl
+bunx moku-editor perf --lan               # a phone on the network, paired by a four-digit code
+bunx moku-editor perf summary .moku/perf/<log>.jsonl
+```
+
+- `moku-game build --debug` is the release page plus `@moku-labs/editor/agent/page` and the `.dev` modules. Never
+  ship it. `--debug=read` runs read and cosmetic commands only. `--editor host:port` names where it dials, by
+  default `127.0.0.1:47600`, which `adb reverse` reaches.
+- On the phone the overlay shows hidden, as a pill or as a card with tabs Frames, Game, Record, Link. Open it with
+  `DebugTrigger()` on a view (five taps), `app.debug.overlay.open()`, or `debug: { overlay: "pill" }` in `config.ts`.
+  The Game tab lists only commands marked `overlay: "toggle"` or `"button"`.
+- A log records only when someone starts it: the Record tab, Render's Record, or the door tool `editor_record`.
+- The JS heap of a phone comes from CDP over USB. On the network it reads not available.
+- **An iPhone link is not confirmed.** The engine builds `native build ios --debug` since 0.15.87, while the
+  editor's docs at 0.10.20 still say no iOS debug build exists and an iPhone cannot link. Try it before you promise it.
+- Not run in this sync: no debug build, no phone, no `moku-editor perf`. The steps come from the two packages' docs
+  and the PR that shipped Mission control, which was checked on a Galaxy A26.
+
+What works without a debug build: the simulator panel and `adb` for pictures and input, `doors` on a dev build
+through Safari Web Inspector or Chrome `chrome://inspect`, and the headless and visual tests on the Mac for the proof.

@@ -1,9 +1,9 @@
 # @moku-labs/ai — Plugin & Property Index
 
-**Synced version:** `0.16.8` (npm `dist-tags.latest`; catalog from the `v0.16.8` tag source:
+**Synced version:** `0.16.13` (npm `dist-tags.latest`; catalog from the `v0.16.13` tag source:
 `src/index.ts`, `src/config.ts`, `src/bin.ts`, `src/plugins/*`, `README.md`, `llms.txt`,
 `llms-full.txt`). Peer deps `@moku-labs/core ^1.7.1` + `@moku-labs/common ^0.3.4` (dev-pinned
-1.7.5 / 0.3.7). Runtime deps:
+1.7.6 / 0.3.10). Runtime deps: `@anthropic-ai/sdk` (`^1.3.0`, since 0.16.10),
 `better-sqlite3` (Node; Bun uses `bun:sqlite`), `openai`, `sharp` (0.35.5, the sprite pixel step),
 `yaml`, `zod`. Engines node ≥24, bun ≥1.3.14. Bin: `moku` (`dist/bin.mjs`), which loads
 `moku.config.{ts,mts,js,mjs}`.
@@ -12,7 +12,7 @@
 
 `src/config.ts` is `createCoreConfig("ai", …)` with five core plugins: `logPlugin`, `envPlugin`
 (from `@moku-labs/common`), `journalPlugin`, `storePlugin`, `limitsPlugin`. `src/index.ts` is
-`createCore(coreConfig, { plugins, pluginConfigs })` with 21 regular plugins and exports `createApp`,
+`createCore(coreConfig, { plugins, pluginConfigs })` with 22 regular plugins and exports `createApp`,
 `createPlugin` and `defineConfig`. Layer-3 apps import only from `@moku-labs/ai`.
 
 Global `Config` and `Events` are empty by decision: every option is per plugin, and only the runner
@@ -23,15 +23,15 @@ declares bus events.
 | Group | Names |
 |---|---|
 | Framework API | `createApp`, `createPlugin`, `defineConfig` (+ type `ProjectConfig`) |
-| Plugins | `registryPlugin`, `buildfilePlugin`, `runnerPlugin`, `voiceoverPlugin`, `translatePlugin`, `promptGenPlugin`, `imagePlugin`, `videoPlugin`, `musicPlugin`, `sfxPlugin`, `spritePlugin`, `assetPlugin`, `elevenlabsPlugin`, `openaiPlugin`, `codexPlugin`, `claudePlugin`, `falPlugin`, `apimodelsPlugin`, `arkPlugin`, `composePlugin`, `cliPlugin`, `journalPlugin`, `storePlugin`, `limitsPlugin` |
+| Plugins | `registryPlugin`, `buildfilePlugin`, `runnerPlugin`, `voiceoverPlugin`, `translatePlugin`, `promptGenPlugin`, `imagePlugin`, `videoPlugin`, `musicPlugin`, `sfxPlugin`, `spritePlugin`, `assetPlugin`, `elevenlabsPlugin`, `openaiPlugin`, `anthropicPlugin`, `codexPlugin`, `claudePlugin`, `falPlugin`, `apimodelsPlugin`, `arkPlugin`, `composePlugin`, `cliPlugin`, `journalPlugin`, `storePlugin`, `limitsPlugin` |
 | Helpers | `defineBuild`, `ASSET_MIME`, `encodeAssetRecord`, `parseAssetRecord`, `PromptGenUnavailableError`, `isPromptGenUnavailable`, `ToolArgumentsError`, `runToolLoop` |
-| Type namespaces | `Journal`, `Store`, `Limits`, `Buildfile`, `Runner`, `Voiceover`, `Translate`, `PromptGen`, `Image`, `Video`, `Music`, `Sfx`, `Sprite`, `Asset`, `Elevenlabs`, `Openai`, `Codex`, `Claude`, `Fal`, `Apimodels`, `Ark`, `Compose`, `Cli` |
-| Error classes (values) | `ApimodelsErrors`, `ArkErrors`, `ClaudeErrors`, `CodexErrors`, `ElevenlabsErrors`, `FalErrors`, `OpenaiErrors` — each with `RetryableProviderError`, `TerminalProviderError`, `FlaggedProviderError` |
+| Type namespaces | `Journal`, `Store`, `Limits`, `Buildfile`, `Runner`, `Voiceover`, `Translate`, `PromptGen`, `Image`, `Video`, `Music`, `Sfx`, `Sprite`, `Asset`, `Elevenlabs`, `Openai`, `Anthropic`, `Codex`, `Claude`, `Fal`, `Apimodels`, `Ark`, `Compose`, `Cli` |
+| Error classes (values) | `AnthropicErrors`, `ApimodelsErrors`, `ArkErrors`, `ClaudeErrors`, `CodexErrors`, `ElevenlabsErrors`, `FalErrors`, `OpenaiErrors` — each with `RetryableProviderError`, `TerminalProviderError`, `FlaggedProviderError` |
 
 ## Plugins
 
 Registration order in `src/index.ts`: `registry → buildfile → runner → voiceover → translate →
-promptGen → image → video → music → sfx → sprite → asset → elevenlabs → openai → codex → claude → fal → apimodels →
+promptGen → image → video → music → sfx → sprite → asset → elevenlabs → openai → anthropic → codex → claude → fal → apimodels →
 ark → compose → cli`. Provider plugins register handlers in `onInit`; the first registered provider
 of a task is its implicit default, but each task plugin's `defaultProvider` config decides for the
 facade and the runner.
@@ -64,7 +64,8 @@ Lane name: `"{task}/{provider}/default"`. Precedence: exact lane → `"{task}/{p
 | `sprite` | Standard | registry | same three; `execute` only, always RGBA png | `defaultProvider` (`fal`) |
 | `asset` | Standard | registry | `register(request, opts)` (`AssetRequest.groupName?` since 0.15: 1 to 64 characters, default the provider's group name), `estimate`, `providers()` | `defaultProvider` (`ark`), `pollIntervalMs` (3000) |
 | `elevenlabs` | Complex | registry | `info()` (`models` lists the voice models only; `sfx:` and `music:` price rows are left out); registers `("voiceover","elevenlabs")`, `("sfx","elevenlabs")`, `("music","elevenlabs")` (since 0.16.2: `POST /v1/music`, `estimate` + `execute`, models `music_v1`, `music_v2`, `music_v2_5`) | `apiKeyEnv` (`ELEVENLABS_API_KEY`), `baseUrl`, `defaultModel` (`eleven_multilingual_v2`), `timeoutMs` (60000), `musicTimeoutMs` (600000, since 0.16.2), `priceOverrides` (voice model ids; `sfx:<model>#second`, `sfx:<model>#auto`; `music:<model>`) |
-| `openai` | Complex | registry | `info()`; registers voiceover, translate, prompt-gen | `apiKeyEnv` (`OPENAI_API_KEY`), `baseUrl`, `models` (`{ tts: gpt-4o-mini-tts, chat: gpt-4o-mini }`), `timeoutMs`, `priceOverrides` |
+| `openai` | Complex | registry | `info()`; registers voiceover, translate, prompt-gen (on the Responses API since 0.16.10) | `apiKeyEnv` (`OPENAI_API_KEY`), `baseUrl`, `models` (`{ tts: gpt-4o-mini-tts, chat: gpt-4o-mini }`), `timeoutMs` (60000), `promptGenTimeoutMs` (900000, since 0.16.10), `priceOverrides` |
+| `anthropic` | Complex | registry | `info()`; registers prompt-gen over the Messages API, always streamed (since 0.16.10) | `apiKeyEnv` (`ANTHROPIC_API_KEY`), `baseUrl`, `model` (`claude-opus-5-5`), `maxTokens` (32000), `timeoutMs` (900000), `priceOverrides` |
 | `codex` | Complex | registry | `info()`; registers image, prompt-gen over `codex exec` | `bin` (`codex`), `model` (`gpt-6-astra`), `reasoningEffort` (`low`), `timeoutMs` (600000), `workDir` (`.moku/tmp`), `priceOverrides`, `textModel`, `modelMap` |
 | `claude` | Complex | registry | `info()`; registers prompt-gen over `claude -p` | `bin` (`claude`), `textModel`, `modelMap`, `timeoutMs` (600000), `workDir` |
 | `fal` | Complex | registry | `info()`, `models(task)`, `upload(file: { path, mimeType }, opts?: { signal? }): Promise<{ url }>` (since 0.15: fal storage, also when `upload` is `"data-uri"`; a failure throws, no data-URI fallback); registers video, image, prompt-gen, music, sfx, sprite | `apiKeyEnv` (`FAL_KEY`), `queueUrl`, `uploadUrl`, `upload` (`storage`), `timeoutMs`, `priceOverrides` (video `<alias>`; `image:`, `music:`, `sfx:`, `sprite:<alias>`; `llm:<id>#in`/`#out`), `runUrl`, `imageDefaultModel` (`gpt-image-2.5`), `llmDefaultModel` (`anthropic/claude-opus-5.5`), `pollIntervalMs` (2000), `jobTimeoutMs` (900000), `requestLog` |
@@ -230,6 +231,28 @@ not lengthMs <n>.`, `ElevenLabs music takes seed only with chunks: the API refus
 
 Read from the `v0.16.8` tag source. The upstream tests mock ElevenLabs; no call to the live Music API was
 made for this sync. The 0.16.1 "checked on the published package" note above was not repeated for 0.16.8.
+
+## 0.16.9 to 0.16.13 notes (PRs #55 to #60)
+
+New plugin: `anthropic`. No new task, event or CLI flag. Peer ranges and engines are the same. The default
+`prompt-gen` provider stays `openai`.
+
+| Version | Change |
+|---|---|
+| 0.16.9 | **fal** `falFetch` passes Bun's `timeout: false`, so Bun's socket idle timer no longer cuts a silent call at about 5 minutes. Only `timeoutMs` or the caller's signal end a call. Node ignores the field. A runtime `TimeoutError` is now retryable `kind: "timeout"`, was `network`: `[ai] fal request timed out after <n> s: the runtime's socket idle timer, not timeoutMs (<n> s).` |
+| 0.16.10 | **anthropic** new plugin, `("prompt-gen", "anthropic")`: `messages`, `tools`, `toolChoice`, images, `params.responseSchema`, `params.reasoning`, cache marks, thinking blocks replayed per tool turn (last 500 turns, lost on a restart). **openai** prompt-gen moves to `responses.create` and now serves `messages` and `tools`; tts and translate are unchanged. New key `promptGenTimeoutMs`. GPT-6 rows and cache rates in the price table. An unset key on either provider is `PromptGenUnavailableError` `"auth"`, so `promptGen` moves to the next `fallback` provider. Both SDK clients turn off Bun's idle timer. ⚠️ **Behaviour change:** openai no longer answers `unsupported` for messages or tools, so a fallback chain that skipped it now uses it, and a custom `baseUrl` that proxies only Chat Completions breaks |
+| 0.16.11 | **fal** image model `nano-banana-2.1`: `fal-ai/nano-banana-2.1` and `/edit`, 14 refs, `1K` / `2K` / `4K` (`1080` → `1K`), Pro's aspects plus `4:1 1:4 8:1 1:8`. `thinking_level`, `safety_tolerance`, `seed` and `system_prompt` pass through `params`. fal lists no per-image price; the bundled one is Pro's (0.15 / 0.15 / 0.30), an upper bound. Override key `image:nano-banana-2.1@2K` |
+| 0.16.12 | **anthropic, openai** a tool whose `inputSchema` has `oneOf`, `anyOf` or `allOf` at the top is flattened into one object schema (merged properties, shared required keys, the shapes in the description), because both APIs refuse it. The tool's own schema still checks the input before the tool runs. **anthropic** a 4xx names its cause: the error and `anthropic:prompt-gen:failed` carry Anthropic's error type and message, cut to 300 characters |
+| 0.16.13 | **promptGen** `PromptGenRequest.cacheTtl`: `"5m"` (default) or `"1h"`. **anthropic** `"1h"` sends `cache_control: { type: "ephemeral", ttl: "1h" }` on every mark of the request; unset or `"5m"` sends no `ttl`; any other value is a 400 before any call. Writes bill at `cacheWrite1hPerM`. fal, openai, claude and codex ignore it, and `runToolLoop` does not set it |
+
+The per-provider contract is in `src/plugins/anthropic/README.md`, `src/plugins/openai/README.md` and
+`src/plugins/promptGen/README.md`. At `v0.16.13` the root `README.md` covers the plugin, but `llms.txt` and
+`llms-full.txt` name neither `ANTHROPIC_API_KEY`, `cacheTtl` nor `nano-banana-2.1`, and `CHANGELOG.md` files 0.16.9 to 0.16.13 under
+"Unreleased". This section follows the source, the tags and the PRs.
+
+Not proven live, from the PR notes: a real OpenAI Responses call (#57) and a real `ttl: "1h"` call (#60). Live
+checks that did run: Opus 5.5 with 20 tools (#59), and `nano-banana-2.1` with 8 refs at `2K` (#58). No provider was called
+for this sync.
 
 ## 0.14.1 and 0.14.2 notes
 

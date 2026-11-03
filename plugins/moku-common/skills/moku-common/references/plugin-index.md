@@ -1,12 +1,13 @@
 # @moku-labs/common — Plugin & Property Index
 
-**Synced version:** `0.3.10` (npm `dist-tags.latest`; catalog generated from the `v0.3.10` git tag **source** +
+**Synced version:** `0.3.11` (npm `dist-tags.latest`; catalog generated from the `v0.3.11` git tag **source** +
 the root `README.md` and the per-module READMEs `src/plugins/log/README.md`, `src/plugins/env/README.md`,
 `src/cli/README.md`). Upstream ships **no `llms.txt`**, so the source is the only authority. No regular
 dependencies. One peer dependency: `@moku-labs/core` `^1.7.1` (since 0.3.4; through 0.3.3 it was an exact
 `1.7.0` dependency). The framework that bundles common must install core itself. `0.3.4 → 0.3.5` is a CI
 bump only (`@moku-labs/ci` 1.3.0): no `src/` change. `0.3.6` to `0.3.10` are CI and dev dependencies only
-(a patch release on every merge to `main`, Dependabot, development on Bun 1.4.3): no `src/` change. Engines node ≥24, bun ≥1.3.14.
+(a patch release on every merge to `main`, Dependabot, development on Bun 1.4.3): no `src/` change. `0.3.11` is
+a build change only: the root entry is one file per module, public exports do not change. Engines node ≥24, bun ≥1.3.14.
 `sideEffects: false`, ESM + CJS on `.` and `./cli`, ESM only on `./browser`, types included.
 
 ⚠️ The READMEs and JSDoc disagree with the source in four places. The registry's "source wins" policy applies:
@@ -38,7 +39,9 @@ The family rules MC1–MC3 live in the `moku:moku-common-conventions` skill; loa
 
 `dotenv`, `processEnv` and `cloudflareBindings` share `src/plugins/env/providers.ts`, which imports `node:fs`.
 `workerSafeProcessEnv` (`providers.worker.ts`) and `browserEnv` (`providers.browser.ts`) import nothing from
-`node:*`. The browser entry is built as its own ESM pass so its graph never references the Node module; CI
+`node:*`. Since 0.3.11 the root entry (ESM and CJS) is built as one file per module, so `"sideEffects": false`
+can drop `providers.ts`: a Worker that imports `workerSafeProcessEnv` from `.` no longer carries `node:fs` and
+starts without `nodejs_compat`. The browser entry is built as its own ESM pass so its graph never references the Node module; CI
 asserts zero static `node:` imports and a gzip budget (`bun run check:bundle`). The flat type re-exports exist
 so a framework's inferred `createApp` type can name them (a namespace-only export triggers TS4023).
 

@@ -1,6 +1,6 @@
 # The editor from Claude's browser pane
 
-How Claude runs `@moku-labs/editor@0.10.10` beside a game on `@moku-labs/game@0.14.12` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`, and to the changes of 0.9.1 to 0.10.10; the start in section 1 was run on the template scaffold with editor 0.10.10 and game 0.14.12 (the bin started, both pages answered, no browser opened them). The tools page of 0.10.9 and later was not opened: what this file says about its new controls is read from the editor's source and docs. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
+How Claude runs `@moku-labs/editor@0.10.20` beside a game on `@moku-labs/game@0.15.92` in the chat pane, reads the live game and takes pictures. Synced to the 0.9.0 `llms.txt` and `llms-full.txt`, and to the changes of 0.9.1 to 0.10.20; the start in section 1 was run on the template scaffold with editor 0.10.20 and game 0.15.92 (the bin started, both pages answered, no browser opened them). The tools page of 0.10.9 and later was not opened: what this file says about its new controls is read from the editor's source and docs. When a detail differs from the installed editor, its `README.md` and `llms.txt` win. The
 tools page is built for this: decision D-26 makes the Claude pane at 480 px (one third) or 720 px (half)
 the first-class viewport.
 
@@ -25,9 +25,11 @@ serves it under `.moku/bunfig.toml`. So `generated/` is fresh before the page is
 or strings file is scanned again: the log prints `› keys: <path>`. The game is on `/` with
 Bun hot reload on (`--no-hmr` turns it off), the tools page on `/__editor/`, and the game's files as
 static (manifest, art, sounds; dot folders and `node_modules` refused), answered with `Cache-Control:
-no-store`. `--port 0` takes a free port.
-Bun ≥1.4.2 only. The game must be `@moku-labs/game` 0.13.1 or later: on an older one the bin stops with
-`install @moku-labs/game >=0.13.1 in the game`. It binds `127.0.0.1` only. The game's `dev` script, `moku-game dev`, serves the same page
+no-store`. `--port 0` takes a free port. `--packed` (0.10.18) serves `dist/assets` and starts no keys watch:
+run `moku-game pack` first, and new art shows only after a pack. It stops with `no packed build in
+"<root>/dist/assets"` without one. On a heavy game a switch is far faster with it.
+Bun ≥1.4.2 only. The peer range is `@moku-labs/game >=0.15.0` since editor 0.10.12. A game older than
+0.13.1 stops the bin with `install @moku-labs/game >=0.13.1 in the game`. It binds `127.0.0.1` only. The game's `dev` script, `moku-game dev`, serves the same page
 without the agent and without the tools page.
 
 The startup lines name the project index: `files:project-on {"files":…}` is good. `files:project-off`
@@ -163,6 +165,15 @@ text styles file.
 
 The Flow Inspector has two tabs, Info and Code. Its Styles tab left in 0.10.9 with the palette group
 "Styles". Nothing in the editor writes a style into a file now: edit the file, or apply the pending edits.
+
+**Render is Mission control** (editor 0.10.12). It reads one source: the local preview, or a phone. The bar on
+top shows the source and has Connect device; Scene details holds the old cards (render tree, textures, bundles,
+pools, release log), never read from a phone. Below it are a frame timeline of 6 s, 30 s or 2 min with GC, shader
+and rate marks, a range you drag to inspect, the cards (FPS with a rate switch, frame time, draws, textures, GPU
+passes, memory, device load), Record and Monitoring. The local preview pauses while a phone is the source and
+comes back after. A number it cannot read says not measured, never 0. A Render with no frames reads "Waiting for
+the first frames": the game must be drawing. An agent starts and marks a log with the door tool `editor_record`
+(`{ on?, label?, mark? }`). The phone side is in `device.md`.
 
 ## 4. Read and drive the game by script
 
@@ -345,8 +356,8 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/<yyyy-mm-dd>/serie
   without `audioPlugin` (the hello world) the switch is lit and a press toasts
   "Sound switch failed · [game] The command game.mute needs audioPlugin." Not a finding. Check the flag
   with `doors.read(game, doors.sources.audioMuted)`.
-- **The hub is loopback only** (`127.0.0.1`, Host + Origin + token). A phone or a simulator cannot connect
-  its game page to the tools page. See `device.md`.
+- **The hub is loopback only by default** (`127.0.0.1`, Host + Origin + token). A plain dev page on a phone
+  cannot connect. A debug build can, through device mode: Render's Connect panel or `moku-editor perf`. See `device.md`.
 - **Hidden pane: the game stays paused.** While the pane is hidden the game page is
   `visibilityState: hidden` and the game holds its own pause reason `"background"`. The pill says
   `Paused` and the canvas does not redraw. `game.resume` answers `true`, but the game stays paused: it only

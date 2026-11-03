@@ -2,6 +2,28 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.85.10 (2026-11-03)
+
+### Changed
+- **Family sync to today's npm.** web 2.4.19, worker 0.20.11, room 0.8.18, common 0.3.11, native 0.3.15, game 0.15.92,
+  editor 0.10.20, ai 0.16.13. core 1.7.6 and system 0.3.7 did not move. The registry `knownVersion`, the upgrade
+  "currently" lines and a 2026-11-03 sync note follow.
+- **moku-game:** a section "A game that moves to 0.15", the new engine and editor APIs, validator §12. Breaking for a
+  game: `pixi.js ^8.22.0`, `systemsRun`, `ecs.hold` and `ecs.isActive` removed, guides lock input and own Back, a scene
+  veil on every live switch. The template pins moved; a fresh scaffold passes every check.
+- **moku-room:** `reconnectToken` removed, a reload keeps the room and the seat, `room:host-back`, `joinRoom` returns
+  `full`, `reentryMaxAgeMs`, `register` first because `onIntent` throws, `./server` types.
+- **moku-web:** `data` preload, spa `prefetch`, `shikiLanguages`, `router.match` returns `name`, the client DATA path
+  syncs the whole head.
+- **moku-worker:** `bindings` has no config, and a runtime Worker needs no `nodejs_compat`.
+- **moku-common:** the root entry is one file per module, so a Worker can drop `node:fs`.
+- **moku-native:** Android page bridge, debug and dev profiles, store builds, `gen/` regenerated when the app id changes.
+- **moku-ai:** `anthropic` provider, openai Responses prompt-gen, `nano-banana-2.1`, `cacheTtl`.
+
+### Not run
+- A native build, simulator, device, store or debug build. The editor's MCP tools and `perf`. A real browser or hub for
+  room, a real browser or Worker for web and worker, live provider calls for ai.
+
 ## 0.85.9 (2026-11-03)
 
 ### Fixed

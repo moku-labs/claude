@@ -63,7 +63,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../web",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "2.4.10",
+      "knownVersion": "2.4.19",
       "pack": "moku-web",
       "skill": "plugins/moku-web/skills/moku-web",
       "pluginIndex": "plugins/moku-web/skills/moku-web/references/plugin-index.md",
@@ -86,7 +86,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../worker",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.20.9",
+      "knownVersion": "0.20.11",
       "pack": "moku-worker",
       "skill": "plugins/moku-worker/skills/moku-worker",
       "pluginIndex": "plugins/moku-worker/skills/moku-worker/references/plugin-index.md",
@@ -109,7 +109,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../room",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.8.9",
+      "knownVersion": "0.8.18",
       "pack": "moku-room",
       "skill": "plugins/moku-room/skills/moku-room",
       "pluginIndex": "plugins/moku-room/skills/moku-room/references/plugin-index.md",
@@ -132,7 +132,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../common",
       "layer": 2,
       "role": "shared-infra",
-      "knownVersion": "0.3.10",
+      "knownVersion": "0.3.11",
       "pack": "moku-common",
       "skill": "plugins/moku-common/skills/moku-common",
       "pluginIndex": "plugins/moku-common/skills/moku-common/references/plugin-index.md",
@@ -154,7 +154,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../native",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.3.8",
+      "knownVersion": "0.3.15",
       "pack": "moku-native",
       "skill": "plugins/moku-native/skills/moku-native",
       "pluginIndex": "plugins/moku-native/skills/moku-native/references/plugin-index.md",
@@ -200,7 +200,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../game",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.14.12",
+      "knownVersion": "0.15.92",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -223,7 +223,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../editor",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.10.10",
+      "knownVersion": "0.10.20",
       "pack": "moku-game",
       "skill": "plugins/moku-game/skills/moku-game",
       "pluginIndex": "plugins/moku-game/skills/moku-game/references/plugin-index.md",
@@ -246,7 +246,7 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
       "localClone": "../ai",
       "layer": 2,
       "role": "framework",
-      "knownVersion": "0.16.8",
+      "knownVersion": "0.16.13",
       "pack": "moku-ai",
       "skill": "plugins/moku-ai/skills/moku-ai",
       "pluginIndex": "plugins/moku-ai/skills/moku-ai/references/plugin-index.md",
@@ -265,6 +265,32 @@ llms files and the source disagree, **the source wins** (observed at 1.6.1).
   ]
 }
 ```
+
+> **Family sync 2026-11-03: web 2.4.19, worker 0.20.11, room 0.8.18, common 0.3.11, native 0.3.15, game 0.15.92,
+> editor 0.10.20, ai 0.16.13** (npm `dist-tags.latest`; PR bodies and tag sources). core 1.7.6 and system 0.3.7 did
+> not move. Each pack's `SKILL.md` and `plugin-index.md` hold the details.
+> - **Peers that moved:** game takes `pixi.js ^8.22.0`. editor takes game `>=0.15.0`. worker takes common `^0.3.11`.
+>   core `^1.7.1` did not move. Engines did not move.
+> - **game 0.14.12 → 0.15.92. Breaking:** 0.15.0 only moved the number; the breaks came in 0.14.13 and 0.15.4.
+>   `systemsRun`, `ecs.hold` and `ecs.isActive` are gone, and a system with a `query` skips while a term has no
+>   entity. A guide locks input outside its window and owns Back (0.15.52, 0.15.56). A live scene switch builds
+>   aside and shows a veil (0.15.29, 0.15.40, 0.15.46). `NodeFx` is generic, so tests use `fakeFx`. Reserved names:
+>   the plugin `debug`, `OverlayLevel`, `Now`. The table is in `moku-game/SKILL.md`, "A game that moves to 0.15".
+> - **editor 0.10.10 → 0.10.20:** Mission control reads a phone, `moku-editor --packed`, device safe insets.
+> - **room 0.8.9 → 0.8.18. Breaking:** `RosterEntry.reconnectToken` is removed (0.8.17). `onIntent` throws on an
+>   unregistered name (0.8.13). `@moku-labs/room/server` ships types since 0.8.12, so the older "ships no types"
+>   lines below are history.
+> - **worker 0.20.9 → 0.20.11:** the `bindings` config key `required` is gone; no code read it.
+> - **web 2.4.10 → 2.4.19:** `data` preload, spa `prefetch`, `shikiLanguages`, `router.match` returns `name`, and the
+>   client DATA path syncs the whole head. A tag the sync selectors match must come from `.head()`.
+> - **common 0.3.10 → 0.3.11:** one file per module in the root entry, so a Worker can drop `node:fs`.
+> - **native 0.3.8 → 0.3.15:** Android page bridge, debug and dev profiles, store builds, `gen/` regenerated when the
+>   app id changes.
+> - **ai 0.16.8 → 0.16.13:** `anthropic` provider, openai Responses prompt-gen, `nano-banana-2.1`, `cacheTtl: "1h"`.
+> - **The game template pins** game 0.15.92, editor 0.10.20, core 1.7.6, common 0.3.11, system 0.3.7, native 0.3.15,
+>   `pixi.js` 8.22.0. A fresh scaffold passed install, keys, tests, typecheck, lint, coverage, visual twice and build.
+>   `dev` and the editor started, and the page drew on WebGPU and WebGL. Not run: a native build, simulator, device,
+>   store or debug build, MCP tools, `perf`.
 
 > **Game and editor sync 2026-10-11, second pass: game 0.14.12, editor 0.10.10** (npm `dist-tags.latest`;
 > each read from the diff between the two tags). Peer ranges and engines did not move.

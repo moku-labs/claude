@@ -364,7 +364,7 @@ the block below.
 - **Default:** on
 - **Depends on:** moku-core-version (when the project also depends directly on `@moku-labs/core`)
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/worker` AND its
-  resolved/declared version `< frameworks[worker].knownVersion` in `moku-frameworks.md` (currently `0.20.9`).
+  resolved/declared version `< frameworks[worker].knownVersion` in `moku-frameworks.md` (currently `0.20.11`).
 - **Apply:**
   1. Read `frameworks[worker].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/worker` dependency to that version (preserve the range operator
@@ -398,7 +398,8 @@ the block below.
   NOT add a direct `@moku-labs/core` dependency. Since `0.3.1`, room declares `@moku-labs/worker@^0.15.0` as an
   **optional peer** — needed only by apps that adopt the `./server` signaling tier.)
 - **Detect:** `package.json` dependencies contain `@moku-labs/room` AND its resolved/declared version
-  `< frameworks[room].knownVersion` in `moku-frameworks.md` (currently `0.8.9`).
+  `< frameworks[room].knownVersion` in `moku-frameworks.md` (currently `0.8.18`).
+  Crossing 0.8.13: `onIntent` throws on an unregistered name, so call `register` first. Crossing 0.8.17: `RosterEntry.reconnectToken` is removed.
 - **Apply:**
   1. Read `frameworks[room].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set `@moku-labs/room` to that version (preserve the range operator; default exact).
@@ -431,7 +432,7 @@ the block below.
 - **Default:** on
 - **Depends on:** moku-core-version (when the project also depends directly on `@moku-labs/core`)
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/common` AND its
-  resolved/declared version `< frameworks[common].knownVersion` in `moku-frameworks.md` (currently `0.3.10`).
+  resolved/declared version `< frameworks[common].knownVersion` in `moku-frameworks.md` (currently `0.3.11`).
 - **Apply:**
   1. Read `frameworks[common].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/common` dependency to that version (preserve the range operator
@@ -452,7 +453,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/native` AND its
-  resolved/declared version `< frameworks[native].knownVersion` in `moku-frameworks.md` (currently `0.3.8`).
+  resolved/declared version `< frameworks[native].knownVersion` in `moku-frameworks.md` (currently `0.3.15`).
 - **Apply:**
   1. Read `frameworks[native].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/native` dependency to that version (preserve the range operator
@@ -496,7 +497,9 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/game` AND its
-  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.14.12`).
+  resolved/declared version `< frameworks[game].knownVersion` in `moku-frameworks.md` (currently `0.15.92`).
+  Crossing 0.15: peer `pixi.js ^8.22.0`; `systemsRun`, `ecs.hold` and `ecs.isActive` are gone; guides lock input
+  and own Back; a live scene switch shows a veil. Act on the table in `moku-game/SKILL.md`, "A game that moves to 0.15".
 - **Apply:**
   1. Read `frameworks[game].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/game` dependency to that version (preserve the range operator
@@ -521,12 +524,12 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/editor` AND its
-  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.10.10`).
+  resolved/declared version `< frameworks[editor].knownVersion` in `moku-frameworks.md` (currently `0.10.20`).
 - **Apply:**
   1. Read `frameworks[editor].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/editor` dependency to that version (preserve the range operator
      the project already uses — `^`/`~`/exact; default to exact if none).
-  3. Keep it a devDependency. It peers on `@moku-labs/game >=0.13.1` (since 0.9.5; `>=0.10.0` before) and `typescript >=5.5`, and needs Bun `>=1.4.2` since 0.10.0; apply moku-game-version first. A shell game's script is `moku-editor --root .`, with no HTML file. Keep TypeScript on 6.x in a game: the project index needs the JS API.
+  3. Keep it a devDependency. It peers on `@moku-labs/game >=0.15.0` (since 0.10.12; `>=0.13.1` from 0.9.5) and `typescript >=5.5`, and needs Bun `>=1.4.2` since 0.10.0; apply moku-game-version first. A shell game's script is `moku-editor --root .`, with no HTML file. Keep TypeScript on 6.x in a game: the project index needs the JS API.
   4. `bun install` to resolve.
 - **Verify:** `bunx tsc --noEmit` → `bun run lint` → `bun run test` (+ `bun run build`). On failure →
   **moku-error-diagnostician** (bounded 3 rounds); fix against the pack's
@@ -544,7 +547,7 @@ the block below.
 - **Default:** on
 - **Depends on:** —
 - **Detect:** `package.json` dependencies/devDependencies contain `@moku-labs/ai` AND its
-  resolved/declared version `< frameworks[ai].knownVersion` in `moku-frameworks.md` (currently `0.16.8`).
+  resolved/declared version `< frameworks[ai].knownVersion` in `moku-frameworks.md` (currently `0.16.13`).
 - **Apply:**
   1. Read `frameworks[ai].knownVersion` from `moku-frameworks.md`.
   2. `package.json`: set the `@moku-labs/ai` dependency to that version (preserve the range operator

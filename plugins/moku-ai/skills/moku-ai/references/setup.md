@@ -1,9 +1,9 @@
 # Provider setup: keys and logins
 
-Verified against `@moku-labs/ai@0.16.8` source (`src/index.ts`, `src/plugins/<provider>/README.md`,
+Verified against `@moku-labs/ai@0.16.13` source (`src/index.ts`, `src/plugins/<provider>/README.md`,
 `src/plugins/cli/project-config.ts`). 0.13 and 0.14 add no new env var: `sfx` uses
 `ELEVENLABS_API_KEY` or `FAL_KEY`, `sprite` uses `FAL_KEY`. 0.16.2 adds none either: `music` on
-`elevenlabs` uses `ELEVENLABS_API_KEY`.
+`elevenlabs` uses `ELEVENLABS_API_KEY`. 0.16.10 adds `ANTHROPIC_API_KEY`, needed only for `provider: anthropic`.
 
 ## How keys are read
 
@@ -36,6 +36,7 @@ names as placeholders when asked to scaffold it:
 # .env.local (gitignored)
 FAL_KEY=
 OPENAI_API_KEY=
+ANTHROPIC_API_KEY=
 ELEVENLABS_API_KEY=
 ```
 
@@ -45,6 +46,7 @@ ELEVENLABS_API_KEY=
 |---|---|---|---|
 | `fal` | image, sprite, sfx, video, music, prompt-gen | `FAL_KEY` | fal.ai dashboard, "Keys" page. Sent as `Authorization: Key <FAL_KEY>`. |
 | `openai` | voiceover, translate, prompt-gen | `OPENAI_API_KEY` | platform.openai.com, API keys. |
+| `anthropic` | prompt-gen | `ANTHROPIC_API_KEY` | An Anthropic API key, sent by the official SDK. |
 | `elevenlabs` | voiceover, sfx (default), music | `ELEVENLABS_API_KEY` | elevenlabs.io account, API keys. Sent as the `xi-api-key` header. |
 | `apimodels` | video | `APIMODELS_API_KEY` | apimodels.app account. |
 | `ark` (`intl`) | video, image, asset | `ARK_API_KEY`; assets also `ARK_ACCESS_KEY` + `ARK_SECRET_KEY` | BytePlus ModelArk console. The access and secret key pair is for the signed asset API; a video item without asset refs needs only `ARK_API_KEY`. |
@@ -77,6 +79,17 @@ Error text when the key is missing: `[ai] FAL_KEY is not set.` The item fails be
 
 The chat default model is `gpt-4o-mini`, TTS `gpt-4o-mini-tts`. A `baseUrl` config points the SDK at
 a proxy. A model not in the price table estimates as `$0`: add `priceOverrides` for it.
+Since 0.16.10 prompt-gen calls the Responses API, so a proxy that serves only Chat Completions breaks it. Its
+timeout is `promptGenTimeoutMs` (900000). A missing key on prompt-gen is `PromptGenUnavailableError` with
+`reason: "auth"`, so a `promptGen` fallback chain moves on.
+
+### anthropic
+
+Prompt-gen over the Messages API (0.16.10). Default model `claude-opus-5-5`; the fal id
+`anthropic/claude-opus-5.5` works too. Set `provider: anthropic` on the item, or `{ provider: "anthropic" }` on
+`app.promptGen.generate`: the default `prompt-gen` provider stays `openai`. `pluginConfigs.anthropic` takes `apiKeyEnv`,
+`baseUrl`, `model`, `maxTokens` (32000), `timeoutMs` (900000) and `priceOverrides`. A missing key
+is `PromptGenUnavailableError` with `reason: "auth"`. `app.anthropic.info()` reports whether the key is set.
 
 ### elevenlabs
 
@@ -127,6 +140,9 @@ Then `moku run --max-cost <estimate * 1.2>` for the real batch.
 | Symptom | Cause | Fix |
 |---|---|---|
 | `[ai] FAL_KEY is not set.` | Shell has no key and `.env.local` is not in the cwd | Run `moku` from the folder that holds `.env.local` |
+| `[ai] ANTHROPIC_API_KEY is not set.` | `provider: anthropic` with no key | Add the variable to `.env.local`, or use another prompt-gen provider |
+| `[ai] Anthropic model "<m>" has no price.` | A model outside the bundled table | Use a listed model, or give `anthropic.priceOverrides` all five rates |
+| `[ai] fal request timed out after <n> s: the runtime's socket idle timer, not timeoutMs (<n> s).` | The runtime cut a silent call (0.16.9) | Retried. Bun's timer is off for fal, so look at the runtime or a proxy |
 | Exit 5 at once | `--max-cost` below the first item | Raise the ceiling to the estimate |
 | Item `failed`, 401 or 403 | Wrong or expired key | Replace the value in `.env.local`; the next run adopts the same job |
 | Item `flagged` | Content policy at the provider | Change the prompt; flagged items are never retried |

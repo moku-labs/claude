@@ -13,7 +13,7 @@ description: >
 
 # Moku Common Patterns
 
-> **Synced to `@moku-labs/common@0.3.10`** (npm `dist-tags.latest`; catalog from the `v0.3.10` tag source +
+> **Synced to `@moku-labs/common@0.3.11`** (npm `dist-tags.latest`; catalog from the `v0.3.11` tag source +
 > the root and per-plugin READMEs; upstream ships no `llms.txt`). Full surface — 2 core plugins, 5 env
 > providers, 3 entry points, every config field, API signature and CLI kit export, the data-flow diagram —
 > is in [`references/plugin-index.md`](references/plugin-index.md). Registered in the framework registry
@@ -45,8 +45,8 @@ for consuming it (MC1–MC3) live in the `moku:moku-common-conventions` skill; l
 
 | Layer | Technology |
 |-------|-----------|
-| Package | `@moku-labs/common@0.3.10` — `sideEffects: false`, types included, MIT |
-| `.` entry | dual ESM + CJS, **Node**: `logPlugin`, `envPlugin`, all five providers, the `Log` / `Env` type namespaces and flat plugin types |
+| Package | `@moku-labs/common@0.3.11` — `sideEffects: false`, types included, MIT |
+| `.` entry | dual ESM + CJS, **Node**: `logPlugin`, `envPlugin`, all five providers, the `Log` / `Env` type namespaces and flat plugin types. One file per module since 0.3.11, so a Worker bundle can drop `node:fs` |
 | `./cli` entry | dual ESM + CJS, **Node only** (reads `process.*`, uses `node:readline`): the branded CLI kit |
 | `./browser` entry | ESM only, **browser-safe**: the same `logPlugin` + `envPlugin`, `browserEnv`, the types; zero `node:*` in its static import graph (CI gate `bun run check:bundle`) |
 | Kernel | `@moku-labs/core` `^1.7.1` — a **peer dependency** since 0.3.4 (was an exact `1.7.0` dependency). The framework that bundles common provides core |
@@ -79,7 +79,7 @@ for consuming it (MC1–MC3) live in the `moku:moku-common-conventions` skill; l
 - Do not use `console.*` or `process.env` in plugin source. The rules and their exceptions (`// @log-sink`,
   env providers, tests) are in `moku:moku-common-conventions`.
 
-## Package API (@moku-labs/common v0.3.10)
+## Package API (@moku-labs/common v0.3.11)
 
 ```ts
 // src/config.ts of a Layer-2 framework (Node runtime)

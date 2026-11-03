@@ -1,8 +1,9 @@
 # @moku-labs/worker — Plugin & Property Index
 
-**Synced version:** `0.20.9` (npm `dist-tags.latest`; surface read from the `v0.20.9` git tag's source —
-upstream `llms.txt`/`llms-full.txt` are stale at this tag, the source wins. The `0.15.0 → 0.20.9` delta,
-additive, 9 → **10 plugins**: **0.15.1** the `deploy.dev` watcher drops stale watch-echo batches (a rebuild
+**Synced version:** `0.20.11` (npm `dist-tags.latest`; surface read from the `v0.20.11` git tag's source —
+upstream `llms.txt`/`llms-full.txt` are stale at this tag, for example they still list `bindings.required`;
+the source wins. The `0.15.0 → 0.20.11` delta, 9 → **10 plugins**, additive except the `bindings.required`
+removal in 0.20.11: **0.15.1** the `deploy.dev` watcher drops stale watch-echo batches (a rebuild
 can no longer schedule the next one); **0.16.0** added the **`turn` plugin** (`turnPlugin`) — Cloudflare
 Realtime TURN keys as a declared deploy resource — plus the `"turn"` resource kind on
 `provision:resource`/`provision:skip` and the required **`DeployReport.turn`** field; **0.17.0** moved TURN
@@ -13,7 +14,11 @@ check at preflight, default `"/api/ice"`); **0.20.0** added the `.env.local` key
 **0.20.1**/**0.20.2** are CI and dependency bumps only; **0.20.3** moved `@moku-labs/core` and
 `@moku-labs/common` from `dependencies` to `peerDependencies`, no source change; **0.20.4** is a CI bump
 only (`@moku-labs/ci` 1.3.0), no `src/` change; **0.20.5** to **0.20.9** are CI and dev dependencies only
-(a patch release on every merge to `main`, Dependabot, development on Bun 1.4.3), no `src/` change. Earlier, `0.11.0 → 0.15.0`: **0.12.0 (BREAKING)**
+(a patch release on every merge to `main`, Dependabot, development on Bun 1.4.3), no `src/` change;
+**0.20.10** builds one file per module, so a Worker that lists neither `deployPlugin` nor `cliPlugin` bundles
+no Node built-ins, and raises the `@moku-labs/common` peer to `^0.3.11`; public exports do not change;
+**0.20.11** removes the `bindings.required` config key, which no code read (a stale key is now a type error).
+Earlier, `0.11.0 → 0.15.0`: **0.12.0 (BREAKING)**
 removed the **`stage` plugin** and rebranded the plugin id to **`"worker"`** — deployment stage is now plain
 global config (`config.stage`, read via `ctx.global.stage`), no stage plugin; **0.12.1** sourced the env provider
 `workerSafeProcessEnv` from `@moku-labs/common`; **0.13.0** added the **`deploy --delete`** teardown command
@@ -21,10 +26,10 @@ global config (`config.stage`, read via `ctx.global.stage`), no stage plugin; **
 **0.14.0** added **`endpoint.new(guard)`** — a chainable guard factory; **0.15.0** let guards **enrich** the
 request context (a guard returning an object merges a typed field onto `ctx`). Earlier: `0.11.0` (`#42`)
 removed the `./cli` subpath — `deployPlugin`/`cliPlugin` + the manifest types ship **only** from the package
-root). Since 0.20.3 `@moku-labs/core` (`^1.7.1`) and `@moku-labs/common` (`^0.3.4`) are
-**`peerDependencies`**, no longer bundled `dependencies`: the consumer project installs them, and one copy
-is shared with sibling frameworks. Dev-pinned to core `1.7.1` / common `0.3.4` at the tag (0.20.2 pinned
-`1.6.0` / `0.3.2` as `dependencies`). `common` supplies the `log` + `env` core plugins, plus
+root). Since 0.20.3 `@moku-labs/core` (`^1.7.1`) and `@moku-labs/common` (`^0.3.11` since 0.20.10, `^0.3.4`
+before) are **`peerDependencies`**, no longer bundled `dependencies`: the consumer project installs them, and
+one copy is shared with sibling frameworks. Dev-pinned to core `1.7.6` / common `0.3.11` at the tag (0.20.2
+pinned `1.6.0` / `0.3.2` as `dependencies`). `common` supplies the `log` + `env` core plugins, plus
 `workerSafeProcessEnv`, sourced from it since 0.12.1. `wrangler` is an **optional `peerDependency`** (`>=3`). Engines: node ≥24,
 bun ≥1.3.14.
 
@@ -50,6 +55,12 @@ requests). Deploy/CLI tooling is built from the same model but tree-shaken out o
 > spec-referenced `@moku-labs/worker/worker` subpath never existed). The node-only `deployPlugin`/`cliPlugin`
 > + the manifest types ship from the **root**; they only enter a bundle when a consumer actually lists the
 > plugins in `createApp({ plugins })`.
+>
+> **No Node built-ins in a runtime Worker (since 0.20.10).** `dist` is one file per module, so
+> `"sideEffects": false` can drop the node-only graph. A Worker that lists neither `deployPlugin` nor
+> `cliPlugin` starts without `nodejs_compat`. It needs `@moku-labs/common` ≥0.3.11, which does the same for its
+> root entry. wrangler can still print "wasn't found on the file system" warnings for `node:*`: it prints them
+> before tree shaking, and they do not reach the bundle.
 
 ## API form
 
@@ -104,7 +115,6 @@ export const app = createApp({
   config: { name: "my-api", stage: "production", compatibilityDate: "2026-06-17" },
   plugins: [kvPlugin],                       // bindings + server are defaults — don't re-list
   pluginConfigs: {
-    bindings: { required: ["MY_KV"] },
     // keyed-map: one named instance; `cache` is the implicit default (sole entry).
     kv: { cache: { name: "my-cache", binding: "MY_KV" } },
     server: {
@@ -117,6 +127,7 @@ export const app = createApp({
 });
 // app.kv.get(env, key)            → default instance
 // app.kv.use("cache").get(env, k) → explicit selector (same instance here)
+// app.bindings.require<KVNamespace>(env, "MY_KV") → throws when the binding is missing
 // worker.ts (hand-assembled): export default { fetch: (r, env, ctx) => app.server.handle(r, env, ctx) }
 ```
 
@@ -151,7 +162,10 @@ config (read via `ctx.global.stage`) — the `stage` plugin was removed in 0.12.
 
 **Per-plugin (`pluginConfigs.<name>`):**
 
-- `bindings.required: string[]` (`[]`).
+- `bindings`: **no keys** (`Config = Record<string, never>`). `required` was removed in 0.20.11: no code read
+  it, so it checked nothing, and passing it is now a type error. To require a binding, call
+  `app.bindings.require<T>(env, name)` where you need it: it throws a `[worker]` error when the binding is
+  missing. A check cannot run at `createApp`, because `env` only exists per invocation.
 - `server.endpoints: Endpoint[]` (`[]`).
 - **Keyed-map resource plugins** (config = `Record<key, instance>`, default `{}` — declare at least one
   instance to use the plugin; a sole entry or `default: true` picks the default):

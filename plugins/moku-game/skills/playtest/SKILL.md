@@ -64,7 +64,7 @@ feature belongs in `/moku:plan` and `/moku:build`; say so and stop.
    page; the game has none of its own. A game still on `web/index.html` and `web/main.ts` is the old
    shape: say so in the report and play it with its own `dev` script, but do not migrate it here.
 4. `@moku-labs/editor` in `devDependencies` and an `editor` script that runs `moku-editor --root .`.
-   Missing: add `bun add --exact -d @moku-labs/editor@0.10.10` and the script; say so.
+   Missing: add `bun add --exact -d @moku-labs/editor@0.10.20` and the script; say so.
 
 5. **Editor tools.** `.mcp.json` names the `moku-editor` server and the `mcp__moku-editor__*` tools are
    listed (deferred: load them through ToolSearch with `moku-editor`). Then the editor's MCP tools are
@@ -206,6 +206,9 @@ Run it when DEVICE is set, or when the change touched `native` or `system` in `c
 `.planning/e2e/game/sim-<flow>.png`. Android: `adb install -r`, `adb exec-out screencap`.
 
 A real iPhone needs the user's signing; guide them (`device.md` → Real iPhone), never ask for credentials.
+
+To measure on a phone, build `moku-game native build android --debug` and read it in the editor's Render
+workspace, Mission control (`device.md` → "The editor on a device"). Never report a debug build as the store build.
 
 ## Step 5 — a second opinion (optional)
 
