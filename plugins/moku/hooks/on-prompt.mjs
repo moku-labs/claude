@@ -25,8 +25,21 @@ import { status } from "../lib/rails/commands.mjs";
 import { loadLedger, markPrompt } from "../lib/rails/ledger.mjs";
 import { LOOP_STATIONS } from "../lib/rails/routes.mjs";
 
-/** A person about to sign out, sign in again or move to another account, in English or Russian. */
-const SIGN_IN = /\b(sign(ing|ed)?[\s-]?(in|out)|log(ging|ged)?[\s-]?(in|out)|login|logout|re-?log|account|checkpoint)\b|аккаунт|логин|разлогин|перелогин|войд|вход|выйд|чекпойнт|чекпоинт/i;
+/**
+ * The person is about to change their own Claude sign-in: an explicit first-person or "my account" phrase, a re-login,
+ * a Claude login command, or a request to keep the sessions. Plain "login", "account" or "вход" never match: a login
+ * screen, a user account page or a sign-in form is ordinary app work.
+ */
+const SIGN_IN = [
+  /\b(sign|log)(ging|ged)?[\s-]?(in|on)\s+(again|anew)\b/i,
+  /\b(sign|log)(ging|ged)?[\s-]?in\s+(with|to|under|as)\s+my\s+(\w+\s+)?account\b/i,
+  /\bI('ll|'m| will| am)?\b[^.?!\n]{0,40}\b(another|other|second|different)\s+(claude\s+)?account\b/i,
+  /\b(switch|change|swap)\w*\s+(to\s+)?my\s+(\w+\s+)?account\b|\b(switch|change|swap)\w*\s+(my\s+)?claude\s+accounts?\b/i,
+  /\bre-?log(in)?\b|\bclaude\s+(auth\s+)?(login|logout)\b|(^|\s)\/(login|logout)\b/i,
+  /\bmoku-rails\s+(resume-)?checkpoint\b|\b(save|keep|checkpoint)\s+(all\s+)?(my|the|all|open)\s+(\w+\s+)?sessions\b/i,
+  /перелогин|разлогин|релогин|(войду|зайду|залогинюсь|перейду|переключусь|переключаюсь|выйду|выхожу|сменю|меняю)[^.?!\n]{0,30}аккаунт/i,
+  /claude[^.?!\n]{0,20}аккаунт|аккаунт\w*\s+claude|(сохрани|сохранить|чекпо[йи]нт)\w*\s+(все\s+|мои\s+|открытые\s+)*сесси/i,
+];
 
 const CHECKPOINT_HINT = "The person is about to sign in again. Run `moku-rails checkpoint`, not `pause`: it saves every open moku session on this machine (id, folder, where it stopped, background tasks). If a change is open inside a station, also run `moku-rails pause --reason \"signing in again\"` before you answer, so the turn can end. Then, in your last message, tell them to close the sessions, sign in themselves with `claude auth login`, and run `moku-rails resume-checkpoint`, which prints one `claude --resume <id>` per session. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
 
@@ -61,7 +74,7 @@ if (tweaking) {
 }
 
 // Signing in again ends the sessions: the checkpoint keeps them, a pause keeps only the change
-const signingIn = SIGN_IN.test(prompt);
+const signingIn = SIGN_IN.some((pattern) => pattern.test(prompt));
 
 const report = status({ root, positional: [], flags: {} });
 const changed = statusChanged(root, payload.session_id, report.lines);

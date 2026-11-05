@@ -15,8 +15,9 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   (the newest, or a named file) prints one `claude --resume <id>` per session, `--desktop` for a Code tab session,
   with what moved meanwhile and the tasks to start again. No token, credentials file or Keychain entry is read or
   written, and sessions from other eval and scratch folders are left out (`--include-temp`).
-- **The prompt hook names the checkpoint** when the person says they will sign out, sign in or move to another account
-  (English or Russian), because a model that skips the conductor reached for `pause`, which keeps only the change.
+- **The prompt hook names the checkpoint** when the person says they will change their own sign-in ("I'll sign in with my
+  work account", "перелогинюсь на другой аккаунт", "save my sessions"); a login screen, an account page or a sign-in
+  form in the app never triggers it, because a model that skips the conductor reached for `pause`, which keeps only the change.
   The hint also has the model pause an open change before it answers, so the stop hook does not cut the hand-over.
   New core eval `rails-checkpoint`: 0/3 before the hint, 6/6 after.
 
