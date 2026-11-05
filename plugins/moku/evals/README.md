@@ -106,7 +106,7 @@ claude plugin eval plugins/moku --trust-plugin --no-publish --case conductor-ide
 | `thin-root` | Root files stay thin composition (idiom I4) |
 | `readable-stanzas` | Stanza style: guard first, intent comments |
 | `conductor-idea` | Plain-language idea reaches the conductor and the init station |
-| `conductor-delegates-reading` | A question that needs a dozen files of a 35-file app goes to an `Explore` agent: no shell reads (`cat`, `sed`, `grep`) in the main thread, no change opened, and the flow is explained right. Needs `--scaffold`. |
+| `conductor-delegates-reading` | A question that needs a dozen files of a 35-file app goes to an agent (`Explore`), no change is opened, and the flow is explained right. `tool_used` also counts the subagent's calls, so the main thread's own reads are measured from the kept transcripts, not graded. Needs `--scaffold`. |
 | `rails-no-init` | No code is written into an uninitialized project |
 | `release-first-publish` | Release flow is three commands, no NPM_TOKEN |
 | `tweak-quick-edits` | A run of quick edits opens a size Q change, asks `moku-rails tier`, makes the edit and runs no checks in between. Needs `--scaffold`. |
