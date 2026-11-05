@@ -101,6 +101,67 @@ export function isLaneLink(root) {
 }
 
 /**
+ * Where a lane's link to a shared file points, for a planning file of a worktree: `.planning/decisions.md`
+ * in a lane is a link to the main checkout's `decisions.md`. Claude Code refuses to write a file that is a
+ * link, and the worktree's isolation refuses the main checkout's path, so the write hook applies such a
+ * write itself. Undefined for every other file, a lane's own files included.
+ *
+ * @param {string} root worktree root
+ * @param {string} file path relative to the root
+ * @returns {string | undefined} absolute path of the shared file in the main checkout
+ * @example
+ * sharedFileTarget("/work/site/.claude/worktrees/fix", ".planning/decisions.md"); // "/work/site/.planning/decisions.md"
+ */
+export function sharedFileTarget(root, file) {
+  if (!file.startsWith(".planning/") || !isLaneLink(root)) return undefined;
+
+  let entry;
+  try {
+    entry = join(realpathSync(dirname(join(root, file))), basename(file));
+  } catch {
+    return undefined;
+  }
+
+  const target = linkTarget(entry);
+  if (target === undefined || !SHARED_FILES.includes(basename(file))) return undefined;
+
+  return target.startsWith("/") ? target : join(dirname(entry), target);
+}
+
+/**
+ * Apply a Write or an Edit to a shared planning file the way the tool would: Write replaces the content,
+ * Edit replaces `old_string` once (or everywhere with `replace_all`) and fails when it is missing or not
+ * unique.
+ *
+ * @param {string} target absolute path of the shared file
+ * @param {string} tool "Write" or "Edit"
+ * @param {Record<string, unknown>} input the tool's input
+ * @returns {{ ok: boolean, message: string }}
+ * @example
+ * applySharedWrite("/work/site/.planning/decisions.md", "Edit", { old_string: "a", new_string: "b" }); // { ok: true, ... }
+ */
+export function applySharedWrite(target, tool, input) {
+  if (tool === "Write") {
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, String(input.content ?? ""));
+    return { ok: true, message: `wrote ${target}` };
+  }
+
+  if (!existsSync(target)) return { ok: false, message: `${target} does not exist yet: create it with Write` };
+
+  const text = readFileSync(target, "utf8");
+  const before = String(input.old_string ?? "");
+  const after = String(input.new_string ?? "");
+  const count = before === "" ? 0 : text.split(before).length - 1;
+
+  if (count === 0) return { ok: false, message: `old_string was not found in ${target}` };
+  if (count > 1 && !input.replace_all) return { ok: false, message: `old_string is found ${count} times in ${target}: give more context or set replace_all` };
+
+  writeFileSync(target, input.replace_all ? text.split(before).join(after) : text.replace(before, () => after));
+  return { ok: true, message: `edited ${target}` };
+}
+
+/**
  * The lane folder of a worktree: named after the worktree, with a short hash when another worktree of the
  * same name already owns that folder.
  *
