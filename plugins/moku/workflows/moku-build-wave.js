@@ -100,8 +100,11 @@ log(`Wave${waveNumber === undefined ? '' : ` ${waveNumber}`}: ${plugins.map((p) 
 // no tooling and no spec. A misbehaving builder can still run a repo-wide command (lint:fix,
 // git checkout) that clobbers a sibling's work — that caused real data loss in a prior build — so the
 // prompt's command ban below is the isolation.
-// Complex and VeryComplex plugins go to the deep builder (same instructions, higher effort).
-const DEEP_TIERS = new Set(['Complex', 'VeryComplex'])
+// Only VeryComplex plugins go to the deep builder (same instructions, higher effort): on a Complex plugin
+// the high builder scored the same hidden tests at less than half the cost. Nano and Micro plugins run on
+// Sonnet; the builder stop hook re-runs their tsc and tests, which is what makes that safe.
+const DEEP_TIERS = new Set(['VeryComplex'])
+const SONNET_TIERS = new Set(['Nano', 'Micro'])
 const HARD_RULES =
   ' Filesystem safety — sibling builders run concurrently, so a repo-wide command from you corrupts ' +
   'their work, and unbounded test workers time their tests out: run your tests as ' +
@@ -152,6 +155,7 @@ const results = await pipeline(
         label: `build:${p.name}`,
         phase: 'Build+Verify',
         agentType: DEEP_TIERS.has(p.tier) ? 'moku:moku-builder-deep' : 'moku:moku-builder',
+        ...(SONNET_TIERS.has(p.tier) ? { model: 'sonnet' } : {}),
         schema: BUILD_RESULT,
       },
     )),

@@ -182,7 +182,7 @@ Only this session spawns agents; no agent spawns another.
 
 | Job | Who |
 |---|---|
-| Build a plugin | `moku-builder`; `moku-builder-deep` for tier Complex or VeryComplex, and after one failed attempt |
+| Build a plugin | `moku-builder` by default, any tier; `moku-builder-deep` only for tier VeryComplex and to retry after one failed attempt; `moku-builder` with `model: sonnet` for tier Nano or Micro, a delta of one or two files, or a tests-only unit (the builder stop hook re-runs its unit's tsc and tests, so a fast model cannot hand back a hidden type error). The tier rules are `build-wave-execution.md` → "Picking the builder" |
 | Diagnose a build error | `moku-error-diagnostician`, or `-deep` on the same rule. It returns a diagnosis; you dispatch the fix |
 | Check artifacts after a wave | `moku-verify-artifacts <plugin> --tier <tier> --run --json` (exit 0 pass, 2 fail) |
 | Review a wave's diff | `moku-code-reviewer` |
