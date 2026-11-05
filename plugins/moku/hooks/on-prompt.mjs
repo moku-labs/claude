@@ -10,6 +10,8 @@
  * builders running in the background keep their gate open, and nothing is printed, so the standing and the
  * routing rule appear once per typed message and never on an agent's reply. The one exception: a hand-back
  * that says an agent produced no report gets the one resume instruction.
+ * The standing itself is repeated only when it changed since the session last saw it (here or at session
+ * start, compaction included); the routing rule comes with every typed message.
  * Off the rails: silent, except for one hint when the person names moku.
  */
 
@@ -18,6 +20,7 @@ import { readHookInput } from "../lib/hooks/input.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
 import { isSystemPrompt, promptText } from "../lib/hooks/origin.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
+import { rememberStatus, statusChanged } from "../lib/hooks/seen.mjs";
 import { status } from "../lib/rails/commands.mjs";
 import { loadLedger, markPrompt } from "../lib/rails/ledger.mjs";
 import { LOOP_STATIONS } from "../lib/rails/routes.mjs";
@@ -53,10 +56,12 @@ if (tweaking) {
 }
 
 const report = status({ root, positional: [], flags: {} });
+const changed = statusChanged(root, payload.session_id, report.lines);
+if (changed) rememberStatus(root, payload.session_id, report.lines);
+
 console.log(
   [
-    `Moku rails (${root}):`,
-    ...report.lines,
+    ...(changed ? [`Moku rails (${root}):`, ...report.lines] : [`Moku rails (${root}): standing unchanged since it was last shown (\`moku-rails status\` prints it).`]),
     "Route this request before acting on it. Load the `moku:moku` skill with the Skill tool unless it is already loaded in this conversation, and follow it.",
     "A question needs no routing. Work does: `moku-rails open` for a new change, `moku-rails enter <station>` for the next station, `moku-rails continue` to finish work of the current station, `moku-rails scope \"<what is new>\"` when the person adds something the plan does not cover.",
     "Source writes are refused until one of these ran. Stations run through their skills (brainstorm, design, plan, build, verify, e2e), not by hand.",

@@ -240,6 +240,18 @@ describe("session hook", () => {
 
     assert.match(hook("session-rails.mjs", { cwd: root }).out, /Rails: clean/);
   });
+
+  it("gives the standing again after a compaction, and the next prompt does not repeat it", () => {
+    const root = project({ initialized: true });
+    hook("on-prompt.mjs", { cwd: root, session_id: "s-1", prompt: "first" });
+
+    const compacted = hook("session-rails.mjs", { cwd: root, session_id: "s-1", source: "compact" }).out;
+    const next = hook("on-prompt.mjs", { cwd: root, session_id: "s-1", prompt: "go on" }).out;
+
+    assert.match(compacted, /after compaction[\s\S]*Rails: clean/);
+    assert.doesNotMatch(next, /Rails: clean/);
+    assert.match(next, /standing unchanged/);
+  });
 });
 
 describe("git worktree", () => {
@@ -473,6 +485,23 @@ describe("prompt hook on the rails", () => {
     assert.equal(refused.code, 2);
     assert.match(refused.err, /not been routed/);
     assert.equal(hook("pre-write.mjs", write(root, "src/main.ts")).code, 0);
+  });
+
+  it("repeats the standing only when it changed; the routing rule comes every time", () => {
+    const root = project({ initialized: true });
+    const ask = (session) => hook("on-prompt.mjs", { cwd: root, session_id: session, prompt: "next" }).out;
+
+    const first = ask("s-1");
+    const same = ask("s-1");
+    rails(root, "idea", "a streak counter");
+    const changed = ask("s-1");
+
+    assert.match(first, /Rails: clean/);
+    assert.doesNotMatch(same, /Rails: clean/);
+    assert.match(same, /standing unchanged[\s\S]*Route this request/);
+    assert.match(changed, /Backlog: 1 idea/);
+    assert.match(ask("s-2"), /Rails: clean/, "another session has seen nothing yet");
+    assert.match(hook("on-prompt.mjs", { cwd: root, prompt: "no session id" }).out, /Rails: clean/);
   });
 
   it("stays silent when the user turned the rails off", () => {
