@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn, spawnSync } from "node:child_process";
-import { appendFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -507,6 +507,43 @@ describe("prompt hook on the rails", () => {
     ];
 
     for (const prompt of prompts) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }).out, /checkpoint/, prompt);
+  });
+
+  it("reads \"save the work\" as the checkpoint only beside the sessions or a sign-in", () => {
+    const root = project({ initialized: true });
+    const env = { MOKU_HOME: join(mkdtempSync(join(tmpdir(), "moku-home-")), "moku") };
+    const saves = [
+      "сохрани работу и сессии, я перелогинюсь",
+      "сохрани работу перед выходом из аккаунта",
+      "перед перелогином сохрани всё",
+      "save my work and the sessions before I log out",
+    ];
+    const plain = ["сохрани работу", "сохрани прогресс в файл сейвов игры", "save the work and commit it"];
+
+    for (const prompt of saves) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails checkpoint`, not `pause`/, prompt);
+    for (const prompt of plain) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /checkpoint/, prompt);
+  });
+
+  it("names resume-checkpoint for \"restore the sessions\" only while a recent checkpoint is on the machine", () => {
+    const root = project({ initialized: true });
+    const home = join(mkdtempSync(join(tmpdir(), "moku-home-")), "moku");
+    const env = { MOKU_HOME: home };
+    const prompts = ["восстанови работу и сессии", "в новой сессии восстанови сессии", "продолжи сессии после логина", "restore my sessions"];
+
+    for (const prompt of prompts) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /resume-checkpoint/, `no checkpoint: ${prompt}`);
+
+    const dir = join(dirname(home), "moku-checkpoints");
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, "2026-11-05T20-00-00Z.json");
+    writeFileSync(file, "{}\n");
+
+    for (const prompt of prompts) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails resume-checkpoint/, prompt);
+    assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "восстанови сессии" }, env).out, /moku-rails resume-checkpoint/, "off the rails");
+    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "добавь счётчик серий" }, env).out, /resume-checkpoint/);
+
+    const old = (Date.now() - 49 * 3_600_000) / 1000;
+    utimesSync(file, old, old);
+    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "восстанови сессии" }, env).out, /resume-checkpoint/, "stale checkpoint");
   });
 
   it("closes the free pass: an open change inside build does not admit a new request until it is routed", () => {
