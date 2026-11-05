@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -11,7 +11,8 @@ const RAILS = join(PLUGIN, "bin", "moku-rails");
 
 /** Run a hook script with a JSON payload on stdin. */
 function hook(name, payload, env = {}) {
-  const run = spawnSync("node", [join(PLUGIN, "hooks", name)], { input: JSON.stringify(payload), encoding: "utf8", env: { ...process.env, ...env } });
+  // The stop hook's wait for a late hand-back is its own test; elsewhere a missing report blocks at once
+  const run = spawnSync("node", [join(PLUGIN, "hooks", name)], { input: JSON.stringify(payload), encoding: "utf8", env: { ...process.env, MOKU_HANDBACK_WAIT_MS: "0", ...env } });
   return { code: run.status, out: run.stdout, err: run.stderr };
 }
 
@@ -749,6 +750,36 @@ describe("a report handed back through SubagentHandback", () => {
     const result = stopAfter(root, [prompt("Build the ui plugin."), handback(contract), delivered, prompt("New work: apply finding 1."), said("I will look at it.")], { last_assistant_message: "I will look at it." });
 
     assert.equal(JSON.parse(result.out).decision, "block");
+  });
+
+  it("is found when it reaches the transcript just after the stop: the agent is not blocked", async () => {
+    const root = project({ initialized: true });
+    const transcript = join(root, "agent.jsonl");
+    writeFileSync(transcript, `${JSON.stringify(prompt("Build the ui plugin."))}\n`);
+
+    const child = spawn("node", [join(PLUGIN, "hooks", "on-subagent-stop.mjs")], { env: { ...process.env, MOKU_HANDBACK_WAIT_MS: "2000" } });
+    let out = "";
+    child.stdout.on("data", (chunk) => (out += chunk));
+    child.stdin.end(JSON.stringify({ cwd: root, agent_id: "agent-1", agent_type: "moku:moku-builder-deep", stop_hook_active: false, last_assistant_message: "", agent_transcript_path: transcript }));
+    setTimeout(() => appendFileSync(transcript, `${JSON.stringify(handback(contract))}\n${JSON.stringify(delivered)}\n`), 300);
+    await new Promise((resolve) => child.on("close", resolve));
+
+    assert.equal(out, "");
+    assert.equal(existsSync(join(root, ".planning", "build", "stop-diagnostics.jsonl")), false, "no block, no diagnostic");
+  });
+
+  it("a block leaves one diagnostic line: payload keys and transcript size, none of the content", () => {
+    const root = project({ initialized: true });
+
+    stopAfter(root, [prompt("Build the secret plugin."), handback("All done, it works.")]);
+
+    const lines = readFileSync(join(root, ".planning", "build", "stop-diagnostics.jsonl"), "utf8").trim().split("\n");
+    const line = JSON.parse(lines[0]);
+    assert.equal(lines.length, 1);
+    assert.deepEqual(line.keys, ["agent_id", "agent_transcript_path", "agent_type", "cwd", "last_assistant_message", "stop_hook_active"]);
+    assert.equal(line.handBackSeen, true);
+    assert.ok(line.transcriptAtStop > 0 && line.transcriptAtBlock === line.transcriptAtStop);
+    assert.doesNotMatch(lines[0], /secret|All done|reconcile/);
   });
 
   it("without the contract is still no report, and so is a transcript that cannot be read", () => {
