@@ -19,7 +19,7 @@ moku-rails status --json
 pwd && ls -A | head -30
 ```
 
-`data.onRails` true means the session already exists: say so in one line and go to step 4.
+`data.onRails` true means the session already exists: say so in one line and go to step 4, after step 3's adopt check.
 
 ## 2. Settle the directory
 
@@ -44,6 +44,14 @@ moku-rails session start --root "/absolute/path/to/project"
 ```
 
 The command creates the directory when it is new and writes an empty ledger, `.planning/state.json`. It scaffolds nothing; that is the init station's work. Repeating it is harmless.
+
+When its output, or `data.adoptable` of `status --json`, says the directory holds a moku project that is not initialized here, the project was made elsewhere: `.planning/` is local and never committed, so a fresh clone and a second person have none. Adopt it, never init it:
+
+```bash
+moku-rails adopt --root "/absolute/path/to/project"
+```
+
+`adopt` writes the missing parts of `.planning/` (the ledger and the `moku.md` marker) from what the repository shows, and touches no other file. Repeating it changes nothing. Say in one line that the existing project was adopted.
 
 Then allow the commands the session runs all the time, so the person is not asked for each one: the read-only ones (`moku-rails status`, `git diff`, `grep` and the like), the ledger moves (`moku-rails continue`, `enter`, `done` and the like) and edits inside `.planning/`. Nothing that pushes, deletes, installs, reaches the network or writes source. It merges them into `.claude/settings.local.json` and touches no other rule. Say so in one line in the hand-over, and that `/permissions` removes them:
 

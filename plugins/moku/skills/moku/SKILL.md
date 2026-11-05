@@ -49,6 +49,7 @@ Stations run through their skills, with the Skill tool. You do not write source 
 |---|---|
 | A question | Answer it. No change is opened. |
 | An idea for later | `moku-rails idea "<text>"`, confirm it is kept, carry on. |
+| Work in a directory that holds moku code but no `.planning/moku.md` (a fresh clone, a second person's checkout; `moku-rails status` says "Next step: `moku-rails adopt`") | Run `moku-rails adopt`. It writes only `.planning/` from what the repository shows and touches no other file. Never run init here: init rewrites the tooling. Then classify the request as usual. |
 | Work on a project that does not exist yet | A short intake: two to four questions that decide the project type. Then propose creating the project and wait for a yes. Init comes before brainstorm and design, so everything after it lands in a real project. Then open the first change (type `project`). |
 | A fix, tweak, feature or refactor | Look at the code briefly, pick type and size, open a change. |
 | A run of small edits they want to see at once ("move this", "recolor that", "make it like the reference", a list of nudges) | Open a size Q change and run the `moku:tweak` skill. Each edit is made at once, and the checks run one time at the end. |
@@ -134,7 +135,8 @@ Whoever writes, changes or removes a test follows `${CLAUDE_PLUGIN_ROOT}/skills/
 
 | Station | Skill | Notes |
 |---|---|---|
-| init (project level) | `moku:init` | Required before any station past design. It runs `moku-rails init begin` and `init done` itself and leaves `.planning/moku.md`. |
+| adopt (project level) | none, `moku-rails adopt` | Instead of init, for a project that exists in the repository with no `.planning/` here. Idempotent. |
+| init (project level) | `moku:init` | Required before any station past design, in a project that does not exist yet. It runs `moku-rails init begin` and `init done` itself and leaves `.planning/moku.md`. |
 | intake | none, this conversation | Opening the change is the intake: `moku-rails open` marks it done. Record what, why and size in `.planning/changes/<id>/intake.md`. |
 | brainstorm | `moku:brainstorm` | For L, or when the person is unsure what they want. |
 | design | `moku-design:design` | Allowed before init. Modes: `ui` (screens), `api` (usage-first type sketch), `architecture` (diagrams). Ask which ones apply. |

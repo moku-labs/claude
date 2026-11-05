@@ -38,16 +38,21 @@ import { basename, dirname, join, resolve } from "node:path";
  * worktree is a lane of its own: `changes` holds the changes opened in this lane and `turn` is this lane's
  * last request. What the other lanes hold is in `elsewhere`, to read and never to edit.
  *
- * @typedef {{ version: 1, changes: Change[], ideas: string[], activatedAt?: string, turn?: Turn, elsewhere?: Change[] }} Ledger
+ * @typedef {{ version: 2, milestone: string | null, changes: Change[], ideas: string[], activatedAt?: string, turn?: Turn, elsewhere?: Change[] }} Ledger
  */
 
 /**
  * The file on disk: every lane's changes in one list, and one last request per lane. The main checkout's
  * request stays in `turn`, where it always was, so a ledger written before lanes existed reads the same.
  * The commit the tests last passed on is kept the same way: `testsGreenAt` and `testsGreenAtIn`.
+ * `version` is the schema of the file, `LEDGER_VERSION`; an older file is migrated when it is read.
+ * `milestone` names the milestone the project works toward, or null while it has none.
  *
- * @typedef {{ version: 1, changes: Change[], ideas: string[], activatedAt?: string, turn?: Turn, turns?: Record<string, Turn>, testsGreenAt?: string, testsGreenAtIn?: Record<string, string> }} LedgerFile
+ * @typedef {{ version: 2, milestone: string | null, changes: Change[], ideas: string[], activatedAt?: string, turn?: Turn, turns?: Record<string, Turn>, testsGreenAt?: string, testsGreenAtIn?: Record<string, string> }} LedgerFile
  */
+
+/** The schema of `state.json`. 1: no `milestone`. 2: `milestone`, null until one is set. */
+export const LEDGER_VERSION = 2;
 
 /** The lane of the main checkout. */
 const MAIN_LANE = "";
@@ -74,7 +79,8 @@ export function loadLedger(root) {
   const file = readLedgerFile(root);
 
   return {
-    version: 1,
+    version: LEDGER_VERSION,
+    milestone: file.milestone,
     changes: file.changes.filter((change) => inLane(change, lane)),
     ideas: file.ideas,
     ...(file.activatedAt ? { activatedAt: file.activatedAt } : {}),
@@ -136,12 +142,29 @@ function readLedgerFile(root) {
 
   // A corrupt ledger must never crash a hook: a crashed hook lets every write through unchecked
   try {
-    return JSON.parse(readFileSync(file, "utf8"));
+    return migrate(JSON.parse(readFileSync(file, "utf8")));
   } catch {
     renameSync(file, `${file}.corrupt`);
     console.error(`moku rails: ${LEDGER_FILE} was not valid JSON. It was moved to ${LEDGER_FILE}.corrupt and a fresh ledger was started.`);
     return emptyLedger();
   }
+}
+
+/**
+ * Bring a ledger of any earlier schema to `LEDGER_VERSION`. Version 1, and a file with no version at all,
+ * had no `milestone`: it reads as null. Nothing else moves, so the next save writes the file as version 2.
+ *
+ * @param {Record<string, unknown>} raw the parsed file
+ * @returns {LedgerFile}
+ * @example
+ * migrate({ version: 1, changes: [], ideas: [] }); // { version: 2, milestone: null, changes: [], ideas: [] }
+ */
+export function migrate(raw) {
+  const changes = Array.isArray(raw.changes) ? raw.changes : [];
+  const ideas = Array.isArray(raw.ideas) ? raw.ideas : [];
+  const milestone = typeof raw.milestone === "string" ? raw.milestone : null;
+
+  return /** @type {LedgerFile} */ ({ ...raw, version: LEDGER_VERSION, milestone, changes, ideas });
 }
 
 /**
@@ -173,7 +196,7 @@ function greenOf(file, lane) {
 
 /** @returns {Ledger} */
 function emptyLedger() {
-  return { version: 1, changes: [], ideas: [] };
+  return { version: LEDGER_VERSION, milestone: null, changes: [], ideas: [] };
 }
 
 /**
@@ -225,7 +248,7 @@ export function saveLedger(root, ledger) {
 
     // This lane's changes come from the caller, every other lane's from the file
     const mine = ledger.changes.map((change) => (lane === MAIN_LANE ? change : { ...change, worktree: lane }));
-    const merged = { ...disk, version: 1, changes: [...disk.changes.filter((change) => !inLane(change, lane)), ...mine], ideas: ledger.ideas };
+    const merged = { ...disk, version: LEDGER_VERSION, milestone: ledger.milestone === undefined ? disk.milestone : ledger.milestone, changes: [...disk.changes.filter((change) => !inLane(change, lane)), ...mine], ideas: ledger.ideas };
     if (ledger.activatedAt) merged.activatedAt = ledger.activatedAt;
 
     // And the same for the last request

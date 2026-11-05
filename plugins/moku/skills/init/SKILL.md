@@ -1,7 +1,7 @@
 ---
 name: init
 description: Scaffolds a new Moku project — tooling, directory skeleton, release plumbing and the .planning/moku.md marker the lifecycle rails read. Use once per project, before any change is opened, when the user asks to start, set up or initialize a Moku framework, app or library.
-when_to_use: Starting a new Moku project, or bringing Moku tooling into a directory that has none. Not for changing an already-initialized project.
+when_to_use: Starting a new Moku project, or bringing Moku tooling into a directory that has none. Not for changing an already-initialized project, and not for a moku project that only lacks `.planning/` (a fresh clone): that one takes `moku-rails adopt`.
 argument-hint: natural language, or [project-path]
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, AskUserQuestion
 model: fable
@@ -14,6 +14,14 @@ effort: medium
 is what makes the rails usable at all. Its last act is writing `.planning/moku.md`, the marker
 `moku-rails` reads to answer "is this project initialized?". Writing it last means a half-finished
 init never looks finished.
+
+## An existing project is adopted, not initialized
+
+Before anything else, run `moku-rails status --json`. When `data.adoptable` names a type, the directory
+already holds a moku project and only `.planning/` is missing: a fresh clone, or a second person's
+checkout. Do not scaffold over it. Run `moku-rails adopt --root "$ABSOLUTE_PROJECT_PATH"`, which writes
+only `.planning/`, say so in one line and hand back to the conductor. On an empty folder `adoptable` is
+absent and init goes on as below.
 
 ## Rails first and last
 

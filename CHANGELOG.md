@@ -2,6 +2,24 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.86.0 (2026-11-05)
+
+### Added
+- **`moku-rails adopt` puts an existing project on the rails.** `.planning/` is local and never committed, so a
+  fresh clone or a second person's checkout of a moku project had none, and init would rewrite its tooling. With
+  no id, `adopt` reads what the repository shows (type, name, `@moku-labs/*` packages and versions, plugin
+  folders) and writes the missing `state.json` and `moku.md` marker. It touches no file outside `.planning/`,
+  keeps every part of `.planning/` that exists, and running it again changes nothing. Refused in a folder with no
+  moku code (next step: init) and while init is scaffolding. `--type` sets the type when the signs mislead.
+  `adopt <id>` still moves a change between worktrees.
+- **`status` and `session start` name adopt.** In a directory with moku code and no marker they say "Next step:
+  `moku-rails adopt`" and set `data.adoptable`. The conductor, `moku:session` and `moku:init` adopt there
+  instead of initializing; on an empty folder init runs as before.
+
+### Changed
+- **`state.json` schema version 2.** `version` is the schema, and the new field `milestone` is null until a
+  milestone is set. A version 1 file, or one with no version, is migrated when it is read and saved as version 2.
+
 ## 0.85.11 (2026-11-05)
 
 ### Fixed
