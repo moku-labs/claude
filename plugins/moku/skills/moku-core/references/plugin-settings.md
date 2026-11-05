@@ -14,7 +14,7 @@ settings. Claude Code exposes each value to hooks as `CLAUDE_PLUGIN_OPTION_<NAME
 | Option | Type | Default | What it does |
 |---|---|---|---|
 | `rails` | `strict` · `warn` · `off` | `strict` | `strict` blocks a source write that skips a lifecycle station, `warn` only prints the reason, `off` disables the write guard. Read by `hooks/pre-write.mjs` as `CLAUDE_PLUGIN_OPTION_RAILS`. |
-| `max_parallel_agents` | number 1–8 | `3` | How many builder or validator agents the orchestrating session may run at once. |
+| `max_parallel_agents` | number 1–8 | `5` | How many builder or validator agents the orchestrating session may run at once. Each builder runs its tests with `--maxWorkers=2`, so five of them stay inside the 5 s test timeout on one machine. |
 
 ### Design pack (`moku-design`)
 
@@ -46,7 +46,7 @@ Anything about this repository's moku setup worth keeping next to the settings.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `maxParallelAgents` | 3 | Overrides `max_parallel_agents` for this project. |
+| `maxParallelAgents` | 5 | Overrides `max_parallel_agents` for this project. |
 | `gapClosureMaxRounds` | 2 | Fix attempts before a gap goes back to the user. |
 | `autoFormat` | true | Run `bun run format` after edits. |
 | `bundleSizeTarget.js` | 8 | JS bundle target in KB, gzipped. |

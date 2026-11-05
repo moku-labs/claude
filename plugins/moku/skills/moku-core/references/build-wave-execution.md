@@ -67,7 +67,8 @@ On the first, `git switch -c build/{target-slug}`. Later waves are already safe.
    The `building` status is what makes a crash detectable on the next resume.
 
 Then spawn one builder per plugin, in parallel, up to `maxParallelAgents` (default 5); larger waves
-run in batches of that size. Sub-agents have their own context, so fan-out width costs you only the
+run in batches of that size. Each builder runs its tests with `--maxWorkers=2` (`builder.md`): six
+unbounded Vitest runs on one machine timed tests out at 5 s, so the width is safe only with that cap. Sub-agents have their own context, so fan-out width costs you only the
 summaries they return.
 
 **Tell the user where you are:** the plugin list before spawning, each plugin as it returns, the

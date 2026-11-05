@@ -34,6 +34,7 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 - Leave framework files alone — `src/config.ts`, `src/index.ts`, `src/plugins/index.ts`, `package.json`, build and tsconfig files. The orchestrator wires your plugin in after verification. A new dependency goes in the contract, not in `package.json`.
 - The orchestrator commits after verification, so do not commit and do not run `git add`.
 - Repo-wide commands (`eslint .`, `oxlint .`, project-wide `tsc`, a test run with no path) disturb the other builders. Scope everything to your directory.
+- Never install a tool the project lacks. Run `biome`, `oxlint`, `eslint`, `tsc` and `vitest` only when `node_modules/.bin/<tool>` exists: no `bun add`, no `npm i`, and no `bunx` or `npx` of a package that is not installed, because `bunx` downloads it. A missing test runner leaves no way to work test-first: stop, and report it in `blockers` with `verdict: FAIL` before you write code. A missing linter or `tsc`: skip that check, name it in `blockers` (`"fix": "the orchestrator installs <tool>"`) and go on with the rest.
 - Obey the Moku Code Rules R1–R9, `skeleton-conventions.md` and `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/jsdoc-examples.md`.
 - API method docs go on the members of the `Api` type in `types.ts`, with a scenario `@example`; the implementation in `api.ts` carries none. Before writing an `@example`, read the real signature and a test that asserts the result. Never echo the signature (`const api = createApi(ctx);`). API means public: every `Api` member gets a true example, with no `@remarks No example` way out. When the real caller is another plugin, write the example from that plugin's side with `ctx.require`. When no honest example exists, do not invent one: report the member in `blockers` as an API finding — move it off the API into a plain function, or delete it.
 
@@ -45,7 +46,7 @@ Which tests to write is `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/te
 
 **Greenfield:**
 1. Write the unit and integration tests first, in `src/plugins/{name}/__tests__/`.
-2. Run them and confirm they fail, with the project's test runner: `bunx vitest run src/plugins/{name}/` when `package.json` depends on `vitest` (the Moku default), otherwise `bun test src/plugins/{name}/`. Bun's own runner has no `vi.stubGlobal` and no `expectTypeOf(...).parameter`, so it fails Vitest suites that are green.
+2. Run them and confirm they fail, with the project's test runner: `bunx vitest run src/plugins/{name}/ --maxWorkers=2` when `package.json` depends on `vitest` (the Moku default), otherwise `bun test src/plugins/{name}/`. The worker cap is not optional: sibling builders run their tests at the same time, and unbounded workers from five of them time tests out. Bun's own runner has no `vi.stubGlobal` and no `expectTypeOf(...).parameter`, so it fails Vitest suites that are green.
 3. Implement the domain files (state, api, handlers, types) until they pass.
 4. The kill check: for each logic file, break one line the way a bug would, run that file's tests once, restore the line. A test must fail; if none does, close the hole and break it again. At most eight per plugin. The last test run happens after the last restore.
 5. Keep `index.ts` to wiring only (R3).
@@ -76,7 +77,7 @@ skill).
 ```bash
 biome check src/plugins/{name}/
 oxlint src/plugins/{name}/      # current stack; legacy stack: eslint src/plugins/{name}/
-bunx vitest run src/plugins/{name}/   # `bun test src/plugins/{name}/` when the project has no vitest; skip it when this command was green and you edited nothing since
+bunx vitest run src/plugins/{name}/ --maxWorkers=2   # `bun test src/plugins/{name}/` when the project has no vitest; skip it when this command was green and you edited nothing since
 bunx tsc --noEmit               # when it is cheap; otherwise the orchestrator runs it
 ```
 

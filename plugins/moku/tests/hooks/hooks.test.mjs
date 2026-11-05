@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { spawnSync } from "node:child_process";
-import { existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { appendFileSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readlinkSync, realpathSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -11,7 +11,8 @@ const RAILS = join(PLUGIN, "bin", "moku-rails");
 
 /** Run a hook script with a JSON payload on stdin. */
 function hook(name, payload, env = {}) {
-  const run = spawnSync("node", [join(PLUGIN, "hooks", name)], { input: JSON.stringify(payload), encoding: "utf8", env: { ...process.env, ...env } });
+  // The stop hook's wait for a late hand-back is its own test; elsewhere a missing report blocks at once
+  const run = spawnSync("node", [join(PLUGIN, "hooks", name)], { input: JSON.stringify(payload), encoding: "utf8", env: { ...process.env, MOKU_HANDBACK_WAIT_MS: "0", ...env } });
   return { code: run.status, out: run.stdout, err: run.stderr };
 }
 
@@ -238,6 +239,18 @@ describe("session hook", () => {
     const root = project({ initialized: true });
 
     assert.match(hook("session-rails.mjs", { cwd: root }).out, /Rails: clean/);
+  });
+
+  it("gives the standing again after a compaction, and the next prompt does not repeat it", () => {
+    const root = project({ initialized: true });
+    hook("on-prompt.mjs", { cwd: root, session_id: "s-1", prompt: "first" });
+
+    const compacted = hook("session-rails.mjs", { cwd: root, session_id: "s-1", source: "compact" }).out;
+    const next = hook("on-prompt.mjs", { cwd: root, session_id: "s-1", prompt: "go on" }).out;
+
+    assert.match(compacted, /after compaction[\s\S]*Rails: clean/);
+    assert.doesNotMatch(next, /Rails: clean/);
+    assert.match(next, /standing unchanged/);
   });
 });
 
@@ -472,6 +485,23 @@ describe("prompt hook on the rails", () => {
     assert.equal(refused.code, 2);
     assert.match(refused.err, /not been routed/);
     assert.equal(hook("pre-write.mjs", write(root, "src/main.ts")).code, 0);
+  });
+
+  it("repeats the standing only when it changed; the routing rule comes every time", () => {
+    const root = project({ initialized: true });
+    const ask = (session) => hook("on-prompt.mjs", { cwd: root, session_id: session, prompt: "next" }).out;
+
+    const first = ask("s-1");
+    const same = ask("s-1");
+    rails(root, "idea", "a streak counter");
+    const changed = ask("s-1");
+
+    assert.match(first, /Rails: clean/);
+    assert.doesNotMatch(same, /Rails: clean/);
+    assert.match(same, /standing unchanged[\s\S]*Route this request/);
+    assert.match(changed, /Backlog: 1 idea/);
+    assert.match(ask("s-2"), /Rails: clean/, "another session has seen nothing yet");
+    assert.match(hook("on-prompt.mjs", { cwd: root, prompt: "no session id" }).out, /Rails: clean/);
   });
 
   it("stays silent when the user turned the rails off", () => {
@@ -751,6 +781,36 @@ describe("a report handed back through SubagentHandback", () => {
     assert.equal(JSON.parse(result.out).decision, "block");
   });
 
+  it("is found when it reaches the transcript just after the stop: the agent is not blocked", async () => {
+    const root = project({ initialized: true });
+    const transcript = join(root, "agent.jsonl");
+    writeFileSync(transcript, `${JSON.stringify(prompt("Build the ui plugin."))}\n`);
+
+    const child = spawn("node", [join(PLUGIN, "hooks", "on-subagent-stop.mjs")], { env: { ...process.env, MOKU_HANDBACK_WAIT_MS: "2000" } });
+    let out = "";
+    child.stdout.on("data", (chunk) => (out += chunk));
+    child.stdin.end(JSON.stringify({ cwd: root, agent_id: "agent-1", agent_type: "moku:moku-builder-deep", stop_hook_active: false, last_assistant_message: "", agent_transcript_path: transcript }));
+    setTimeout(() => appendFileSync(transcript, `${JSON.stringify(handback(contract))}\n${JSON.stringify(delivered)}\n`), 300);
+    await new Promise((resolve) => child.on("close", resolve));
+
+    assert.equal(out, "");
+    assert.equal(existsSync(join(root, ".planning", "build", "stop-diagnostics.jsonl")), false, "no block, no diagnostic");
+  });
+
+  it("a block leaves one diagnostic line: payload keys and transcript size, none of the content", () => {
+    const root = project({ initialized: true });
+
+    stopAfter(root, [prompt("Build the secret plugin."), handback("All done, it works.")]);
+
+    const lines = readFileSync(join(root, ".planning", "build", "stop-diagnostics.jsonl"), "utf8").trim().split("\n");
+    const line = JSON.parse(lines[0]);
+    assert.equal(lines.length, 1);
+    assert.deepEqual(line.keys, ["agent_id", "agent_transcript_path", "agent_type", "cwd", "last_assistant_message", "stop_hook_active"]);
+    assert.equal(line.handBackSeen, true);
+    assert.ok(line.transcriptAtStop > 0 && line.transcriptAtBlock === line.transcriptAtStop);
+    assert.doesNotMatch(lines[0], /secret|All done|reconcile/);
+  });
+
   it("without the contract is still no report, and so is a transcript that cannot be read", () => {
     const root = project({ initialized: true });
 
@@ -992,5 +1052,48 @@ describe("the Agent hook reads the response the harness really passes", () => {
     const result = agentHook(root, finished("Reviewed 12 files. (output marked as partial: the agent reached its maxTurns limit)"));
 
     assert.match(context(result), /It stopped at its turn limit\. .*Resume the agent exactly once/);
+  });
+});
+
+describe("the read-only allow-list", () => {
+  const script = join(PLUGIN, "lib", "hooks", "allow-list.mjs");
+
+  it("is merged into the project's local settings, keeps the rules there, and adds nothing twice", async () => {
+    const { READ_ONLY_ALLOW } = await import(script);
+    const root = mkdtempSync(join(tmpdir(), "moku-allow-"));
+    mkdirSync(join(root, ".claude"));
+    writeFileSync(join(root, ".claude", "settings.local.json"), JSON.stringify({ permissions: { allow: ["Bash(bun run:*)"], deny: ["Bash(rm:*)"] }, env: { A: "1" } }));
+
+    const first = spawnSync("node", [script, "--root", root], { encoding: "utf8" }).stdout;
+    const second = spawnSync("node", [script, "--root", root], { encoding: "utf8" }).stdout;
+    const settings = JSON.parse(readFileSync(join(root, ".claude", "settings.local.json"), "utf8"));
+
+    assert.match(first, new RegExp(`${READ_ONLY_ALLOW.length} rule`));
+    assert.match(second, /already allowed/);
+    assert.deepEqual(settings.permissions.allow, ["Bash(bun run:*)", ...READ_ONLY_ALLOW]);
+    assert.deepEqual(settings.permissions.deny, ["Bash(rm:*)"]);
+    assert.equal(settings.env.A, "1");
+  });
+
+  it("holds no command that can write, and init's template allows every one of them", async () => {
+    const { READ_ONLY_ALLOW } = await import(script);
+    const template = readFileSync(join(PLUGIN, "skills", "moku-core", "references", "tooling-config.md"), "utf8");
+
+    for (const rule of READ_ONLY_ALLOW) {
+      assert.doesNotMatch(rule, /\((cat|find|sed|tee|cp|mv|rm|node|python3?|bash|sh|bunx|npx|bun)\b/, rule);
+      assert.ok(template.includes(`"${rule}"`), `tooling-config.md lacks ${rule}`);
+    }
+  });
+
+  it("leaves a settings file that is not JSON alone", () => {
+    const root = mkdtempSync(join(tmpdir(), "moku-allow-"));
+    mkdirSync(join(root, ".claude"));
+    writeFileSync(join(root, ".claude", "settings.local.json"), "{ not json");
+
+    const run = spawnSync("node", [script, "--root", root], { encoding: "utf8" });
+
+    assert.equal(run.status, 0);
+    assert.match(run.stdout, /not added/);
+    assert.equal(readFileSync(join(root, ".claude", "settings.local.json"), "utf8"), "{ not json");
   });
 });
