@@ -14,7 +14,10 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   command that looks like it carries a credential is never repeated. After `claude auth login`, `resume-checkpoint`
   (the newest, or a named file) prints one `claude --resume <id>` per session, `--desktop` for a Code tab session,
   with what moved meanwhile and the tasks to start again. No token, credentials file or Keychain entry is read or
-  written, and sessions from eval and scratch folders are left out (`--include-temp`). The conductor knows the move.
+  written, and sessions from other eval and scratch folders are left out (`--include-temp`).
+- **The prompt hook names the checkpoint** when the person says they will sign out, sign in or move to another account
+  (English or Russian), because a model that skips the conductor reached for `pause`, which keeps only the change.
+  New core eval `rails-checkpoint`: 0/3 before the hint, 3/3 after.
 
 ### Fixed
 - **`moku-rails --json` cut a long answer at 64 KB** when stdout was a pipe: the CLI exited before the pipe was

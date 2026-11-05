@@ -25,6 +25,11 @@ import { status } from "../lib/rails/commands.mjs";
 import { loadLedger, markPrompt } from "../lib/rails/ledger.mjs";
 import { LOOP_STATIONS } from "../lib/rails/routes.mjs";
 
+/** A person about to sign out, sign in again or move to another account, in English or Russian. */
+const SIGN_IN = /\b(sign(ing|ed)?[\s-]?(in|out)|log(ging|ged)?[\s-]?(in|out)|login|logout|re-?log|account|checkpoint)\b|аккаунт|логин|разлогин|перелогин|войд|вход|выйд|чекпойнт|чекпоинт/i;
+
+const CHECKPOINT_HINT = "The person is about to sign in again. Run `moku-rails checkpoint`, not `pause`: it saves every open moku session on this machine (id, folder, where it stopped, background tasks). Then tell them to close the sessions, sign in themselves with `claude auth login`, and run `moku-rails resume-checkpoint`, which prints one `claude --resume <id>` per session. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
+
 const { payload } = readHookInput();
 const prompt = promptText(payload);
 const root = rootForSession(payload);
@@ -55,6 +60,9 @@ if (tweaking) {
   process.exit(0);
 }
 
+// Signing in again ends the sessions: the checkpoint keeps them, a pause keeps only the change
+const signingIn = SIGN_IN.test(prompt);
+
 const report = status({ root, positional: [], flags: {} });
 const changed = statusChanged(root, payload.session_id, report.lines);
 if (changed) rememberStatus(root, payload.session_id, report.lines);
@@ -65,5 +73,6 @@ console.log(
     "Route this request before acting on it. Load the `moku:moku` skill with the Skill tool unless it is already loaded in this conversation, and follow it.",
     "A question needs no routing. Work does: `moku-rails open` for a new change, `moku-rails enter <station>` for the next station, `moku-rails continue` to finish work of the current station, `moku-rails scope \"<what is new>\"` when the person adds something the plan does not cover.",
     "Source writes are refused until one of these ran. Stations run through their skills (brainstorm, design, plan, build, verify, e2e), not by hand.",
+    ...(signingIn ? [CHECKPOINT_HINT] : []),
   ].join("\n"),
 );

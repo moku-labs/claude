@@ -89,14 +89,14 @@ export function checkpointsDir() {
 /**
  * Every session of the config folder active since the cut-off whose directory is on the rails, newest first.
  * Sessions that ran in a temporary folder (eval runs, scratch projects) are left out unless `includeTemp` asks
- * for them, and so are sessions whose folder is gone.
+ * for them or they ran in `here`, the project the command runs in; sessions whose folder is gone are left out too.
  *
- * @param {{ config: string, sinceMs: number, now?: number, includeTemp?: boolean }} options
+ * @param {{ config: string, sinceMs: number, now?: number, includeTemp?: boolean, here?: string }} options
  * @returns {SavedSession[]}
  * @example
  * collectSessions({ config: "/Users/ann/.claude", sinceMs: 24 * 3600e3 }).map((session) => session.id);
  */
-export function collectSessions({ config, sinceMs, now = Date.now(), includeTemp = false }) {
+export function collectSessions({ config, sinceMs, now = Date.now(), includeTemp = false, here }) {
   const projects = join(config, "projects");
   if (!existsSync(projects)) return [];
 
@@ -107,7 +107,8 @@ export function collectSessions({ config, sinceMs, now = Date.now(), includeTemp
 
     const head = readHead(transcript);
     const id = transcript.split("/").at(-1)?.replace(/\.jsonl$/, "") ?? "";
-    if (!head.cwd || !existsSync(head.cwd) || (!includeTemp && isTemporary(head.cwd))) continue;
+    if (!head.cwd || !existsSync(head.cwd)) continue;
+    if (!includeTemp && isTemporary(head.cwd) && !(here && isInside(head.cwd, here))) continue;
 
     const root = rootForSession({ cwd: head.cwd, session_id: id });
     if (!root) continue;
@@ -400,8 +401,16 @@ function gitState(cwd) {
  * @returns {boolean}
  */
 function isTemporary(path) {
-  const temp = [tmpdir(), realpathSync(tmpdir()), "/tmp", "/private/tmp"];
-  return temp.some((dir) => path === dir || path.startsWith(`${dir}${sep}`));
+  return [tmpdir(), realpathSync(tmpdir()), "/tmp", "/private/tmp"].some((dir) => isInside(path, dir));
+}
+
+/**
+ * @param {string} path
+ * @param {string} dir
+ * @returns {boolean}
+ */
+function isInside(path, dir) {
+  return path === dir || path.startsWith(`${dir}${sep}`);
 }
 
 /**

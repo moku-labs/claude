@@ -601,12 +601,20 @@ export function session({ root, positional }) {
  * @example
  * checkpoint({ root, positional: [], flags: { since: "8" } });
  */
-export function checkpoint({ flags }) {
+export function checkpoint({ root, flags }) {
   const config = typeof flags["config-dir"] === "string" ? flags["config-dir"] : configDir();
   const hours = Number(flags.since ?? DEFAULT_SINCE_HOURS);
   if (!(hours > 0)) return usage("moku-rails checkpoint [--since <hours>] [--config-dir <dir>] [--include-temp]");
 
-  const sessions = collectSessions({ config, sinceMs: hours * 60 * 60 * 1000, includeTemp: flags["include-temp"] === true });
+  let sessions;
+  try {
+    sessions = collectSessions({ config, sinceMs: hours * 60 * 60 * 1000, includeTemp: flags["include-temp"] === true, here: root });
+  } catch (error) {
+    // A sandbox that may not read the config folder: say so, and where the command works instead
+    const code = /** @type {NodeJS.ErrnoException} */ (error).code;
+    if (code !== "EPERM" && code !== "EACCES") throw error;
+    return fail(`Could not read the transcripts in ${config}/projects (${code}): nothing was saved. Run \`moku-rails checkpoint\` where that folder is readable, such as a terminal outside the sandbox.`);
+  }
   if (sessions.length === 0) return ok(`No moku session in ${config} was active in the last ${hours} h. Nothing to save.`);
 
   const file = writeCheckpoint({ version: 1, savedAt: new Date().toISOString(), configDir: config, sessions });

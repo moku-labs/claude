@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -17,14 +17,15 @@ function machine() {
   execFileSync("git", ["init", "-q", "-b", "main", root]);
   writeFileSync(join(root, "draft.ts"), "export {};\n");
 
-  const rails = (/** @type {string[]} */ ...args) => {
-    const run = spawnSync("node", [CLI, ...args, "--root", root], { encoding: "utf8", env });
+  const railsAt = (/** @type {string} */ dir, /** @type {string[]} */ ...args) => {
+    const run = spawnSync("node", [CLI, ...args, "--root", dir], { encoding: "utf8", env });
     return { code: run.status, text: `${run.stdout}${run.stderr}`, json: () => JSON.parse(run.stdout || run.stderr) };
   };
+  const rails = (/** @type {string[]} */ ...args) => railsAt(root, ...args);
   rails("session", "start");
   writeFileSync(join(root, ".planning", "moku.md"), "type: consumer\nname: site\n");
 
-  return { base, env, root, rails };
+  return { base, env, root, rails, railsAt };
 }
 
 /**
@@ -87,8 +88,8 @@ describe("moku-rails checkpoint", () => {
     assert.deepEqual(checkpoints(env), [saved.data.file]);
   });
 
-  it("leaves out stale sessions, sessions off the rails, subagent transcripts and, by default, temp folders", () => {
-    const { base, env, root, rails } = machine();
+  it("leaves out stale sessions, sessions off the rails, subagent transcripts and, by default, other temp folders", () => {
+    const { base, env, root, rails, railsAt } = machine();
     const elsewhere = join(base, "other");
     mkdirSync(elsewhere);
     transcript(env.CLAUDE_CONFIG_DIR, { id: "stale", cwd: root, ageHours: 60 });
@@ -98,7 +99,8 @@ describe("moku-rails checkpoint", () => {
     transcript(env.CLAUDE_CONFIG_DIR, { id: ID_CLI, cwd: root });
 
     assert.deepEqual(rails("checkpoint", "--include-temp", "--json").json().data.sessions.map((session) => session.id), [ID_CLI, "yesterday"]);
-    assert.match(rails("checkpoint").text, /Nothing to save/);
+    assert.match(railsAt(mkdtempSync(join(tmpdir(), "moku-elsewhere-")), "checkpoint").text, /Nothing to save/);
+    assert.equal(rails("checkpoint", "--json").json().data.sessions.length, 2, "a temp folder counts when the command runs in it");
     assert.equal(rails("checkpoint", "--include-temp", "--since", "72", "--json").json().data.sessions.length, 3);
     assert.equal(rails("checkpoint", "--include-temp", "--since", "12", "--json").json().data.sessions.length, 1);
   });
@@ -194,6 +196,19 @@ describe("moku-rails checkpoint", () => {
     assert.equal(rails("resume-checkpoint", "--json").json().data.file, file);
     assert.equal(rails("resume-checkpoint", file).code, 0);
     assert.equal(rails("checkpoint", "--since", "0").code, 1);
+  });
+
+  it("says plainly when the transcripts cannot be read, and saves nothing", () => {
+    const { env, root, rails } = machine();
+    transcript(env.CLAUDE_CONFIG_DIR, { id: ID_CLI, cwd: root });
+    chmodSync(join(env.CLAUDE_CONFIG_DIR, "projects"), 0o000);
+
+    const result = rails("checkpoint");
+    chmodSync(join(env.CLAUDE_CONFIG_DIR, "projects"), 0o700);
+
+    assert.equal(result.code, 1);
+    assert.match(result.text, /Could not read the transcripts .*nothing was saved/);
+    assert.deepEqual(checkpoints(env), []);
   });
 
   it("prints a long JSON in full when stdout is a pipe", () => {

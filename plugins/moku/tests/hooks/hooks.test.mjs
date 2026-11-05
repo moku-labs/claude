@@ -474,6 +474,15 @@ describe("prompt hook on the rails", () => {
     assert.equal(JSON.parse(readFileSync(join(root, ".planning", "state.json"), "utf8")).turn.routed, false);
   });
 
+  it("names the checkpoint when the person is about to sign in again, and only then", () => {
+    const root = project({ initialized: true });
+
+    for (const prompt of ["I'll sign out and sign in with my work account", "перелогинюсь на другой аккаунт, сохрани сессии"]) {
+      assert.match(hook("on-prompt.mjs", { cwd: root, prompt }).out, /moku-rails checkpoint`, not `pause`/, prompt);
+    }
+    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "add a streak counter" }).out, /checkpoint/);
+  });
+
   it("closes the free pass: an open change inside build does not admit a new request until it is routed", () => {
     const root = project({ initialized: true });
     building(root);
