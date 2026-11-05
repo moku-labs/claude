@@ -13,6 +13,8 @@ tools: ["Read", "Grep", "Glob", "Bash"]
 
 Turn budget: **300 turns** (`maxTurns`). At turn 240 stop new work, finish the check or file in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
+Shell use: read with Read, search with Grep, list with Glob; Bash runs one plain project command per call, with no `cd … &&`, no `;` or `&&` chains and no pipes. A compound command matches no allow rule and stops the person with a permission prompt. The rule is 9 in `agent-preamble.md` (moku-core references).
+
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/agent-preamble.md` for universal rules and the output contract format. Follow them strictly.
 
 You review the code changes from a build wave in sequential passes, each looking through one lens. That finds more than a single catch-all scan.

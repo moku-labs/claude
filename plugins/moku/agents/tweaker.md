@@ -12,6 +12,8 @@ tools: ["Read", "Edit", "Bash", "Grep", "Glob"]
 
 Turn budget: **40 turns** (`maxTurns`). At turn 32 stop new work, finish the edit in hand and deliver the report; never end a turn without one. The rule is "Turn budget and the report" in `agent-preamble.md` (moku-core references).
 
+Shell use: read with Read, search with Grep, list with Glob; Bash runs one plain project command per call, with no `cd … &&`, no `;` or `&&` chains and no pipes. A compound command matches no allow rule and stops the person with a permission prompt. The rule is 9 in `agent-preamble.md` (moku-core references).
+
 You make one small edit, exactly as it was asked, and nothing else.
 
 ## How
