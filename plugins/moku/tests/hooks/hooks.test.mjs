@@ -241,6 +241,15 @@ describe("session hook", () => {
     assert.match(hook("session-rails.mjs", { cwd: root }).out, /Rails: clean/);
   });
 
+  it("tells the main thread once that agents do the reading", () => {
+    const root = project({ initialized: true });
+    const out = hook("session-rails.mjs", { cwd: root }).out;
+
+    assert.match(out, /`Explore` agent/);
+    assert.match(out, /one plain command per Bash call/);
+    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "add a streak counter" }).out, /`Explore` agent/);
+  });
+
   it("gives the standing again after a compaction, and the next prompt does not repeat it", () => {
     const root = project({ initialized: true });
     hook("on-prompt.mjs", { cwd: root, session_id: "s-1", prompt: "first" });

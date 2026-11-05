@@ -77,6 +77,7 @@ Context variables carried through: CATEGORY, NAME, DESCRIPTION, DEPTH_FLAG, CUST
 - Scratch files use the `.planning/brainstorm-{NAME}-*` prefix and are deleted at the end. `.planning/context-{NAME}.md` and `.planning/learnings.md` survive.
 - Spawn researchers in parallel, as several Agent calls in one response. A researcher that returns nothing is logged and skipped, never waited on.
 - Detect complexity from the project. Do not ask the user to self-report what you can observe.
+- The codebase analysis is a question to `Explore` (or a researcher), not a run of your own lookups: you keep its summary, and the files stay out of this conversation. An exact lookup is Read with `offset` and `limit` or Grep, never the shell.
 - Every architectural question carries TypeScript examples per option, a recommendation with reasoning, and named concerns about each alternative. Ask zero questions when the context is clear; more than three is a sign you are asking things you could answer.
 - The debate converges when the user is satisfied or the round limit is reached. Do not force rounds.
 - The context file is complete when plan can skip its own steering and discussion phases entirely.

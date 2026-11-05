@@ -4,7 +4,7 @@ Behavior tests for the plugin itself. Four suites, from cheap and gated to expen
 
 | Suite | Where | What it guards | Cost and time of one pass | When |
 |---|---|---|---|---|
-| Core, the gate | `plugins/moku/evals/`, 14 cases | Conductor, rails, code shape, tests rules | $3.6 and 7.5 min per run-set; the gate runs 3: about **$11**, 6–8 min at `-j 4` | Locally, `npm run evals:gate` before merging a PR that touches `plugins/moku/` |
+| Core, the gate | `plugins/moku/evals/`, 15 cases | Conductor, rails, code shape, tests rules | $3.6 and 7.5 min per run-set; the gate runs 3: about **$11**, 6–8 min at `-j 4` | Locally, `npm run evals:gate` before merging a PR that touches `plugins/moku/` |
 | Long | `plugins/moku/evals-long/`, 9 cases | Builder route, real-size builds and delta fixes, task splitting | about **$22** for one run of every case, 80 min at `-j 1` | By hand, before and after a change to the build route, the builders or the conductor's staging |
 | Manual harnesses | `plugins/moku/evals-manual/` | Builder arms on a real fix, validator effort (F2) | $2 per F2 run; the real case only on a subscription session | By hand, when a model or effort of an agent changes |
 | Design fidelity | `research/design-fidelity/baseline/harness` (not in the repo) | Built screens against the HTML prototype | $2–4 per screen, about $40 for the synthetic set | Nightly or by hand; never in CI |
@@ -12,7 +12,7 @@ Behavior tests for the plugin itself. Four suites, from cheap and gated to expen
 ### The gate
 
 ```bash
-npm run evals:gate                                # run the 14 cases ×3 and compare (about $11)
+npm run evals:gate                                # run the 15 cases ×3 and compare (about $11)
 npm run evals:gate -- --case 'tests-*'            # only the matching cases, against their part of the baseline
 npm run evals:gate -- --from <aggregate-result.json>   # compare a result on disk, nothing paid
 npm run evals:gate -- --write-baseline <aggregate-result.json> --source "<commit, versions, date>"
@@ -106,6 +106,7 @@ claude plugin eval plugins/moku --trust-plugin --no-publish --case conductor-ide
 | `thin-root` | Root files stay thin composition (idiom I4) |
 | `readable-stanzas` | Stanza style: guard first, intent comments |
 | `conductor-idea` | Plain-language idea reaches the conductor and the init station |
+| `conductor-delegates-reading` | A question that needs a dozen files of a 35-file app goes to an `Explore` agent: no shell reads (`cat`, `sed`, `grep`) in the main thread, no change opened, and the flow is explained right. Needs `--scaffold`. |
 | `rails-no-init` | No code is written into an uninitialized project |
 | `release-first-publish` | Release flow is three commands, no NPM_TOKEN |
 | `tweak-quick-edits` | A run of quick edits opens a size Q change, asks `moku-rails tier`, makes the edit and runs no checks in between. Needs `--scaffold`. |
