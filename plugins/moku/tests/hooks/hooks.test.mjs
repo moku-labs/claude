@@ -355,11 +355,15 @@ describe("git worktree", () => {
     assert.equal(JSON.parse(result.out).hookSpecificOutput.permissionDecision, "allow");
   });
 
-  it("approves a shared planning file too, which the lane links on to the main checkout", () => {
+  it("writes a shared planning file itself, which the lane links on to the main checkout", () => {
     const { tree } = worktree({ initialized: true });
     hook("session-rails.mjs", { cwd: tree });
 
-    assert.match(hook("pre-write.mjs", write(tree, ".planning/decisions.md", "# decisions\n")).out, /"permissionDecision":"allow"/);
+    const result = hook("pre-write.mjs", write(tree, ".planning/decisions.md", "# decisions\n"));
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /moku: done/);
+    assert.equal(readFileSync(realpathSync(join(tree, ".planning", "decisions.md")), "utf8"), "# decisions\n");
   });
 
   it("approves nothing outside .planning/, and nothing the rails refuse", () => {

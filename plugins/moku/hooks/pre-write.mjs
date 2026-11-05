@@ -14,7 +14,7 @@ import { fileURLToPath } from "node:url";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForFile } from "../lib/hooks/root.mjs";
 import { isSubagent } from "../lib/hooks/origin.mjs";
-import { isLaneLink } from "../lib/hooks/worktree.mjs";
+import { applySharedWrite, isLaneLink, sharedFileTarget } from "../lib/hooks/worktree.mjs";
 import { facts } from "../lib/rails/commands.mjs";
 import { guardWrite } from "../lib/rails/guard.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
@@ -55,6 +55,19 @@ for (const script of CONTENT_CHECKS) {
     process.stderr.write(run.stderr);
     process.exit(BLOCK);
   }
+}
+
+// A shared file of the project in a lane (decisions, app spec, steering, memory) is a link to the main
+// checkout's copy. Claude Code refuses to write a link, and the worktree's isolation refuses the main
+// checkout's path, so a write that passed every check above is applied here and the tool call is stopped.
+// Without this the agent writes a copy of its own, and the project's decision log never gets the entry.
+const shared = sharedFileTarget(root, file);
+if (shared) {
+  const result = applySharedWrite(shared, payload.tool_name, payload.tool_input);
+  console.error(result.ok
+    ? `moku: done — this is a shared planning file, so moku applied the ${payload.tool_name} itself (${result.message}). Do not repeat it, and do not write a copy in the lane.`
+    : `moku: the shared planning file was not changed: ${result.message}.`);
+  process.exit(BLOCK);
 }
 
 // A worktree's `.planning` is a link into the main checkout. Claude Code sees the write leave the worktree
