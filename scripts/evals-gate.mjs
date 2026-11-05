@@ -9,7 +9,7 @@
  *   node scripts/evals-gate.mjs --case 'tests-*'     run and compare only the matching cases
  *   node scripts/evals-gate.mjs --write-baseline <result.json>   replace the baseline from a result
  *
- * In CI without ANTHROPIC_API_KEY (a fork PR, or the secret is not set) it says so and exits 0.
+ * It runs locally before a merge, not in CI. Under CI without ANTHROPIC_API_KEY it says so and exits 0.
  */
 
 import { spawnSync } from "node:child_process";

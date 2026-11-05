@@ -4,7 +4,7 @@ Behavior tests for the plugin itself. Four suites, from cheap and gated to expen
 
 | Suite | Where | What it guards | Cost and time of one pass | When |
 |---|---|---|---|---|
-| Core, the gate | `plugins/moku/evals/`, 13 cases | Conductor, rails, code shape, tests rules | $3.6 and 7.5 min per run-set; the gate runs 3: about **$11**, 6–8 min at `-j 4` | Every PR that touches `plugins/moku/` (CI), and `npm run evals:gate` before one |
+| Core, the gate | `plugins/moku/evals/`, 13 cases | Conductor, rails, code shape, tests rules | $3.6 and 7.5 min per run-set; the gate runs 3: about **$11**, 6–8 min at `-j 4` | Locally, `npm run evals:gate` before merging a PR that touches `plugins/moku/` |
 | Long | `plugins/moku/evals-long/`, 9 cases | Builder route, real-size builds and delta fixes, task splitting | about **$22** for one run of every case, 80 min at `-j 1` | By hand, before and after a change to the build route, the builders or the conductor's staging |
 | Manual harnesses | `plugins/moku/evals-manual/` | Builder arms on a real fix, validator effort (F2) | $2 per F2 run; the real case only on a subscription session | By hand, when a model or effort of an agent changes |
 | Design fidelity | `research/design-fidelity/baseline/harness` (not in the repo) | Built screens against the HTML prototype | $2–4 per screen, about $40 for the synthetic set | Nightly or by hand; never in CI |
@@ -23,12 +23,12 @@ npm run evals:gate -- --write-baseline <aggregate-result.json> --source "<commit
 $3.58 and 453 s per run-set). It **fails** when the overall score is below the baseline − 0.03, or a case passes more
 than one run of three fewer than the baseline (`readable-stanzas` and `tests-kill-check` are at 2/3 there, so they
 fail at 0/3). A case missing from the run fails; a new case is listed and not judged. Cost and time are printed per
-case and in total, with a **warning** above +10 %; they never fail the gate. The verdict goes to the GitHub job summary.
+case and in total, with a **warning** above +10 %; they never fail the gate.
 
-In CI the job is `.github/workflows/evals.yml`, on PRs that touch `plugins/moku/` outside the long and manual suites.
-It needs the `ANTHROPIC_API_KEY` repository secret; without it (a fork PR, or no secret) the gate says it was skipped
-and passes. Rewrite the baseline only on purpose, from a run on `main`, and say why in the commit: a change that
-lowers a score and is right moves the baseline in the same PR, with the reason.
+The gate runs **locally, before a merge**, not in CI: whoever opens a PR that changes the prose of `plugins/moku/`
+(skills, agents, references) runs `npm run evals:gate` on the branch and pastes its table into the PR description.
+A red gate blocks the merge. Rewrite the baseline only on purpose, from a run on `main`, and say why in the commit:
+a change that lowers a score and is right moves the baseline in the same PR, with the reason.
 
 `EVALS_MAX_COST_USD` (default 20) is the run's cost ceiling, `EVALS_CONCURRENCY` (default 4) its `-j`.
 
