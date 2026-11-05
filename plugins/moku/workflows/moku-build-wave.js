@@ -1,7 +1,7 @@
 export const meta = {
   name: 'moku-build-wave',
   description: 'Build one Moku wave non-interactively: builders in parallel (disjoint plugin dirs), each verified as it completes (pipeline), then a wave disposition',
-  whenToUse: 'OPT-IN, non-interactive fan-out for a single build wave. The gated moku:build skill (per-wave user checkpoint) is still the default; use this when you explicitly want a wave built end-to-end without stopping. Pass {plugins:[{name,tier,spec}]} to name a wave, or {all:true} to build every remaining wave and stop at the first that does not pass. Pass {plugins:[{name,tier,spec}]} to define the wave, or omit to auto-detect the next wave from STATE.md.',
+  whenToUse: 'OPT-IN, non-interactive fan-out for a single build wave. The gated moku:build skill (per-wave user checkpoint) is still the default; use this when you explicitly want a wave built end-to-end without stopping. Pass {plugins:[{name,tier,spec}]} to name a wave, or {all:true} to build every remaining wave and stop at the first that does not pass; {maxParallel:N} (default 5) caps builders at once. Pass {plugins:[{name,tier,spec}]} to define the wave, or omit to auto-detect the next wave from STATE.md.',
   phases: [
     { title: 'Plan', detail: 'determine the wave plugin set' },
     { title: 'Build+Verify', detail: 'build each plugin, verify as it completes' },
@@ -104,7 +104,8 @@ log(`Wave${waveNumber === undefined ? '' : ` ${waveNumber}`}: ${plugins.map((p) 
 const DEEP_TIERS = new Set(['Complex', 'VeryComplex'])
 const HARD_RULES =
   ' Filesystem safety — sibling builders run concurrently, so a repo-wide command from you corrupts ' +
-  'their work. Write only under src/plugins/<this-plugin>/ and its __tests__/; leave src/config.ts, ' +
+  'their work, and unbounded test workers time their tests out: run your tests as ' +
+  '`bunx vitest run src/plugins/<this-plugin>/ --maxWorkers=2`. Write only under src/plugins/<this-plugin>/ and its __tests__/; leave src/config.ts, ' +
   'src/plugins/index.ts (the barrel), package.json and sibling plugins alone. Run no repo-wide command ' +
   '(lint:fix, bun run format, `biome … .`, `eslint .`, `oxlint .`) and no git mutation ' +
   '(checkout/restore/reset/stash/clean/add/commit). Scoped formatting only: ' +
@@ -120,10 +121,27 @@ const DESIGN_REFERENCE =
   'whole screen. Use the exact font faces, weights and sizes the section names. Every word is text ' +
   'from the string table, drawn by a font; never bake a word into an image or a sprite unless the ' +
   'section lists it as lettering that is art. Read the numbers, never copy the prototype code.'
+// At most MAX_PARALLEL builders and artifact checks run at once: each runs its plugin's tests, and six
+// unbounded Vitest runs on one machine timed tests out at 5 s. Builders cap their workers too (builder.md).
+const MAX_PARALLEL = Math.min(8, Math.max(1, Number(args?.maxParallel) || 5))
+let running = 0
+const waiting = []
+// A finished run hands its slot straight to the next waiting one, so no newcomer can slip in between
+const limited = async (run) => {
+  if (running < MAX_PARALLEL) running += 1
+  else await new Promise((resolve) => waiting.push(resolve))
+  try {
+    return await run()
+  } finally {
+    const next = waiting.shift()
+    if (next) next()
+    else running -= 1
+  }
+}
 phase('Build+Verify')
 const results = await pipeline(
   plugins,
-  (p) =>
+  (p) => limited(() =>
     agent(
       `You are building the Moku plugin "${p.name}" (${p.tier || 'tier per spec'}) using TDD ` +
         `(types → red → green → refactor). Spec: ${p.spec || `.planning/specs for ${p.name}`}. ${STYLE}` +
@@ -136,15 +154,15 @@ const results = await pipeline(
         agentType: DEEP_TIERS.has(p.tier) ? 'moku:moku-builder-deep' : 'moku:moku-builder',
         schema: BUILD_RESULT,
       },
-    ),
+    )),
   // The artifact check is a deterministic script, so this step only runs it and reports the result.
-  (build, p) =>
+  (build, p) => limited(() =>
     agent(
       `Run \`moku-verify-artifacts ${p.name} --tier ${p.tier || 'auto'} --run --json\` with Bash and ` +
         `report what it printed. Exit 0 is PASS, exit 2 is FAIL; any other exit is PARTIAL with the ` +
         `error as a blocker. Do not fix anything and do not judge the code yourself.`,
       { label: `verify:${p.name}`, phase: 'Build+Verify', schema: VERIFY_RESULT },
-    ).then((verify) => ({ plugin: p.name, build, verify })),
+    )).then((verify) => ({ plugin: p.name, build, verify })),
 )
 
 const done = results.filter(Boolean)

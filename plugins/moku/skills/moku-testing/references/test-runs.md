@@ -15,7 +15,7 @@ a full run that the commit hook then ran a second time.
    tests again to see another part of what they printed.
 
    ```bash
-   bunx vitest run src/plugins/streak/ > "$TMPDIR/moku-test.log" 2>&1; echo "exit $?"
+   bunx vitest run src/plugins/streak/ --maxWorkers=2 > "$TMPDIR/moku-test.log" 2>&1; echo "exit $?"
    tail -30 "$TMPDIR/moku-test.log"        # then grep, head or sed on the same file
    ```
 
@@ -34,7 +34,7 @@ a full run that the commit hook then ran a second time.
 
 | Moment | Run | Do not run |
 |---|---|---|
-| A builder works on one plugin | That plugin's tests: `bunx vitest run src/plugins/<name>/` | The whole script |
+| A builder works on one plugin | That plugin's tests: `bunx vitest run src/plugins/<name>/ --maxWorkers=2`. Up to five builders run at once, and unbounded workers from each time tests out | The whole script |
 | A wave is reconciled (`build-verification.md` Step 4a0) | The whole script, once: `bun run test` | A second whole run before anything was edited |
 | The regression check after the wave is wired (Step 4b2) | The earlier plugins' tests, in one command | That command when the whole script was green on this exact tree: it ran them |
 | A gap-closure fix | The tests of what the fix touched | The whole script after every fix |
