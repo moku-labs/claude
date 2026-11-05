@@ -1,7 +1,7 @@
 ---
 name: init
-description: Scaffolds a new Moku project — tooling, directory skeleton, release plumbing and the .planning/moku.md marker the lifecycle rails read. Use once per project, before any change is opened, when the user asks to start, set up or initialize a Moku framework, app or library.
-when_to_use: Starting a new Moku project, or bringing Moku tooling into a directory that has none. Not for changing an already-initialized project.
+description: Scaffolds a new Moku project — tooling, directory skeleton, release plumbing and the .planning/moku.md marker the lifecycle rails read — or adopts an existing one (a fresh clone) by writing only the marker. Use once per checkout, before any change is opened, when the user asks to start, set up or initialize a Moku framework, app or library, or when the rails call an existing Moku project not initialized.
+when_to_use: Starting a new Moku project, bringing Moku tooling into a directory that has none, or adopting an existing Moku project that has no `.planning/moku.md` (a fresh clone). Not for changing an already-initialized project.
 argument-hint: natural language, or [project-path]
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Skill, AskUserQuestion
 model: fable
@@ -45,6 +45,65 @@ local-only state and is never staged or committed.
 defaulting to the current directory. Echo one line, `Interpreting as: …`, when you interpreted
 something. Ask only for a value you are missing.
 
+## Adopt or scaffold — decide first
+
+`.planning/` is local state and gitignored, so the marker never travels with the repository. A fresh
+clone of a Moku project is "not initialized" although everything but the marker is there, and the
+scaffold would overwrite its `package.json`, `biome.json` and `tsconfig.json`. So before anything else:
+
+```bash
+moku-rails init adopt --dry-run --root "$ABSOLUTE_PROJECT_PATH"
+```
+
+It exits 2 when the directory holds no Moku project (no `package.json` naming `@moku-labs/*`, no
+`createApp`, `createCoreConfig` or `defineGameApp` in the sources): then scaffold, Step 0 on. Otherwise
+it prints what it detected, and the project is **adopted**: follow "The adopt path" below and skip
+Steps 0–6.5. `moku-rails status` names the same case ("Existing moku project … adopt it").
+
+## The adopt path
+
+The adopt path writes nothing outside `.planning/`. It never runs `bun init`, never writes a tooling
+file, never installs, formats or commits. `git status` is exactly as clean afterwards as before.
+
+1. **Read what was detected.** The dry run prints `type`, `name` and `core_version` and where each came
+   from. The type is decided by the runtime dependencies first: `@moku-labs/game` → `game`,
+   `@moku-labs/core` → `framework`, any other `@moku-labs/*` runtime package → `consumer`, only tooling
+   packages (`@moku-labs/ci`, `common`, `editor`, `ai`) → `tools`. The factory calls in the sources
+   decide only when the dependencies name none, because a docs site quotes other layers' calls.
+   `core_version` comes from `node_modules/@moku-labs/core`, else from `bun.lock`, so a clone without
+   an install has it too. When the detection is plainly wrong, pass `--type <type>`; ask the person
+   only when the dependencies and the sources disagree.
+2. **Compare the tooling, report only.** Read
+   `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` and compare the project's
+   tooling files against it for the detected type: `.bun-version`, `bunfig.toml` (none for a game),
+   the `package.json` script contract and pinned devDependency versions, `biome.json`,
+   `.oxlintrc.json`, `tsconfig.json`, `vitest.config.ts`, `lefthook.yml`, `.editorconfig`,
+   `.gitignore` (`.claude` and `.planning` present), `cspell.json`, and the workflow files under
+   `.github/workflows/`. List each difference in one line (`biome.json: no "!!**/.planning" entry`,
+   `typescript 7.0.1, template 7.0.2`). Fix none of them: a project's tooling is its owner's, and
+   moving it to the current stack is `/moku:upgrade`'s job, with its own plan and approval. A missing
+   file the template has is a difference too; a file the template lacks is the project's own and is
+   not reported.
+3. **Write the marker and finish.**
+
+   ```bash
+   moku-rails init adopt --root "$ABSOLUTE_PROJECT_PATH"   # add --type <type> when step 1 corrected it
+   ```
+
+   It writes `.planning/moku.md` in the Step 6 format, puts the directory on the rails and closes the
+   init window, so no `init begin` or `init done` is needed. Run `git -C "$ABSOLUTE_PROJECT_PATH" status
+   --short` and check it shows nothing new.
+4. **Report.** One line that the project is adopted with its type and core version, the list of
+   tooling differences (or "tooling matches the template"), and, when there are differences, one line
+   that `/moku:upgrade` can bring them in line. Then hand back as in Step 7: work starts by opening
+   the first change.
+
+Why the marker stays local rather than committed (`.planning/*` with `!.planning/moku.md`): every git
+worktree of a project on the rails gets `.planning` as a link into the main checkout's lane folder. A
+tracked file inside `.planning/` would make git create a real `.planning/` in every new worktree, and
+the lane link would either be refused or show the marker as deleted. Adopting a clone costs one
+command; breaking every worktree costs more.
+
 ## Step 0 — read the tooling reference
 
 Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/tooling-config.md` in full before writing
@@ -76,8 +135,8 @@ working directory does not survive between tool calls.
 
 ## Step 2 — prepare the directory
 
-`mkdir -p "$ABSOLUTE_PROJECT_PATH"`. If it already exists and `ls -A` shows content, ask before
-continuing: tooling files (`package.json`, `biome.json`, `tsconfig.json`, …) are overwritten, files
+`mkdir -p "$ABSOLUTE_PROJECT_PATH"`. A directory that holds a Moku project never reaches this step: it
+was adopted above. If it already exists and `ls -A` shows other content, ask before continuing: tooling files (`package.json`, `biome.json`, `tsconfig.json`, …) are overwritten, files
 under `src/` are left alone. Stop on anything but an explicit yes.
 
 Run `git init "$ABSOLUTE_PROJECT_PATH"` only when `.git` is absent. Re-initializing an existing

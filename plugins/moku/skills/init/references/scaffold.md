@@ -49,7 +49,7 @@ Identical for framework, consumer app and library. Copy each body from `tooling-
 
 `.gitignore` is the one file to merge rather than overwrite. When one already exists, keep it and
 append whichever of `.claude/` and `.planning/` is missing, under a short comment. `.planning/` is
-local-only state; the `verify-before-commit` hook blocks any `git add` or commit that names it.
+local-only state; the `verify-before-commit` hook blocks any `git add` or commit that names it. Ignore the whole folder, the marker included: a fresh clone is adopted with `moku-rails init adopt` (`SKILL.md` → "The adopt path"), and a tracked file under `.planning/` would break the worktree lane links.
 
 ## 3. Directory skeleton and source templates
 

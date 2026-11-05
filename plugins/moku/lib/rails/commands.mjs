@@ -7,12 +7,13 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { commitHook } from "./commit-hook.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
+import { PROJECT_TYPES, detectProject, markerBody } from "./project.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
 import { parseTestOutput, readings } from "./test-output.mjs";
@@ -49,6 +50,9 @@ export function status({ root }) {
   const debts = reconcile(root, ledger);
 
   const lines = [initialized ? "Project: initialized." : "Project: NOT initialized. Only intake, brainstorm and design are possible."];
+  // A fresh clone of a moku project has no marker (.planning/ is gitignored): adopt it, never scaffold over it
+  const existing = initialized || isInitializing(root) ? undefined : detectProject(root);
+  if (existing) lines.push(`Existing moku project (${existing.type}): adopt it with \`moku-rails init adopt\` (the init skill's adopt path). The scaffold would overwrite its tooling.`);
   if (isInitializing(root)) lines.push("Debt [init]: the init station started and never finished. Finish it with the init skill.");
   if (debts.length === 0) lines.push("Rails: clean. Ready for new work.");
   for (const debt of debts) lines.push(debt.kind === "paused" ? `Paused: ${debt.detail}` : `Debt [${debt.kind}]: ${debt.detail}`);
@@ -81,7 +85,7 @@ export function status({ root }) {
     lines.push(`Elsewhere: ${change.id} is open in ${where}${change.station ? `, inside "${change.station}"` : ""}.${gone}`);
   }
 
-  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas, agents, elsewhere } };
+  return { code: 0, lines, data: { onRails: true, initialized, adoptable: existing?.type, debts, changes: ledger.changes, ideas: ledger.ideas, agents, elsewhere } };
 }
 
 /**
@@ -609,15 +613,17 @@ export function scope({ root, positional, flags }) {
 /**
  * Begin or finish the init station. While it runs, source writes are allowed in a project that is not initialized yet.
  * `done` requires the marker the init skill writes as its last step, so a half-finished init never counts.
+ * `adopt` initializes a directory that already holds a moku project (a fresh clone): it writes only the marker.
  *
- * @param {Args} args positional: begin | done
+ * @param {Args} args positional: begin | done | adopt; flags for adopt: --type <type>, --dry-run
  * @returns {Result}
  * @example
  * init({ root, positional: ["begin"], flags: {} });
  */
-export function init({ root, positional }) {
+export function init({ root, positional, flags }) {
   const [phase] = positional;
-  if (phase !== "begin" && phase !== "done") return usage("moku-rails init <begin|done>");
+  if (phase === "adopt") return adoptProject(root, flags);
+  if (phase !== "begin" && phase !== "done") return usage("moku-rails init <begin|done|adopt> [--type <type>] [--dry-run]");
 
   if (phase === "begin") {
     activate(root);
@@ -629,6 +635,41 @@ export function init({ root, positional }) {
 
   setInitializing(root, false);
   return ok("Init station done. The project is initialized.");
+}
+
+/**
+ * Initialize an existing moku project without the scaffold: detect it, write the marker, put it on the rails.
+ * Writes nothing but `.planning/`, so the working tree stays as git has it.
+ *
+ * @param {string} root project root
+ * @param {Args["flags"]} flags --type overrides the detected type, --dry-run only reports
+ * @returns {Result} `data` holds the detected type, name, core version and where each came from
+ */
+function adoptProject(root, flags) {
+  if (isInitialized(root)) return { code: 0, lines: [`Already initialized (type: ${projectType(root) ?? "unknown"}). Nothing to adopt.`], data: { adopted: false } };
+
+  const detected = detectProject(root);
+  if (!detected) return refused("No moku project here: no package.json naming @moku-labs/*, no createApp or createCoreConfig in the sources. A new project takes the scaffold (`moku-rails init begin`).");
+
+  const type = typeof flags.type === "string" ? flags.type : detected.type;
+  if (!PROJECT_TYPES.includes(type)) return usage(`moku-rails init adopt --type <${PROJECT_TYPES.join("|")}>`);
+
+  const project = { ...detected, type };
+  const lines = [`type: ${type} (${flags.type ? "given" : detected.reasons.join("; ")})`, `name: ${project.name || "(package.json has no name)"}`, `core_version: ${project.coreVersion || "(empty)"} (${project.coreFrom})`];
+  if (flags["dry-run"]) return { code: 0, lines: ["Would adopt this project:", ...lines], data: { adopted: false, ...project } };
+
+  mkdirSync(join(root, ".planning"), { recursive: true });
+  writeFileSync(join(root, ".planning", "moku.md"), markerBody(project, today()));
+  activate(root);
+  setInitializing(root, false);
+
+  return { code: 0, lines: ["Adopted. The project is initialized; no file outside .planning/ was touched.", ...lines], data: { adopted: true, ...project } };
+}
+
+/** @returns {string} the local date as YYYY-MM-DD, as `date +%F` prints it */
+function today() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
 }
 
 /**
