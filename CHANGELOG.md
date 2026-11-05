@@ -2,6 +2,15 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.87.1 (2026-11-05)
+
+### Changed
+- **Plain words for the checkpoint.** "Save the work" means the checkpoint when the sessions, a sign-in or the account
+  are named beside it («сохрани работу и сессии, я перелогинюсь», «перед выходом сохрани»); alone it stays a commit or a
+  pause. "Restore the sessions", «восстанови работу и сессии», «продолжи сессии» name `moku-rails resume-checkpoint`,
+  in a moku project or outside one, but only while a checkpoint younger than 48 h is on the machine; without one these
+  words are ordinary work.
+
 ## 0.87.0 (2026-11-05)
 
 ### Added
