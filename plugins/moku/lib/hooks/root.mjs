@@ -78,7 +78,7 @@ function bindingFile(sessionId) {
 }
 
 /**
- * The folder moku keeps per-machine state in: session bindings and the handoff checkpoint. It stays in
+ * The folder moku keeps per-machine state in: the session bindings; the checkpoints sit beside it. It stays in
  * `~/.claude/moku` whatever `CLAUDE_CONFIG_DIR` says, so a sign-in in another config folder finds the same state.
  *
  * @returns {string}

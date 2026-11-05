@@ -22,7 +22,8 @@ const HANDLERS = {
   park: commands.park,
   resume: commands.resume,
   adopt: commands.adopt,
-  handoff: commands.handoff,
+  checkpoint: commands.checkpoint,
+  "resume-checkpoint": commands.resumeCheckpoint,
   continue: commands.proceed,
   scope: commands.scope,
   idea: commands.idea,
@@ -62,7 +63,9 @@ try {
 // Print for humans, or as JSON for skills and hooks
 const output = args.flags.json ? JSON.stringify({ code: result.code, lines: result.lines, data: result.data ?? null }) : result.lines.join("\n");
 (result.code === 0 ? console.log : console.error)(output);
-process.exit(result.code);
+
+// exitCode, not exit(): a piped stdout is written asynchronously, and exit() would cut a long JSON short
+process.exitCode = result.code;
 
 /**
  * Split argv into positionals and `--flag value` pairs.

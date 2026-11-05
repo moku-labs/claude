@@ -127,11 +127,12 @@ project has none. `moku-rails adopt` puts such a project on the rails: it writes
 from what the repository shows (type, name, moku packages, plugins) and touches no file outside `.planning/`.
 Running it again changes nothing. `init` stays for a project that does not exist yet.
 
-A change of sign-in (an API key from the Console, a Team account, a config folder of its own) keeps the work
-going with `moku-rails handoff`. `handoff save` writes a checkpoint of every session that worked on the rails in
-the last 24 hours: its id, folder, open change and station, branch and uncommitted file count. The person then
-switches with Claude Code's own `claude auth login`, and `handoff resume` prints one `claude --resume <id>` per
-session (`--desktop` for a Code tab session) with what moved meanwhile. No credential is read or written.
+Signing in again (an API key from the Console, a Team account, another sign-in) keeps the work going.
+`moku-rails checkpoint` writes `~/.claude/moku-checkpoints/<time>.json` with every session that worked on the rails in
+the last 48 hours: its id, folder, branch, uncommitted files, the open change with where it stopped, and the background
+tasks that had not reported back. The person signs in with Claude Code's own `claude auth login`, and
+`moku-rails resume-checkpoint` prints one `claude --resume <id>` per session (`--desktop` for a Code tab session), what
+moved meanwhile and the tasks to start again. No credential is read or written.
 
 | Invariant | Enforced by | What you see |
 |---|---|---|

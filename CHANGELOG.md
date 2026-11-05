@@ -5,19 +5,20 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 ## 0.87.0 (2026-11-05)
 
 ### Added
-- **`moku-rails handoff`: the open sessions survive a change of sign-in.** Moving to a Console API key, a Team
-  account or a config folder of its own used to mean finding every session again by hand. `handoff save` writes a
-  checkpoint (`~/.claude/moku/handoff.json`) of each session that worked on the rails in the last 24 hours
-  (`--since <hours>`): its id, folder, open change and station, branch and uncommitted file count, read from the
-  first lines of its transcript and nothing else of it. After the person switches with `claude auth login`,
-  `handoff resume` prints one `claude --resume <id>` per session, `--desktop` for a Code tab session, with what moved
-  meanwhile: a station, the tree, a transcript the current config folder cannot see. No token, credentials file or
-  Keychain entry is read or written, and sessions from eval and scratch folders are left out (`--include-temp`).
-- **The conductor knows the move**, and says that rotating personal subscriptions to get past a usage limit is
-  against Anthropic's Usage Policy, with extra usage, a plan upgrade or an API key instead. The research behind it is
-  in `research/account-switch/report.html`.
+- **`moku-rails checkpoint` and `resume-checkpoint`: the open sessions continue after the person signs in again**, in
+  any way (a Console API key, a Team account, another sign-in). Finding every session again by hand is gone.
+  `checkpoint` writes `~/.claude/moku-checkpoints/<time>.json` with each session that worked on the rails in the last
+  48 hours (`--since <hours>`): its id, folder, branch, uncommitted files, the open change with where it stopped and
+  what comes next, and the background agents and commands that never reported back. The cwd and the surface come from
+  the first lines of the transcript, the tasks from its tool calls; nothing of the conversation is copied, and a
+  command that looks like it carries a credential is never repeated. After `claude auth login`, `resume-checkpoint`
+  (the newest, or a named file) prints one `claude --resume <id>` per session, `--desktop` for a Code tab session,
+  with what moved meanwhile and the tasks to start again. No token, credentials file or Keychain entry is read or
+  written, and sessions from eval and scratch folders are left out (`--include-temp`). The conductor knows the move.
 
 ### Fixed
+- **`moku-rails --json` cut a long answer at 64 KB** when stdout was a pipe: the CLI exited before the pipe was
+  written. It now sets the exit code and lets the output finish.
 - **The status line tip looked for `settings.json` in `~/.claude` only.** It now reads `$CLAUDE_CONFIG_DIR` when that
   is set.
 
