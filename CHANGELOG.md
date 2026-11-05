@@ -2,6 +2,21 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.86.0 (2026-11-05)
+
+### Added
+- **`moku:init` adopts an existing project.** A fresh clone of a moku project has no `.planning/moku.md`
+  (`.planning/` is gitignored), so the rails called it uninitialized and the scaffold would have
+  overwritten its `package.json`, `biome.json` and `tsconfig.json`. `moku-rails init adopt [--type]
+  [--dry-run]` detects the type from the runtime dependencies (sources only when they name none) and
+  `core_version` from `node_modules` or `bun.lock`, writes only the marker and closes the init window.
+  The skill's adopt path reports tooling differences against the template and fixes none.
+  `moku-rails status` names an existing project that is not initialized, so the conductor adopts it.
+
+### Decided
+- **The marker stays local.** `.planning/` stays ignored as a whole; a tracked `.planning/moku.md`
+  would give every git worktree a real `.planning/` and break its lane link. A clone is adopted instead.
+
 ## 0.85.10 (2026-11-03)
 
 ### Changed

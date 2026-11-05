@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -162,6 +162,43 @@ describe("moku-rails: the habit tracker walkthrough", () => {
 
     assert.equal(rails(root, "init", "done").code, 0);
     assert.doesNotMatch(rails(root, "status").text, /Debt \[init\]/);
+  });
+
+  it("adopts a fresh clone of a moku app: writes only the marker, with the type and core version it reads", () => {
+    const root = project({ initialized: false });
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    writeFileSync(join(root, ".gitignore"), ".planning\n");
+    writeFileSync(join(root, "package.json"), JSON.stringify({ name: "site", dependencies: { "@moku-labs/web": "2.4.19" }, devDependencies: { "@moku-labs/game": "0.15.95" } }));
+    writeFileSync(join(root, "bun.lock"), '{\n  "packages": {\n    "@moku-labs/core": ["@moku-labs/core@1.7.6", "", {}, "sha512-x"],\n  }\n}\n');
+    mkdirSync(join(root, "src"));
+    writeFileSync(join(root, "src", "docs.ts"), "export const sample = `createCoreConfig(\"x\", {})`;\n");
+    execFileSync("git", ["add", "-A"], { cwd: root });
+    execFileSync("git", ["-c", "user.email=t@t", "-c", "user.name=t", "commit", "-qm", "init"], { cwd: root });
+
+    assert.match(rails(root, "status").text, /Existing moku project \(consumer\).*init adopt/);
+    assert.match(rails(root, "init", "adopt", "--dry-run").text, /Would adopt/);
+    assert.equal(rails(root, "guard", "src/app.ts").code, 2, "a dry run initializes nothing");
+
+    const adopted = rails(root, "init", "adopt");
+
+    assert.equal(adopted.code, 0);
+    assert.match(readFileSync(join(root, ".planning", "moku.md"), "utf8"), /^type: consumer\nname: site\ncore_version: 1\.7\.6\ncreated: \d{4}-\d{2}-\d{2}$/m);
+    assert.match(rails(root, "status").text, /Project: initialized/);
+    assert.equal(execFileSync("git", ["status", "--porcelain"], { cwd: root, encoding: "utf8" }), "", "the working tree is as git has it");
+    assert.match(rails(root, "init", "adopt").text, /Already initialized/);
+  });
+
+  it("refuses to adopt a directory with no moku project, and takes --type over the detected one", () => {
+    const empty = project({ initialized: false });
+    assert.equal(rails(empty, "init", "adopt").code, 2);
+    assert.doesNotMatch(rails(empty, "status").text, /Existing moku project/);
+
+    const library = project({ initialized: false });
+    writeFileSync(join(library, "package.json"), JSON.stringify({ name: "lib", devDependencies: { "@moku-labs/ci": "1.5.8" } }));
+    assert.match(rails(library, "init", "adopt", "--dry-run").text, /type: tools/);
+    assert.equal(rails(library, "init", "adopt", "--type", "nonsense").code, 1);
+    assert.equal(rails(library, "init", "adopt", "--type", "framework").code, 0);
+    assert.match(readFileSync(join(library, ".planning", "moku.md"), "utf8"), /^type: framework$/m);
   });
 
   it("survives a corrupt ledger: it is set aside and the rails keep working", () => {

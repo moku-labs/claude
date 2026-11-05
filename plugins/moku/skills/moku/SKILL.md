@@ -75,6 +75,7 @@ moku-rails open 2026-09-26-streak-midnight --size S --type fix --title "Streak b
 1. Engage with the idea in the person's own words. Ask only what decides the shape: app or framework, UI or not, backend or not. A person who wants to make a game needs no shape questions: it is a game on `@moku-labs/game`.
 2. Say what it is in moku terms in one sentence ("a Layer-3 web app on `@moku-labs/web`") and propose: "Shall I create the project?"
 3. On yes, run `moku:init`. It leaves `.planning/moku.md`, which the rails read as "initialized".
+   A directory that already holds a Moku project (a fresh clone: the standing says "Existing moku project") needs no yes about creating anything: `moku:init` adopts it, writes only the marker and touches no tracked file.
    For a game, init also installs everything, scaffolds a hello world and opens it in the editor in the browser pane, so the person sees the setup works before any idea work starts.
 4. Open the first change, size L, type `project`: a new project always has the full route. Propose the next station: brainstorm when the person brought an idea and not a task, design when there is UI or a public API to shape, otherwise plan.
 
@@ -134,7 +135,7 @@ Whoever writes, changes or removes a test follows `${CLAUDE_PLUGIN_ROOT}/skills/
 
 | Station | Skill | Notes |
 |---|---|---|
-| init (project level) | `moku:init` | Required before any station past design. It runs `moku-rails init begin` and `init done` itself and leaves `.planning/moku.md`. |
+| init (project level) | `moku:init` | Required before any station past design. It runs `moku-rails init begin` and `init done` itself and leaves `.planning/moku.md`. On an existing project (a fresh clone) it runs `moku-rails init adopt` instead: marker only, no scaffold. |
 | intake | none, this conversation | Opening the change is the intake: `moku-rails open` marks it done. Record what, why and size in `.planning/changes/<id>/intake.md`. |
 | brainstorm | `moku:brainstorm` | For L, or when the person is unsure what they want. |
 | design | `moku-design:design` | Allowed before init. Modes: `ui` (screens), `api` (usage-first type sketch), `architecture` (diagrams). Ask which ones apply. |
