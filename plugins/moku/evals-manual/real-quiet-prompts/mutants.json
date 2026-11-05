@@ -1,0 +1,7 @@
+[
+ ["const isSecondChain = secondChain.step === \"tap\" || secondChain.step === \"look\";", "const isSecondChain = secondChain.step === \"tap\";"],
+ ["const isSecondChain = secondChain.step === \"tap\" || secondChain.step === \"look\";", "const isSecondChain = secondChain.step === \"look\";"],
+ ["const isLesson = isGift || shopOpen === \"tap\" || isSecondChain;", "const isLesson = isGift || shopOpen === \"tap\";"],
+ ["const isSecondChain = secondChain.step === \"tap\" || secondChain.step === \"look\";", "const isSecondChain = secondChain.step !== \"done\";"],
+ ["const isSecondChain = secondChain.step === \"tap\" || secondChain.step === \"look\";", "const isSecondChain = secondChain.step !== \"waiting\";"]
+]

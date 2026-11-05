@@ -1,6 +1,94 @@
 # moku evals
 
-Behavior tests for the plugin itself. Run from the repository root:
+Behavior tests for the plugin itself. Four suites, from cheap and gated to expensive and by hand:
+
+| Suite | Where | What it guards | Cost and time of one pass | When |
+|---|---|---|---|---|
+| Core, the gate | `plugins/moku/evals/`, 13 cases | Conductor, rails, code shape, tests rules | $3.6 and 7.5 min per run-set; the gate runs 3: about **$11**, 6–8 min at `-j 4` | Every PR that touches `plugins/moku/` (CI), and `npm run evals:gate` before one |
+| Long | `plugins/moku/evals-long/`, 9 cases | Builder route, real-size builds and delta fixes, task splitting | about **$22** for one run of every case, 80 min at `-j 1` | By hand, before and after a change to the build route, the builders or the conductor's staging |
+| Manual harnesses | `plugins/moku/evals-manual/` | Builder arms on a real fix, validator effort (F2) | $2 per F2 run; the real case only on a subscription session | By hand, when a model or effort of an agent changes |
+| Design fidelity | `research/design-fidelity/baseline/harness` (not in the repo) | Built screens against the HTML prototype | $2–4 per screen, about $40 for the synthetic set | Nightly or by hand; never in CI |
+
+### The gate
+
+```bash
+npm run evals:gate                                # run the 13 cases ×3 and compare (about $11)
+npm run evals:gate -- --case 'tests-*'            # only the matching cases, against their part of the baseline
+npm run evals:gate -- --from <aggregate-result.json>   # compare a result on disk, nothing paid
+npm run evals:gate -- --write-baseline <aggregate-result.json> --source "<commit, versions, date>"
+```
+
+`scripts/evals-gate.mjs` runs `claude plugin eval plugins/moku --runs 3 --ablation none --json` with this repository's
+`moku-rails` first on `PATH`, and compares with `baselines/gate.json` (main ebe03c6, moku 0.85.10: overall 0.972,
+$3.58 and 453 s per run-set). It **fails** when the overall score is below the baseline − 0.03, or a case passes more
+than one run of three fewer than the baseline (`readable-stanzas` and `tests-kill-check` are at 2/3 there, so they
+fail at 0/3). A case missing from the run fails; a new case is listed and not judged. Cost and time are printed per
+case and in total, with a **warning** above +10 %; they never fail the gate. The verdict goes to the GitHub job summary.
+
+In CI the job is `.github/workflows/evals.yml`, on PRs that touch `plugins/moku/` outside the long and manual suites.
+It needs the `ANTHROPIC_API_KEY` repository secret; without it (a fork PR, or no secret) the gate says it was skipped
+and passes. Rewrite the baseline only on purpose, from a run on `main`, and say why in the commit: a change that
+lowers a score and is right moves the baseline in the same PR, with the reason.
+
+`EVALS_MAX_COST_USD` (default 20) is the run's cost ceiling, `EVALS_CONCURRENCY` (default 4) its `-j`.
+
+### The long suite
+
+```bash
+npm run evals:long -- --case build-board-high --max-cost-usd 10
+```
+
+| Case | Guards | One run |
+|---|---|---|
+| `build-board-high` | A Complex plugin built by `moku-builder` from a spec; 41 hidden tests | $2.5, 9 min |
+| `build-board-deep` | The same build by `moku-builder-deep` | $5.7, 22 min |
+| `build-board-staged` | The same build in three stages, a deep builder each | $9.1, 36 min |
+| `delta-fix-perframe` | Two behaviour-preserving per-frame fixes on an open change, tests kept | $0.55, 2 min |
+| `delta-fix-staged` | The same fixes in two stages | $0.58, 2 min |
+| `split-offer-big` | A large request gets two to five stages proposed, and no code | $0.7 |
+| `split-not-for-bug` | A long bug report gets no stages | $0.8 |
+| `split-not-for-tweaks` | Six small edits get no stages | $1.4 |
+| `split-one-go-respected` | "In one go" is not argued with | $0.8 |
+
+The `build-board-*` graders see the trace, not the code: the quality there is the hidden
+`hidden/acceptance.test.ts` (31 rules of the spec and 10 edges: the energy remainder at max, a tie of `nearestEmpty`
+across a row edge, exactly 20 undo records, a v1 save with empty cells and so on), run on the kept sandboxes:
+
+```bash
+chmod 700 /private/tmp/e-XXX /private/tmp/e-XXX/sealed   # each sandbox the run printed
+python3 -I plugins/moku/evals-manual/score_kept_runs.py <aggregate-result.json> \
+  plugins/moku/evals-long/build-board-deep/hidden/acceptance.test.ts <scored.json>
+```
+
+The scorer copies the hidden test into each kept sandbox and runs it with `bun test`, with the agent's own tests and
+the tokens of the run. The routing finding of 2026-11-05 holds: a Complex spec sends even `build-board-high` to the
+deep builder now and then (build/SKILL.md, "deep for tier Complex"), so read `agent_types` in the scored rows rather
+than the case name. Baselines of 2026-11-05: the hidden tests pass in every kept build (41/41 in 11 of 11), the
+`split-*` cases offer stages in one run of three with or without the plugin.
+
+### Manual harnesses
+
+- `evals-manual/real-quiet-prompts/`: a real S fix (memory_missing 2a74eacb). `build.sh` rebuilds the tree just before
+  the fix from the source repository (read only, by `git archive`), `prompt.md` is the builder brief, `score.py`
+  scores a run: the real fix's test, the board's 650 tests, tsc, 5 mutants. The brief goes to the builder arm directly
+  (Agent tool, or `claude -p --agent moku:moku-builder`), not through the runner: the runner's case is the main thread.
+  On 2026-11-05: deep 324 s, high 123 s, Sonnet 76 s (medians, n=3), the same quality.
+- `evals-manual/f2-validators/`: a plan and a framework with seeded holes; `run_f2.sh <plan|code> <high|medium> <rep>
+  <out> <plugin copy>` runs one validator, `grade_f2.py <out>` counts the holes each report names. About $2 a run.
+
+### Design fidelity
+
+`research/design-fidelity/baseline/harness` (`run.sh`, `fidelity.mjs`, `score.py`) builds a screen from an HTML
+prototype and measures it element by element and by pixels at five viewports. A run needs a browser and several
+minutes per screen, costs $2–4, and waits when two heavy runs are already on the machine. It stays out of CI: run it
+nightly or by hand, and see `research/plan/baseline-design.md` for the commands.
+
+Keep at most two heavy runs (`claude plugin eval`, `claude -p`) on one machine at a time; they share one rate limit
+and the times stop being comparable.
+
+## Running the core cases
+
+Run from the repository root:
 
 ```bash
 claude plugin eval plugins/moku --trust-plugin --no-publish --allow-tools Write Edit Bash

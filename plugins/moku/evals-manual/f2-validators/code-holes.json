@@ -1,0 +1,5 @@
+{"A1-cycle-search-notify": "(?is)(cycl|circular).{0,300}(search|notify)|(search.{0,60}notify.{0,60}search|notify.{0,60}search.{0,60}notify)",
+ "A2-order-sync-before-storage": "(?is)sync.{0,200}(before|ahead of|precedes|earlier than).{0,80}storage|storage.{0,200}(after|later than).{0,80}sync|order.{0,200}sync.{0,120}storage",
+ "A3-undeclared-sync-failed": "(?is)sync:failed.{0,250}(undeclared|not declared|never declared|missing|declare)|(undeclared|not declared).{0,250}sync:failed",
+ "A4-dead-hook-search-indexed": "(?is)search:indexed.{0,250}(never emitted|not emitted|dead|no plugin emits|orphan|no emitter|never fires)|(dead hook|never emitted|not emitted).{0,250}search:indexed",
+ "A5-full-reindex-per-change": "(?is)(rebuild|re-?index|clear|O\\(n|every note|whole index|full).{0,300}storage:changed|storage:changed.{0,300}(rebuild|re-?index|clears|O\\(n|every note|whole index|full)"}

@@ -1,0 +1,99 @@
+{
+  "source": "main ebe03c6, moku 0.85.10, CLI 2.1.296, 3 runs, ablation none, haiku judge, 2026-11-05",
+  "overallScore": 0.972,
+  "costUsd": 3.58,
+  "durationSeconds": 453,
+  "cases": {
+    "conductor-idea": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.288,
+      "durationSeconds": 39
+    },
+    "nano-plugin-shape": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.221,
+      "durationSeconds": 21.7
+    },
+    "rails-design-check-gate": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.251,
+      "durationSeconds": 30
+    },
+    "rails-no-init": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.235,
+      "durationSeconds": 24.3
+    },
+    "readable-stanzas": {
+      "runs": 3,
+      "passed": 2,
+      "score": 0.6666666666666666,
+      "costUsd": 0.181,
+      "durationSeconds": 20.3
+    },
+    "release-first-publish": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.19,
+      "durationSeconds": 25
+    },
+    "tests-coverage-no-filler": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.364,
+      "durationSeconds": 61.7
+    },
+    "tests-keep-the-floor": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.304,
+      "durationSeconds": 36.3
+    },
+    "tests-kill-check": {
+      "runs": 3,
+      "passed": 2,
+      "score": 0.9696969696969697,
+      "costUsd": 0.449,
+      "durationSeconds": 60.7
+    },
+    "tests-name-the-bug": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.373,
+      "durationSeconds": 57.3
+    },
+    "thin-root": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.247,
+      "durationSeconds": 29.7
+    },
+    "tweak-quick-edits": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.336,
+      "durationSeconds": 36
+    },
+    "waves-next-wave": {
+      "runs": 3,
+      "passed": 3,
+      "score": 1,
+      "costUsd": 0.137,
+      "durationSeconds": 11
+    }
+  }
+}
