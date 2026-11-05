@@ -28,7 +28,7 @@ import { LOOP_STATIONS } from "../lib/rails/routes.mjs";
 /** A person about to sign out, sign in again or move to another account, in English or Russian. */
 const SIGN_IN = /\b(sign(ing|ed)?[\s-]?(in|out)|log(ging|ged)?[\s-]?(in|out)|login|logout|re-?log|account|checkpoint)\b|аккаунт|логин|разлогин|перелогин|войд|вход|выйд|чекпойнт|чекпоинт/i;
 
-const CHECKPOINT_HINT = "The person is about to sign in again. Run `moku-rails checkpoint`, not `pause`: it saves every open moku session on this machine (id, folder, where it stopped, background tasks). Then tell them to close the sessions, sign in themselves with `claude auth login`, and run `moku-rails resume-checkpoint`, which prints one `claude --resume <id>` per session. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
+const CHECKPOINT_HINT = "The person is about to sign in again. Run `moku-rails checkpoint`, not `pause`: it saves every open moku session on this machine (id, folder, where it stopped, background tasks). If a change is open inside a station, also run `moku-rails pause --reason \"signing in again\"` before you answer, so the turn can end. Then, in your last message, tell them to close the sessions, sign in themselves with `claude auth login`, and run `moku-rails resume-checkpoint`, which prints one `claude --resume <id>` per session. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
 
 const { payload } = readHookInput();
 const prompt = promptText(payload);

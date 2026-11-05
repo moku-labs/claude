@@ -17,7 +17,8 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   written, and sessions from other eval and scratch folders are left out (`--include-temp`).
 - **The prompt hook names the checkpoint** when the person says they will sign out, sign in or move to another account
   (English or Russian), because a model that skips the conductor reached for `pause`, which keeps only the change.
-  New core eval `rails-checkpoint`: 0/3 before the hint, 3/3 after.
+  The hint also has the model pause an open change before it answers, so the stop hook does not cut the hand-over.
+  New core eval `rails-checkpoint`: 0/3 before the hint, 6/6 after.
 
 ### Fixed
 - **`moku-rails --json` cut a long answer at 64 KB** when stdout was a pipe: the CLI exited before the pipe was
