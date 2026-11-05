@@ -7,7 +7,7 @@ import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
 import { registerAgent, runningAgents } from "../../lib/hooks/agents.mjs";
-import { linkPlanning } from "../../lib/hooks/worktree.mjs";
+import { allowPlanningDirectory, linkPlanning } from "../../lib/hooks/worktree.mjs";
 import { facts } from "../../lib/rails/commands.mjs";
 import { laneOf, markPrompt } from "../../lib/rails/ledger.mjs";
 
@@ -179,5 +179,34 @@ describe("moku-rails: two worktrees of one project work side by side", () => {
     assert.equal(facts(main).changes.length, 1);
     assert.equal(facts(main).routed, true);
     assert.equal(facts(first).changes.length, 0);
+  });
+});
+
+describe("a worktree's sessions may write the main checkout's .planning/", () => {
+  const settingsOf = (/** @type {string} */ tree) => JSON.parse(readFileSync(join(tree, ".claude", "settings.local.json"), "utf8"));
+
+  it("names it a working directory of the worktree, once, and keeps the file out of git", () => {
+    const { main, first } = projectWithWorktrees();
+
+    assert.deepEqual(settingsOf(first).permissions.additionalDirectories, [join(main, ".planning")]);
+    assert.equal(linkPlanning(first), false);
+    assert.deepEqual(settingsOf(first).permissions.additionalDirectories, [join(main, ".planning")]);
+    assert.equal(git(first, "status", "--porcelain"), "");
+  });
+
+  it("keeps the rules already in the file", () => {
+    const { main, first } = projectWithWorktrees();
+    writeFileSync(join(first, ".claude", "settings.local.json"), JSON.stringify({ permissions: { allow: ["Bash(ls:*)"] } }));
+
+    assert.equal(allowPlanningDirectory(first, join(main, ".planning")), true);
+    assert.deepEqual(settingsOf(first).permissions, { allow: ["Bash(ls:*)"], additionalDirectories: [join(main, ".planning")] });
+  });
+
+  it("leaves a settings file that is not JSON alone", () => {
+    const { main, first } = projectWithWorktrees();
+    writeFileSync(join(first, ".claude", "settings.local.json"), "{ not json");
+
+    assert.equal(allowPlanningDirectory(first, join(main, ".planning")), false);
+    assert.equal(readFileSync(join(first, ".claude", "settings.local.json"), "utf8"), "{ not json");
   });
 });

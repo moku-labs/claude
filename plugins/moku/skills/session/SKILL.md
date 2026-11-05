@@ -45,7 +45,7 @@ moku-rails session start --root "/absolute/path/to/project"
 
 The command creates the directory when it is new and writes an empty ledger, `.planning/state.json`. It scaffolds nothing; that is the init station's work. Repeating it is harmless.
 
-Then allow the read-only commands the session runs all the time (`moku-rails status`, `git diff`, `grep` and the like), so the person is not asked for each one. It merges them into `.claude/settings.local.json` and touches no other rule:
+Then allow the commands the session runs all the time, so the person is not asked for each one: the read-only ones (`moku-rails status`, `git diff`, `grep` and the like), the ledger moves (`moku-rails continue`, `enter`, `done` and the like) and edits inside `.planning/`. Nothing that pushes, deletes, installs, reaches the network or writes source. It merges them into `.claude/settings.local.json` and touches no other rule. Say so in one line in the hand-over, and that `/permissions` removes them:
 
 ```bash
 node "${CLAUDE_PLUGIN_ROOT}/lib/hooks/allow-list.mjs" --root "/absolute/path/to/project"
