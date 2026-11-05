@@ -2,9 +2,11 @@
  * Which files a shell command writes.
  *
  * One concern: read a command the way a shell would, far enough to name its write targets. A redirect
- * writes the word after it; `tee`, `touch`, `mv`, `cp`, `install`, `ln` and `sed -i` write the files they
- * name, also behind `xargs` and `find -exec`. Text that is only data (a heredoc body, a quoted pattern,
- * a `2>&1`) names nothing.
+ * writes the word after it; `tee`, `touch`, `mv`, `cp`, `install`, `ln`, `sed -i`, `perl -i` and `dd of=`
+ * write the files they name, also behind `xargs` and `find -exec`. Text that is only data (a heredoc body,
+ * a quoted pattern, a `2>&1`) names nothing, unless a shell or an interpreter runs it: `bash -c '...'` and a
+ * heredoc fed to `bash` are read as commands, and the script of `node -e`, `python3 -c` or a heredoc fed to
+ * `python3 -` names every path it holds when it calls a write function.
  */
 
 import { posix } from "node:path";
@@ -32,6 +34,19 @@ const WRITES_ALL = new Set(["tee", "touch", "mv"]);
 /** Commands that write their last operand. */
 const WRITES_LAST = new Set(["cp", "install", "ln"]);
 
+/** Shells whose `-c` script, or heredoc on stdin, is a command line of its own. */
+const SHELLS = new Set(["bash", "sh", "zsh", "dash", "ksh"]);
+
+/** Interpreters whose inline script (`-e`, `-c`, `-p`, `eval`) or heredoc on stdin can write files. */
+const INTERPRETERS = new Set(["node", "python", "python3", "perl", "ruby", "bun", "deno", "tsx", "php"]);
+const INLINE_SCRIPT = new Set(["-e", "-c", "-p", "-E", "--eval", "--print", "eval", "-r"]);
+
+/** A write call in a script: Node, Bun, Deno, Python, Ruby, Perl, PHP. */
+const WRITE_CALL = /\b(?:write(?:File|FileSync|TextFile|_text|_bytes)?|appendFile(?:Sync)?|createWriteStream|copyFile(?:Sync)?|rename(?:Sync)?|cpSync|file_put_contents|Bun\.write)\s*\(|\bopen\s*\([^)]*,\s*['"][wax+]|\bFile\.(?:write|open)\b|open\s*\(?\s*(?:my\s+)?\$?\w*\s*,\s*['"][>+]/;
+
+/** A quoted literal that reads as a file path. */
+const PATH_LITERAL = /(['"`])((?:[\w.@~-]*\/)+[\w.@-]+|[\w-]+\.(?:[cm]?[jt]sx?|json|css|html|md))\1/g;
+
 /** `xargs` options followed by a value of their own. */
 const XARGS_VALUE = new Set(["-I", "-n", "-P", "-d", "-L", "-s", "-E", "-a"]);
 
@@ -57,7 +72,7 @@ export function shellWriteTargets(command) {
 
   for (const segment of readSegments(withoutHeredocBodies(command))) {
     const words = commandWords(segment.words);
-    const written = [...segment.redirects, ...writtenOperands(words), ...handedOver(words, piped)];
+    const written = [...segment.redirects, ...writtenOperands(words), ...handedOver(words, piped), ...scripted(words)];
     for (const target of written) targets.push(place(directory, target));
 
     // Later targets are relative to the directory the command moved to
@@ -67,7 +82,71 @@ export function shellWriteTargets(command) {
     piped = segment.piped ? [...piped, ...words.slice(1)] : [];
   }
 
+  // A heredoc fed to a shell or an interpreter is a script, not data
+  for (const { opener, body } of heredocs(command)) {
+    const words = commandWords(readSegments(opener).at(-1)?.words ?? []);
+    if (SHELLS.has(words[0])) targets.push(...shellWriteTargets(body));
+    else if (INTERPRETERS.has(words[0])) targets.push(...scriptPaths(body));
+  }
+
   return targets;
+}
+
+/**
+ * The files an inline script writes: the `-c` command line of a shell, or the paths of an interpreter's
+ * `-e`/`-c` script that calls a write function.
+ *
+ * @param {string[]} words command name first
+ * @returns {string[]}
+ */
+function scripted([name, ...rest]) {
+  const at = rest.findIndex((word) => INLINE_SCRIPT.has(word) || /^-[a-zA-Z]*[ce]$/.test(word));
+  const script = at === -1 ? undefined : rest[at + 1];
+  if (typeof script !== "string") return [];
+
+  if (SHELLS.has(name)) return shellWriteTargets(script);
+  if (INTERPRETERS.has(name)) return scriptPaths(script);
+
+  return [];
+}
+
+/**
+ * Every path literal of a script that calls a write function. Which one it writes cannot be told without
+ * running it, so all are judged: a script that only reads names none.
+ *
+ * @param {string} script
+ * @returns {string[]}
+ */
+function scriptPaths(script) {
+  if (!WRITE_CALL.test(script)) return [];
+
+  return [...script.matchAll(PATH_LITERAL)].map((match) => match[2]);
+}
+
+/**
+ * The heredocs of a command, each with the text of the line that opens it (up to the `<<`) and its body.
+ * A heredoc that never closes has no body: `withoutHeredocBodies` keeps its text as commands.
+ *
+ * @param {string} command
+ * @returns {{ opener: string, body: string }[]}
+ */
+function heredocs(command) {
+  const lines = command.split("\n");
+  /** @type {{ opener: string, body: string }[]} */
+  const found = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    for (const match of lines[index].matchAll(HEREDOC)) {
+      const [, dash, , delimiter] = match;
+      const closes = lines.findIndex((line, at) => at > index && (dash ? line.replace(/^\t+/, "") : line) === delimiter);
+      if (closes === -1) continue;
+
+      found.push({ opener: lines[index].slice(0, match.index), body: lines.slice(index + 1, closes).join("\n") });
+      index = closes;
+    }
+  }
+
+  return found;
 }
 
 /**
@@ -257,6 +336,7 @@ function writtenOperands([name, ...rest]) {
 
   if (WRITES_ALL.has(name)) return operands;
   if (WRITES_LAST.has(name)) return operands.slice(-1);
+  if (name === "dd") return rest.filter((word) => word.startsWith("of=")).map((word) => word.slice(3));
   if (writes([name, ...rest])) return sedFiles(rest);
 
   return [];
@@ -297,22 +377,23 @@ function handedOver([name, ...rest], piped) {
  * @returns {boolean}
  */
 function writes([name, ...rest]) {
-  return WRITES_ALL.has(name) || WRITES_LAST.has(name) || (name === "sed" && rest.some((word) => IN_PLACE.test(word)));
+  return WRITES_ALL.has(name) || WRITES_LAST.has(name) || ((name === "sed" || name === "perl") && rest.some((word) => IN_PLACE.test(word)));
 }
 
 /**
- * The files of a `sed -i` call: its operands without the script.
+ * The files of a `sed -i` or `perl -i` call: its operands without the script.
  *
- * @param {string[]} rest arguments after `sed`
+ * @param {string[]} rest arguments after `sed` or `perl`
  * @returns {string[]}
  */
 function sedFiles(rest) {
   const takesValue = new Set(["-e", "-f", "--expression", "--file"]);
-  const scripted = rest.some((word) => takesValue.has(word));
-  const operands = rest.filter((word, index) => word !== "" && !word.startsWith("-") && !takesValue.has(rest[index - 1]));
+  const bundled = (/** @type {string | undefined} */ word) => typeof word === "string" && /^-[a-zA-Z]*e$/.test(word);
+  const withScript = rest.some((word) => takesValue.has(word) || bundled(word));
+  const operands = rest.filter((word, index) => word !== "" && !word.startsWith("-") && !takesValue.has(rest[index - 1]) && !bundled(rest[index - 1]));
 
   // Without -e or -f the first operand is the script
-  return scripted ? operands : operands.slice(1);
+  return withScript ? operands : operands.slice(1);
 }
 
 /**

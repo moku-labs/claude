@@ -130,6 +130,29 @@ describe("guardShell", () => {
   it("scans the rest of the command when a heredoc never closes", () => {
     refused('echo "<< EOF"\ntouch src/a.ts');
   });
+
+  it("reads the script a shell runs: bash -c and a heredoc fed to bash", () => {
+    refused("bash -c 'cat > src/a.ts' <<EOF\nx\nEOF");
+    refused('sh -c "echo x > src/a.ts"');
+    refused("bash <<'SH'\ncat > src/a.ts <<'TS'\nexport const a = 1;\nTS\nSH");
+    allowed("bash -lc 'grep -rn x src/ && bun run test src/a.test.ts'");
+    allowed("bash <<'SH'\ngrep -rn x src/\nSH");
+  });
+
+  it("judges the paths of an interpreter script that writes, and lets one that only reads through", () => {
+    refused(`node -e "require('fs').writeFileSync('src/a.ts', 'x')"`);
+    refused("python3 - <<'PY'\nopen('src/a.ts', 'w').write('x')\nPY");
+    refused("perl -pi -e 's/a/b/' src/a.ts");
+    refused("dd if=/tmp/a of=src/a.ts");
+    allowed(`node -e "console.log(require('./src/a.json'))"`);
+    allowed("python3 - <<'PY'\nimport json\nprint(json.load(open('src/a.json')))\nPY");
+    allowed("perl -ne 'print if /x/' src/a.ts");
+    allowed(`node -e "require('fs').writeFileSync('.planning/notes.md', 'x')"`);
+  });
+
+  it("does not take a commit message heredoc for a script", () => {
+    allowed("git commit -m \"$(cat <<'EOF'\nfix: cat > src/a.ts\nEOF\n)\"");
+  });
 });
 
 describe("guardWrite in a game", () => {
