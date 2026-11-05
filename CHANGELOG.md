@@ -2,6 +2,22 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.86.2 (2026-11-05)
+
+### Fixed
+- **A worktree asked the person for every write to `.planning/`.** In a worktree `.planning` is a link into the main
+  checkout, and Claude Code's safety check asks for each write that leaves the worktree, in auto mode too, ignoring the
+  write hook's allow: 98% of 922 prompts in 132 real sessions. The SessionStart hook now names the main checkout's
+  `.planning/` an additional directory in the worktree's `.claude/settings.local.json` (kept out of git). A replay over
+  the same transcripts closes 92% of the prompts; per session with prompts, median 5 → 0, p90 41 → 3.
+
+### Changed
+- **The rails' ledger moves and plan edits are allowed in the project's local settings** (`moku-rails continue`,
+  `enter`, `done` and the like, and `Edit(/.planning/**)`): init's template has them, and the session skill merges them
+  in. `check`, `session`, `init` and `adopt` still ask.
+- **The conductor writes `.planning/` files with Write and Edit**, not the shell, and runs commands with no `cd … &&`
+  and no `VAR=…` prefix, so they match the allow rules.
+
 ## 0.86.1 (2026-11-05)
 
 ### Fixed
@@ -40,28 +56,6 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 ### Changed
 - **`state.json` schema version 2.** `version` is the schema, and the new field `milestone` is null until a
   milestone is set. A version 1 file, or one with no version, is migrated when it is read and saved as version 2.
-
-## 0.85.11 (2026-11-05)
-
-### Fixed
-- **SubagentStop blocked agents that had already reported.** 1069 of 1121 blocks in real runs (95%, ≈ $309 of calls after
-  them) came after a valid JSON hand-back: the hook read the transcript before the hand-back reached it. The hook now
-  looks again for up to a second before it blocks; a replay over the same transcripts leaves 0 of those 1069 blocked.
-  A block that still happens writes one line to `.planning/build/stop-diagnostics.jsonl` (payload keys, transcript size,
-  no content), until the cause of the rest is known.
-- **The rails write gate had shell ways around it.** `bash -c`, a heredoc fed to `bash`, `node -e` / `python3 -c` and a
-  heredoc fed to `python3 -` that write, `perl -i` and `dd of=` are judged like a Write of the files they name.
-- **Six parallel Vitest runs timed tests out at 5 s.** Builders run their tests with `--maxWorkers=2`, and the wave
-  workflow caps builders and artifact checks at `maxParallel`.
-
-### Changed
-- **The prompt hook repeats the rails standing only when it changed**; the routing rule still comes with every typed
-  message. A compaction (`SessionStart` with `source: compact`) gives the standing in full again.
-- **Five parallel agents by default** (`max_parallel_agents` 3 → 5), safe with the worker cap above.
-- **Read-only commands are allowed in the project's local settings** (`moku-rails status`, `git diff`, `grep` and the
-  like): init's template has them, and the session skill merges them in (`lib/hooks/allow-list.mjs`).
-- **A builder never installs a tool the project lacks.** No test runner: it stops and reports. No linter or `tsc`: it
-  skips that check and names it in `blockers`.
 
 ## 0.85.10 (2026-11-03)
 
