@@ -1059,7 +1059,7 @@ describe("the read-only allow-list", () => {
   const script = join(PLUGIN, "lib", "hooks", "allow-list.mjs");
 
   it("is merged into the project's local settings, keeps the rules there, and adds nothing twice", async () => {
-    const { READ_ONLY_ALLOW } = await import(script);
+    const { READ_ONLY_ALLOW, RAILS_ALLOW } = await import(script);
     const root = mkdtempSync(join(tmpdir(), "moku-allow-"));
     mkdirSync(join(root, ".claude"));
     writeFileSync(join(root, ".claude", "settings.local.json"), JSON.stringify({ permissions: { allow: ["Bash(bun run:*)"], deny: ["Bash(rm:*)"] }, env: { A: "1" } }));
@@ -1068,9 +1068,9 @@ describe("the read-only allow-list", () => {
     const second = spawnSync("node", [script, "--root", root], { encoding: "utf8" }).stdout;
     const settings = JSON.parse(readFileSync(join(root, ".claude", "settings.local.json"), "utf8"));
 
-    assert.match(first, new RegExp(`${READ_ONLY_ALLOW.length} rule`));
+    assert.match(first, new RegExp(`${READ_ONLY_ALLOW.length + RAILS_ALLOW.length} rule`));
     assert.match(second, /already allowed/);
-    assert.deepEqual(settings.permissions.allow, ["Bash(bun run:*)", ...READ_ONLY_ALLOW]);
+    assert.deepEqual(settings.permissions.allow, ["Bash(bun run:*)", ...READ_ONLY_ALLOW, ...RAILS_ALLOW]);
     assert.deepEqual(settings.permissions.deny, ["Bash(rm:*)"]);
     assert.equal(settings.env.A, "1");
   });
@@ -1081,6 +1081,18 @@ describe("the read-only allow-list", () => {
 
     for (const rule of READ_ONLY_ALLOW) {
       assert.doesNotMatch(rule, /\((cat|find|sed|tee|cp|mv|rm|node|python3?|bash|sh|bunx|npx|bun)\b/, rule);
+      assert.ok(template.includes(`"${rule}"`), `tooling-config.md lacks ${rule}`);
+    }
+  });
+
+  it("allows only ledger moves and plan files: no test run, no command that creates a project", async () => {
+    const { RAILS_ALLOW } = await import(script);
+    const template = readFileSync(join(PLUGIN, "skills", "moku-core", "references", "tooling-config.md"), "utf8");
+    const ledger = new Set(["open", "enter", "done", "skip", "close", "pause", "park", "resume", "continue", "scope", "idea", "tier", "guard", "guard-bash", "may-stop"]);
+
+    for (const rule of RAILS_ALLOW) {
+      const move = /^Bash\(moku-rails ([a-z-]+):\*\)$/.exec(rule)?.[1];
+      assert.ok(rule === "Edit(/.planning/**)" || ledger.has(move ?? ""), rule);
       assert.ok(template.includes(`"${rule}"`), `tooling-config.md lacks ${rule}`);
     }
   });

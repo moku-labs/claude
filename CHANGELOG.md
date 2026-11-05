@@ -2,6 +2,22 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.86.2 (2026-11-05)
+
+### Fixed
+- **A worktree asked the person for every write to `.planning/`.** In a worktree `.planning` is a link into the main
+  checkout, and Claude Code's safety check asks for each write that leaves the worktree, in auto mode too, ignoring the
+  write hook's allow: 98% of 922 prompts in 132 real sessions. The SessionStart hook now names the main checkout's
+  `.planning/` an additional directory in the worktree's `.claude/settings.local.json` (kept out of git). A replay over
+  the same transcripts closes 92% of the prompts; per session with prompts, median 5 → 0, p90 41 → 3.
+
+### Changed
+- **The rails' ledger moves and plan edits are allowed in the project's local settings** (`moku-rails continue`,
+  `enter`, `done` and the like, and `Edit(/.planning/**)`): init's template has them, and the session skill merges them
+  in. `check`, `session`, `init` and `adopt` still ask.
+- **The conductor writes `.planning/` files with Write and Edit**, not the shell, and runs commands with no `cd … &&`
+  and no `VAR=…` prefix, so they match the allow rules.
+
 ## 0.86.1 (2026-11-05)
 
 ### Fixed

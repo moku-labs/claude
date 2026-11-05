@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Запросы разрешений moku</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--muted:#6b675f;--line:#e4e0d7;--card:#fff;--accent:#b4532a;--ok:#2f7a4a;--bar:#d9a184}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#161513;--fg:#ece9e2;--muted:#a19c91;--line:#33302b;--card:#1f1e1b;--accent:#e0875c;--ok:#6cc08b;--bar:#8a5136}}
+:root[data-theme="dark"]{--bg:#161513;--fg:#ece9e2;--muted:#a19c91;--line:#33302b;--card:#1f1e1b;--accent:#e0875c;--ok:#6cc08b;--bar:#8a5136}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 10px}
+.sub{color:var(--muted);margin:0 0 24px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums}.kpi span{color:var(--muted);font-size:14px}
+.kpi.good b{color:var(--ok)}.kpi.bad b{color:var(--accent)}
+table{width:100%;border-collapse:collapse;font-size:15px;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px}
+td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar{height:8px;background:var(--bar);border-radius:4px}
+code{font:13.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--line);padding:1px 4px;border-radius:4px}
+.note{color:var(--muted);font-size:14px}
+.box{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 14px;margin:12px 0}
+ul{padding-left:20px}li{margin:4px 0}
+.wrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<main>
+<h1>Почему moku так часто спрашивает разрешения</h1>
+<p class="sub">Разбор транскриптов moku_game, moku_editor, memory_missing, moku_native, moku_system и их worktree · 132 сессии, 2166 файлов · 5 ноября 2026</p>
+
+<div class="kpis">
+  <div class="kpi bad"><b>922</b><span>запроса, на которые ответил человек</span></div>
+  <div class="kpi bad"><b>98%</b><span>из них — запись в <code>.planning/</code> (97% — из worktree)</span></div>
+  <div class="kpi good"><b>92%</b><span>запросов закрывает фикс (replay)</span></div>
+  <div class="kpi"><b>5 → 0</b><span>медиана на сессию с запросами; p90 41 → 3</span></div>
+</div>
+
+<h2>Причина</h2>
+<div class="box">
+В worktree <code>.planning</code> — симлинк на <code>&lt;основной checkout&gt;/.planning/lanes/&lt;имя&gt;</code>. Любая запись туда уходит за пределы рабочего каталога сессии. Встроенная safety-проверка Claude Code спрашивает человека на каждую такую запись — и в режиме auto тоже. Хук <code>pre-write.mjs</code> уже отвечал <code>allow</code>, но safety-проверка этот ответ не учитывает: в транскриптах сразу после <code>allow</code> от хука идёт запрос.
+</div>
+<ul>
+  <li>Все сессии шли в режиме <b>auto</b>. Классификатор пропускал обычные команды, поэтому запросы почти полностью — это safety-проверка (<code>reasonCode: safetyCheck</code>).</li>
+  <li>897 из 922 запросов (97%) — в worktree, и все Edit/Write с запросом — файлы <code>.planning/</code>.</li>
+  <li>Медианное ожидание ответа — 29 с на запрос. Из сессий, где запросы были (67 из 132), у медианной их 5, у p90 — 41, максимум 77.</li>
+  <li>Составные команды, <code>cd … &amp;&amp;</code> и env-префиксы в режиме auto запросов сами по себе не вызывали: из 488 Bash-запросов <b>все</b> пишут в <code>.planning/</code>.</li>
+</ul>
+
+<h2>Топ шаблонов</h2>
+<div class="wrap"><table>
+<tr><th>Шаблон</th><th class="n">Запросов</th><th class="n">Доля</th><th style="width:28%"></th></tr>
+<tr><td>Edit/Write → прочие файлы <code>.planning/</code> (черновики, <code>context-*.md</code>, specs, archive)</td><td class="n">110</td><td class="n">11.9%</td><td><div class="bar" style="width:100%"></div></td></tr>
+<tr><td>Bash: <code>cat &gt; / cat &gt;&gt; … &lt;&lt;EOF</code> в <code>.planning/</code></td><td class="n">106</td><td class="n">11.5%</td><td><div class="bar" style="width:96%"></div></td></tr>
+<tr><td>Bash: <code>moku-rails …</code> и запись в <code>.planning/</code> в той же команде (<code>; … &gt;&gt;</code>, <code>&lt;&lt;EOF</code>)</td><td class="n">100</td><td class="n">10.8%</td><td><div class="bar" style="width:91%"></div></td></tr>
+<tr><td>Write → <code>.planning/design/</code></td><td class="n">86</td><td class="n">9.3%</td><td><div class="bar" style="width:78%"></div></td></tr>
+<tr><td>Bash: <code>sed -i</code> по <code>.planning/</code></td><td class="n">74</td><td class="n">8.0%</td><td><div class="bar" style="width:67%"></div></td></tr>
+<tr><td>Artifact из файла в <code>.planning/</code></td><td class="n">68</td><td class="n">7.4%</td><td><div class="bar" style="width:62%"></div></td></tr>
+<tr><td>Bash: <code>mkdir -p .planning/…</code></td><td class="n">63</td><td class="n">6.8%</td><td><div class="bar" style="width:57%"></div></td></tr>
+<tr><td>Edit → <code>.planning/design/</code></td><td class="n">59</td><td class="n">6.4%</td><td><div class="bar" style="width:54%"></div></td></tr>
+<tr><td>Write → <code>.planning/changes/</code></td><td class="n">59</td><td class="n">6.4%</td><td><div class="bar" style="width:54%"></div></td></tr>
+<tr><td>Bash: <code>cp … .planning/…</code></td><td class="n">43</td><td class="n">4.7%</td><td><div class="bar" style="width:39%"></div></td></tr>
+<tr><td>Edit → <code>.planning/changes/</code></td><td class="n">37</td><td class="n">4.0%</td><td><div class="bar" style="width:34%"></div></td></tr>
+<tr><td>Bash: <code>echo / printf &gt;&gt; .planning/…</code></td><td class="n">28</td><td class="n">3.0%</td><td><div class="bar" style="width:25%"></div></td></tr>
+<tr><td>Bash: <code>python3 &lt;&lt;EOF</code>, пишет в <code>.planning/</code></td><td class="n">13</td><td class="n">1.4%</td><td><div class="bar" style="width:12%"></div></td></tr>
+<tr><td>Bash: прочее в цепочке с записью в <code>.planning/</code> (ls, grep, mv, rm, git add)</td><td class="n">61</td><td class="n">6.6%</td><td><div class="bar" style="width:55%"></div></td></tr>
+<tr><td>Не про <code>.planning/</code>: Artifact, MCP сессий (archive/start), ArtifactData, Agent</td><td class="n">15</td><td class="n">1.6%</td><td><div class="bar" style="width:14%"></div></td></tr>
+</table></div>
+<p class="note">Запросом считается решение с <code>grantScope</code> (once/session) или ответом человека; AskUserQuestion не считается. Ранее сохранённые правила (<code>user_permanent</code>, ответ за 0.2 с) запросом не считаются.</p>
+
+<h2>Кто вызывает</h2>
+<div class="wrap"><table>
+<tr><th>Кто</th><th class="n">Запросов</th><th class="n">Доля</th></tr>
+<tr><td>Оркестратор (основная сессия: дирижёр, станции design/plan/brainstorm)</td><td class="n">859</td><td class="n">93.2%</td></tr>
+<tr><td><code>moku-design:design-generator</code></td><td class="n">27</td><td class="n">2.9%</td></tr>
+<tr><td><code>general-purpose</code> (в основном Artifact)</td><td class="n">15</td><td class="n">1.6%</td></tr>
+<tr><td><code>moku-builder</code> / <code>moku-builder-deep</code></td><td class="n">16</td><td class="n">1.7%</td></tr>
+<tr><td><code>moku-code-reviewer</code> и неизвестные</td><td class="n">5</td><td class="n">0.5%</td></tr>
+</table></div>
+<p class="note">Validator, tweaker и e2e-агенты запросов не вызывали.</p>
+
+<h2>Что поменяно</h2>
+<ol>
+  <li><b>Главный фикс.</b> Когда SessionStart-хук ставит worktree ссылку на lane, он добавляет <code>&lt;основной checkout&gt;/.planning</code> в <code>permissions.additionalDirectories</code> в <code>.claude/settings.local.json</code> этого worktree и убирает файл из git через <code>info/exclude</code>. Добавляется только эта папка, остальные правила файла не трогаются. Если файл — не JSON или его отслеживает git, хук его не меняет (<code>lib/hooks/worktree.mjs</code>, <code>allowPlanningDirectory</code>). Уже созданные worktree получат это на следующем старте сессии.</li>
+  <li><b>Allowlist (поверх PR #100).</b> К read-only правилам добавлены переходы по ledger: <code>moku-rails open/enter/done/skip/close/pause/park/resume/continue/scope/idea/tier/guard/guard-bash/may-stop</code> — они меняют только <code>.planning/state.json</code>. Плюс <code>Edit(/.planning/**)</code>. Не добавлены: <code>check</code> (запускает тесты), <code>session</code>, <code>init</code>, <code>adopt</code> (создают файлы там, куда указывает <code>--root</code>). Список пишут скилл session и шаблон init; в сообщении при передаче сессии говорится, что правила убираются через <code>/permissions</code>.</li>
+  <li><b>Дирижёр.</b> Одна строка в Gotchas: текстовые файлы <code>.planning/</code> писать через Write/Edit, а не shell (<code>cat &gt; &lt;&lt;EOF</code>, <code>sed -i</code>, <code>printf &gt;&gt;</code>); команды запускать без <code>cd … &amp;&amp;</code> и без <code>VAR=…</code> в начале. Это важно для режима default, где shell-запись в <code>.planning/</code> не совпадёт ни с одним правилом.</li>
+</ol>
+<p>Не ослаблено: push, удаление, установка пакетов, сеть, запись вне проекта и в <code>src/</code> по-прежнему спрашивают. Проверено: из worktree запись в корень основного checkout блокируется и после фикса.</p>
+
+<h2>До / после</h2>
+<div class="wrap"><table>
+<tr><th>Замер</th><th>До</th><th>После</th></tr>
+<tr><td>Replay по транскриптам: запросы, закрытые фиксом</td><td class="n">922</td><td class="n">72 остаются (−92%)</td></tr>
+<tr><td>Запросов на сессию (из 67 сессий с запросами): медиана / p90 / максимум</td><td class="n">5 / 41 / 77</td><td class="n">0 / 3 / 31</td></tr>
+<tr><td>Живой прогон <code>claude -p</code>, auto, worktree проекта на рельсах: 4 записи в <code>.planning/</code></td><td class="n">2 заблокированы</td><td class="n">0 заблокированы</td></tr>
+<tr><td>Тот же прогон: запись в корень основного checkout (вне <code>.planning/</code>)</td><td class="n">блок</td><td class="n">блок</td></tr>
+<tr><td>Эксперимент: правило <code>Edit(/.planning/**)</code>, режим default</td><td class="n">—</td><td class="n"><code>.planning/</code> да, <code>src/</code> спрашивает</td></tr>
+<tr><td>Евалы <code>waves-next-wave</code>, <code>tweak-quick-edits</code> (1 прогон)</td><td class="n">—</td><td class="n">1.00 / 1.00, $0.72</td></tr>
+<tr><td><code>npm test</code> / <code>check</code> / <code>validate</code></td><td class="n">—</td><td class="n">356/356 · ok · exit 0</td></tr>
+</table></div>
+<p class="note">Из 72 оставшихся: 38 — записи до 25.10 без <code>reasonCode</code> (старая версия Claude Code; скорее всего та же причина, но в замер не входят). Остальное — Artifact и MCP-инструменты сессий: там запрос уместен. Евал-раннер сам разрешает Write/Edit/Bash и запускается без worktree, поэтому запросы в нём не посчитать: евалы здесь — только проверка на регрессию.</p>
+
+<h2>PreToolUse-хук с <code>allow</code> — не делал</h2>
+<ul>
+  <li>Против главной причины он бесполезен: safety-проверка игнорирует <code>allow</code> от хука, и это видно в данных.</li>
+  <li>Для режима default те же команды закрываются правилами allowlist. Claude Code сам делит составные команды и проверяет каждую часть: <code>moku-rails continue 2&gt;&amp;1 | tail -1</code> проходит.</li>
+  <li>Риск: хуку пришлось бы самому разбирать shell. Ошибка разбора дала бы <code>allow</code> и в обход классификатора auto, и в обход правил. Узкие правила в настройках безопаснее, и их видно в <code>/permissions</code>.</li>
+</ul>
+
+<h2>Режим default (оценка)</h2>
+<p>В транскриптах только режим auto. Грубая симуляция по 105 тыс. Bash-вызовов: 95% составные, 12% начинаются с <code>cd … &amp;&amp;</code>, 10% — с env-префикса, 32% пишут через shell. В режиме default без правил спрашивалось бы около 70% вызовов. Новые правила rails снимают около 1 п.п.; остальное зависит от того, перестанет ли модель писать через shell (строка в дирижёре). Без евалов в режиме default это не измерено.</p>
+
+<h2>Стыки</h2>
+<ul>
+  <li>Ветка отведена от <code>claude/hooks-quick-fixes-ebc910</code> (PR #100): <code>allow-list.mjs</code> расширен, а не продублирован.</li>
+  <li>С PR #99 пересекаются <code>skills/session/SKILL.md</code> (правлен абзац из PR #100) и <code>skills/moku/SKILL.md</code> (одна строка в Gotchas, вне хунков #99). <code>commands.mjs</code> не тронут.</li>
+  <li>Версия и CHANGELOG не подняты — это делается при слиянии.</li>
+</ul>
+</main>
+</body>
+</html>

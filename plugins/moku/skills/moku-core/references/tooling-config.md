@@ -921,6 +921,22 @@ Safe default permissions for Claude Code agents working in a Moku project. These
       "Bash(moku-rails status:*)",
       "Bash(moku-rails waves:*)",
       "Bash(moku-rails tests:*)",
+      "Bash(moku-rails open:*)",
+      "Bash(moku-rails enter:*)",
+      "Bash(moku-rails done:*)",
+      "Bash(moku-rails skip:*)",
+      "Bash(moku-rails close:*)",
+      "Bash(moku-rails pause:*)",
+      "Bash(moku-rails park:*)",
+      "Bash(moku-rails resume:*)",
+      "Bash(moku-rails continue:*)",
+      "Bash(moku-rails scope:*)",
+      "Bash(moku-rails idea:*)",
+      "Bash(moku-rails tier:*)",
+      "Bash(moku-rails guard:*)",
+      "Bash(moku-rails guard-bash:*)",
+      "Bash(moku-rails may-stop:*)",
+      "Edit(/.planning/**)",
       "Bash(pwd)",
       "Bash(ls:*)",
       "Bash(tree:*)",
@@ -939,7 +955,10 @@ Safe default permissions for Claude Code agents working in a Moku project. These
 **What's included:**
 - **Bun:** install, run scripts, test, all bunx tool invocations (tsc, biome, oxlint, vitest, lefthook, publint, attw)
 - **Git (read-only):** status, log, diff, branch, show, remote, rev-parse, worktree list
-- **Rails (read-only):** `moku-rails status`, `waves`, `tests` — the session skill merges the same read-only rules into a project init never touched (`lib/hooks/allow-list.mjs`)
+- **Rails (read-only):** `moku-rails status`, `waves`, `tests`
+- **Rails (ledger moves):** `open`, `enter`, `done`, `skip`, `close`, `pause`, `park`, `resume`, `continue`, `scope`, `idea`, `tier`, `guard`, `guard-bash`, `may-stop` — they change only `.planning/state.json`; `check` (runs the tests), `session`, `init` and `adopt` are not here
+- **Plan files:** `Edit(/.planning/**)` — `.planning/` and nothing else; the write hook still guards each file
+- The session skill merges the same rails and read-only rules into a project init never touched (`lib/hooks/allow-list.mjs`)
 - **File system (read-only):** pwd, ls, tree, wc, head, tail, grep, rg, cat, mkdir
 
 **What's NOT included (requires explicit approval):**

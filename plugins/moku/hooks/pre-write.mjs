@@ -59,6 +59,8 @@ for (const script of CONTENT_CHECKS) {
 
 // A worktree's `.planning` is a link into the main checkout. Claude Code sees the write leave the worktree
 // and asks the person every time, so a planning file that passed every check above is approved here.
+// The safety check on a link that leaves the worktree ignores this approval: what lifts it is the main
+// checkout's `.planning/` as a working directory of the worktree (`allowPlanningDirectory`).
 if (file.startsWith(".planning/") && isLaneLink(root)) {
   console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "allow", permissionDecisionReason: "moku: a planning file of this worktree's lane" } }));
 }

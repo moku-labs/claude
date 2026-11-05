@@ -14,7 +14,7 @@
 
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, lstatSync, mkdirSync, readFileSync, readlinkSync, realpathSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 
 import { isOnRails } from "../rails/ledger.mjs";
@@ -61,6 +61,7 @@ export function linkPlanning(cwd) {
   mkdirSync(lane, { recursive: true });
   writeFileSync(join(lane, OWNER_FILE), `${top}\n`);
   shareProjectFiles(shared, lane);
+  allowPlanningDirectory(top, shared);
 
   // Already in its lane: only the shared links were brought up to date
   if (target === lane) return false;
@@ -149,16 +150,58 @@ function linkTarget(path) {
 }
 
 /**
- * Add `.planning` to the repository's `info/exclude`, which every worktree of it shares.
+ * Make the main checkout's `.planning/` a working directory of the worktree's sessions, in the worktree's
+ * `.claude/settings.local.json`.
+ *
+ * A write through the lane link resolves outside the worktree. Claude Code's safety check asks the person
+ * for every such write, in auto mode too, and an `allow` from a hook does not lift it. Inside an
+ * additional directory the write is judged like any write in the project. Only that one folder is added;
+ * every other rule of the file stays. A settings file that is not JSON, or one git tracks, is left alone.
  *
  * @param {string} top worktree root
+ * @param {string} shared the main checkout's `.planning/`
+ * @returns {boolean} true when the directory was added
+ * @example
+ * allowPlanningDirectory("/work/site/.claude/worktrees/fix-streak", "/work/site/.planning"); // true once
  */
-function excludeFromGit(top) {
+export function allowPlanningDirectory(top, shared) {
+  const name = join(".claude", "settings.local.json");
+  if (git(top, "ls-files", "--error-unmatch", name) !== undefined) return false;
+
+  const file = join(top, name);
+  const dir = realpathSync(shared);
+  let settings = {};
+  try {
+    settings = existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : {};
+  } catch {
+    return false;
+  }
+
+  const dirs = Array.isArray(settings.permissions?.additionalDirectories) ? settings.permissions.additionalDirectories : [];
+  if (dirs.includes(dir)) return false;
+
+  settings.permissions = { ...settings.permissions, additionalDirectories: [...dirs, dir] };
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, `${JSON.stringify(settings, null, 2)}\n`);
+
+  // The file is the worktree's own and never belongs in a commit
+  if (git(top, "check-ignore", "-q", name) === undefined) excludeFromGit(top, name);
+
+  return true;
+}
+
+/**
+ * Add a path to the repository's `info/exclude`, which every worktree of it shares.
+ *
+ * @param {string} top worktree root
+ * @param {string} [entry] the path to keep out of git
+ */
+function excludeFromGit(top, entry = ".planning") {
   const common = git(top, "rev-parse", "--path-format=absolute", "--git-common-dir");
   if (!common) return;
 
   mkdirSync(join(common, "info"), { recursive: true });
-  appendFileSync(join(common, "info", "exclude"), "\n.planning\n");
+  appendFileSync(join(common, "info", "exclude"), `\n${entry}\n`);
 }
 
 /**
