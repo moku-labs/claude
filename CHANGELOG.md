@@ -2,6 +2,16 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.86.3 (2026-11-05)
+
+### Fixed
+- **Agents read files through the shell and asked the person each time.** A builder in a real session read with
+  `sed -n 1,60p a.ts; sed -n 100,160p a.ts`, `grep … | cut` and `cd <worktree> && …`: compound commands match no allow
+  rule, so each stopped the person with a permission prompt. Rule 9 of `agent-preamble.md` now says: Read, Grep and Glob
+  for reading, searching and listing; Bash runs one plain project command per call, with no `cd … &&`, no chains and no
+  pipes. Every agent with Bash (builder, builder-deep, tweaker, code-reviewer, error-diagnostician and its deep twin,
+  quality-validator, web-e2e-tester, web-qa-explorer, web-ux-reviewer, design-generator) points to it.
+
 ## 0.86.2 (2026-11-05)
 
 ### Fixed
