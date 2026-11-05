@@ -13,6 +13,7 @@ import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { PROJECT_TYPES, adoptProject, detectProject, planningIgnored } from "./adopt.mjs";
 import { commitHook } from "./commit-hook.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
+import { DEFAULT_SINCE_HOURS, checkpointsDir, collectSessions, configDir, describeSession, driftNotes, latestCheckpoint, readCheckpoint, resumeCommand, writeCheckpoint } from "./checkpoint.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
@@ -587,6 +588,85 @@ export function session({ root, positional }) {
   const report = status({ root, positional: [], flags: {} });
 
   return { code: 0, lines: [`${created ? "Session started" : "Session already active"} in ${root}. The rails and their hooks act here from now on.`, ...report.lines], data: report.data };
+}
+
+/**
+ * Keep the progress of every open moku session on this machine, so each one continues after the person signs in
+ * again. Writes `~/.claude/moku-checkpoints/<time>.json`: per session its id, folder, branch, uncommitted files, the
+ * open change with where it stopped, and the background tasks that had not reported back. The sign-in is the
+ * person's, through Claude Code's own commands: nothing here reads or writes a credential.
+ *
+ * @param {Args} args flags: --since <hours>, --config-dir <dir>, --include-temp
+ * @returns {Result}
+ * @example
+ * checkpoint({ root, positional: [], flags: { since: "8" } });
+ */
+export function checkpoint({ root, flags }) {
+  const config = typeof flags["config-dir"] === "string" ? flags["config-dir"] : configDir();
+  const hours = Number(flags.since ?? DEFAULT_SINCE_HOURS);
+  if (!(hours > 0)) return usage("moku-rails checkpoint [--since <hours>] [--config-dir <dir>] [--include-temp]");
+
+  let sessions;
+  try {
+    sessions = collectSessions({ config, sinceMs: hours * 60 * 60 * 1000, includeTemp: flags["include-temp"] === true, here: root });
+  } catch (error) {
+    // A sandbox that may not read the config folder: say so, and where the command works instead
+    const code = /** @type {NodeJS.ErrnoException} */ (error).code;
+    if (code !== "EPERM" && code !== "EACCES") throw error;
+    return fail(`Could not read the transcripts in ${config}/projects (${code}): nothing was saved. Run \`moku-rails checkpoint\` where that folder is readable, such as a terminal outside the sandbox.`);
+  }
+  if (sessions.length === 0) return ok(`No moku session in ${config} was active in the last ${hours} h. Nothing to save.`);
+
+  const file = writeCheckpoint({ version: 1, savedAt: new Date().toISOString(), configDir: config, sessions });
+  const lines = [
+    `Saved ${sessions.length} moku session${sessions.length === 1 ? "" : "s"} to ${file}:`,
+    ...sessions.flatMap((session) => [`- ${describeSession(session)}`, ...sessionNotes(session)]),
+    "Next steps:",
+    "1. Close these sessions, so none keeps running under the old sign-in. Uncommitted files stay on disk.",
+    "2. Sign in with Claude Code's own command, in the same config folder so the transcripts stay visible: `claude auth login` (`--console` for an API key).",
+    "3. Run `moku-rails resume-checkpoint`.",
+  ];
+
+  return { code: 0, lines, data: { file, sessions } };
+}
+
+/**
+ * Turn a checkpoint, the newest unless a file is named, back into one command per session that continues it under
+ * the current sign-in, with where it stopped, what moved since, and the background tasks to start again.
+ *
+ * @param {Args} args positional: [file]; flags: --config-dir <dir>, --desktop, --cli
+ * @returns {Result}
+ * @example
+ * resumeCheckpoint({ root, positional: [], flags: {} });
+ */
+export function resumeCheckpoint({ positional, flags }) {
+  const config = typeof flags["config-dir"] === "string" ? flags["config-dir"] : configDir();
+  const file = positional[0] ?? latestCheckpoint();
+  const saved = file ? readCheckpoint(file) : undefined;
+  if (!saved) return refused(file ? `${file} is not a moku checkpoint.` : `there is no checkpoint in ${checkpointsDir()}. Run \`moku-rails checkpoint\` first.`);
+
+  const surface = flags.desktop ? "desktop" : flags.cli ? "cli" : undefined;
+  const sessions = saved.sessions.map((session) => ({ ...session, command: resumeCommand(session, surface), drift: driftNotes(session, config) }));
+  const lines = [`Checkpoint of ${saved.savedAt}, ${sessions.length} session${sessions.length === 1 ? "" : "s"}. Continue each with:`];
+  for (const session of sessions) {
+    lines.push(`- ${describeSession(session)}`, `  ${session.command}`, ...sessionNotes(session), ...session.drift.map((note) => `  note: ${note}`));
+  }
+  if (config !== saved.configDir) lines.push(`The checkpoint was saved from ${saved.configDir} and Claude Code reads ${config} now: a session resumes only from the config folder that holds its transcript.`);
+  lines.push("Each session continues with its conversation; background tasks and the prompt cache do not carry over.");
+
+  return { code: 0, lines, data: { file, savedAt: saved.savedAt, configDir: saved.configDir, sessions } };
+}
+
+/**
+ * Where a saved session stopped, and the background tasks it leaves to start again.
+ *
+ * @param {import("./checkpoint.mjs").SavedSession} session
+ * @returns {string[]}
+ */
+function sessionNotes(session) {
+  const change = session.change ? `  ${session.change.id}${session.change.title && session.change.title !== session.change.id ? ` (${session.change.title})` : ""}: ${session.change.next}` : "  no open change";
+
+  return [change, ...session.unfinished.map((task) => `  restart: ${task.kind} "${task.description}" did not finish`)];
 }
 
 /**

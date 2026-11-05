@@ -474,6 +474,41 @@ describe("prompt hook on the rails", () => {
     assert.equal(JSON.parse(readFileSync(join(root, ".planning", "state.json"), "utf8")).turn.routed, false);
   });
 
+  it("names the checkpoint when the person is about to change their own sign-in", () => {
+    const root = project({ initialized: true });
+    const prompts = [
+      "In a minute I'll sign out and sign in with my work account. Before I do, save where my moku sessions are",
+      "log in again with the other account",
+      "I'm moving to another account in a minute",
+      "switch my claude account and keep the sessions",
+      "run moku-rails checkpoint",
+      "перелогинюсь на другой аккаунт, сохрани сессии",
+      "сейчас переключусь на второй аккаунт",
+      "сохрани все открытые сессии перед выходом",
+    ];
+
+    for (const prompt of prompts) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }).out, /moku-rails checkpoint`, not `pause`/, prompt);
+  });
+
+  it("stays out of ordinary login and account work in the app", () => {
+    const root = project({ initialized: true });
+    const prompts = [
+      "Make the login screen match the design",
+      "Add a login form with email and password",
+      "Build a user account page with an avatar",
+      "Users should be able to switch to another account from the menu",
+      "Fix: after logout the sign in button stays disabled",
+      "add a save checkpoint to the second level",
+      "Сделай экран входа",
+      "Выйди из попапа по крестику",
+      "Форма входа: логин и пароль",
+      "Страница аккаунта пользователя с аватаром",
+      "Кнопка переключения на другой аккаунт в меню",
+    ];
+
+    for (const prompt of prompts) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }).out, /checkpoint/, prompt);
+  });
+
   it("closes the free pass: an open change inside build does not admit a new request until it is routed", () => {
     const root = project({ initialized: true });
     building(root);

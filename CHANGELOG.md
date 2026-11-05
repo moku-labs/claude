@@ -2,6 +2,31 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.87.0 (2026-11-05)
+
+### Added
+- **`moku-rails checkpoint` and `resume-checkpoint`: the open sessions continue after the person signs in again**, in
+  any way (a Console API key, a Team account, another sign-in). Finding every session again by hand is gone.
+  `checkpoint` writes `~/.claude/moku-checkpoints/<time>.json` with each session that worked on the rails in the last
+  48 hours (`--since <hours>`): its id, folder, branch, uncommitted files, the open change with where it stopped and
+  what comes next, and the background agents and commands that never reported back. The cwd and the surface come from
+  the first lines of the transcript, the tasks from its tool calls; nothing of the conversation is copied, and a
+  command that looks like it carries a credential is never repeated. After `claude auth login`, `resume-checkpoint`
+  (the newest, or a named file) prints one `claude --resume <id>` per session, `--desktop` for a Code tab session,
+  with what moved meanwhile and the tasks to start again. No token, credentials file or Keychain entry is read or
+  written, and sessions from other eval and scratch folders are left out (`--include-temp`).
+- **The prompt hook names the checkpoint** when the person says they will change their own sign-in ("I'll sign in with my
+  work account", "перелогинюсь на другой аккаунт", "save my sessions"); a login screen, an account page or a sign-in
+  form in the app never triggers it, because a model that skips the conductor reached for `pause`, which keeps only the change.
+  The hint also has the model pause an open change before it answers, so the stop hook does not cut the hand-over.
+  New core eval `rails-checkpoint`: 0/3 before the hint, 6/6 after.
+
+### Fixed
+- **`moku-rails --json` cut a long answer at 64 KB** when stdout was a pipe: the CLI exited before the pipe was
+  written. It now sets the exit code and lets the output finish.
+- **The status line tip looked for `settings.json` in `~/.claude` only.** It now reads `$CLAUDE_CONFIG_DIR` when that
+  is set.
+
 ## 0.86.3 (2026-11-05)
 
 ### Fixed

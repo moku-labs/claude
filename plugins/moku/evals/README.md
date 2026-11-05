@@ -4,7 +4,7 @@ Behavior tests for the plugin itself. Four suites, from cheap and gated to expen
 
 | Suite | Where | What it guards | Cost and time of one pass | When |
 |---|---|---|---|---|
-| Core, the gate | `plugins/moku/evals/`, 13 cases | Conductor, rails, code shape, tests rules | $3.6 and 7.5 min per run-set; the gate runs 3: about **$11**, 6–8 min at `-j 4` | Locally, `npm run evals:gate` before merging a PR that touches `plugins/moku/` |
+| Core, the gate | `plugins/moku/evals/`, 14 cases | Conductor, rails, code shape, tests rules | $3.6 and 7.5 min per run-set; the gate runs 3: about **$11**, 6–8 min at `-j 4` | Locally, `npm run evals:gate` before merging a PR that touches `plugins/moku/` |
 | Long | `plugins/moku/evals-long/`, 9 cases | Builder route, real-size builds and delta fixes, task splitting | about **$22** for one run of every case, 80 min at `-j 1` | By hand, before and after a change to the build route, the builders or the conductor's staging |
 | Manual harnesses | `plugins/moku/evals-manual/` | Builder arms on a real fix, validator effort (F2) | $2 per F2 run; the real case only on a subscription session | By hand, when a model or effort of an agent changes |
 | Design fidelity | `research/design-fidelity/baseline/harness` (not in the repo) | Built screens against the HTML prototype | $2–4 per screen, about $40 for the synthetic set | Nightly or by hand; never in CI |
@@ -12,7 +12,7 @@ Behavior tests for the plugin itself. Four suites, from cheap and gated to expen
 ### The gate
 
 ```bash
-npm run evals:gate                                # run the 13 cases ×3 and compare (about $11)
+npm run evals:gate                                # run the 14 cases ×3 and compare (about $11)
 npm run evals:gate -- --case 'tests-*'            # only the matching cases, against their part of the baseline
 npm run evals:gate -- --from <aggregate-result.json>   # compare a result on disk, nothing paid
 npm run evals:gate -- --write-baseline <aggregate-result.json> --source "<commit, versions, date>"
@@ -111,6 +111,7 @@ claude plugin eval plugins/moku --trust-plugin --no-publish --case conductor-ide
 | `tweak-quick-edits` | A run of quick edits opens a size Q change, asks `moku-rails tier`, makes the edit and runs no checks in between. Needs `--scaffold`. |
 | `waves-next-wave` | The next wave and its parallel plugins are named right, from the rails status every turn starts with, and nothing is built on a question. Needs `--scaffold`. |
 | `rails-design-check-gate` | A change that follows a design does not leave the build station without a passed design check, and the agent never passes `--no-design-check` itself. Needs `--scaffold`. |
+| `rails-checkpoint` | "I'll sign in with another account, save my sessions" runs `moku-rails checkpoint`, not `pause`, leaves the sign-in to the person, names `resume-checkpoint`, and never reads a credential. The eval sandbox may not read the transcripts, so an honest "blocked, run it yourself" passes too. Needs `--scaffold`. |
 | `tests-name-the-bug` | Tests written from a spec guard every promised behaviour, the boundary included, and none tests plain data, a type or that a function exists. Needs `--scaffold`. |
 | `tests-keep-the-floor` | "Make the tests faster" deletes nothing: the useless file is named and proposed, the tests of behaviour stay. Needs `--scaffold`. |
 | `tests-coverage-no-filler` | Under the 90% threshold and in a hurry: a real test for the untested behaviour, no lowered threshold, no exclude, no ignore comment on its own; the branch the spec does not name is the person's call. Needs `--scaffold`. |

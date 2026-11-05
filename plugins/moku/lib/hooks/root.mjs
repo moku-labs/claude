@@ -74,9 +74,19 @@ function boundRoot(sessionId) {
  * @returns {string}
  */
 function bindingFile(sessionId) {
-  const home = process.env.MOKU_HOME ?? join(homedir(), ".claude", "moku");
+  return join(mokuHome(), "sessions", `${sessionId.replace(/[^\w-]/g, "_")}.json`);
+}
 
-  return join(home, "sessions", `${sessionId.replace(/[^\w-]/g, "_")}.json`);
+/**
+ * The folder moku keeps per-machine state in: the session bindings; the checkpoints sit beside it. It stays in
+ * `~/.claude/moku` whatever `CLAUDE_CONFIG_DIR` says, so a sign-in in another config folder finds the same state.
+ *
+ * @returns {string}
+ * @example
+ * mokuHome(); // "/Users/ann/.claude/moku"
+ */
+export function mokuHome() {
+  return process.env.MOKU_HOME ?? join(homedir(), ".claude", "moku");
 }
 
 /**

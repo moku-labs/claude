@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Смена аккаунта Claude</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--muted:#6b675f;--line:#e4e0d7;--card:#fff;--accent:#b4532a;--ok:#2f7a4a;--warn:#a07a12}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#161513;--fg:#ece9e2;--muted:#a19c91;--line:#33302b;--card:#1f1e1b;--accent:#e0875c;--ok:#6cc08b;--warn:#d9b44a}}
+:root[data-theme="dark"]{--bg:#161513;--fg:#ece9e2;--muted:#a19c91;--line:#33302b;--card:#1f1e1b;--accent:#e0875c;--ok:#6cc08b;--warn:#d9b44a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 10px}
+.sub{color:var(--muted);margin:0 0 24px}
+table{width:100%;border-collapse:collapse;font-size:15px;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px}
+code{font:13.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--line);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+.note{color:var(--muted);font-size:14px}
+.box{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 14px;margin:12px 0}
+.box.ok{border-left-color:var(--ok)}.box.warn{border-left-color:var(--warn)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 7px;border-radius:9px;border:1px solid currentColor;white-space:nowrap}
+.t-ok{color:var(--ok)}.t-warn{color:var(--warn)}.t-bad{color:var(--accent)}
+ul{padding-left:20px}li{margin:4px 0}
+.wrap{overflow-x:auto}
+a{color:var(--accent)}
+</style>
+</head>
+<body>
+<main>
+<h1>Смена аккаунта Claude на одной машине</h1>
+<p class="sub">Исследование перед фичей moku · 5 ноября 2026 · Claude Code 2.1.296 · проверки на машине только чтением, секреты и Keychain не трогались</p>
+
+<div class="box">
+<b>Вывод.</b> Технически переключение простое: транскрипты не привязаны к аккаунту, и сессии продолжаются через <code>claude --resume &lt;id&gt;</code>. Но сам сценарий — <b>два личных Pro/Max, чтобы обойти недельный лимит</b> — это серая зона с уклоном в нарушение. Usage Policy запрещает «create multiple accounts, to … circumvent product guardrails», а Anthropic пишет, что лимиты рассчитаны на «ordinary, individual usage». Прямого запрета на две подписки нет, но ротация ради лимита — ровно то, на что эти формулировки нацелены. <b>Ротацию строить не предлагаю.</b> Предлагаю тот же механизм (чекпойнт, смена входа, продолжение), но для допустимых переходов: Extra usage, API-ключ из Console, рабочий Team-аккаунт, апгрейд плана.
+</div>
+
+<h2>1. Условия Anthropic</h2>
+<div class="wrap"><table>
+<tr><th>Что</th><th>Статус</th><th>Источник</th></tr>
+<tr><td>Несколько аккаунтов на машине через <code>CLAUDE_CONFIG_DIR</code>, пример — «work and personal accounts»</td><td><span class="tag t-ok">разрешено</span></td><td><a href="https://code.claude.com/docs/en/authentication#log-in-with-multiple-accounts">Authentication</a></td></tr>
+<tr><td>Вход в Claude Code своей подпиской, <code>/login</code> и <code>/logout</code></td><td><span class="tag t-ok">разрешено</span></td><td><a href="https://code.claude.com/docs/en/legal-and-compliance">Legal and compliance</a></td></tr>
+<tr><td>Иметь две личные подписки одному человеку</td><td><span class="tag t-warn">явно не регулируется</span></td><td>Правила «один человек — один аккаунт» в Consumer Terms нет</td></tr>
+<tr><td>Переключаться между ними, чтобы получить больше лимита</td><td><span class="tag t-warn">серая зона → вероятно нарушение</span></td><td>AUP: «create multiple accounts, to avoid detection, circumvent product guardrails»; Claude Code: лимиты «assume ordinary, individual usage» (<a href="https://www.anthropic.com/legal/aup">AUP</a>, <a href="https://code.claude.com/docs/en/legal-and-compliance">Legal</a>)</td></tr>
+<tr><td>Автоматически переключать аккаунт при срабатывании лимита</td><td><span class="tag t-bad">не строим</span></td><td>AUP: «bypass … restrictions, or guardrails». Автоматическое переключение делает обход лимита явным</td></tr>
+<tr><td>Делиться входом, перепродавать, гонять запросы через чужие подписки</td><td><span class="tag t-bad">запрещено</span></td><td><a href="https://www.anthropic.com/legal/consumer-terms">Consumer Terms</a> §2–3; AUP: «route requests through consumer subscriptions»</td></tr>
+</table></div>
+<p class="note">Оговорки: AUP на сайте датирована 12 ноября 2026 (через неделю), формулировки выше взяты со страницы как она есть. Consumer Terms агент получил в версии для ЕЭА; запрет делиться учётными данными есть во всех версиях. Что считать «guardrail» — нигде не определено, это толкование.</p>
+
+<p><b>Допустимые способы получить больше:</b></p>
+<ul>
+<li><b>Extra usage</b> (usage credits) — доплата по API-тарифам сверх лимита с месячным потолком; в Claude Code это <code>/usage-credits</code>. <a href="https://support.claude.com/en/articles/12429409-extra-usage-for-paid-claude-plans">Справка</a></li>
+<li><b>Апгрейд плана</b> — Max → Ultra (бывший Max 20x). <a href="https://support.claude.com/en/articles/17728952-what-is-the-ultra-plan">Ultra</a></li>
+<li><b>API-ключ из Console</b> — <code>claude auth login --console</code> или <code>ANTHROPIC_API_KEY</code>, оплата за токены.</li>
+<li><b>Team/Enterprise</b> — рабочий аккаунт рядом с личным разрешён явно, но место в Team принадлежит одному человеку.</li>
+<li><b>Подождать</b> — <code>autoContinueAtUsageLimit</code>: Claude Code сам продолжит после сброса лимита.</li>
+</ul>
+
+<h2>2. Где Claude Code держит вход и состояние</h2>
+<div class="wrap"><table>
+<tr><th>Что</th><th>Где</th><th>Привязано к аккаунту?</th></tr>
+<tr><td>Учётные данные</td><td>macOS Keychain, запись привязана к папке конфигурации; запасной вариант — <code>&lt;config&gt;/.credentials.json</code></td><td>да</td></tr>
+<tr><td>Профиль входа, организация, кэши флагов</td><td><code>~/.claude.json</code> (<code>oauthAccount</code>, <code>userID</code>, кэши моделей и лимитов)</td><td>да</td></tr>
+<tr><td><code>remote-settings.json</code>, <code>policy-limits.json</code></td><td><code>~/.claude/</code>, удаляются при logout</td><td>да</td></tr>
+<tr><td>Транскрипты сессий</td><td><code>~/.claude/projects/&lt;cwd&gt;/&lt;id&gt;.jsonl</code> (на машине 133 проекта)</td><td><b>нет</b></td></tr>
+<tr><td>Настройки, скиллы, плагины</td><td><code>~/.claude/settings.json</code>, <code>plugins/</code> (moku установлен в user scope)</td><td>нет, но внутри папки конфигурации</td></tr>
+<tr><td>Сессии вкладки Code в десктопе</td><td>индекс: <code>~/Library/Application Support/Claude/claude-code-sessions/&lt;uuid&gt;/&lt;uuid&gt;/local_*.json</code>; транскрипты: общая <code>~/.claude/projects</code> (40 из 40 найдены)</td><td>индекс — по-видимому да (на машине два корня); транскрипты — нет</td></tr>
+<tr><td>Cloud-сессии (claude.ai/code), Remote Control, коннекторы claude.ai</td><td>на серверах</td><td>да, только тот же аккаунт</td></tr>
+</table></div>
+<p>Способы входа (по приоритету): облачные провайдеры → <code>ANTHROPIC_AUTH_TOKEN</code> → <code>ANTHROPIC_API_KEY</code> → <code>apiKeyHelper</code> → <code>CLAUDE_CODE_OAUTH_TOKEN</code> → вход по <code>/login</code>. Команды: <code>claude auth login [--claudeai|--console] [--email] [--sso]</code>, <code>claude auth logout</code>, <code>claude auth status --json</code> (возвращает тип входа и папку конфигурации; токен в ответ не попадает). <a href="https://code.claude.com/docs/en/authentication#authentication-precedence">Документация</a></p>
+
+<h2>3. Продолжить сессию под другим входом</h2>
+<div class="wrap"><table>
+<tr><th>Путь</th><th>Что выходит</th></tr>
+<tr><td><b>Одна папка конфигурации, <code>claude auth logout</code> → <code>login</code></b></td><td>Транскрипты общие, <code>claude --resume &lt;id&gt;</code> и <code>--continue</code> находят все сессии. Сбрасываются первичная настройка и серверные настройки. Самый простой путь. <span class="note">На живом переключении не проверял.</span></td></tr>
+<tr><td>Профили <code>CLAUDE_CONFIG_DIR</code></td><td>Каждый профиль со своей историей: сессии A не видны из B. Плагины и marketplace нужно ставить в каждый профиль. Оба профиля можно держать залогиненными одновременно.</td></tr>
+<tr><td>Десктоп, вкладка Code</td><td>Список сессий в боковой панели, по-видимому, свой для каждого аккаунта, но транскрипты общие. Сессию можно продолжить через <code>claude --desktop --resume &lt;id&gt;</code> или из CLI. <span class="note">Как десктоп ведёт себя при смене аккаунта, не документировано.</span></td></tr>
+</table></div>
+<p><b>Что теряется при продолжении:</b> кэш промптов (первый запрос — полный объём контекста по полной цене); фоновые Bash и субагенты (помечаются «did not finish»); флаги запуска (<code>--add-dir</code>, <code>--mcp-config</code>, <code>--settings</code>); Remote Control, cloud-сессии и teleport (они только под своим аккаунтом); коннекторы claude.ai и OAuth для MCP, если они привязаны к аккаунту. Разговор, модель, режим разрешений и незавершённые вызовы инструментов восстанавливаются. <a href="https://code.claude.com/docs/en/sessions">Sessions</a></p>
+
+<h2>4. Что в moku зависит от аккаунта</h2>
+<ul>
+<li><b>Ничего существенного.</b> <code>.planning/</code>, <code>state.json</code>, ledger с lanes по worktree, хуки — всё живёт в проекте и привязано к папке, а не к аккаунту.</li>
+<li><b>Привязка сессии к рельсам</b> лежит в <code>~/.claude/moku/sessions/&lt;session-id&gt;.json</code> (<code>plugins/moku/lib/hooks/root.mjs</code>). Путь прописан жёстко, <code>MOKU_HOME</code> его переопределяет, <code>CLAUDE_CONFIG_DIR</code> на него не влияет. Поэтому при <code>--resume</code> с тем же id привязка сохраняется, а при <code>--fork-session</code> id новый — нужен повторный <code>moku-rails session start</code>.</li>
+<li><b>Плагины</b> установлены в user scope, в <code>~/.claude/plugins</code>. Новый профиль <code>CLAUDE_CONFIG_DIR</code> = заново marketplace и 12 плагинов.</li>
+<li><b>Мелкий баг:</b> <code>hooks/detect-moku-project.sh</code> читает <code>$HOME/.claude/settings.json</code> и не учитывает <code>CLAUDE_CONFIG_DIR</code>.</li>
+</ul>
+
+<h2>5. Предложение для шага 2</h2>
+<div class="box ok">
+<p><b><code>moku-rails handoff</code></b> — чекпойнт и продолжение сессий при смене способа входа. Это не ротация аккаунтов ради лимита.</p>
+<ul>
+<li><code>handoff save</code> — пишет <code>~/.claude/moku/handoff.json</code>: для каждой открытой moku-сессии id, cwd, станцию и открытое изменение, а также сводку незакоммиченного (число файлов, ветку). Без содержимого и без секретов.</li>
+<li>Переход — только официальными командами: <code>claude auth login --console</code> (API-ключ), Team-аккаунт, <code>/usage-credits</code> или профиль <code>CLAUDE_CONFIG_DIR</code> для рабочего аккаунта. moku только печатает команду, токенов и Keychain не касается.</li>
+<li><code>handoff resume</code> — печатает по каждой сессии <code>cd &lt;cwd&gt; &amp;&amp; claude --resume &lt;id&gt;</code> (или <code>--desktop</code>), проверяет привязку к рельсам и подсказывает станцию.</li>
+<li>Попутно: <code>detect-moku-project.sh</code> начнёт учитывать <code>CLAUDE_CONFIG_DIR</code>.</li>
+<li><b>Чего не будет:</b> автоматического переключения по сигналу лимита и сценария «второй личный аккаунт».</li>
+</ul>
+</div>
+<p class="note">Решение за пользователем: (а) строить <code>handoff</code> в таком виде; (б) не строить и пользоваться Extra usage или Ultra; (в) уточнить вопрос в поддержке Anthropic, прежде чем что-то делать с двумя личными подписками.</p>
+</main>
+</body>
+</html>
