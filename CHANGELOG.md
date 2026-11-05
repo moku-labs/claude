@@ -2,6 +2,25 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.87.0 (2026-11-05)
+
+### Added
+- **`moku-rails handoff`: the open sessions survive a change of sign-in.** Moving to a Console API key, a Team
+  account or a config folder of its own used to mean finding every session again by hand. `handoff save` writes a
+  checkpoint (`~/.claude/moku/handoff.json`) of each session that worked on the rails in the last 24 hours
+  (`--since <hours>`): its id, folder, open change and station, branch and uncommitted file count, read from the
+  first lines of its transcript and nothing else of it. After the person switches with `claude auth login`,
+  `handoff resume` prints one `claude --resume <id>` per session, `--desktop` for a Code tab session, with what moved
+  meanwhile: a station, the tree, a transcript the current config folder cannot see. No token, credentials file or
+  Keychain entry is read or written, and sessions from eval and scratch folders are left out (`--include-temp`).
+- **The conductor knows the move**, and says that rotating personal subscriptions to get past a usage limit is
+  against Anthropic's Usage Policy, with extra usage, a plan upgrade or an API key instead. The research behind it is
+  in `research/account-switch/report.html`.
+
+### Fixed
+- **The status line tip looked for `settings.json` in `~/.claude` only.** It now reads `$CLAUDE_CONFIG_DIR` when that
+  is set.
+
 ## 0.86.2 (2026-11-05)
 
 ### Fixed

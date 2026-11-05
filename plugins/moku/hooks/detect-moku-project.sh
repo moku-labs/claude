@@ -99,8 +99,9 @@ fi
 # Suggest status line setup on first detection (if not already configured)
 if [ -n "$PROJECT_TYPE" ]; then
   STATUSLINE_CONFIGURED="false"
-  if [ -f "$HOME/.claude/settings.json" ]; then
-    if grep -q 'statusLine' "$HOME/.claude/settings.json" 2>/dev/null; then
+  USER_SETTINGS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/settings.json"
+  if [ -f "$USER_SETTINGS" ]; then
+    if grep -q 'statusLine' "$USER_SETTINGS" 2>/dev/null; then
       STATUSLINE_CONFIGURED="true"
     fi
   fi

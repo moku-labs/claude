@@ -22,6 +22,7 @@ const HANDLERS = {
   park: commands.park,
   resume: commands.resume,
   adopt: commands.adopt,
+  handoff: commands.handoff,
   continue: commands.proceed,
   scope: commands.scope,
   idea: commands.idea,

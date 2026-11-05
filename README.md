@@ -10,7 +10,7 @@ You describe an idea. It leads you by the hand, and refuses to let you skip the 
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.86.2-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.87.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugins-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
 [![tests](https://img.shields.io/badge/rails-node%3Atest-2b8a3e)](./plugins/moku/tests)
@@ -126,6 +126,12 @@ ledger. Every other project is left alone, whatever its `package.json` names: no
 project has none. `moku-rails adopt` puts such a project on the rails: it writes the ledger and the `moku.md` marker
 from what the repository shows (type, name, moku packages, plugins) and touches no file outside `.planning/`.
 Running it again changes nothing. `init` stays for a project that does not exist yet.
+
+A change of sign-in (an API key from the Console, a Team account, a config folder of its own) keeps the work
+going with `moku-rails handoff`. `handoff save` writes a checkpoint of every session that worked on the rails in
+the last 24 hours: its id, folder, open change and station, branch and uncommitted file count. The person then
+switches with Claude Code's own `claude auth login`, and `handoff resume` prints one `claude --resume <id>` per
+session (`--desktop` for a Code tab session) with what moved meanwhile. No credential is read or written.
 
 | Invariant | Enforced by | What you see |
 |---|---|---|

@@ -13,6 +13,7 @@ import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { PROJECT_TYPES, adoptProject, detectProject, planningIgnored } from "./adopt.mjs";
 import { commitHook } from "./commit-hook.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
+import { DEFAULT_SINCE_HOURS, checkpointFile, clearCheckpoint, collectSessions, configDir, describeSession, driftNotes, readCheckpoint, resumeCommand, writeCheckpoint } from "./handoff.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
@@ -587,6 +588,76 @@ export function session({ root, positional }) {
   const report = status({ root, positional: [], flags: {} });
 
   return { code: 0, lines: [`${created ? "Session started" : "Session already active"} in ${root}. The rails and their hooks act here from now on.`, ...report.lines], data: report.data };
+}
+
+/**
+ * Carry the open moku sessions across a change of sign-in. `save` writes a checkpoint of every session that
+ * worked on the rails lately (id, cwd, change and station, branch, uncommitted count); `resume` prints the
+ * command that continues each one and what moved since; `clear` drops the checkpoint. The sign-in itself is
+ * the person's, through Claude Code's own commands: nothing here reads or writes a credential.
+ *
+ * @param {Args} args positional: save|resume|clear; flags: --since <hours>, --config-dir <dir>, --include-temp, --desktop, --cli
+ * @returns {Result}
+ * @example
+ * handoff({ root, positional: ["save"], flags: { since: "8" } });
+ */
+export function handoff({ positional, flags }) {
+  const [action] = positional;
+  const config = typeof flags["config-dir"] === "string" ? flags["config-dir"] : configDir();
+
+  if (action === "save") return saveHandoff(config, Number(flags.since ?? DEFAULT_SINCE_HOURS), flags["include-temp"] === true);
+  if (action === "resume") return resumeHandoff(config, flags.desktop ? "desktop" : flags.cli ? "cli" : undefined);
+  if (action === "clear") {
+    clearCheckpoint();
+    return ok("Handoff checkpoint removed.");
+  }
+
+  return usage("moku-rails handoff <save|resume|clear> [--since <hours>] [--config-dir <dir>] [--include-temp] [--desktop|--cli]");
+}
+
+/**
+ * @param {string} config
+ * @param {number} hours
+ * @param {boolean} includeTemp
+ * @returns {Result}
+ */
+function saveHandoff(config, hours, includeTemp) {
+  if (!(hours > 0)) return usage("moku-rails handoff save [--since <hours>], hours above zero");
+
+  const sessions = collectSessions({ config, sinceMs: hours * 60 * 60 * 1000, includeTemp });
+  if (sessions.length === 0) return ok(`No moku session in ${config} was active in the last ${hours} h. Nothing to save.`);
+
+  const file = writeCheckpoint({ version: 1, savedAt: new Date().toISOString(), configDir: config, sessions });
+  const lines = [
+    `Saved ${sessions.length} moku session${sessions.length === 1 ? "" : "s"} to ${file}:`,
+    ...sessions.map((session) => `- ${describeSession(session)}`),
+    "Next steps:",
+    "1. Close these sessions, so none keeps running under the old sign-in. Uncommitted files stay on disk.",
+    "2. Switch the sign-in with Claude Code's own commands, in the same config folder so the transcripts stay visible: `claude auth login --console` for an API key, `claude auth login` for a Team or work account, or `/usage-credits` to stay on the plan with extra usage.",
+    "3. Run `moku-rails handoff resume`.",
+  ];
+
+  return { code: 0, lines, data: { file, sessions } };
+}
+
+/**
+ * @param {string} config
+ * @param {"desktop" | "cli" | undefined} surface
+ * @returns {Result}
+ */
+function resumeHandoff(config, surface) {
+  const checkpoint = readCheckpoint();
+  if (!checkpoint) return refused(`there is no handoff checkpoint at ${checkpointFile()}.`);
+
+  const lines = [`Checkpoint of ${checkpoint.savedAt}, ${checkpoint.sessions.length} session${checkpoint.sessions.length === 1 ? "" : "s"}. Continue each with:`];
+  const sessions = checkpoint.sessions.map((session) => ({ ...session, command: resumeCommand(session, surface), notes: driftNotes(session, config) }));
+  for (const session of sessions) {
+    lines.push(`- ${describeSession(session)}`, `  ${session.command}`, ...session.notes.map((note) => `  note: ${note}`));
+  }
+  if (config !== checkpoint.configDir) lines.push(`The checkpoint was saved from ${checkpoint.configDir} and Claude Code reads ${config} now: a session resumes only from the config folder that holds its transcript.`);
+  lines.push("Each session continues under the current sign-in with its conversation; background tasks and the prompt cache do not carry over. Run `moku-rails handoff clear` when all are back.");
+
+  return { code: 0, lines, data: { savedAt: checkpoint.savedAt, configDir: checkpoint.configDir, sessions } };
 }
 
 /**
