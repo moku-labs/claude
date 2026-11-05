@@ -19,7 +19,7 @@ moku-rails status --json
 pwd && ls -A | head -30
 ```
 
-`data.onRails` true means the session already exists: say so in one line and go to step 4.
+`data.onRails` true means the session already exists: say so in one line and go to step 4, after step 3's adopt check.
 
 ## 2. Settle the directory
 
@@ -44,6 +44,14 @@ moku-rails session start --root "/absolute/path/to/project"
 ```
 
 The command creates the directory when it is new and writes an empty ledger, `.planning/state.json`. It scaffolds nothing; that is the init station's work. Repeating it is harmless.
+
+When its output, or `data.adoptable` of `status --json`, says the directory holds a moku project that is not initialized here, the project was made elsewhere: `.planning/` is local and never committed, so a fresh clone and a second person have none. Adopt it, never init it:
+
+```bash
+moku-rails adopt --root "/absolute/path/to/project"
+```
+
+`adopt` writes the missing parts of `.planning/` (the ledger and the `moku.md` marker) from what the repository shows, and touches no other file. Repeating it changes nothing. Say in one line that the existing project was adopted.
 
 From here on: every request is routed before code follows it, source files are refused before init and outside a writing station, and the conversation cannot end inside a station without a pause.
 

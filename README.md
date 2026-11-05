@@ -122,6 +122,11 @@ The rails act in one kind of directory only: one where a moku session was starte
 skill settles the directory (this one, or a new folder) and runs `moku-rails session start`, which writes the
 ledger. Every other project is left alone, whatever its `package.json` names: no gate, no hint, no hook output.
 
+`.planning/` is local and never committed, so a fresh clone or a second person's checkout of an existing moku
+project has none. `moku-rails adopt` puts such a project on the rails: it writes the ledger and the `moku.md` marker
+from what the repository shows (type, name, moku packages, plugins) and touches no file outside `.planning/`.
+Running it again changes nothing. `init` stays for a project that does not exist yet.
+
 | Invariant | Enforced by | What you see |
 |---|---|---|
 | Hooks act only where a session was started | every hook resolves its project from `.planning/state.json` or `.planning/moku.md`, found from the file being written | nothing, in your other projects |
