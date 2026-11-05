@@ -10,6 +10,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
+import { PROJECT_TYPES, adoptProject, detectProject, planningIgnored } from "./adopt.mjs";
 import { commitHook } from "./commit-hook.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
@@ -39,16 +40,21 @@ const RECENT_TESTS_MS = 24 * 60 * 60 * 1000;
  * status({ root: process.cwd(), positional: [], flags: {} });
  */
 export function status({ root }) {
+  // Moku code without a marker is a project made elsewhere: a fresh clone, or a second person's checkout
+  const adoptable = isInitialized(root) || isInitializing(root) ? undefined : detectProject(root)?.type;
+
   // A directory nobody put on the rails: say so, and name the one step that changes it
   if (!isOnRails(root)) {
-    return { code: 0, lines: ["Rails: off. This directory is not on the moku rails, so no hook acts here.", "Next step: the `moku:session` skill (it runs `moku-rails session start`)."], data: { onRails: false, initialized: false, debts: [], changes: [], ideas: [] } };
+    const next = adoptable ? `This is a moku ${adoptable} project with no .planning/ here. Next step: the \`moku:session\` skill, then \`moku-rails adopt\` (not init: the project exists).` : "Next step: the `moku:session` skill (it runs `moku-rails session start`).";
+    return { code: 0, lines: ["Rails: off. This directory is not on the moku rails, so no hook acts here.", next], data: { onRails: false, initialized: false, ...(adoptable ? { adoptable } : {}), debts: [], changes: [], ideas: [] } };
   }
 
   const ledger = loadLedger(root);
   const initialized = isInitialized(root);
   const debts = reconcile(root, ledger);
 
-  const lines = [initialized ? "Project: initialized." : "Project: NOT initialized. Only intake, brainstorm and design are possible."];
+  const uninitialized = adoptable ? `Project: NOT initialized here, but the directory holds a moku ${adoptable} project. Next step: \`moku-rails adopt\`, which writes only .planning/ (not init: the project exists).` : "Project: NOT initialized. Only intake, brainstorm and design are possible.";
+  const lines = [initialized ? "Project: initialized." : uninitialized];
   if (isInitializing(root)) lines.push("Debt [init]: the init station started and never finished. Finish it with the init skill.");
   if (debts.length === 0) lines.push("Rails: clean. Ready for new work.");
   for (const debt of debts) lines.push(debt.kind === "paused" ? `Paused: ${debt.detail}` : `Debt [${debt.kind}]: ${debt.detail}`);
@@ -81,7 +87,7 @@ export function status({ root }) {
     lines.push(`Elsewhere: ${change.id} is open in ${where}${change.station ? `, inside "${change.station}"` : ""}.${gone}`);
   }
 
-  return { code: 0, lines, data: { onRails: true, initialized, debts, changes: ledger.changes, ideas: ledger.ideas, agents, elsewhere } };
+  return { code: 0, lines, data: { onRails: true, initialized, ...(adoptable ? { adoptable } : {}), debts, changes: ledger.changes, ideas: ledger.ideas, agents, elsewhere } };
 }
 
 /**
@@ -393,22 +399,52 @@ export function resume({ root, positional }) {
 }
 
 /**
- * Move a change from another worktree into this checkout: the worktree was removed, or the work is handed over.
+ * Adopt. Without an id: put an existing moku project on the rails in this checkout, writing the local
+ * `.planning/` from what the repository shows, and nothing outside it. With an id: move a change from
+ * another worktree into this checkout, because that worktree was removed or the work is handed over.
  *
- * @param {Args} args positional: id
+ * @param {Args} args positional: [id]; flags: --type framework|consumer|tools|game, when the signs mislead
  * @returns {Result}
  * @example
+ * adopt({ root, positional: [], flags: {} }); // a fresh clone of a game: "Adopted a-memory-missing (game) …"
  * adopt({ root, positional: ["2026-09-26-streak-midnight"], flags: {} });
  */
-export function adopt({ root, positional }) {
+export function adopt({ root, positional, flags }) {
   const [id] = positional;
-  if (!id) return usage("moku-rails adopt <id>");
+  if (!id) return adoptExisting(root, optional(flags.type));
   if (!isOnRails(root)) return offRails();
 
   const change = adoptChange(root, id);
   if (!change) return refused(`No other checkout holds a change "${id}". \`moku-rails status\` lists them under "Elsewhere".`);
 
   return ok(`Adopted ${id} into this checkout${change.station ? `, inside "${change.station}"` : ""}. Done so far: ${change.done.join(", ") || "nothing"}.`);
+}
+
+/**
+ * Adopt the project in `root`. Refused where there is no moku code, which is the init station's ground,
+ * and while init is scaffolding, which only init itself finishes.
+ *
+ * @param {string} root
+ * @param {string | undefined} type the type a person set, over the one the signs show
+ * @returns {Result}
+ */
+function adoptExisting(root, type) {
+  if (type && !PROJECT_TYPES.has(type)) return usage("moku-rails adopt [--type framework|consumer|tools|game]");
+  if (isInitializing(root)) return refused("the init station started here and never finished. Finish it with the init skill; adopt is for a project that init already built.");
+
+  const seen = detectProject(root);
+  if (!seen && !isInitialized(root) && !type) return { code: REFUSED, lines: ["Refused: no moku code here: no package.json that names a @moku-labs package. There is nothing to adopt.", "Next step: init (the `moku:init` skill scaffolds a new project)."], data: { ok: false, missing: "init" } };
+
+  const actual = seen ?? { type: "tools", name: root.split("/").at(-1) ?? "project", coreVersion: "", created: new Date().toISOString().slice(0, 10), packages: {}, plugins: [] };
+  const { created, kept } = adoptProject(root, { ...actual, type: /** @type {import("./adopt.mjs").ProjectType} */ (type ?? actual.type) });
+
+  const shown = projectType(root);
+  const lines = [created.length > 0 ? `Adopted ${actual.name} (${shown}): wrote .planning/${created.join(", .planning/")}${kept.length > 0 ? `, kept .planning/${kept.join(", .planning/")}` : ""}. No file outside .planning/ was touched.` : `Already adopted: .planning/${kept.join(" and .planning/")} exist, nothing changed.`];
+  if (type && kept.includes("moku.md") && type !== shown) lines.push(`The marker already says type: ${shown}; it was kept. Edit .planning/moku.md to change it.`);
+  if (!planningIgnored(root)) lines.push("Warning: git does not ignore .planning/ here. It is local state: add `.planning` to .gitignore so it is never committed.");
+  lines.push("Next step: open the first change (the conductor does it).");
+
+  return { code: 0, lines, data: { ok: true, created, kept, type: shown, seen: seen ?? null } };
 }
 
 /**

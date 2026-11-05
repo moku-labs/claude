@@ -10,7 +10,7 @@ You describe an idea. It leads you by the hand, and refuses to let you skip the 
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.85.11-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.86.1-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugins-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
 [![tests](https://img.shields.io/badge/rails-node%3Atest-2b8a3e)](./plugins/moku/tests)
@@ -121,6 +121,11 @@ means "refused", and the refusal names the missing step, so the conductor can of
 The rails act in one kind of directory only: one where a moku session was started. The `moku:session`
 skill settles the directory (this one, or a new folder) and runs `moku-rails session start`, which writes the
 ledger. Every other project is left alone, whatever its `package.json` names: no gate, no hint, no hook output.
+
+`.planning/` is local and never committed, so a fresh clone or a second person's checkout of an existing moku
+project has none. `moku-rails adopt` puts such a project on the rails: it writes the ledger and the `moku.md` marker
+from what the repository shows (type, name, moku packages, plugins) and touches no file outside `.planning/`.
+Running it again changes nothing. `init` stays for a project that does not exist yet.
 
 | Invariant | Enforced by | What you see |
 |---|---|---|
