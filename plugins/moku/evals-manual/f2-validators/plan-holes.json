@@ -1,0 +1,5 @@
+{"H1-uncovered-R5": "(?is)(R5|export|markdown).{0,200}(not covered|no spec|uncovered|missing|without|lacks|no plugin)|(not covered|no spec|uncovered|missing|no plugin).{0,200}(R5|export|markdown)",
+ "H2-order-search-notify": "(?is)(search.{0,160}notify|notify.{0,160}search).{0,200}(order|later|higher|before|wave)|(order|later|higher).{0,200}(search.{0,120}notify|notify.{0,120}search)",
+ "H3-undeclared-sync-failed": "(?is)sync:failed.{0,250}(undeclared|not declared|never declared|missing from|declare)|(undeclared|not declared|declare).{0,250}sync:failed",
+ "H4-dead-hook-search-indexed": "(?is)search:indexed.{0,250}(never emitted|not emitted|dead|no plugin emits|nobody emits|orphan|no emitter)|(dead hook|never emitted|not emitted|no emitter).{0,250}search:indexed",
+ "H5-search-no-verification": "(?is)(03|search).{0,200}verification.{0,80}(missing|absent|no |lacks)|verification.{0,120}(missing|absent).{0,200}(03|search)|(missing|absent|no|lacks).{0,40}verification.{0,200}(03|search)"}
