@@ -210,3 +210,55 @@ describe("a worktree's sessions may write the main checkout's .planning/", () =>
     assert.equal(readFileSync(join(first, ".claude", "settings.local.json"), "utf8"), "{ not json");
   });
 });
+
+describe("shared planning files written from a lane", () => {
+  const HOOK = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "hooks", "pre-write.mjs");
+
+  /** Run the write hook in a worktree for one tool call. */
+  function write(tree, tool_name, tool_input) {
+    const run = spawnSync("node", [HOOK], { input: JSON.stringify({ cwd: tree, tool_name, tool_input }), encoding: "utf8" });
+    return { code: run.status, err: run.stderr, out: run.stdout };
+  }
+
+  it("an Edit of the lane's decisions.md lands in the main checkout's file, once", () => {
+    const { main, first } = projectWithWorktrees();
+    writeFileSync(join(main, ".planning", "decisions.md"), "# Decisions\n\n- D1: keep pixi\n");
+
+    const result = write(first, "Edit", { file_path: join(first, ".planning", "decisions.md"), old_string: "- D1: keep pixi\n", new_string: "- D1: keep pixi\n- D2: text runs share one baseline\n" });
+
+    assert.equal(result.code, 2);
+    assert.match(result.err, /moku: done/);
+    assert.equal(readFileSync(join(main, ".planning", "decisions.md"), "utf8"), "# Decisions\n\n- D1: keep pixi\n- D2: text runs share one baseline\n");
+  });
+
+  it("a Write of a shared file that does not exist yet creates it in the main checkout", () => {
+    const { main, second } = projectWithWorktrees();
+
+    const result = write(second, "Write", { file_path: join(second, ".planning", "app-spec.md"), content: "# App spec\n" });
+
+    assert.match(result.err, /moku: done/);
+    assert.equal(readFileSync(join(main, ".planning", "app-spec.md"), "utf8"), "# App spec\n");
+  });
+
+  it("an Edit whose old text is missing or not unique changes nothing and says why", () => {
+    const { main, first } = projectWithWorktrees();
+    const log = join(main, ".planning", "decisions.md");
+    writeFileSync(log, "- a\n- a\n");
+
+    assert.match(write(first, "Edit", { file_path: join(first, ".planning", "decisions.md"), old_string: "- b", new_string: "- c" }).err, /not changed: old_string was not found/);
+    assert.match(write(first, "Edit", { file_path: join(first, ".planning", "decisions.md"), old_string: "- a", new_string: "- c" }).err, /found 2 times/);
+    assert.equal(readFileSync(log, "utf8"), "- a\n- a\n");
+
+    write(first, "Edit", { file_path: join(first, ".planning", "decisions.md"), old_string: "- a", new_string: "- c", replace_all: true });
+    assert.equal(readFileSync(log, "utf8"), "- c\n- c\n");
+  });
+
+  it("a lane's own planning file is left to the tool", () => {
+    const { first } = projectWithWorktrees();
+
+    const result = write(first, "Write", { file_path: join(first, ".planning", "changes", "c1", "intake.md"), content: "# Intake\n" });
+
+    assert.equal(result.code, 0);
+    assert.doesNotMatch(result.err, /moku: done/);
+  });
+});

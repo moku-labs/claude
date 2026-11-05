@@ -30,6 +30,15 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   caught.
 - **`moku-plan-checker` and `moku-architecture-validator` run at `effort: medium`.** On the seeded F2 fixtures medium
   found 5 of 5 holes in every run, like high, 26–35 % faster and 22–25 % cheaper.
+## 0.87.2 (2026-11-05)
+
+### Fixed
+- **A lane could not write the project's shared planning files, and the decision log forked.** In a worktree,
+  `.planning/decisions.md`, `app-spec.md`, `steering.md`, `memory.md` and `learnings.md` are links to the main
+  checkout's copies. Claude Code refuses to write a file that is a link, and the worktree's isolation refuses the main
+  checkout's path. A real session then wrote its decision into a copy in its lane, where the project's log never got it.
+  The write hook now applies a Write or an Edit of such a file to the main checkout's copy itself, the way the tool
+  would (an Edit whose old text is missing or not unique changes nothing and says why), and tells the agent it is done.
 
 ## 0.87.1 (2026-11-05)
 
