@@ -1054,3 +1054,46 @@ describe("the Agent hook reads the response the harness really passes", () => {
     assert.match(context(result), /It stopped at its turn limit\. .*Resume the agent exactly once/);
   });
 });
+
+describe("the read-only allow-list", () => {
+  const script = join(PLUGIN, "lib", "hooks", "allow-list.mjs");
+
+  it("is merged into the project's local settings, keeps the rules there, and adds nothing twice", async () => {
+    const { READ_ONLY_ALLOW } = await import(script);
+    const root = mkdtempSync(join(tmpdir(), "moku-allow-"));
+    mkdirSync(join(root, ".claude"));
+    writeFileSync(join(root, ".claude", "settings.local.json"), JSON.stringify({ permissions: { allow: ["Bash(bun run:*)"], deny: ["Bash(rm:*)"] }, env: { A: "1" } }));
+
+    const first = spawnSync("node", [script, "--root", root], { encoding: "utf8" }).stdout;
+    const second = spawnSync("node", [script, "--root", root], { encoding: "utf8" }).stdout;
+    const settings = JSON.parse(readFileSync(join(root, ".claude", "settings.local.json"), "utf8"));
+
+    assert.match(first, new RegExp(`${READ_ONLY_ALLOW.length} rule`));
+    assert.match(second, /already allowed/);
+    assert.deepEqual(settings.permissions.allow, ["Bash(bun run:*)", ...READ_ONLY_ALLOW]);
+    assert.deepEqual(settings.permissions.deny, ["Bash(rm:*)"]);
+    assert.equal(settings.env.A, "1");
+  });
+
+  it("holds no command that can write, and init's template allows every one of them", async () => {
+    const { READ_ONLY_ALLOW } = await import(script);
+    const template = readFileSync(join(PLUGIN, "skills", "moku-core", "references", "tooling-config.md"), "utf8");
+
+    for (const rule of READ_ONLY_ALLOW) {
+      assert.doesNotMatch(rule, /\((cat|find|sed|tee|cp|mv|rm|node|python3?|bash|sh|bunx|npx|bun)\b/, rule);
+      assert.ok(template.includes(`"${rule}"`), `tooling-config.md lacks ${rule}`);
+    }
+  });
+
+  it("leaves a settings file that is not JSON alone", () => {
+    const root = mkdtempSync(join(tmpdir(), "moku-allow-"));
+    mkdirSync(join(root, ".claude"));
+    writeFileSync(join(root, ".claude", "settings.local.json"), "{ not json");
+
+    const run = spawnSync("node", [script, "--root", root], { encoding: "utf8" });
+
+    assert.equal(run.status, 0);
+    assert.match(run.stdout, /not added/);
+    assert.equal(readFileSync(join(root, ".claude", "settings.local.json"), "utf8"), "{ not json");
+  });
+});

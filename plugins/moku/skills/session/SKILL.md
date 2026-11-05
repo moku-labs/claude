@@ -45,6 +45,12 @@ moku-rails session start --root "/absolute/path/to/project"
 
 The command creates the directory when it is new and writes an empty ledger, `.planning/state.json`. It scaffolds nothing; that is the init station's work. Repeating it is harmless.
 
+Then allow the read-only commands the session runs all the time (`moku-rails status`, `git diff`, `grep` and the like), so the person is not asked for each one. It merges them into `.claude/settings.local.json` and touches no other rule:
+
+```bash
+node "${CLAUDE_PLUGIN_ROOT}/lib/hooks/allow-list.mjs" --root "/absolute/path/to/project"
+```
+
 From here on: every request is routed before code follows it, source files are refused before init and outside a writing station, and the conversation cannot end inside a station without a pause.
 
 ## 4. Hand over

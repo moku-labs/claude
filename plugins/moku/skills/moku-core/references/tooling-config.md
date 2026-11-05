@@ -913,11 +913,22 @@ Safe default permissions for Claude Code agents working in a Moku project. These
       "Bash(git log:*)",
       "Bash(git diff:*)",
       "Bash(git branch:*)",
+      "Bash(git branch --show-current)",
       "Bash(git show:*)",
       "Bash(git remote:*)",
+      "Bash(git rev-parse:*)",
+      "Bash(git worktree list:*)",
+      "Bash(moku-rails status:*)",
+      "Bash(moku-rails waves:*)",
+      "Bash(moku-rails tests:*)",
+      "Bash(pwd)",
       "Bash(ls:*)",
       "Bash(tree:*)",
       "Bash(wc:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
       "Bash(mkdir:*)",
       "Bash(cat:*)"
     ]
@@ -927,8 +938,9 @@ Safe default permissions for Claude Code agents working in a Moku project. These
 
 **What's included:**
 - **Bun:** install, run scripts, test, all bunx tool invocations (tsc, biome, oxlint, vitest, lefthook, publint, attw)
-- **Git (read-only):** status, log, diff, branch, show, remote
-- **File system (read-only):** ls, tree, wc, cat, mkdir
+- **Git (read-only):** status, log, diff, branch, show, remote, rev-parse, worktree list
+- **Rails (read-only):** `moku-rails status`, `waves`, `tests` — the session skill merges the same read-only rules into a project init never touched (`lib/hooks/allow-list.mjs`)
+- **File system (read-only):** pwd, ls, tree, wc, head, tail, grep, rg, cat, mkdir
 
 **What's NOT included (requires explicit approval):**
 - `git add`, `git commit`, `git push` — destructive/shared operations
