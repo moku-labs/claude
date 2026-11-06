@@ -73,6 +73,17 @@ ul,ol{padding-left:20px}li{margin:4px 0}
 <li>Если нужна вложенность в панели: закрыть приложение, выполнить <code>moku-rails resume-checkpoint --relink</code>, открыть приложение.</li>
 </ol>
 
+<h2>Итог реализации (0.89.0)</h2>
+<div class="box ok">
+<b>Готово в ветке <code>claude/resume-checkpoint-v2-660d5e</code>, обновлена с main 0.88.1.</b>
+<ul>
+<li>Пробный прогон на этой машине (чекпойнт в scratchpad): 23 живые сессии текущего аккаунта, родители всех подсессий на месте, 4 артефакта скопированы. Раньше было 38 сессий, из них 18 живых.</li>
+<li><code>npm test</code>: 425 из 425 прошли. <code>validate</code> и <code>check</code> прошли.</li>
+<li>Евал <code>rails-checkpoint</code>: 3 из 3. Добавлен грейдер: агент сам не запускает <code>--open</code> и <code>--relink</code> и не трогает файлы приложения.</li>
+<li>Евал-гейт не прошёл по общему баллу: 0.936 при пороге 0.942. Просели <code>readable-stanzas</code> и <code>rails-no-init</code>. При отдельной перепроверке <code>readable-stanzas</code> дал 2 из 3 и на ветке, и на main. <code>rails-no-init</code> на ветке дважды дал 2 из 3, на main один раз 3 из 3. В проваленном прогоне агент объяснил, что сначала нужен init, и предложил его сделать, но судья трижды поставил FAIL. Хук в этом кейсе текст чекпойнта не выводит.</li>
+</ul>
+</div>
+
 <h2>Что не делаем</h2>
 <ul>
 <li>Не входим и не выходим из аккаунта сами, не читаем токены, <code>.credentials.json</code> и Keychain.</li>
