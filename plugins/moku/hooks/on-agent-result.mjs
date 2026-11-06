@@ -7,12 +7,14 @@
  * no result yet, and a report sent through the hand-back (`handback: "send"`) is not in the response: both
  * arrive later as a hand-back prompt, which the prompt hook handles the same way. Only the text of a
  * finished call is read for the contract, never the whole object, whose `prompt` is the orchestrator's words.
+ * When the SubagentStop hook noted a builder cut off at its turn limit, the stages offer rides along, once.
  */
 
 import { MOKU_AGENT, RESUME_INSTRUCTION } from "../lib/hooks/agents.mjs";
 import { extractContract } from "../lib/hooks/contract.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
+import { takeSplitOffer } from "../lib/rails/stages.mjs";
 
 const LAUNCH_TEXT = /Async agent launched|agent is working in the background|will be notified automatically|delivered to you as a message from/i;
 const TURN_LIMIT = /partial|max(imum)? turns|turn limit|maxTurns/i;
@@ -20,7 +22,8 @@ const TURN_LIMIT = /partial|max(imum)? turns|turn limit|maxTurns/i;
 const { payload } = readHookInput();
 const agentType = String(payload.tool_input?.subagent_type ?? "");
 
-if (!rootForSession(payload) || !MOKU_AGENT.test(agentType)) process.exit(0);
+const root = rootForSession(payload);
+if (!root || !MOKU_AGENT.test(agentType)) process.exit(0);
 
 // A launch or a hand-back pointer is not the agent's result: the report comes later as a hand-back prompt
 const response = payload.tool_response;
@@ -28,10 +31,14 @@ if (payload.tool_input?.run_in_background === true || isLaunch(response) || resp
 
 // The text of a finished call: its contract, or the launch notice when the response is plain text
 const report = reportText(response);
-if (extractContract(report) || LAUNCH_TEXT.test(report)) process.exit(0);
+if (LAUNCH_TEXT.test(report)) process.exit(0);
 
-const partial = TURN_LIMIT.test(report) ? " It stopped at its turn limit." : "";
-console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: `moku: ${agentType} returned without its output contract.${partial} ${RESUME_INSTRUCTION}` } }));
+// A missing contract gets the resume; a builder cut off at its turn limit brings the stages offer, once
+const notes = [];
+if (!extractContract(report)) notes.push(`moku: ${agentType} returned without its output contract.${TURN_LIMIT.test(report) ? " It stopped at its turn limit." : ""} ${RESUME_INSTRUCTION}`);
+const offer = takeSplitOffer(root);
+if (offer) notes.push(offer);
+if (notes.length > 0) console.log(JSON.stringify({ hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: notes.join("\n") } }));
 
 /**
  * True for a background launch: the harness marks it async, or it returns an agent id or output file
