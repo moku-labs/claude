@@ -272,7 +272,7 @@ function comparePage(prop, exp, act, k, size) {
 export function applyDeviation(row, deviations) {
   if (row.result === "pass") return row;
 
-  const match = deviations.find((entry) => entry.element === row.el && (!entry.prop || entry.prop === row.prop || (Array.isArray(entry.prop) && entry.prop.includes(row.prop))) && (!entry.sizes || entry.sizes.includes(row.size)) && (!entry.states || entry.states.includes(row.state)));
+  const match = deviations.find((entry) => (entry.element === row.el || (Array.isArray(entry.element) && entry.element.includes(row.el))) && (!entry.prop || entry.prop === row.prop || (Array.isArray(entry.prop) && entry.prop.includes(row.prop))) && (!entry.sizes || entry.sizes.includes(row.size)) && (!entry.states || entry.states.includes(row.state)));
   if (!match) return row;
 
   const decision = match.decision?.answer;

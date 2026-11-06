@@ -82,7 +82,9 @@ moku-fidelity check .planning/design/{slug} --serve dist          # a static bui
 It measures the build on the inventory's rows at every size and state, compares, and writes
 `check/actual.json`, `check/result.json` (every row) and `check/design-check.md` (the report). Exit 0 is
 PASS. Lengths are compared in prototype px: the build's value divided by the conversion of its size,
-unrounded.
+unrounded. Read the report's head and its Fail and Open sections; `result.json` holds every row for tools
+and is not read whole. A game page is measured once its doors answer and its ui tree is still: use
+`check` on it, not a script of your own.
 
 | Property | pass | open (borderline) | fail |
 |---|---|---|---|
@@ -117,6 +119,11 @@ another: these are deviations. The one who meets it raises it **before** writing
 moku-fidelity deviate .planning/design/{slug} --element help --prop font --kind impossible \
   --reason "weight 800 is not among the vendored faces" --proposal "700, the heaviest vendored face" --by moku-builder
 ```
+
+One deviation per cause, not per element: a cause that touches several elements or properties names
+them all (`--element blank1,blank2,blank3 --prop drawn,fill,stroke`), so the person answers one question.
+`unmeasurable` is for a row the tool cannot read; a row it read with a value you disagree with is a
+defect or a `conflict`.
 
 Kinds: `impossible`, `conflict`, `stale-context`, `unmeasurable`, `by-design-context`. The entry in
 `deviations.json` carries the reason, the kind, the proposal, when it was asked, and the decision

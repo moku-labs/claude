@@ -11,6 +11,7 @@ import { compareAll, compareRow, normalizeGradient, toPrototypePx } from "../../
 import { addDeviation, decide, readDeviations } from "../../lib/fidelity/deviations.mjs";
 import { buildInventory, normalizeSpec } from "../../lib/fidelity/inventory.mjs";
 import { boxDiff, decodePng } from "../../lib/fidelity/png.mjs";
+import { pageProbe } from "../../lib/fidelity/probe.mjs";
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "bin", "moku-fidelity");
 
@@ -99,6 +100,18 @@ describe("deviations", () => {
     decide(file, "D1", { answer: "accept", words: "rings are fine" });
     assert.equal(readDeviations(file)[0].decision.answer, "accept");
   });
+
+  it("cover every element and property of one cause in one question", () => {
+    const spec = normalizeSpec({ sizes: [{ w: 390, h: 844 }] });
+    const values = { "390x844": { default: { a: box(), b: box() } } };
+    const expected = { spec, values, inventory: buildInventory(spec, values) };
+    const sprite = box({ drawn: ["image"], fill: "rgba(0, 0, 0, 0)", stroke: null, image: "frost" });
+    const actual = { values: { "390x844": { default: { a: sprite, b: sprite, "@page": { scrollW: 390, innerW: 390, clipped: [] } } } } };
+    const one = { id: "D1", element: ["a", "b"], prop: ["drawn", "fill", "stroke"], kind: "conflict", reason: "the kit draws rows as a sprite", proposal: "keep the sprite", decision: null };
+    const rows = compareAll(expected, actual, [one]).rows.filter((item) => ["drawn", "fill", "stroke"].includes(item.prop));
+    assert.equal(rows.length, 6);
+    assert.ok(rows.every((item) => item.result === "open" && item.deviation === "D1"));
+  });
 });
 
 describe("the per-element pixel diff", () => {
@@ -166,3 +179,29 @@ function png(width, height, colour) {
   ihdr[9] = 2;
   return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk("IHDR", ihdr), chunk("IDAT", deflateSync(Buffer.from(raw))), chunk("IEND", Buffer.alloc(0))]);
 }
+
+describe("the game probe", () => {
+  it("gives a measured element the paint of its unmeasured keyed children", () => {
+    const tree = { key: "root", rect: { x: 0, y: 0, w: 390, h: 844 }, children: [
+      { key: "caseBlank:blank1", type: "box", rect: { x: 14, y: 350, w: 362, h: 72 }, style: {}, children: [
+        { key: "caseBlank:blank1:body", type: "box", rect: { x: 14, y: 350, w: 362, h: 72 }, style: { nineSlice: "frost-row-locked" }, children: [] },
+      ] },
+      { key: "caseDock", type: "box", rect: { x: 0, y: 700, w: 390, h: 144 }, style: {}, children: [
+        { key: "caseBlank:blank2", type: "box", rect: { x: 0, y: 0, w: 1, h: 1 }, style: { fill: 0xffffff }, children: [] },
+      ] },
+    ] };
+    const saved = { doors: globalThis.doors, game: globalThis.game, document: globalThis.document, innerWidth: globalThis.innerWidth };
+    globalThis.innerWidth = 390;
+    globalThis.doors = { sources: { ui: "ui" }, read: () => tree };
+    globalThis.game = {};
+    globalThis.document = { querySelector: () => null, scrollingElement: null };
+    try {
+      const out = pageProbe({ elements: { blank1: { game: { key: "caseBlank:blank1" } }, blank2: { game: { key: "caseBlank:blank2" } }, dock: { game: { key: "caseDock" } } }, reference: 390 });
+      assert.deepEqual(out.blank1.drawn, ["image"]);
+      assert.equal(out.blank1.image, "frost-row-locked");
+      assert.deepEqual(out.dock.drawn, [], "a measured child keeps its own paint");
+    } finally {
+      Object.assign(globalThis, saved);
+    }
+  });
+});

@@ -53,15 +53,19 @@ export function pageProbe(input) {
     };
     walk(tree);
 
-    // What draws a ui element is also in the components of its entity and of its unkeyed children:
-    // Sprite and NineSlice are images, Shape is a fill and a stroke. Best effort: a door that answers
-    // otherwise leaves the style as the only source.
+    // The keys the inventory measures. Paint of any other descendant (a keyed nine-slice body, a sprite
+    // child) belongs to the nearest measured ancestor: a row drawn as a sprite child is drawn as an image.
+    const measured = new Set(wanted ? Object.entries(wanted).map(([id, el]) => el?.game?.key ?? id) : byKey.keys());
+
+    // What draws a ui element is also in the components of its entity and of its descendants up to the
+    // next measured element: Sprite and NineSlice are images, Shape is a fill and a stroke. Best effort: a
+    // door that answers otherwise leaves the style as the only source.
     const parts = new Map();
     try {
       const snapshot = doors.read(game, doors.sources.entities, {});
       const rows = Array.isArray(snapshot) ? snapshot : (snapshot?.entities ?? []);
       const comps = (row) => (Array.isArray(row.components) ? Object.fromEntries(row.components.map((c) => [c.name ?? c.type, c.value ?? c.data ?? c])) : (row.components ?? {}));
-      const keyed = new Set([...byKey.keys()].map((key) => game.ui?.find?.(key)).filter((id) => id !== undefined));
+      const keyed = new Set([...measured].map((key) => game.ui?.find?.(key)).filter((id) => id !== undefined));
       const children = new Map();
       for (const row of rows) {
         const parent = comps(row).Parent?.entity;
@@ -71,7 +75,8 @@ export function pageProbe(input) {
       for (const key of byKey.keys()) {
         const id = game.ui?.find?.(key);
         if (id === undefined || !byId.has(id)) continue;
-        const own = [byId.get(id), ...(children.get(id) ?? []).filter((row) => !keyed.has(row.id))];
+        const own = [byId.get(id)];
+        for (let i = 0; i < own.length; i++) for (const row of children.get(own[i].id) ?? []) if (!keyed.has(row.id)) own.push(row);
         const found = { drawn: new Set(), fill: undefined, stroke: undefined, image: undefined };
         for (const row of own) {
           const c = comps(row);
@@ -124,6 +129,18 @@ export function pageProbe(input) {
       if ((style.strokeWidth ?? 0) > 0 && typeof style.stroke === "number" && !style.nineSlice) drawn.push("stroke");
       const fromParts = parts.get(ref.key ?? id);
       for (const kind of fromParts?.drawn ?? []) if (!drawn.includes(kind)) drawn.push(kind);
+      let childImage;
+      const paintOf = (child) => {
+        const cs = child.style ?? {};
+        if (child.type === "image" || child.type === "icon" || cs.nineSlice) {
+          if (!drawn.includes("image")) drawn.push("image");
+          childImage ??= cs.nineSlice ?? child.local?.texture;
+        }
+        if (child.type !== "text" && typeof cs.fill === "number" && !cs.nineSlice && !drawn.includes("fill")) drawn.push("fill");
+        if ((cs.strokeWidth ?? 0) > 0 && typeof cs.stroke === "number" && !cs.nineSlice && !drawn.includes("stroke")) drawn.push("stroke");
+        for (const next of child.children ?? []) if (!(next.key && measured.has(next.key))) paintOf(next);
+      };
+      for (const child of node.children ?? []) if (!(child.key && measured.has(child.key))) paintOf(child);
       const element = {
         present: true,
         x: node.rect.x,
@@ -137,7 +154,7 @@ export function pageProbe(input) {
         radius: style.radius ?? 0,
         shadow: style.shadow ? `${style.shadow.x ?? 0}px ${style.shadow.y ?? 0}px ${style.shadow.blur ?? 0}px 0px ${rgba(style.shadow.color ?? 0, style.shadow.alpha ?? 1)}` : "none",
         opacity: a,
-        image: style.nineSlice ?? fromParts?.image ?? node.local?.texture ?? undefined,
+        image: style.nineSlice ?? fromParts?.image ?? node.local?.texture ?? childImage ?? undefined,
         source: "game.ui",
       };
       if (node.type === "text" && node.content !== undefined) {

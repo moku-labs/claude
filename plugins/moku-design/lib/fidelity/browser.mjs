@@ -85,6 +85,9 @@ export function serveFolder(root) {
  * @returns {Promise<{ stop: () => void }>}
  */
 export async function startCommand(command, url, cwd, timeoutMs = 60_000) {
+  const taken = await fetch(url).then(() => true, () => false);
+  if (taken) throw new Error(`something already answers at ${url}, before "${command}" started: that would be measured instead of this build. Give the command a free port and --url that port.`);
+
   const child = spawn(command, { cwd, shell: true, detached: true, stdio: "ignore" });
   const stop = () => {
     try {
@@ -145,18 +148,101 @@ export async function measureAll(chromium, { url, spec, elements, shots, side, o
 
 /**
  * Freeze motion, wait for fonts and a canvas page's ready flag, then run the state's door commands (a game).
+ * A game page is measured only once its doors answer and its ui tree has stopped changing: a screen that
+ * mounts late, or a command that reloads the page, is waited for instead of read empty.
  *
  * @param {any} page
  * @param {{ command: string, input?: any }[] | undefined} run
  */
 async function settle(page, run) {
-  await page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}" }).catch(() => {});
+  const freeze = () => page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}" }).catch(() => {});
+  await freeze();
   await page.evaluate(() => document.fonts.ready).catch(() => {});
   await page.waitForFunction(() => !document.querySelector("canvas") || document.body.dataset.ready === "1" || globalThis.doors !== undefined, null, { timeout: 8000 }).catch(() => {});
-  for (const step of run ?? []) {
-    await page.evaluate(async ({ command, input }) => globalThis.doors.run(globalThis.game, globalThis.doors.commands[command], input), step);
+  const isGame = await page.evaluate(() => Boolean(globalThis.doors && globalThis.game)).catch(() => false);
+  if (!isGame && !run?.length) {
+    await page.waitForTimeout(200);
+    return;
   }
-  await page.waitForTimeout(200);
+
+  await waitForDoors(page);
+  for (const step of run ?? []) {
+    try {
+      await page.evaluate(runDoorStep, step);
+    } catch (error) {
+      // The command navigated: the page is waited for below. Any other refusal is the state's mapping.
+      if (!/context was destroyed|navigat/i.test(String(error))) throw new Error(`the door command "${step.command}" of a state failed: ${String(error).split("\n")[0]}`);
+    }
+    await page.waitForLoadState("load").catch(() => {});
+    await waitForDoors(page);
+  }
+  await freeze();
+  await waitForStableUi(page);
+}
+
+/**
+ * One door command, run in the page. A game that is not resting at a node yet refuses commands, so a
+ * refusal is retried for up to 10 s. `{ "command": "restore", "input": { "bookmark": { "$patch": {…} } } }`
+ * restores the live bookmark with the patch merged in, so a state is reached without a hand-made bookmark.
+ *
+ * @param {{ command: string, input?: any }} step
+ */
+async function runDoorStep({ command, input }) {
+  const doors = globalThis.doors;
+  const game = globalThis.game;
+  const merge = (base, patch) => {
+    if (patch === null || typeof patch !== "object" || Array.isArray(patch) || base === null || typeof base !== "object") return patch;
+    const out = { ...base };
+    for (const key of Object.keys(patch)) out[key] = merge(base[key], patch[key]);
+    return out;
+  };
+  const once = async () => {
+    let value = input;
+    const patch = input?.bookmark?.$patch;
+    if (patch) {
+      const live = await doors.run(game, doors.commands.bookmark, {});
+      value = { ...input, bookmark: merge(live?.value ?? live, patch) };
+    }
+    return doors.run(game, doors.commands[command], value);
+  };
+
+  const deadline = Date.now() + 10_000;
+  for (;;) {
+    try {
+      return await once();
+    } catch (error) {
+      if (Date.now() > deadline) throw error;
+      await new Promise((ok) => setTimeout(ok, 250));
+    }
+  }
+}
+
+/** @param {any} page */
+async function waitForDoors(page) {
+  await page.waitForFunction(() => Boolean(globalThis.doors?.sources?.ui && globalThis.game), null, { timeout: 15_000 }).catch(() => {});
+}
+
+/**
+ * Until two reads of the ui tree 300 ms apart are the same (at most 8 s).
+ *
+ * @param {any} page
+ */
+async function waitForStableUi(page) {
+  const read = () => page.evaluate(() => {
+    try {
+      return JSON.stringify(globalThis.doors.read(globalThis.game, globalThis.doors.sources.ui));
+    } catch {
+      return "";
+    }
+  }).catch(() => "");
+  let last = await read();
+  const deadline = Date.now() + 8000;
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(300);
+    const now = await read();
+    if (now && now === last) return;
+    last = now;
+  }
 }
 
 /**

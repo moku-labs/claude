@@ -38,11 +38,11 @@ export function readDeviations(file) {
  * Append one deviation, raised now. Returns it with its id.
  *
  * @param {string} file
- * @param {{ element: string, prop?: string, kind: string, reason: string, proposal: string, by?: string, sizes?: string[], states?: string[], decision?: any }} entry
+ * @param {{ element: string | string[], prop?: string | string[], kind: string, reason: string, proposal: string, by?: string, sizes?: string[], states?: string[], decision?: any }} entry
  * @returns {any}
  */
 export function addDeviation(file, entry) {
-  if (!entry.element) throw new Error("a deviation names its element (--element)");
+  if (!entry.element || (Array.isArray(entry.element) && entry.element.length === 0)) throw new Error("a deviation names its element(s) (--element)");
   if (!KINDS.includes(entry.kind)) throw new Error(`a deviation's kind is one of ${KINDS.join(", ")}`);
   if (!entry.reason || !entry.proposal) throw new Error("a deviation has a reason and a proposal (--reason, --proposal)");
 

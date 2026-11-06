@@ -10,7 +10,7 @@
  *   moku-fidelity compare <design-dir>                            compare what is measured, write the report
  *   moku-fidelity probe   <design-dir> --side expected|actual [--frame]   the probe for the browser pane
  *   moku-fidelity ingest  <design-dir> --side expected|actual --size WxH --state <id> --file <probe.json>
- *   moku-fidelity deviate <design-dir> --element <id> [--prop <p>] --kind <kind> --reason "…" --proposal "…" [--by <agent>]
+ *   moku-fidelity deviate <design-dir> --element <id[,id…]> [--prop <p[,p…]>] --kind <kind> --reason "…" --proposal "…" [--by <agent>]
  *   moku-fidelity decide  <design-dir> <D1> --answer accept|reject|other [--words "…"]
  *   moku-fidelity status  <design-dir>                            the last result as one JSON line
  *
@@ -170,9 +170,20 @@ async function ingest() {
 
 /** Raise a deviation, before the replacement is written. */
 async function deviate() {
-  const entry = addDeviation(files.deviations, { element: flags.element, prop: flags.prop, kind: flags.kind, reason: flags.reason, proposal: flags.proposal, by: flags.by, sizes: flags.sizes?.split(","), states: flags.states?.split(",") });
-  console.log(`${entry.id} raised (${entry.kind}): ${entry.element}${entry.prop ? ` · ${entry.prop}` : ""} — ${entry.proposal}. The person decides; until then its rows stay open.`);
+  const entry = addDeviation(files.deviations, { element: list(flags.element), prop: list(flags.prop), kind: flags.kind, reason: flags.reason, proposal: flags.proposal, by: flags.by, sizes: flags.sizes?.split(","), states: flags.states?.split(",") });
+  console.log(`${entry.id} raised (${entry.kind}): ${[entry.element].flat().join(", ")}${entry.prop ? ` · ${[entry.prop].flat().join(", ")}` : ""} — ${entry.proposal}. The person decides; until then its rows stay open.`);
   return 0;
+}
+
+/**
+ * One flag value or a comma list: one deviation covers every element of one cause.
+ *
+ * @param {string | undefined} value
+ * @returns {string | string[] | undefined}
+ */
+function list(value) {
+  if (typeof value !== "string" || !value.includes(",")) return value;
+  return value.split(",").map((part) => part.trim()).filter(Boolean);
 }
 
 /** Record the person's answer. */
