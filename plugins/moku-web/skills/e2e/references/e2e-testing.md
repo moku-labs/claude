@@ -30,11 +30,12 @@ the exploratory method, and the UX gate. Build this; do not depend on an externa
    interaction reference: check every screen against its layout, spacing, states and inventory, and close
    the gap in the implementation (moku-web conventions: `data-*`, tokens, `@scope` and `@layer`). A screen
    that works but visibly diverges from the design context is a defect. The reference for the numbers is
-   the approved prototype in that folder, not the prose and not a generated image: measure the prototype
-   and the app with the same script (`getBoundingClientRect()`, `getComputedStyle()`), fonts first
-   (family, weight, size, line height, letter spacing, the real face loaded), then every word as live
+   the approved prototype in that folder, not the prose and not a generated image. Without the
+   `moku-design` pack, measure the prototype and the app with the same script (`getBoundingClientRect()`,
+   `getComputedStyle()`) at every target size, fonts first (family, weight, size, line height, letter
+   spacing, the real face loaded), what draws each element (fill, stroke, image), then every word as live
    text from the i18n table, never inside an image. Write the table to
-   `.planning/design/{slug}/check/design-check.md`. The e2e skill runs this as its design check.
+   `.planning/design/{slug}/check/design-check.md`. With the pack the e2e skill runs `moku-fidelity`.
 
 ---
 

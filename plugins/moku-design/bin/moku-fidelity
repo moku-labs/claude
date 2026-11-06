@@ -1,0 +1,359 @@
+#!/usr/bin/env node
+/**
+ * moku-fidelity: the design check as a tool. It measures the approved prototype once into a fixed inventory,
+ * measures the build on the same rows at every size and state, and compares by fixed tolerances, so the check
+ * measures the same thing on every run and a borderline value is never a silent pass.
+ *
+ *   moku-fidelity capture <design-dir> [--sizes 390x844,768x1024] [--game 1080] [--states default,open=?state=open] [--root <served dir>] [--force]
+ *   moku-fidelity check   <design-dir> (--url <url> | --serve <dir> [--entry index.html]) [--start "<command>"] [--unit <name> --elements a,b]
+ *   moku-fidelity measure <design-dir> (same flags as check)     the build side only
+ *   moku-fidelity compare <design-dir>                            compare what is measured, write the report
+ *   moku-fidelity probe   <design-dir> --side expected|actual [--frame]   the probe for the browser pane
+ *   moku-fidelity ingest  <design-dir> --side expected|actual --size WxH --state <id> --file <probe.json>
+ *   moku-fidelity deviate <design-dir> --element <id> [--prop <p>] --kind <kind> --reason "…" --proposal "…" [--by <agent>]
+ *   moku-fidelity decide  <design-dir> <D1> --answer accept|reject|other [--words "…"]
+ *   moku-fidelity status  <design-dir>                            the last result as one JSON line
+ *
+ * <design-dir> is `.planning/design/{slug}`. `--unit` and `--elements` check one builder's elements only, into
+ * `check/units/<name>/`, so builders of one screen do not see each other's unbuilt parts. Exit codes: 0 PASS (or done), 1 not PASS, 2 usage error,
+ * 3 no headless browser here (run `probe` in the browser pane, then `ingest`).
+ */
+
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
+import { basename, dirname, join, relative, resolve } from "node:path";
+
+import { NO_BROWSER, loadChromium, measureAll, serveFolder, startCommand } from "../lib/fidelity/browser.mjs";
+import { compareAll } from "../lib/fidelity/compare.mjs";
+import { addDeviation, decide, readDeviations } from "../lib/fidelity/deviations.mjs";
+import { ACTUAL_SCHEMA, EXPECTED_SCHEMA, PAGE, RESULT_SCHEMA, buildInventory, normalizeSpec, parseSizes } from "../lib/fidelity/inventory.mjs";
+import { boxDiff, readPng } from "../lib/fidelity/png.mjs";
+import { probeExpression } from "../lib/fidelity/probe.mjs";
+import { renderReport } from "../lib/fidelity/report.mjs";
+
+const USAGE = 2;
+const [command, dirArg, ...rest] = process.argv.slice(2);
+const flags = parseFlags(rest);
+
+const COMMANDS = { capture, check, measure, compare, probe, ingest, deviate, decide: decideCmd, status };
+if (!COMMANDS[command] || !dirArg) {
+  const doc = readFileSync(new URL(import.meta.url), "utf8").split("\n");
+  const from = doc.findIndex((line) => line.includes("moku-fidelity capture"));
+  const to = doc.findIndex((line) => line.includes("Exit codes"));
+  console.error(doc.slice(from, to + 2).map((line) => line.replace(/^ \* ?/, "")).join("\n"));
+  process.exit(USAGE);
+}
+
+const dir = resolve(dirArg);
+const checkDir = join(dir, "check");
+// A unit run (`--unit <name> --elements a,b`) checks only its own elements, beside the screen's files
+const unitDir = flags.unit ? join(checkDir, "units", String(flags.unit).replace(/[^\w.-]/g, "_")) : checkDir;
+const files = { spec: join(dir, "spec.json"), expected: join(checkDir, "expected.json"), actual: join(unitDir, "actual.json"), result: join(unitDir, "result.json"), report: join(unitDir, "design-check.md"), shots: join(unitDir, "actual"), deviations: join(dir, "deviations.json") };
+
+try {
+  process.exit((await COMMANDS[command]()) ?? 0);
+} catch (error) {
+  console.error(`moku-fidelity ${command}: ${error.message}`);
+  process.exit(error.exitCode ?? USAGE);
+}
+
+// --- commands ----------------------------------------------------------------
+
+/** Measure the prototype once into `check/expected.json`: the spec, the fixed inventory and the values. */
+async function capture() {
+  const spec = loadSpec(true);
+  const existing = readJson(files.expected);
+  if (existing?.schema === EXPECTED_SCHEMA && !flags.force && sameSpec(existing.spec, spec)) {
+    console.log(`kept ${relative(process.cwd(), files.expected)}: ${existing.inventory.length} rows, the prototype is measured once (--force measures it again)`);
+    return 0;
+  }
+  if (existing && existing.schema !== EXPECTED_SCHEMA) renameSync(files.expected, join(checkDir, "expected.legacy.json"));
+
+  const chromium = await needChromium();
+  const root = flags.root ? resolve(String(flags.root)) : dir;
+  const served = await serveFolder(root);
+  try {
+    const values = await measureAll(chromium, { url: `${served.url}/${relative(root, join(dir, spec.prototype)).split("\\").join("/")}`, spec, elements: spec.elements ?? null, shots: join(checkDir, "expected"), side: "expected" });
+    const expected = writeExpected(spec, values);
+    console.log(`captured ${expected.inventory.length} rows: ${countElements(values)} elements × ${spec.sizes.length} sizes × ${spec.states.length} states → ${relative(process.cwd(), files.expected)}`);
+  } finally {
+    served.close();
+  }
+  return 0;
+}
+
+/** Measure the build, then compare. */
+async function check() {
+  await measure();
+  return compare();
+}
+
+/** Measure the build on the rows of the inventory, at every size and state. */
+async function measure() {
+  const expected = needExpected();
+  const chromium = await needChromium();
+  const target = await openBuild();
+  try {
+    const values = await measureAll(chromium, { url: target.url, spec: expected.spec, elements: inventoryElements(expected), shots: files.shots, side: "actual" });
+    writeJson(files.actual, { schema: ACTUAL_SCHEMA, url: target.url, measuredAt: new Date().toISOString(), values });
+    console.log(`measured the build at ${expected.spec.sizes.map((size) => size.id).join(", ")} × ${expected.spec.states.map((state) => state.id).join(", ")}`);
+  } finally {
+    target.close();
+  }
+  return 0;
+}
+
+/** Compare what is measured and write `result.json` and `design-check.md`. */
+async function compare() {
+  const expected = needExpected();
+  const actual = readJson(files.actual) ?? { values: {} };
+  const deviations = readDeviations(files.deviations);
+  const { rows, summary } = compareAll(expected, actual, deviations);
+  const look = lookList(expected, actual, rows);
+  const slug = basename(dir);
+
+  writeJson(files.result, { schema: RESULT_SCHEMA, slug, at: new Date().toISOString(), summary, look, rows });
+  writeFileSync(files.report, renderReport({ slug, spec: expected.spec, summary, rows, deviations, look }));
+
+  const s = summary;
+  console.log(`Verdict: ${s.verdict}    Rows: ${s.rows}    Pass: ${s.pass}    By decision: ${s.decision}    Open: ${s.open}    Fail: ${s.fail}    Unmeasured: ${s.unmeasured}    Waiting on the person: ${s.pendingDeviations}`);
+  for (const row of rows.filter((item) => item.result === "fail" || item.result === "open").slice(0, 15)) console.log(`  ${row.result.padEnd(4)} ${row.row}  expected ${row.expected}  actual ${row.actual}${row.note ? `  — ${row.note}` : ""}`);
+  console.log(`report: ${relative(process.cwd(), files.report)}`);
+  return s.verdict === "PASS" ? 0 : 1;
+}
+
+/** Print the probe for the browser pane: paste it into `javascript_tool`, save what it returns, then `ingest`. */
+async function probe() {
+  const side = flags.side;
+  if (side !== "expected" && side !== "actual") throw usage("--side expected|actual");
+
+  const expected = side === "actual" ? needExpected() : undefined;
+  const spec = expected?.spec ?? loadSpec(true);
+  const elements = side === "actual" ? inventoryElements(expected) : (spec.elements ?? null);
+  const expression = probeExpression(elements, spec.conversion.reference ?? 1080, side === "expected" ? flags.origin : undefined);
+  console.log(flags.frame ? `document.querySelector('iframe[data-game-frame]').contentWindow.eval(${JSON.stringify(expression)})` : expression);
+  return 0;
+}
+
+/** Take one probe result from the pane into `expected.json` or `actual.json`. */
+async function ingest() {
+  const side = flags.side;
+  if (side !== "expected" && side !== "actual") throw usage("--side expected|actual");
+  if (!flags.size || !flags.state || !flags.file) throw usage("--size WxH --state <id> --file <probe.json>");
+
+  const raw = readFileSync(resolve(flags.file), "utf8").trim();
+  const measured = JSON.parse(raw.startsWith('"') ? JSON.parse(raw) : raw);
+
+  if (side === "expected") {
+    const spec = loadSpec(true);
+    const partial = readJson(files.expected);
+    if (partial?.complete && !flags.force) throw usage("the prototype is captured and its inventory fixed; --force to measure it again");
+
+    const values = { ...(partial?.values ?? {}) };
+    values[flags.size] = { ...(values[flags.size] ?? {}), [flags.state]: measured };
+    const expected = writeExpected(spec, values);
+    console.log(expected.complete ? `captured ${expected.inventory.length} rows, inventory fixed` : `took ${flags.size} · ${flags.state}; still to measure: ${missingCells(spec, values).join(", ")}`);
+    return 0;
+  }
+
+  const expected = needExpected();
+  const actual = readJson(files.actual) ?? { schema: ACTUAL_SCHEMA, values: {} };
+  actual.values[flags.size] = { ...(actual.values[flags.size] ?? {}), [flags.state]: measured };
+  actual.measuredAt = new Date().toISOString();
+  writeJson(files.actual, actual);
+  const left = missingCells(expected.spec, actual.values);
+  console.log(left.length ? `took ${flags.size} · ${flags.state}; still to measure: ${left.join(", ")}` : "every size and state measured: run compare");
+  return 0;
+}
+
+/** Raise a deviation, before the replacement is written. */
+async function deviate() {
+  const entry = addDeviation(files.deviations, { element: flags.element, prop: flags.prop, kind: flags.kind, reason: flags.reason, proposal: flags.proposal, by: flags.by, sizes: flags.sizes?.split(","), states: flags.states?.split(",") });
+  console.log(`${entry.id} raised (${entry.kind}): ${entry.element}${entry.prop ? ` · ${entry.prop}` : ""} — ${entry.proposal}. The person decides; until then its rows stay open.`);
+  return 0;
+}
+
+/** Record the person's answer. */
+async function decideCmd() {
+  const id = rest.find((arg) => /^D\d+$/.test(arg));
+  if (!id) throw usage("decide <design-dir> D<n> --answer accept|reject|other");
+  const entry = decide(files.deviations, id, { answer: flags.answer, words: flags.words, by: flags.by });
+  console.log(`${entry.id}: ${entry.decision.answer}${entry.decision.words ? ` — ${entry.decision.words}` : ""}. Run compare to refresh the report.`);
+  return 0;
+}
+
+/** The last result as one JSON line: verdict, counts, when, and what it was measured against. */
+async function status() {
+  const result = readJson(files.result);
+  const expected = readJson(files.expected);
+  const pending = readDeviations(files.deviations).filter((entry) => !entry.decision?.answer).map((entry) => entry.id);
+  console.log(JSON.stringify({ captured: expected?.schema === EXPECTED_SCHEMA && expected.complete === true, rows: expected?.inventory?.length ?? 0, verdict: result?.summary?.verdict ?? null, at: result?.at ?? null, summary: result?.summary ?? null, pending }));
+  return result?.summary?.verdict === "PASS" ? 0 : 1;
+}
+
+// --- pieces ------------------------------------------------------------------
+
+/**
+ * The spec: `spec.json`, completed by flags; written back when flags made it.
+ *
+ * @param {boolean} write
+ */
+function loadSpec(write) {
+  const onDisk = readJson(files.spec) ?? {};
+  const merged = { ...onDisk };
+  if (flags.sizes) merged.sizes = parseSizes(flags.sizes);
+  if (flags.game) merged.conversion = { unit: "game", reference: Number(flags.game === true ? 1080 : flags.game) };
+  if (flags.states) merged.states = String(flags.states).split(",").map((part) => ({ id: part.split("=")[0], query: part.split("=")[1] ?? "" }));
+  if (flags.prototype) merged.prototype = flags.prototype;
+
+  const spec = normalizeSpec(merged);
+  if (write && (flags.sizes || flags.game || flags.states || flags.prototype || !existsSync(files.spec))) writeJson(files.spec, spec);
+  return spec;
+}
+
+/**
+ * @param {any} spec
+ * @param {Record<string, any>} values
+ */
+function writeExpected(spec, values) {
+  const complete = missingCells(spec, values).length === 0;
+  const expected = { schema: EXPECTED_SCHEMA, prototype: spec.prototype, capturedAt: new Date().toISOString(), complete, spec, inventory: complete ? buildInventory(spec, values) : [], values };
+  writeJson(files.expected, expected);
+  return expected;
+}
+
+/**
+ * The captured prototype; for a unit run, with the inventory cut to the unit's elements (no page rows, which
+ * need the whole screen).
+ *
+ * @returns {any}
+ */
+function needExpected() {
+  const expected = readJson(files.expected);
+  if (expected?.schema !== EXPECTED_SCHEMA || !expected.complete) throw usage(`the prototype is not captured: run \`moku-fidelity capture ${relative(process.cwd(), dir)} --sizes …\` first`);
+  if (!flags.elements) return expected;
+
+  const own = new Set(String(flags.elements).split(",").map((id) => id.trim()).filter(Boolean));
+  const unknown = [...own].filter((id) => !expected.inventory.some((row) => row.el === id));
+  if (unknown.length > 0) throw usage(`not in the inventory: ${unknown.join(", ")}`);
+  return { ...expected, inventory: expected.inventory.filter((row) => own.has(row.el)) };
+}
+
+async function needChromium() {
+  const chromium = await loadChromium(process.cwd());
+  if (chromium) return chromium;
+
+  const error = new Error("no headless browser here (no playwright in this project). Use the browser pane: `moku-fidelity probe <dir> --side …`, run it with javascript_tool at each size and state, save the JSON, then `moku-fidelity ingest`.");
+  error.exitCode = NO_BROWSER;
+  throw error;
+}
+
+/** The build to measure: a served folder, a running URL, or a command started for the run. */
+async function openBuild() {
+  if (flags.serve) {
+    const served = await serveFolder(resolve(flags.serve));
+    return { url: `${served.url}/${flags.entry ?? ""}`.replace(/\/$/, "/"), close: served.close };
+  }
+  if (!flags.url) throw usage("--url <url> or --serve <dir>");
+
+  if (flags.start) {
+    const started = await startCommand(String(flags.start), String(flags.url), process.cwd());
+    return { url: String(flags.url), close: started.stop };
+  }
+  return { url: String(flags.url), close: () => {} };
+}
+
+/** The elements the build is measured on: the inventory's, with the selectors the spec gives. */
+function inventoryElements(expected) {
+  const ids = [...new Set(expected.inventory.map((row) => row.el).filter((id) => id !== PAGE))];
+  return Object.fromEntries(ids.map((id) => [id, expected.spec.elements?.[id]?.build ?? { selector: `[data-check="${id}"]`, game: { key: id } }]));
+}
+
+/**
+ * The elements whose pixels differ most while none of their rows fails: worth a look, never a verdict.
+ *
+ * @param {any} expected
+ * @param {any} actual
+ * @param {any[]} rows
+ */
+function lookList(expected, actual, rows) {
+  const failing = new Set(rows.filter((row) => row.result !== "pass" && row.result !== "decision").map((row) => `${row.el}|${row.size}|${row.state}`));
+  const items = [];
+  for (const size of expected.spec.sizes) {
+    for (const state of expected.spec.states) {
+      const shotE = readPng(join(checkDir, "expected", size.id, `${state.id}.png`));
+      const shotA = readPng(join(files.shots, size.id, `${state.id}.png`));
+      if (!shotE || !shotA) continue;
+
+      for (const [id, element] of Object.entries(expected.values[size.id]?.[state.id] ?? {})) {
+        if (id === PAGE || !element.present || failing.has(`${id}|${size.id}|${state.id}`) || !rows.some((row) => row.el === id)) continue;
+        const diff = boxDiff(shotE, shotA, element);
+        if (diff !== undefined && diff >= 20) items.push({ el: id, size: size.id, state: state.id, diff });
+      }
+    }
+  }
+  return items.sort((p, q) => q.diff - p.diff).slice(0, 10);
+}
+
+/**
+ * @param {any} spec
+ * @param {Record<string, any>} values
+ */
+function missingCells(spec, values) {
+  return spec.sizes.flatMap((size) => spec.states.filter((state) => !values?.[size.id]?.[state.id]).map((state) => `${size.id} · ${state.id}`));
+}
+
+/** @param {Record<string, any>} values */
+function countElements(values) {
+  const ids = new Set();
+  for (const states of Object.values(values)) for (const els of Object.values(states)) for (const id of Object.keys(els)) if (id !== PAGE) ids.add(id);
+  return ids.size;
+}
+
+/** @param {any} p @param {any} q */
+function sameSpec(p, q) {
+  const key = (spec) => JSON.stringify({ sizes: spec.sizes, states: spec.states, conversion: spec.conversion, elements: spec.elements ?? null, prototype: spec.prototype });
+  return key(p) === key(q);
+}
+
+/** @param {string} text */
+function usage(text) {
+  const error = new Error(text);
+  error.exitCode = USAGE;
+  return error;
+}
+
+/** @param {string} file */
+function readJson(file) {
+  try {
+    return JSON.parse(readFileSync(file, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * @param {string} file
+ * @param {unknown} data
+ */
+function writeJson(file, data) {
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(`${file}.tmp`, `${JSON.stringify(data, null, 1)}\n`);
+  renameSync(`${file}.tmp`, file);
+}
+
+/** @param {string[]} args */
+function parseFlags(args) {
+  const out = {};
+  for (let index = 0; index < args.length; index++) {
+    const arg = args[index];
+    if (!arg.startsWith("--")) continue;
+    const next = args[index + 1];
+    if (next === undefined || next.startsWith("--")) out[arg.slice(2)] = true;
+    else {
+      out[arg.slice(2)] = next;
+      index++;
+    }
+  }
+  return out;
+}
+

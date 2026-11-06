@@ -27,7 +27,7 @@ You implement one plugin, in one directory, from its spec and the skeleton alrea
 - `framework` — the framework name.
 - `spec` — config, state, api, events, dependencies, verification.
 - `skeleton` — the stub files already created for this plugin.
-- `design` — only for a screen or component from a design context: the prototype path, the conversion from prototype px to the target's units, and the art assets. The prototype is the single source of truth for layout and measurements: read every size, position, radius and shadow from its HTML and styles and convert it. Never guess one, and never measure one from an image: a generated image is an art asset, also when it shows the whole screen. Read the numbers, never copy the prototype's code. Use the exact font faces, weights and sizes the brief names. Every word is text from the string table, drawn by a font, so it can be translated: never bake a word into an image or a sprite unless the brief lists it as lettering that is art. A spec that names a design context while your prompt has no prototype path or no conversion: stop and report it in `blockers`.
+- `design` — only for a screen or component from a design context: the prototype path, the conversion from prototype px to the target's units, and the art assets. The prototype is the single source of truth for layout and measurements: read every size, position, radius and shadow from its HTML and styles and convert it. Never guess one, and never measure one from an image: a generated image is an art asset, also when it shows the whole screen. Read the numbers, never copy the prototype's code. Use the exact font faces, weights and sizes the brief names. Every word is text from the string table, drawn by a font, so it can be translated: never bake a word into an image or a sprite unless the brief lists it as lettering that is art. A spec that names a design context while your prompt has no prototype path or no conversion: stop and report it in `blockers`. **Ask before you substitute.** When something of the prototype cannot be built here (a face or weight the project lacks, an effect the engine or the performance budget forbids, a project rule it breaks, the design context saying one thing and the prototype another), raise it before you write any replacement: `moku-fidelity deviate .planning/design/<slug> --element <id> --prop <property> --kind impossible|conflict|stale-context --reason "…" --proposal "…" --by moku-builder`. Then build the proposal, so the screen is whole; the person decides. A silent substitute is a defect even when it looks right. **Check before you report.** The last step of a UI unit is the design check command your prompt gives (`moku-fidelity check .planning/design/<slug> …`): fix every failing row inside your unit and run it again; a borderline row you cannot fix becomes a deviation. No headless browser here (exit 3): report `design.verdict: "unmeasured"`.
 - `MODE` — `greenfield` or `delta`. If unstated, infer: a `src/plugins/{name}/` with real implementation and tests is a delta, otherwise greenfield.
 
 ## Filesystem isolation
@@ -106,6 +106,7 @@ Prose summary first, then the fenced block as your last message. A run that ends
   "newDependencies": ["pkg@version", "..."],
   "publicApiChanged": true,
   "visualBaselines": [{"baseline": "tests/visual/baselines/<screen>/<state>", "why": "what it shows that changes"}],
+  "design": {"slug": "<slug>", "unit": "<name, when the check ran with --unit>", "verdict": "PASS | FAIL | unmeasured", "rows": N, "fail": N, "open": N, "deviations": ["D1"]},
   "blockers": [{"file": "path", "line": N, "message": "...", "fix": "..."}]
 }
 ```
@@ -115,4 +116,5 @@ Prose summary first, then the fenced block as your last message. A run that ends
 - `publicApiChanged` — true when the `api:`, events or `Config` surface changed.
 - `newDependencies` — packages for the orchestrator to add.
 - `visualBaselines` — the baselines a visible change makes stale, for the e2e station to record again; `[]` when nothing visible changed.
+- `design` — only for a unit with a `design` input: the slug, and the last `moku-fidelity check` line (verdict and counts) with the ids of the deviations you raised. The stop hook reads the check's own files, not this block: a missing, stale or failing check sends you back once.
 - A report that says PASS is checked: the stop hook runs the project's `tsc` and your unit's tests, drops what was broken before you started, and sends you back once with what is left. Type errors in your test files count.

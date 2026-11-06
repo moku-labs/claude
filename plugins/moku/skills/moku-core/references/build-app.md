@@ -251,23 +251,27 @@ A design context for this change (`.planning/design/<slug>/design-context.md`, n
 person must never have to say "now compare it to the design".
 
 The procedure is in the `moku-design` pack: load the `moku-design:design` skill with the Skill tool and
-read `references/design-check.md` under the base directory it prints. In short:
+read `references/design-check.md` under the base directory it prints. The tool is `moku-fidelity`. In short:
 
-1. Measure the prototype at its frame: position, size, radius, shadow and colour of every inventory
-   row of §6, and family, weight, size, line height and letter spacing of every text.
-2. Measure the same rows in the running build: the app from Step 7, or the game in the editor
-   (`moku-game:playtest` → "The design check").
-3. Compare, expected = prototype value × the conversion. Fonts first. Then "text is text": every word
-   is drawn by a font from the string table, none is baked into an image.
-4. Fix what fails, measure again, at most two rounds. A difference that is intended is a row
-   "by decision" with its source, not a pass by silence.
-5. Write `.planning/design/<slug>/check/design-check.md` and show the verdict line, the open rows and
-   the pairs of shots.
+1. Before the first UI unit is built: the prototype is captured (`spec.json` and
+   `moku-fidelity capture .planning/design/<slug>`; the design station does it at capture, run it if
+   `check/expected.json` is missing). The inventory it fixes is what every later run measures.
+2. Each UI builder's prompt carries the check command in its `## Design Reference`. The builder raises a
+   deviation before it writes any replacement, and runs the check before its report; the stop hook sends
+   it back once when the check is missing, stale or failing, and tells you when deviations wait on the
+   person. **Ask the person then**, before the next wave, and record each answer with
+   `moku-fidelity decide`.
+3. Here, after the last wave: `moku-fidelity check` once more on the whole screen at every target size,
+   the app from Step 7, or the game page (`moku-game:playtest` → "The design check").
+4. Fix what fails, measure again, at most two rounds. A difference that is intended is a decided
+   deviation, never a pass by silence. Look at the pairs the report lists.
+5. Show the verdict line, the questions, the open rows and the pairs of shots from
+   `.planning/design/<slug>/check/design-check.md`.
 
 The build is not reported as done while the verdict is FAIL: `moku-rails pause`, show the open rows and
 ask. The rails hold the same line: for a change tied to a design, `moku-rails done build` is refused
 until the report says `Verdict: PASS`. `--no-design-check "<their words>"` is the person's answer,
-never your shortcut. If the `moku-design` pack is not installed, run the five steps above from this page and say so.
+never your shortcut. If the `moku-design` pack is not installed, measure by hand at every target size, compare by the tolerances of this page's steps, and say so.
 No design context for the change: note it in one line and move on.
 
 ## Step 8: README

@@ -159,6 +159,14 @@ trade-offs — follow them rather than re-deciding. Omit the section when there 
   prototype wins.
 - Read the numbers; do not copy the prototype's CSS, JS, DOM, class names or bugs. Do not guess a size:
   a measurement the prototype does not hold goes into `blockers`.
+- Deviations: what this unit cannot follow (a face the project lacks, an effect the engine or budget
+  forbids, a conflict with the design context) is raised with `moku-fidelity deviate .planning/design/[slug] …`
+  before any replacement is written, then the proposal is built. Known so far: [the open deviations of
+  `deviations.json`, or "none"].
+- Check: the last step before the report is `moku-fidelity check .planning/design/[slug] [--url <url>
+  --start "<dev command>" | --serve <dir>]` [fill in how this project's build is reached; when several
+  builders share one screen, add `--unit [name] --elements [this unit's inventory ids]`]. Every target
+  size is measured. Failing rows are fixed in the unit; the report carries the `design` block.
 
 ## Filesystem safety (parallel builders)
 Sibling builders run concurrently, so a repo-wide command from you corrupts their work.
