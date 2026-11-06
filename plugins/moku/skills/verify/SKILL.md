@@ -202,5 +202,9 @@ confirm nothing changed.
 - Fix rather than only flag, unless `--report-only`. A high-blast-radius or ambiguous change becomes
   a proposal instead of a forced edit.
 - A guardrail is clean only after typecheck, lint and tests pass on the fixed tree.
+- The validators and skeptics read the code; you work from their reports, not from the files. A fix that
+  spans more than a line or two goes to an agent with the findings (file, line, rule, the recipe):
+  `moku-tweaker` for edits in one or two existing files, `moku-builder` for new files such as a missing
+  test, several in parallel on disjoint files. The next validator pass is the check, not a grep of yours.
 - Edit source only. The orchestrating session commits after verification, so do not commit here,
   never pass `--no-verify`, and never write to the plugin cache or `.planning/`.

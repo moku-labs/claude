@@ -165,6 +165,9 @@ moku-rails done e2e
 - Real regressions are fixed in the app source. Goldens are updated only for intended changes, never to
   clear red.
 - The agents edit app source, tests and config. They do not commit; the orchestrator does.
+- The agents run Playwright and read its output; you take their reports and the screenshot set, and do not
+  re-run the suite or open `test-results/` yourself. A rerun you need is one scoped spec file, read by its
+  summary line.
 - `dist-e2e/`, `test-results/` and `playwright-report/` are gitignored build artifacts.
 
 ## Examples

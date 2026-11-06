@@ -31,6 +31,26 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   memory, and both refuse inside a Claude Code session. The app's records are undocumented; the report in
   `research/resume-v2/report.html` weighs what is official and what is not.
 
+## 0.88.1 (2026-11-06)
+
+### Added
+- **The conductor offers `/compact` at a station boundary in a long session.** A PostToolUse hook
+  (`on-station-done.mjs`) reads the newest context from the tail of the transcript after `moku-rails done` or
+  `close`, and above 400k tokens (`MOKU_COMPACT_HINT_TOKENS`) asks for one sentence that offers the person
+  `/compact` before the next station. Never mid-station, never in a subagent, silent off the rails. On 137 real
+  sessions that point came 84 times in 59 sessions; compacting there saves up to about a fifth of the main thread.
+
+### Changed
+- **The main thread reads little and once.** On real sessions most of the main thread's own calls were lookups through
+  the shell (`grep`, `sed`, `cat`), and a third of what they read had been read before; Read was barely used. The
+  conductor (new section "Your context is the costliest thing in the session") and brainstorm, plan, verify, tweak,
+  design, e2e and playtest now take an exact lookup through Read with `offset`/`limit` or Grep, never re-read an
+  unchanged file, keep one plain command per Bash call (`agent-preamble.md` rule 9 for the orchestrator too), do not
+  re-run tests on an unchanged tree, and read screens as text first. The SessionStart hook says it in one line,
+  because a question never loads the conductor. Verify hands fixes larger than a line or two to `moku-tweaker` or
+  `moku-builder`. Sending exploration to an `Explore` agent by default is left out until a long-session eval shows
+  it pays: on a short question it doubled the cost.
+
 ## 0.88.0 (2026-11-05)
 
 ### Added

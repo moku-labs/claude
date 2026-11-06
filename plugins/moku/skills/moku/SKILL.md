@@ -42,6 +42,17 @@ An open change inside `build` is not a free pass. "Also make it pink" during a b
 
 Stations run through their skills, with the Skill tool. You do not write source files yourself and you do not do a station's work by hand, even when it looks quicker: the skills carry the builders, the validators, the reviewers and the gates.
 
+## Your context is the costliest thing in the session
+
+Every call you make carries the whole conversation: in a long moku session 250k tokens and more, so one lookup of yours costs as much as a small agent's whole task. On real sessions most of your own calls were lookups through the shell, and a third of them read a file read before. Keep your turns for steering:
+
+- **Take an agent's hand-back as it is.** Its summary is the account of what changed: do not open its files again to check; `git diff --stat` when you need the list.
+- **An exact lookup is Read or Grep, never the shell.** `Read` with `offset` and `limit` for the lines you need, `Grep` with a pattern and a path; not `cat`, `sed -n`, `head` or `grep` in Bash. A file you read and nobody changed since is not read again.
+- **Bash is one plain command per call** (`agent-preamble.md` rule 9 holds for you too): no `;` or `&&` chains, no `|` into `head` or `grep`, no `cd … &&`, no `VAR=…` prefix, no inline `python3 - <<EOF`. Never `sleep` to wait: reports and task notifications arrive by themselves.
+- **Tests: read the verdict, do not re-run it.** Builders, the quality validator and `moku-rails check tests` run them; tests, `tsc` and lint are not run again on a tree that did not change. When you must run one, run it scoped and read the summary line.
+- **Screens: text first.** `read_page`, `get_page_text`, `moku_read` or a script answer what is on screen. A screenshot is for how it looks, at `scale` 0.5 unless the detail matters; a design comparison takes full size.
+- **Compact between stations.** When the hook after `moku-rails done` or `close` says the context is long, offer the person `/compact` in one sentence before the next station. Never mid-station; on a no, carry on.
+
 **Debts come first.** An open or stuck change, or uncommitted work that no change accounts for, is settled before new work: finish it, or park it with a reason (`moku-rails park <id> --reason "..."`). Say it plainly: "Last time we left the streak fix unfinished. Finish it first, or set it aside?"
 
 ## Classify what the person brought
@@ -132,7 +143,7 @@ Whoever writes, changes or removes a test follows `${CLAUDE_PLUGIN_ROOT}/skills/
 2. `moku-rails enter <station>`. Exit code 2 means refused: read `Next step:` and offer that step instead.
 3. Run the station's skill with the Skill tool.
 4. Before you stop to ask the person anything mid-station: `moku-rails pause --reason "..."`.
-5. `moku-rails done <station>`, then say what was done and what comes next.
+5. `moku-rails done <station>`, then say what was done and what comes next. A long context gets the `/compact` offer here.
 
 | Station | Skill | Notes |
 |---|---|---|
@@ -192,7 +203,7 @@ Then move `.planning/changes/<id>/` to `.planning/archive/changes/<id>/` with a 
 - Several open changes in one checkout are allowed only when the others are paused or parked. Pass `--change <id>` when more than one is open.
 - Each git worktree is a lane of its own. It has its own open change, its own last request, its own `STATE.md` and `build/`, and it never waits for another worktree. The project's files are shared: the ledger, `moku.md`, decisions, steering, memory, `specs/`. `moku-rails status` lists the other checkouts' work under "Elsewhere". A change whose worktree was removed is taken over with `moku-rails adopt <id>`.
 - A fresh worktree has no `node_modules`: install there before the first build (`bun install`).
-- Write and change `.planning/` text files with Write and Edit, never with the shell (`cat > … <<EOF`, `sed -i`, `printf >>`, `echo >>`). The edit rule the session allows covers Write and Edit, not the shell, so a shell write there asks the person. Run commands from the project root, with no `cd … &&` in front and no `VAR=…` prefix: such a command matches no allow rule and is asked too.
+- Write and change `.planning/` text files with Write and Edit, never with the shell (`cat > … <<EOF`, `sed -i`, `printf >>`, `echo >>`). The edit rule the session allows covers Write and Edit, not the shell, so a shell write there asks the person. Run commands from the project root, one per call: a chained or prefixed command matches no allow rule and is asked too.
 - Inside `tweak` a new message needs no routing and the turn may end after every edit. The fast agent or the builder is named by `moku-rails tier <files>`, never by a guess.
 - A directory without a session has no ledger. `status` reports "Rails: off" and names the `moku:session` skill as the next step.
 - The write hook answers "has not been routed" when code is attempted before the request was placed. Route it with the table above; do not retry the write.

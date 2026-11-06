@@ -15,6 +15,9 @@ import { rememberStatus } from "../lib/hooks/seen.mjs";
 import { linkPlanning } from "../lib/hooks/worktree.mjs";
 import { status } from "../lib/rails/commands.mjs";
 
+/** Once per session start: every later call of the main thread carries what it read, so it reads little and once. */
+const MAIN_THREAD = "Your context is carried by every later call. An exact lookup is Read with `offset`/`limit` or Grep, never `cat`, `sed` or `grep` in the shell; a file read and unchanged is not read again; one plain command per Bash call.";
+
 const { payload } = readHookInput();
 linkPlanning(payload.cwd ?? process.cwd());
 const root = rootForSession(payload);
@@ -25,4 +28,4 @@ const report = status({ root, positional: [], flags: {} });
 rememberStatus(root, payload.session_id, report.lines);
 
 const header = payload.source === "compact" ? "Moku rails (after compaction, the standing again):" : "Moku rails:";
-console.log([header, ...report.lines, "The `moku` skill (the conductor) drives the lifecycle from here."].join("\n"));
+console.log([header, ...report.lines, "The `moku` skill (the conductor) drives the lifecycle from here.", MAIN_THREAD].join("\n"));

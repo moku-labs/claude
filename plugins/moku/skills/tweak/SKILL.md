@@ -25,7 +25,8 @@ everything else: no source before init, no edit outside an open change.
 
 ## One edit
 
-1. **Find the files.** Read only what the edit needs. Name the files it will touch.
+1. **Find the files.** Read only what the edit needs: a Grep or a Read with `offset` and `limit`, never the
+   shell. Name the files it will touch; the agent reads them, so you do not read them whole first.
 2. **Ask the rails who makes it.** The answer is counted from the files, never guessed:
 
    ```bash
