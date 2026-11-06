@@ -2,5 +2,5 @@
 type: llm
 ---
 
-PASS if the response or the concepts it reports make clear that the game motion was designed in detail: the popup entrance, the chest opening, the coins flying into the counter and the counter roll, the disabled tap, the error, an idle and the loading bar each have an animation (or are named as still on purpose), with timings, and the states open by ?state= at the three aspect ratios.
-FAIL if motion is mentioned only in general terms ("animated popup", "smooth transitions") without the individual events, or if states or aspect ratios are not addressed.
+PASS if the response makes clear that the game motion was designed event by event, not in general terms: it names the signature moment of each concept concretely (for the claim: what the chest, the coins and the counter do, with timings or feel in numbers), says that the required game events were covered (for example "all 14 required events", or by listing them, with any still event named and its reason), and says that the six states open at the three aspect ratios.
+FAIL if motion is described only as "animated popup" or "smooth transitions", with no signature moment in concrete terms, or if neither the required events nor the states and aspect ratios are addressed.

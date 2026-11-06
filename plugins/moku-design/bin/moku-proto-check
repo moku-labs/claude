@@ -12,13 +12,13 @@
  * One line per frame is printed, so nobody has to look at the screenshots; --out saves them anyway.
  *
  * The last line is the verdict: `proto-check: PASS — …` or `proto-check: FAIL — …`.
- * Exit codes: 0 pass, 1 usage error, 2 findings, 3 no Chrome found (the static part ran; render not checked).
+ * Exit codes: 0 pass, 1 usage error, 2 findings, 3 no Chrome found or none starts (the static part ran; render not checked).
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-import { launch, findChrome } from "../lib/proto-check/cdp.mjs";
+import { chromeCandidates, launch } from "../lib/proto-check/cdp.mjs";
 import { checkContract, columnsPresent, COLUMNS, extractContract } from "../lib/proto-check/contract.mjs";
 import { describeFrame, renderCheck } from "../lib/proto-check/render.mjs";
 
@@ -56,11 +56,10 @@ let render;
 let exitCode = 0;
 
 // Render: a headless Chrome on the machine
-const chrome = flag("static") ? undefined : findChrome();
-if (chrome) {
+const page = flag("static") ? undefined : await startChrome();
+if (page) {
   const out = typeof flag("out") === "string" ? resolve(flag("out")) : undefined;
   if (out) mkdirSync(out, { recursive: true });
-  const page = await launch(chrome);
   try {
     render = await renderCheck(page, path, contract, { out });
   } finally {
@@ -72,7 +71,7 @@ if (chrome) {
   findings.push(...render.findings);
   warnings.push(...render.warnings);
 } else if (!flag("static")) {
-  console.log("Render: not checked — no Chrome found (set CHROME_PATH). Open each ?state= at each ?vp= in the browser pane instead.");
+  console.log("Render: not checked — no Chrome found or none would start here (set CHROME_PATH; a sandbox may forbid it). Open each ?state= at each ?vp= in the browser pane instead.");
   exitCode = NO_CHROME;
 }
 
@@ -86,6 +85,22 @@ const live = render ? `${render.motion.filter((row) => row.live).length}/${rende
 const summary = `${table.fullRows}/${table.rows} rows with 8/8 columns, events ${table.events.covered}/${table.events.required}, states ${table.states} × sizes ${table.viewports}, motion ${live}`;
 console.log(`proto-check: ${findings.length ? "FAIL" : "PASS"} — ${summary}${findings.length ? `, ${findings.length} finding(s)` : ""}`);
 process.exit(findings.length ? FINDINGS : exitCode);
+
+/**
+ * Launches the first Chrome that exists and starts; a sandbox may refuse one, so the next is tried.
+ *
+ * @returns {Promise<import("../lib/proto-check/cdp.mjs").Page | undefined>}
+ */
+async function startChrome() {
+  for (const binary of chromeCandidates().filter((path) => existsSync(path))) {
+    try {
+      return await launch(binary);
+    } catch (error) {
+      console.log(`Render: ${binary} did not start (${error.message})`);
+    }
+  }
+  return undefined;
+}
 
 /**
  * True when the argument is the value of a flag that takes one.

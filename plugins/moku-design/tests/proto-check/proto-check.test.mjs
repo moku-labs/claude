@@ -6,7 +6,7 @@ import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { findChrome } from "../../lib/proto-check/cdp.mjs";
+import { findChrome, launch } from "../../lib/proto-check/cdp.mjs";
 import { checkContract, columnsPresent, extractContract, filled, parseSize } from "../../lib/proto-check/contract.mjs";
 import { durationMs, frameUrl } from "../../lib/proto-check/render.mjs";
 
@@ -92,6 +92,16 @@ describe("helpers", () => {
 
     assert.equal(url.searchParams.get("state"), "s1");
     assert.equal(url.searchParams.has("play"), false);
+  });
+});
+
+describe("launch", () => {
+  it("rejects a Chrome that exits before it listens, so the next one can be tried", async () => {
+    const dir = mkdtempSync(join(tmpdir(), "proto-check-chrome-"));
+    const fake = join(dir, "chrome");
+    writeFileSync(fake, "#!/bin/sh\nexit 21\n", { mode: 0o755 });
+
+    await assert.rejects(launch(fake), /exited with 21/);
   });
 });
 

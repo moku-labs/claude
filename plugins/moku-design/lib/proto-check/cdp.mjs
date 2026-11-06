@@ -84,6 +84,7 @@ export async function launch(binary) {
       }
     });
     child.on("exit", (code) => reject(new Error(`Chrome exited with ${code} before it listened`)));
+    child.on("error", (error) => reject(error));
   });
 
   const socket = new WebSocket(endpoint);
