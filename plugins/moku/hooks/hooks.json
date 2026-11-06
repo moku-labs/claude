@@ -53,12 +53,14 @@
     ],
     "SubagentStart": [
       { "matcher": ".*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-start.mjs", "timeout": 5 }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-start.mjs", "timeout": 5 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-builder-start.mjs", "timeout": 5 }
       ] }
     ],
     "SubagentStop": [
       { "matcher": ".*", "hooks": [
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-stop.mjs", "timeout": 5 }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-subagent-stop.mjs", "timeout": 5 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-builder-stop.mjs", "timeout": 400 }
       ] }
     ],
     "Stop": [

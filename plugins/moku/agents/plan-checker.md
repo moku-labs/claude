@@ -2,7 +2,7 @@
 name: moku-plan-checker
 description: Checks a plan for completeness before it reaches the user — requirement coverage, dependency graph, event flow, spec sections and the idiomatic app shape. The plan station runs it at the gate and after spec edits.
 model: fable
-effort: high
+effort: medium
 color: yellow
 maxTurns: 300 # read-only: the limit only bounds a loop that re-reads the same files; no real run comes near it
 skills:

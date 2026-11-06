@@ -2,7 +2,7 @@
 name: moku-architecture-validator
 description: Validates cross-plugin architecture — dependency graph, event flow, API consistency, config shape and performance red flags — and draws the dependency and event diagrams. The orchestrator runs it after a full build or when plugins are added or changed.
 model: fable
-effort: high
+effort: medium
 color: magenta
 maxTurns: 300 # read-only: the limit only bounds a loop that re-reads the same files; no real run comes near it
 skills:

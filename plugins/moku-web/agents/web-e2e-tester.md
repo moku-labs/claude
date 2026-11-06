@@ -54,7 +54,9 @@ feature works in a real browser.
    node-free client bundle), then re-run. Distinguish a real regression (fix the app, keep the baseline) from
    an intended change (a deliberate, reported baseline update). A blanket `--update-snapshots` hides
    regressions, so goldens are updated one reason at a time. A new screen gets its golden after you looked at
-   the first render.
+   the first render. A change that alters visible behaviour names the baselines it touches: start from the
+   `visualBaselines` the builders reported, search the baselines of every screen the change touches for the
+   ones they missed (one recorded with the bug is the usual miss), and name each one you re-record and why.
 5. **Match the design context** when one exists: check every screen against its layout, spacing, states and
    inventory, and close the gap in the implementation. A screen that works but visibly diverges is a defect.
 6. **Visual determinism** as the reference specifies (animations disabled, `caret: "hide"`, `scale: "css"`,
