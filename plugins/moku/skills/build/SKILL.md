@@ -117,6 +117,12 @@ It refuses a plan where a plugin sits in two waves, or depends on a plugin of th
 Relay the refusal and fix the plan; do not build around it. A person who wants the rest of the plan built
 without a stop between waves gets the workflow `moku-build-wave` with `{all: true}`, on their word.
 
+**A change in stages** (`moku-rails stages` names the current one) is built one stage at a time: the builder
+gets this stage only, with its DoD in the brief. The stage is done when its DoD check shows the item done,
+not when the tests turn green: run that check, commit, then
+`moku-rails stages done --evidence "<what the check showed>"`, and only then start the next stage. The
+rails refuse evidence that only says the gates pass, and a stage on an uncommitted tree.
+
 **Reading it.** No STATE.md and a `.planning/build/skeleton-spec.md` on disk: write a fresh STATE.md
 with `## Skeleton: not-started` and continue. Missing or malformed `## Phase:`, `## Target:` or
 `## Next Action:`: offer to regenerate it from the spec files, inferring the target, and say the values

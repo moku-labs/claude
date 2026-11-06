@@ -58,13 +58,19 @@ export function canEnter(project, change, station) {
 /**
  * Decide whether a change may close.
  *
- * @param {{ size: "S" | "M" | "L", done: string[], skipped?: string[], checklist: Record<string, boolean> }} change
+ * @param {{ size: "S" | "M" | "L", done: string[], skipped?: string[], checklist: Record<string, boolean>, stages?: { title: string, done?: string }[] }} change
  * @returns {Verdict}
  * @example
  * canClose({ size: "S", done: ["intake", "build", "verify"], checklist: { tests: true, verify: true, docs: false } });
  * // { ok: false, missing: "docs", reason: "..." }
  */
 export function canClose(change) {
+  // A staged change closes after its last stage: each stage proved its own item
+  const pending = (change.stages ?? []).findIndex((stage) => !stage.done);
+  if (pending !== -1) {
+    return refuse("stages", `Stage ${pending + 1} of ${change.stages?.length} ("${change.stages?.[pending].title}") is not done. Finish it and run \`moku-rails stages done --evidence "<what its DoD check showed>"\`.`);
+  }
+
   const entry = canEnter({ initialized: true }, change, "close");
   if (!entry.ok) return entry;
 

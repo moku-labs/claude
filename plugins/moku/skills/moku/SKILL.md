@@ -53,6 +53,15 @@ Every call you make carries the whole conversation: in a long moku session 250k 
 - **Screens: text first.** `read_page`, `get_page_text`, `moku_read` or a script answer what is on screen. A screenshot is for how it looks, at `scale` 0.5 unless the detail matters; a design comparison takes full size.
 - **Compact between stations.** When the hook after `moku-rails done` or `close` says the context is long, offer the person `/compact` in one sentence before the next station. Never mid-station; on a no, carry on.
 
+## Stages: offered on a signal, never by default
+
+Do not offer stages because a request sounds big: a request's wording does not predict which work grows. Inside what one go can carry, stages cost 1.6–2× in time and money and raise nothing; they buy a smaller context per builder and a cut-off run that loses no work. The rails print a `Stages offer:` at the two moments that matter: the second `moku-rails scope` of a change, and the result of a builder that was cut off (turn limit, or no report). Only then:
+
+- Offer it once, in two or three sentences, with the price: longer and costlier, but each builder sees less and a cut-off run loses nothing. A no keeps one go; do not ask again. A person who said "in one go" is not argued with.
+- On a yes, the plan station writes `.planning/changes/<id>/stages.md`, each stage with a DoD that checks the item itself (a test by name, a grep, a grader), never only "tests green". The plan-checker checks it; `moku-rails stages set --milestone "<where they lead>"` takes it.
+- Between stages the rails move the change: `moku-rails stages done --evidence "<what the DoD check showed>"` on a committed tree. The change closes after its last stage.
+- The person asking for stages themselves is the same yes: write the stages file with item-level DoDs.
+
 **Debts come first.** An open or stuck change, or uncommitted work that no change accounts for, is settled before new work: finish it, or park it with a reason (`moku-rails park <id> --reason "..."`). Say it plainly: "Last time we left the streak fix unfinished. Finish it first, or set it aside?"
 
 ## Classify what the person brought

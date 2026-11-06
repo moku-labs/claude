@@ -24,6 +24,10 @@ import { basename, dirname, join, resolve } from "node:path";
  * @property {string[]} [skipped] optional stations skipped on purpose, each with a recorded reason in `note`
  * @property {string[]} [scope] requests added after the change was opened
  * @property {string} [worktree] root of the git worktree the change was opened in; absent for the main checkout
+ * @property {import("./stages.mjs").Stage[]} [stages] the stages the change is finished in, each with its own DoD; absent for one go
+ * @property {string} [milestone] where the stages lead; the ledger's `milestone` names it while the stages run
+ * @property {number} [cutoffs] times a builder of the change stopped at its turn limit
+ * @property {string} [splitOffered] when the person was offered stages; the offer comes once
  * @property {string} [design] slug of the design the change follows (`.planning/design/<slug>/`); `build` and `e2e` finish only on its passed design check
  */
 
