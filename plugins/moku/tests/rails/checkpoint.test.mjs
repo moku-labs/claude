@@ -347,6 +347,18 @@ describe("moku-rails resume-checkpoint after a new sign-in", () => {
     assert.deepEqual(rails("resume-checkpoint", "--relink", "--json").json().data.linked, [], "a second run changes nothing");
   });
 
+  it("--relink leaves a session without its parent while the parent is not open in the app yet", () => {
+    const { env, root, rails } = family();
+    const cards = reopen(env, sid("c"), root);
+
+    const result = rails("resume-checkpoint", "--relink", "--json").json();
+
+    assert.deepEqual(result.data.linked, []);
+    assert.equal(JSON.parse(readFileSync(cards, "utf8")).spawnedFrom, undefined);
+    assert.equal(JSON.parse(readFileSync(cards, "utf8")).title, "Card texts", "the title is still set");
+    assert.match(result.lines.join("\n"), /2 sessions are not open in the app yet/);
+  });
+
   it("--open opens only the Code tab sessions the app does not have yet, through a terminal, and only for the person", () => {
     const { base, env, root, rails } = family();
     reopen(env, sid("a"), root);

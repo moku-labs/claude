@@ -725,7 +725,8 @@ function relink(saved) {
   if (ready.length === 0) return refused("no session of the checkpoint is open in the app under the new sign-in yet. Run `moku-rails resume-checkpoint --open` first.");
 
   const backup = join(checkpointFolder(saved.savedAt), "desktop-backup", new Date().toISOString().replace(/[:.]/g, "-"));
-  const { linked, titled } = relinkSessions(ready, idMap(reopened), backup);
+  // A parent the app does not have yet is no parent to point at
+  const { linked, titled } = relinkSessions(ready, idMap(reopened.filter((entry) => entry.opened)), backup);
   const missing = reopened.filter((entry) => entry.newId && !entry.opened).length;
 
   return {
