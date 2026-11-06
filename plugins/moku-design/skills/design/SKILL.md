@@ -131,6 +131,10 @@ done until a screenshot or a live URL shows it.
 - Capture is written by this session, not an agent: `design-context.md` opens with the "spec, not source"
   callout verbatim, carries an exhaustive inventory, and names the prototype as the single source of truth
   for layout and measurements, with the unit conversion. See `references/design-context-template.md`.
+- Concepts are written by `design-generator` agents; you brief and review them. In polish, change the
+  prototype with Edit at the lines the change needs (Grep for the element, Read with `offset` and `limit`):
+  never rewrite or re-read the whole file. Check a preview with `read_page` and the console first; a
+  screenshot is for the look, at full size when it is reviewed.
 - Design never plans or builds. After capture, recommend the plan station.
 
 ## Hand-off

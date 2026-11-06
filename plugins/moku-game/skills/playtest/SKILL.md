@@ -264,6 +264,9 @@ moku-rails done e2e
 - Agents are optional. Spawn one (`general-purpose`) only for an independent side quest that would
   block the main thread, such as writing many missing scenarios while you play; give it the file list and
   the `createHeadless` shape. Never spawn an agent to drive the browser pane.
+- State is read as text (`moku_read`, `read_page`, `find`); a screenshot is for what a screen looks like.
+  Play steps go out as one `browser_batch` where they can, and a shot that only proves a step landed is
+  taken at `scale` 0.5.
 - `.moku/captures/`, `dist/`, `dist-e2e/` are local output.
 
 ## Examples

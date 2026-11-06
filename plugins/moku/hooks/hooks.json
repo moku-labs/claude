@@ -30,7 +30,8 @@
       ] },
       { "matcher": "Bash", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-commit-review.sh", "timeout": 30 },
-        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-test-run.mjs", "timeout": 10 }
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-test-run.mjs", "timeout": 10 },
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-station-done.mjs", "timeout": 5 }
       ] }
     ],
     "PostToolUseFailure": [
