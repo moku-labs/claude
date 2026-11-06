@@ -23,7 +23,7 @@ const PROBE = `(() => {
     && el.scrollWidth > el.clientWidth + 1 && ["hidden", "clip"].includes(getComputedStyle(el).overflowX)
     && getComputedStyle(el).textOverflow !== "ellipsis").length;
   const heads = [...document.querySelectorAll("h1,h2,h3,[role=heading],[role=dialog] *:first-child,button")]
-    .filter(visible).map((el) => el.innerText.trim().split("\\n")[0]).filter(Boolean).slice(0, 6);
+    .filter(visible).map((el) => (el.innerText ?? el.textContent ?? "").trim().split("\\n")[0]).filter(Boolean).slice(0, 6);
   let hash = 0; for (const ch of text) hash = (hash * 31 + ch.charCodeAt(0)) | 0;
   return { lines: text ? text.split("\\n").filter(Boolean).length : 0, nodes: all.length,
     overflowX: root.scrollWidth > innerWidth + 1, clipped, heads, textHash: hash,
