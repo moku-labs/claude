@@ -127,9 +127,12 @@ export async function measureAll(chromium, { url, spec, elements, shots, side, o
         const query = side === "actual" ? (state.build?.query ?? state.query ?? "") : (state.query ?? "");
         await page.goto(joinQuery(url, query), { waitUntil: "load" });
         await settle(page, side === "actual" ? state.build?.run : undefined);
-        values[size.id][state.id] = await page.evaluate(pageProbe, { elements, reference: spec.conversion.reference ?? 1080, origin: side === "expected" ? (state.origin ?? origin) : state.build?.origin });
+        const frame = side === "expected" ? (state.origin ?? origin) : state.build?.origin;
+        values[size.id][state.id] = await page.evaluate(pageProbe, { elements, reference: spec.conversion.reference ?? 1080, origin: frame });
         mkdirSync(join(shots, size.id), { recursive: true });
-        await page.screenshot({ path: join(shots, size.id, `${state.id}.png`), clip: { x: 0, y: 0, width: size.w, height: size.h } });
+        const shot = join(shots, size.id, `${state.id}.png`);
+        if (frame) await page.locator(frame).first().screenshot({ path: shot });
+        else await page.screenshot({ path: shot, clip: { x: 0, y: 0, width: size.w, height: size.h } });
       }
       await page.close();
     }

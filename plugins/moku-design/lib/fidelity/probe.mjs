@@ -17,7 +17,8 @@
  * Runs in the page.
  *
  * @param {{ elements?: Record<string, { selector?: string, game?: { key?: string, projection?: string } }> | null, reference?: number, origin?: string }} input
- *   `origin`: a selector whose top-left corner is 0,0 (a frame inside a gallery page)
+ *   `origin`: a selector whose top-left corner is 0,0 (a frame inside a gallery page); `{origin}` in an element's
+ *   selector stands for it, so one selector serves every frame (`{origin} .head h2`)
  * @returns {Record<string, any>}
  */
 export function pageProbe(input) {
@@ -52,6 +53,51 @@ export function pageProbe(input) {
     };
     walk(tree);
 
+    // What draws a ui element is also in the components of its entity and of its unkeyed children:
+    // Sprite and NineSlice are images, Shape is a fill and a stroke. Best effort: a door that answers
+    // otherwise leaves the style as the only source.
+    const parts = new Map();
+    try {
+      const snapshot = doors.read(game, doors.sources.entities, {});
+      const rows = Array.isArray(snapshot) ? snapshot : (snapshot?.entities ?? []);
+      const comps = (row) => (Array.isArray(row.components) ? Object.fromEntries(row.components.map((c) => [c.name ?? c.type, c.value ?? c.data ?? c])) : (row.components ?? {}));
+      const keyed = new Set([...byKey.keys()].map((key) => game.ui?.find?.(key)).filter((id) => id !== undefined));
+      const children = new Map();
+      for (const row of rows) {
+        const parent = comps(row).Parent?.entity;
+        if (parent !== undefined) children.set(parent, [...(children.get(parent) ?? []), row]);
+      }
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      for (const key of byKey.keys()) {
+        const id = game.ui?.find?.(key);
+        if (id === undefined || !byId.has(id)) continue;
+        const own = [byId.get(id), ...(children.get(id) ?? []).filter((row) => !keyed.has(row.id))];
+        const found = { drawn: new Set(), fill: undefined, stroke: undefined, image: undefined };
+        for (const row of own) {
+          const c = comps(row);
+          if (c.Sprite && c.Sprite.texture) {
+            found.drawn.add("image");
+            found.image ??= String(c.Sprite.texture);
+          }
+          if (c.NineSlice) {
+            found.drawn.add("image");
+            found.image ??= String(c.NineSlice.texture ?? c.NineSlice.key ?? "nine-slice");
+          }
+          if (c.Shape && c.Shape.kind !== "arc" && (c.Shape.fillAlpha ?? 1) > 0 && (c.Shape.alpha ?? 1) > 0 && !c.Text) {
+            found.drawn.add("fill");
+            found.fill ??= rgba(c.Shape.fill, round((c.Shape.fillAlpha ?? 1) * 100) / 100);
+          }
+          if (c.Shape && (c.Shape.strokeWidth ?? 0) > 0) {
+            found.drawn.add("stroke");
+            found.stroke ??= { width: c.Shape.strokeWidth, color: rgba(c.Shape.stroke) };
+          }
+        }
+        parts.set(key, found);
+      }
+    } catch {
+      /* the style alone */
+    }
+
     const canvas = document.querySelector("canvas");
     const box = canvas?.getBoundingClientRect();
     const toRef = box ? reference / box.width : 1;
@@ -76,6 +122,8 @@ export function pageProbe(input) {
       if (node.type === "image" || node.type === "icon" || style.nineSlice) drawn.push("image");
       if (typeof style.fill === "number" && !style.nineSlice && node.type !== "text") drawn.push("fill");
       if ((style.strokeWidth ?? 0) > 0 && typeof style.stroke === "number" && !style.nineSlice) drawn.push("stroke");
+      const fromParts = parts.get(ref.key ?? id);
+      for (const kind of fromParts?.drawn ?? []) if (!drawn.includes(kind)) drawn.push(kind);
       const element = {
         present: true,
         x: node.rect.x,
@@ -83,13 +131,13 @@ export function pageProbe(input) {
         w: node.rect.w,
         h: node.rect.h,
         drawn,
-        fill: drawn.includes("fill") ? rgba(style.fill) : "rgba(0, 0, 0, 0)",
+        fill: typeof style.fill === "number" && drawn.includes("fill") && node.type !== "text" ? rgba(style.fill) : (fromParts?.fill ?? "rgba(0, 0, 0, 0)"),
         gradient: null,
-        stroke: drawn.includes("stroke") ? { width: style.strokeWidth, color: rgba(style.stroke) } : null,
+        stroke: (style.strokeWidth ?? 0) > 0 && typeof style.stroke === "number" ? { width: style.strokeWidth, color: rgba(style.stroke) } : (fromParts?.stroke ?? null),
         radius: style.radius ?? 0,
         shadow: style.shadow ? `${style.shadow.x ?? 0}px ${style.shadow.y ?? 0}px ${style.shadow.blur ?? 0}px 0px ${rgba(style.shadow.color ?? 0, style.shadow.alpha ?? 1)}` : "none",
         opacity: a,
-        image: style.nineSlice ?? node.local?.texture ?? undefined,
+        image: style.nineSlice ?? fromParts?.image ?? node.local?.texture ?? undefined,
         source: "game.ui",
       };
       if (node.type === "text" && node.content !== undefined) {
@@ -138,7 +186,7 @@ export function pageProbe(input) {
 
   // 3. the DOM
   const nodes = wanted
-    ? Object.entries(wanted).map(([id, def]) => [id, document.querySelector(def.selector ?? `[data-check="${CSS.escape(id)}"]`)])
+    ? Object.entries(wanted).map(([id, def]) => [id, document.querySelector((def.selector ?? `[data-check="${CSS.escape(id)}"]`).replaceAll("{origin}", input?.origin ?? ""))])
     : [...document.querySelectorAll("[data-check]")].map((el) => [el.getAttribute("data-check"), el]);
 
   const effectiveOpacity = (el) => {

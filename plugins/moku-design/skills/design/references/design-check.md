@@ -44,6 +44,9 @@ A generated image is on neither side. It is compared to nothing.
 - `elements` is optional: without it every `[data-check]` element of the prototype is in the inventory.
   An element of the build is found by `elements.<id>.build` (`{ "selector": … }` on the web, `{ "game": { "key": … } }`
   or `{ "game": { "projection": …, "key": … } }` in a game), else by the same `data-check` id or ui key.
+  The `build` side (elements and states) may be written after capture: it does not change the inventory.
+- A prototype that shows its states as frames of one board page: give each state `"origin": "#f8"` (the
+  frame's selector, its top-left is 0,0) and write element selectors with `{origin}` (`"{origin} .head h2"`).
 - A state of the build that needs more than the URL: `"build": { "query": "…" }`, or in a game
   `"build": { "run": [{ "command": "restore", "input": { "bookmark": … } }] }` (door commands, run in order).
 
