@@ -57,7 +57,7 @@ const RESUME = [
   /(восстанови|восстановить|продолжи|продолжить|верни|вернуть|подними|поднять|разверни|развернуть|открой)\w*\s+[^.?!\n]{0,30}(сесси|работу|прогресс)/i,
 ];
 
-const RESUME_HINT = (file) => `A checkpoint of the moku sessions is on this machine (${file}). If the person means those sessions (after signing in again, "restore the sessions"), run \`moku-rails resume-checkpoint\`, and hand over what it prints, one \`claude --resume <id>\` per session with where it stopped, and the background tasks to start again. If they mean the change in front of them ("continue the work on F152"), ignore this line. Never sign in or out yourself, and never read a token, \`.credentials.json\` or the Keychain.`;
+const RESUME_HINT = (file) => `A checkpoint of the moku sessions is on this machine (${file}). If the person means those sessions (after signing in again, "restore the sessions"), run \`moku-rails resume-checkpoint --json\` and do it in one pass: if Code tab sessions are not open in the app yet, hand the person \`moku-rails resume-checkpoint --open\` to run in their own terminal with the app open, then run it again; set each title in \`data.titles\` with set_session_title and send each message in \`data.messages\` with send_message (new ids for the parents, the artifact copies for each session); then show the person the map of old and new ids, the background tasks to start again, and, if they want the sidebar nesting back, \`moku-rails resume-checkpoint --relink\` to run in a terminal with the app closed. If they mean the change in front of them ("continue the work on F152"), ignore this line. Never sign in or out yourself, and never read a token, \`.credentials.json\` or the Keychain.`;
 
 /**
  * The newest checkpoint if it is recent enough to resume, else undefined.
@@ -89,7 +89,7 @@ function resumeHint(text) {
   return file ? RESUME_HINT(file) : undefined;
 }
 
-const CHECKPOINT_HINT = "The person is about to sign in again. Run `moku-rails checkpoint`, not `pause`: it saves every open moku session on this machine (id, folder, where it stopped, background tasks). If a change is open inside a station, also run `moku-rails pause --reason \"signing in again\"` before you answer, so the turn can end. Then, in your last message, tell them to close the sessions, sign in themselves with `claude auth login`, and run `moku-rails resume-checkpoint`, which prints one `claude --resume <id>` per session. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
+const CHECKPOINT_HINT = "The person is about to sign in again. Run `moku-rails checkpoint`, not `pause`: it saves every open session of this account on this machine (id, title, parent, folder, where it stopped, background tasks, local copies of the artifacts each published). If a change is open inside a station, also run `moku-rails pause --reason \"signing in again\"` before you answer, so the turn can end. Then, in your last message, tell them to close the sessions, sign in themselves with `claude auth login`, and then say \"restore the sessions\": `moku-rails resume-checkpoint` brings them back in one pass. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
 
 const { payload } = readHookInput();
 const prompt = promptText(payload);

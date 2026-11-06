@@ -7,13 +7,14 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { PROJECT_TYPES, adoptProject, detectProject, planningIgnored } from "./adopt.mjs";
 import { commitHook } from "./commit-hook.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
-import { DEFAULT_SINCE_HOURS, checkpointsDir, collectSessions, configDir, describeSession, driftNotes, latestCheckpoint, readCheckpoint, resumeCommand, writeCheckpoint } from "./checkpoint.mjs";
+import { DEFAULT_SINCE_HOURS, artifactWhere, checkpointFolder, checkpointsDir, collectSessions, configDir, describeSession, driftNotes, idMap, latestCheckpoint, readCheckpoint, reopenedSessions, resumeCommand, resumeMessages, writeCheckpoint } from "./checkpoint.mjs";
+import { currentAccountDir, desktopAppRunning, desktopRoot, openInDesktop, relinkSessions } from "./desktop.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
@@ -591,12 +592,14 @@ export function session({ root, positional }) {
 }
 
 /**
- * Keep the progress of every open moku session on this machine, so each one continues after the person signs in
- * again. Writes `~/.claude/moku-checkpoints/<time>.json`: per session its id, folder, branch, uncommitted files, the
- * open change with where it stopped, and the background tasks that had not reported back. The sign-in is the
- * person's, through Claude Code's own commands: nothing here reads or writes a credential.
+ * Keep the progress of every open session on this machine, so each one continues after the person signs in again.
+ * Writes `~/.claude/moku-checkpoints/<time>.json`: per session its id, the app's local id, title and parent, folder,
+ * branch, uncommitted files, the open change with where it stopped, the background tasks that had not reported
+ * back, and local copies of the artifacts it published, in `<time>/artifacts/<session>/`. The sessions are the
+ * desktop app's open sessions of the current account, plus terminal sessions on the rails of the last 48 hours.
+ * The sign-in is the person's, through Claude Code's own commands: nothing here reads or writes a credential.
  *
- * @param {Args} args flags: --since <hours>, --config-dir <dir>, --include-temp
+ * @param {Args} args flags: --since <hours>, --config-dir <dir>, --include-temp, --account <uuid>, --org <uuid>
  * @returns {Result}
  * @example
  * checkpoint({ root, positional: [], flags: { since: "8" } });
@@ -604,57 +607,137 @@ export function session({ root, positional }) {
 export function checkpoint({ root, flags }) {
   const config = typeof flags["config-dir"] === "string" ? flags["config-dir"] : configDir();
   const hours = Number(flags.since ?? DEFAULT_SINCE_HOURS);
-  if (!(hours > 0)) return usage("moku-rails checkpoint [--since <hours>] [--config-dir <dir>] [--include-temp]");
+  if (!(hours > 0)) return usage("moku-rails checkpoint [--since <hours>] [--config-dir <dir>] [--include-temp] [--account <uuid> --org <uuid>]");
 
-  let sessions;
+  const savedAt = new Date().toISOString();
+  const desktopDir = currentAccountDir(desktopRoot(), { account: optional(flags.account), org: optional(flags.org) });
+  let found;
   try {
-    sessions = collectSessions({ config, sinceMs: hours * 60 * 60 * 1000, includeTemp: flags["include-temp"] === true, here: root });
+    found = collectSessions({ config, sinceMs: hours * 60 * 60 * 1000, includeTemp: flags["include-temp"] === true, here: root, desktopDir, artifactsDir: join(checkpointFolder(savedAt), "artifacts") });
   } catch (error) {
     // A sandbox that may not read the config folder: say so, and where the command works instead
     const code = /** @type {NodeJS.ErrnoException} */ (error).code;
     if (code !== "EPERM" && code !== "EACCES") throw error;
     return fail(`Could not read the transcripts in ${config}/projects (${code}): nothing was saved. Run \`moku-rails checkpoint\` where that folder is readable, such as a terminal outside the sandbox.`);
   }
-  if (sessions.length === 0) return ok(`No moku session in ${config} was active in the last ${hours} h. Nothing to save.`);
+  const { sessions, skipped } = found;
+  if (sessions.length === 0) return ok(`No open session in ${config}${desktopDir ? " or in the desktop app" : ""}, and no moku session active in the last ${hours} h. Nothing to save.`);
 
-  const file = writeCheckpoint({ version: 1, savedAt: new Date().toISOString(), configDir: config, sessions });
+  const file = writeCheckpoint({ version: 2, savedAt, configDir: config, desktopDir: desktopDir ?? null, sessions, skipped });
+  const artifacts = sessions.reduce((count, session) => count + session.artifacts.length, 0);
   const lines = [
-    `Saved ${sessions.length} moku session${sessions.length === 1 ? "" : "s"} to ${file}:`,
+    `Saved ${sessions.length} session${sessions.length === 1 ? "" : "s"} to ${file}:`,
     ...sessions.flatMap((session) => [`- ${describeSession(session)}`, ...sessionNotes(session)]),
+    ...skipped.slice(0, 5).map((entry) => `Not kept: "${entry.title}" ${entry.id.slice(0, 8)}: ${entry.reason}.`),
+    ...(skipped.length > 5 ? [`Not kept: ${skipped.length - 5} more (--json lists them).`] : []),
+    ...(artifacts > 0 ? [`Kept local copies of ${artifacts} artifact${artifacts === 1 ? "" : "s"} in ${join(checkpointFolder(savedAt), "artifacts")}.`] : []),
     "Next steps:",
     "1. Close these sessions, so none keeps running under the old sign-in. Uncommitted files stay on disk.",
-    "2. Sign in with Claude Code's own command, in the same config folder so the transcripts stay visible: `claude auth login` (`--console` for an API key).",
+    "2. Sign in with Claude Code's own command, in the same config folder so the transcripts stay visible: `claude auth login` (`--console` for an API key), or in the desktop app.",
     "3. Run `moku-rails resume-checkpoint`.",
   ];
 
-  return { code: 0, lines, data: { file, sessions } };
+  return { code: 0, lines, data: { file, sessions, skipped } };
 }
 
 /**
- * Turn a checkpoint, the newest unless a file is named, back into one command per session that continues it under
- * the current sign-in, with where it stopped, what moved since, and the background tasks to start again.
+ * Turn a checkpoint, the newest unless a file is named, back into the steps that continue each session under the
+ * current sign-in: the command, the new local id, the title to set again, and one message per session with the new
+ * ids of the sessions it started and the copies of its artifacts. Two steps write outside moku and are the person's
+ * to run, in a terminal: `--open` opens every Code tab session in the app (the app open), `--relink` writes the
+ * parents and titles back into the app's records (the app closed, a backup first).
  *
- * @param {Args} args positional: [file]; flags: --config-dir <dir>, --desktop, --cli
+ * @param {Args} args positional: [file]; flags: --config-dir <dir>, --desktop, --cli, --open, --relink
  * @returns {Result}
  * @example
  * resumeCheckpoint({ root, positional: [], flags: {} });
  */
 export function resumeCheckpoint({ positional, flags }) {
   const config = typeof flags["config-dir"] === "string" ? flags["config-dir"] : configDir();
-  const file = positional[0] ?? latestCheckpoint();
+  const named = positional[0] ?? (typeof flags.open === "string" ? flags.open : typeof flags.relink === "string" ? flags.relink : undefined);
+  const file = named ?? latestCheckpoint();
   const saved = file ? readCheckpoint(file) : undefined;
   if (!saved) return refused(file ? `${file} is not a moku checkpoint.` : `there is no checkpoint in ${checkpointsDir()}. Run \`moku-rails checkpoint\` first.`);
 
+  if (flags.open) return openSessions(saved);
+  if (flags.relink) return relink(saved);
+
   const surface = flags.desktop ? "desktop" : flags.cli ? "cli" : undefined;
-  const sessions = saved.sessions.map((session) => ({ ...session, command: resumeCommand(session, surface), drift: driftNotes(session, config) }));
+  const reopened = reopenedSessions(saved);
+  const sessions = reopened.map(({ session, newId, opened }) => ({ ...session, newId, opened, command: resumeCommand(session, surface), drift: driftNotes(session, config) }));
   const lines = [`Checkpoint of ${saved.savedAt}, ${sessions.length} session${sessions.length === 1 ? "" : "s"}. Continue each with:`];
   for (const session of sessions) {
-    lines.push(`- ${describeSession(session)}`, `  ${session.command}`, ...sessionNotes(session), ...session.drift.map((note) => `  note: ${note}`));
+    const where = session.newId ? `  ${session.opened ? "open in the app" : "not open in the app yet"} as ${session.newId}${session.localId ? ` (was ${session.localId})` : ""}` : undefined;
+    const artifacts = session.artifacts.map((artifact) => `  artifact: ${artifact.title || artifact.url} ${artifact.url} → ${artifactWhere(artifact)}`);
+    lines.push(`- ${describeSession(session)}`, `  ${session.command}`, ...(where ? [where] : []), ...sessionNotes(session), ...artifacts, ...session.drift.map((note) => `  note: ${note}`));
   }
   if (config !== saved.configDir) lines.push(`The checkpoint was saved from ${saved.configDir} and Claude Code reads ${config} now: a session resumes only from the config folder that holds its transcript.`);
+
+  // What a session of the app does with its own tools, once the sessions are open
+  const titles = reopened.filter((entry) => entry.opened && entry.session.title).map((entry) => ({ sessionId: /** @type {string} */ (entry.newId), title: entry.session.title }));
+  const opened = new Set(reopened.filter((entry) => entry.opened).map((entry) => entry.newId));
+  const messages = resumeMessages(reopened).filter((message) => opened.has(message.to));
+  const waiting = reopened.filter((entry) => entry.newId && !entry.opened).length;
+  if (waiting > 0) lines.push(`${waiting} Code tab session${waiting === 1 ? " is" : "s are"} not open in the app yet. The person opens them from a terminal with the app open: \`moku-rails resume-checkpoint --open\` (or each \`claude --desktop --resume <id>\` above in a terminal). Run \`moku-rails resume-checkpoint\` again after that for their titles and messages.`);
+  if (titles.length > 0) lines.push("From a session of the app, set each title again with set_session_title (the app may have renamed them):", ...titles.map((entry) => `  set_session_title ${entry.sessionId} ${JSON.stringify(entry.title)}`));
+  if (messages.length > 0) lines.push(`And send each of these ${messages.length} session${messages.length === 1 ? "" : "s"} its message with send_message (the full text is in --json, data.messages): ${messages.map((message) => `${message.to} "${message.title}"`).join(", ")}.`);
+  if (reopened.some((entry) => entry.session.parent && entry.newId)) lines.push("The sidebar nesting comes back only through the app's own records: with the app closed, the person runs `moku-rails resume-checkpoint --relink` in a terminal, then opens the app.");
   lines.push("Each session continues with its conversation; background tasks and the prompt cache do not carry over.");
 
-  return { code: 0, lines, data: { file, savedAt: saved.savedAt, configDir: saved.configDir, sessions } };
+  return { code: 0, lines, data: { file, savedAt: saved.savedAt, configDir: saved.configDir, sessions, idMap: Object.fromEntries(idMap(reopened)), titles, messages, skipped: saved.skipped ?? [] } };
+}
+
+/**
+ * Open every saved Code tab session in the desktop app that is not open there yet, one after another. The person's
+ * step, from a terminal, with the app open and signed in.
+ *
+ * @param {import("./checkpoint.mjs").Checkpoint} saved
+ * @returns {Result}
+ */
+function openSessions(saved) {
+  if (process.env.CLAUDECODE) return refused("`--open` is the person's step: they run `moku-rails resume-checkpoint --open` in their own terminal, with the desktop app open.");
+
+  const todo = reopenedSessions(saved).filter((entry) => entry.newId && !entry.opened);
+  if (todo.length === 0) return ok("Every Code tab session of the checkpoint is open in the app already.");
+
+  const failed = todo.filter((entry) => !openInDesktop(entry.session.cwd, entry.session.id));
+  const opened = reopenedSessions(saved).filter((entry) => entry.newId && entry.opened).length;
+  const lines = [`Opened ${todo.length - failed.length} of ${todo.length} session${todo.length === 1 ? "" : "s"} in the app; ${opened} of the checkpoint are open there now.`];
+  for (const entry of failed) lines.push(`Did not open: ${describeSession(entry.session)}. Run \`${resumeCommand(entry.session, "desktop")}\` in a terminal.`);
+  lines.push("Next: in a session of the app, run `moku-rails resume-checkpoint` to set the titles and send the new ids.");
+
+  return { code: failed.length > 0 ? 1 : 0, lines, data: { opened: todo.length - failed.length, failed: failed.map((entry) => entry.session.id) } };
+}
+
+/**
+ * Write the parents and titles of the saved sessions into the app's records of the reopened ones. The person's step,
+ * from a terminal, with the app closed: the app writes its records back from memory while it runs.
+ *
+ * @param {import("./checkpoint.mjs").Checkpoint} saved
+ * @returns {Result}
+ */
+function relink(saved) {
+  if (process.env.CLAUDECODE) return refused("`--relink` is the person's step: they close the desktop app, run `moku-rails resume-checkpoint --relink` in their own terminal, then open the app.");
+  if (desktopAppRunning()) return refused("the desktop app is running, and it writes its session records back from memory. Quit it (Cmd+Q), run this again, then open it.");
+
+  const reopened = reopenedSessions(saved);
+  const ready = reopened.filter((entry) => entry.opened && entry.file).map((entry) => ({ ...entry.session, localId: /** @type {string} */ (entry.session.localId), file: /** @type {string} */ (entry.file) }));
+  if (ready.length === 0) return refused("no session of the checkpoint is open in the app under the new sign-in yet. Run `moku-rails resume-checkpoint --open` first.");
+
+  const backup = join(checkpointFolder(saved.savedAt), "desktop-backup", new Date().toISOString().replace(/[:.]/g, "-"));
+  // A parent the app does not have yet is no parent to point at
+  const { linked, titled } = relinkSessions(ready, idMap(reopened.filter((entry) => entry.opened)), backup);
+  const missing = reopened.filter((entry) => entry.newId && !entry.opened).length;
+
+  return {
+    code: 0,
+    lines: [
+      `Wrote the parent of ${linked.length} and the title of ${titled.length} session${titled.length === 1 ? "" : "s"} into the app's records.${linked.length + titled.length > 0 ? ` The records as they were are in ${backup}.` : ""}`,
+      ...(missing > 0 ? [`${missing} session${missing === 1 ? " is" : "s are"} not open in the app yet, so ${missing === 1 ? "it was" : "they were"} left out.`] : []),
+      "Open the app: the sessions nest under their parents again.",
+    ],
+    data: { linked, titled, backup },
+  };
 }
 
 /**
@@ -664,7 +747,7 @@ export function resumeCheckpoint({ positional, flags }) {
  * @returns {string[]}
  */
 function sessionNotes(session) {
-  const change = session.change ? `  ${session.change.id}${session.change.title && session.change.title !== session.change.id ? ` (${session.change.title})` : ""}: ${session.change.next}` : "  no open change";
+  const change = session.change ? `  ${session.change.id}${session.change.title && session.change.title !== session.change.id ? ` (${session.change.title})` : ""}: ${session.change.next}` : session.root ? "  no open change" : "  off the rails";
 
   return [change, ...session.unfinished.map((task) => `  restart: ${task.kind} "${task.description}" did not finish`)];
 }
