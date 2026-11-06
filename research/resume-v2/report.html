@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Восстановление сессий v2</title>
+<style>
+:root{--bg:#fbfaf7;--fg:#1d1c1a;--muted:#6b675f;--line:#e4e0d7;--card:#fff;--accent:#b4532a;--ok:#2f7a4a;--warn:#a07a12}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#161513;--fg:#ece9e2;--muted:#a19c91;--line:#33302b;--card:#1f1e1b;--accent:#e0875c;--ok:#6cc08b;--warn:#d9b44a}}
+:root[data-theme="dark"]{--bg:#161513;--fg:#ece9e2;--muted:#a19c91;--line:#33302b;--card:#1f1e1b;--accent:#e0875c;--ok:#6cc08b;--warn:#d9b44a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:860px;margin:0 auto;padding:32px 16px 64px}
+h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:36px 0 10px}
+.sub{color:var(--muted);margin:0 0 24px}
+table{width:100%;border-collapse:collapse;font-size:15px;background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+th,td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600;font-size:13px}
+code{font:13.5px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--line);padding:1px 4px;border-radius:4px;overflow-wrap:anywhere}
+pre{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px 12px;overflow-x:auto;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+.box{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:12px 14px;margin:12px 0}
+.box.ok{border-left-color:var(--ok)}.box.warn{border-left-color:var(--warn)}
+.tag{display:inline-block;font-size:12px;font-weight:600;padding:1px 7px;border-radius:9px;border:1px solid currentColor;white-space:nowrap}
+.t-ok{color:var(--ok)}.t-warn{color:var(--warn)}.t-bad{color:var(--accent)}
+ul,ol{padding-left:20px}li{margin:4px 0}
+.wrap{overflow-x:auto}
+</style>
+</head>
+<body>
+<main>
+<h1>Восстановление сессий за один проход</h1>
+<p class="sub">Разбор перед доработкой <code>moku-rails checkpoint</code> / <code>resume-checkpoint</code> · 6 ноября 2026 · Claude Code 2.1.317 · на машине только чтение, секреты и Keychain не трогались</p>
+
+<div class="box">
+<b>Вывод.</b> Почти всё делается официальными средствами: список сессий, команды продолжения, названия, рассылка новых id и копии артефактов. Недокументированная запись нужна только для двух вещей: открыть сессии в приложении без ручного запуска и вернуть вложенность в боковой панели. Обе вынесены в отдельные флаги, которые запускает человек.
+</div>
+
+<h2>Что сломалось при переезде 6 ноября</h2>
+<table>
+<tr><th>Проблема</th><th>Причина</th><th>Что меняем</th></tr>
+<tr><td>38 сессий вместо 18</td><td>чекпойнт брал все транскрипты за 48 ч, в том числе архивные и копии с аккаунта <code>87615095…</code></td><td>берём неархивные записи текущего аккаунта из индекса приложения</td></tr>
+<tr><td>3 живые сессии пропущены</td><td>окно в 48 ч</td><td>для сессий приложения окна больше нет, оно осталось только для терминальных</td></tr>
+<tr><td><code>claude --desktop --resume</code> не работает</td><td>команде нужен терминал (TTY)</td><td>флаг <code>--open</code>: запуск через <code>script -q /dev/null …</code> с паузой 3 с</td></tr>
+<tr><td>7 названий подменены</td><td>приложение придумывает название заново</td><td>название сохраняется, сессия возвращает его через <code>set_session_title</code></td></tr>
+<tr><td>новые id, координаторы пишут по старым</td><td>новый id в приложении = <code>local_&lt;cliSessionId&gt;</code></td><td>таблица «старый → новый» и готовые сообщения родительским сессиям</td></tr>
+<tr><td>плоская боковая панель</td><td>вложенность хранится в поле <code>spawnedFrom</code> записи сессии</td><td>флаг <code>--relink</code>: только при закрытом приложении, с резервной копией</td></tr>
+<tr><td>пропадают артефакты</td><td>исходники лежат в scratchpad или <code>/tmp</code>, ссылка приватна для старого аккаунта</td><td>локальные копии артефактов каждой сессии с манифестом</td></tr>
+</table>
+
+<h2>Официальные средства <span class="tag t-ok">делаем по умолчанию</span></h2>
+<ul>
+<li><b>Транскрипты и <code>claude --resume &lt;id&gt;</code>.</b> Транскрипты не привязаны к аккаунту, разговор продолжается целиком.</li>
+<li><b>Инструменты приложения из сессии:</b> <code>set_session_title</code> возвращает название, <code>send_message</code> рассылает новые id. Из <code>moku-rails</code> их не вызвать, это обычная команда. Поэтому <code>resume-checkpoint</code> печатает готовые вызовы, а проводник moku выполняет их в своей сессии.</li>
+<li><b>Только чтение индекса приложения</b> (<code>claude-code-sessions/&lt;account&gt;/&lt;org&gt;/local_*.json</code>): поля <code>isArchived</code>, <code>title</code>, <code>spawnedFrom</code>, <code>cliSessionId</code>. Текущий аккаунт берём из переменных сессии <code>CLAUDE_CODE_ACCOUNT_UUID</code> и <code>CLAUDE_CODE_ORGANIZATION_UUID</code>. Если их нет, берём папку с самой свежей записью. <code>.claude.json</code> и токены не читаются.</li>
+<li><b>Артефакты.</b> В транскрипте есть вызовы <code>Artifact</code> (publish) с <code>file_path</code>, <code>files</code> и ссылкой в ответе. Исходные файлы копируются в чекпойнт. Если файла уже нет, последняя версия собирается из <code>Write</code> и следующих за ним <code>Edit</code> в том же транскрипте.</li>
+<li><b>Без поля «родитель».</b> Вложенность можно частично заменить официальными группами боковой панели (<code>create_group</code>, <code>move_sessions</code>). Это не та же иерархия, но риска нет.</li>
+</ul>
+
+<h2>Недокументированное <span class="tag t-warn">только отдельным флагом</span></h2>
+<table>
+<tr><th>Действие</th><th>Риск</th><th>Защита</th></tr>
+<tr><td><code>--open</code>: <code>script -q /dev/null claude --desktop --resume &lt;id&gt; &lt;/dev/null</code>, по одной сессии, пауза 3 с</td><td>Сама команда официальная, обходной путь только в подмене терминала. При повторном запуске могут появиться дубли. Поведение без TTY может поменяться.</td><td>Пропускаем сессии, которые уже открыты под новым аккаунтом (есть <code>local_&lt;id&gt;.json</code>). Запускает человек в своём терминале.</td></tr>
+<tr><td><code>--relink</code>: запись <code>spawnedFrom</code> (и <code>title</code>) в json приложения по карте «старый → новый», любая глубина</td><td>Формат никем не обещан и может смениться. Приложение держит записи в памяти и само их переписывает: 6 ноября файлы сессий без активности переписывались в 06:48 и 06:51. Правка, сделанная при открытом приложении, может пропасть.</td><td>Команда отказывается работать, если приложение запущено. Перед правкой копирует каждую запись в <code>&lt;чекпойнт&gt;/desktop-backup/</code>. Меняет только два поля и проверяет, что json разбирается. Человек запускает команду сам и потом открывает приложение.</td></tr>
+</table>
+<p class="note">В ручном переезде правка при открытом приложении пережила перезапуск. Это одно наблюдение, а не гарантия, поэтому флаг всё равно требует закрытого приложения.</p>
+
+<h2>Как будет выглядеть переезд</h2>
+<ol>
+<li><b>До смены входа:</b> <code>moku-rails checkpoint</code>. Сохраняет живые сессии текущего аккаунта (id, старый <code>local_</code>, название, родителя, папку, ветку, станцию, фоновые задачи) и копии артефактов в <code>~/.claude/moku-checkpoints/&lt;время&gt;/</code>.</li>
+<li>Человек сам входит в новый аккаунт (<code>claude auth login</code> или приложение).</li>
+<li><code>moku-rails resume-checkpoint --open</code> в терминале при открытом приложении. Открывает все сессии.</li>
+<li><code>moku-rails resume-checkpoint</code> в сессии проводника. Печатает карту id, вызовы <code>set_session_title</code> и сообщения родителям и самим сессиям (новые id детей, список артефактов с путями к копиям). Проводник отправляет их сам.</li>
+<li>Если нужна вложенность в панели: закрыть приложение, выполнить <code>moku-rails resume-checkpoint --relink</code>, открыть приложение.</li>
+</ol>
+
+<h2>Что не делаем</h2>
+<ul>
+<li>Не входим и не выходим из аккаунта сами, не читаем токены, <code>.credentials.json</code> и Keychain.</li>
+<li>Не копируем все артефакты аккаунта, только опубликованные самой сессией.</li>
+<li>Не трогаем записи старого аккаунта: они нужны как источник и остаются как есть.</li>
+</ul>
+</main>
+</body>
+</html>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync, spawnSync } from "node:child_process";
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, it } from "node:test";
@@ -11,14 +11,16 @@ const CLI = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "bin", "mo
 /** A machine: a Claude config folder, a moku home and a project on the rails with one uncommitted file. */
 function machine() {
   const base = mkdtempSync(join(tmpdir(), "moku-checkpoint-"));
-  const env = { ...process.env, CLAUDE_CONFIG_DIR: join(base, "config"), MOKU_HOME: join(base, "moku") };
+  const env = { ...process.env, CLAUDE_CONFIG_DIR: join(base, "config"), MOKU_HOME: join(base, "moku"), MOKU_DESKTOP_SESSIONS: join(base, "desktop"), MOKU_DESKTOP_RUNNING: "0", MOKU_OPEN_PAUSE_MS: "0" };
+  for (const name of ["CLAUDECODE", "CLAUDE_CODE_ACCOUNT_UUID", "CLAUDE_CODE_ORGANIZATION_UUID"]) delete env[name];
   const root = join(base, "site");
   mkdirSync(root, { recursive: true });
   execFileSync("git", ["init", "-q", "-b", "main", root]);
   writeFileSync(join(root, "draft.ts"), "export {};\n");
 
   const railsAt = (/** @type {string} */ dir, /** @type {string[]} */ ...args) => {
-    const run = spawnSync("node", [CLI, ...args, "--root", dir], { encoding: "utf8", env });
+    const extra = typeof args.at(-1) === "object" ? /** @type {Record<string, string>} */ (args.pop()) : {};
+    const run = spawnSync("node", [CLI, ...args, "--root", dir], { encoding: "utf8", env: { ...env, ...extra } });
     return { code: run.status, text: `${run.stdout}${run.stderr}`, json: () => JSON.parse(run.stdout || run.stderr) };
   };
   const rails = (/** @type {string[]} */ ...args) => railsAt(root, ...args);
@@ -217,5 +219,241 @@ describe("moku-rails checkpoint", () => {
     transcript(env.CLAUDE_CONFIG_DIR, { id: ID_CLI, cwd: root });
 
     assert.ok(rails("checkpoint", "--include-temp", "--json").json().data.sessions[0].uncommitted.length > 1500);
+  });
+});
+
+const OLD_ACCOUNT = "aaaaaaaa-0000-4000-8000-000000000001";
+const NEW_ACCOUNT = "bbbbbbbb-0000-4000-8000-000000000002";
+const OTHER_ACCOUNT = "cccccccc-0000-4000-8000-000000000003";
+const ORG = "dddddddd-0000-4000-8000-000000000004";
+
+/** A session id that reads as a Claude Code one, from a letter. */
+const sid = (/** @type {string} */ letter) => `${letter.repeat(8)}-1111-4111-8111-111111111111`;
+
+/** A record of the desktop app: `<desktop>/<account>/<org>/<localId>.json`, with a few unrelated fields kept. */
+function record(env, { account = OLD_ACCOUNT, id, localId = `local_old-${id.slice(0, 8)}`, cwd, title = "", archived = false, parent, activity = Date.now() }) {
+  const file = join(env.MOKU_DESKTOP_SESSIONS, account, ORG, `${localId}.json`);
+  mkdirSync(dirname(file), { recursive: true });
+  const data = { sessionId: localId, cliSessionId: id, cwd, title, isArchived: archived, lastActivityAt: activity, model: "claude-opus-5-5", peerReceipts: [{ messageId: "m1" }] };
+  if (parent) data.spawnedFrom = { sessionId: parent, taskId: "task_1", title, sideSession: true, name: "side" };
+  writeFileSync(file, JSON.stringify(data));
+  return file;
+}
+
+/** The app's record of a session opened again under the new account: `local_<cliSessionId>`, a title it made up. */
+function reopen(env, id, cwd) {
+  return record(env, { account: NEW_ACCOUNT, id, localId: `local_${id}`, cwd, title: "moku: renamed · build" });
+}
+
+const ACCOUNT_ENV = { CLAUDE_CODE_ACCOUNT_UUID: OLD_ACCOUNT, CLAUDE_CODE_ORGANIZATION_UUID: ORG };
+
+describe("moku-rails checkpoint with the desktop app's sessions", () => {
+  it("keeps every open session of the current account, at any age and off the rails, and no archived or other-account one", () => {
+    const { base, env, root, rails } = machine();
+    const offRails = join(base, "notes");
+    mkdirSync(offRails);
+    const config = env.CLAUDE_CONFIG_DIR;
+    for (const [letter, cwd, ageHours] of [["a", root, 0], ["b", root, 1], ["c", root, 2], ["d", root, 3], ["e", offRails, 100]]) {
+      transcript(config, { id: sid(letter), cwd, entrypoint: "claude-desktop", ageHours });
+    }
+    record(env, { id: sid("a"), cwd: root, title: "Coordinator" });
+    record(env, { id: sid("b"), cwd: root, title: "Side task", parent: `local_old-${sid("a").slice(0, 8)}` });
+    record(env, { id: sid("c"), cwd: root, title: "Done long ago", archived: true });
+    record(env, { account: OTHER_ACCOUNT, id: sid("d"), cwd: root, title: "A copy from an earlier account" });
+    record(env, { id: sid("e"), cwd: offRails, title: "Research, quiet for four days" });
+    record(env, { id: sid("f"), cwd: root, title: "Its transcript is elsewhere" });
+
+    const saved = rails("checkpoint", "--json", ACCOUNT_ENV).json().data;
+
+    assert.deepEqual(saved.sessions.map((session) => session.id).sort(), [sid("a"), sid("b"), sid("e")]);
+    const side = saved.sessions.find((session) => session.id === sid("b"));
+    assert.equal(side.title, "Side task");
+    assert.equal(side.localId, `local_old-${sid("b").slice(0, 8)}`);
+    assert.equal(side.parent, `local_old-${sid("a").slice(0, 8)}`);
+    assert.equal(side.spawnedFrom.taskId, "task_1");
+    assert.equal(side.surface, "desktop");
+    assert.equal(saved.sessions.find((session) => session.id === sid("e")).root, null);
+    assert.deepEqual(saved.skipped.map((entry) => entry.title), ["Its transcript is elsewhere"]);
+    assert.match(readFileSync(saved.file, "utf8"), /"desktopDir": ".*aaaaaaaa-0000-4000-8000-000000000001/);
+  });
+
+  it("finds the current account by its most recent session when the session does not name it", () => {
+    const { env, root, rails } = machine();
+    transcript(env.CLAUDE_CONFIG_DIR, { id: sid("a"), cwd: root, entrypoint: "claude-desktop" });
+    transcript(env.CLAUDE_CONFIG_DIR, { id: sid("b"), cwd: root, entrypoint: "claude-desktop" });
+    record(env, { account: OTHER_ACCOUNT, id: sid("a"), cwd: root, activity: Date.now() - 86_400_000 });
+    record(env, { id: sid("b"), cwd: root, activity: Date.now() });
+
+    assert.deepEqual(rails("checkpoint", "--json").json().data.sessions.map((session) => session.id), [sid("b")]);
+  });
+});
+
+describe("moku-rails resume-checkpoint after a new sign-in", () => {
+  /** Three generations of sessions saved under the old account: a coordinator, its side session, and that one's. */
+  function family() {
+    const m = machine();
+    for (const letter of ["a", "b", "c"]) transcript(m.env.CLAUDE_CONFIG_DIR, { id: sid(letter), cwd: m.root, entrypoint: "claude-desktop" });
+    record(m.env, { id: sid("a"), cwd: m.root, title: "Coordinator" });
+    record(m.env, { id: sid("b"), cwd: m.root, title: "Episode 2", parent: `local_old-${sid("a").slice(0, 8)}` });
+    record(m.env, { id: sid("c"), cwd: m.root, title: "Card texts", parent: `local_old-${sid("b").slice(0, 8)}` });
+    m.rails("checkpoint", ACCOUNT_ENV);
+    return m;
+  }
+
+  it("maps each old id to the new one, names the titles to set again and the message to each parent", () => {
+    const { env, root, rails } = family();
+    reopen(env, sid("a"), root);
+    reopen(env, sid("b"), root);
+
+    const resumed = rails("resume-checkpoint", "--json").json();
+    const text = rails("resume-checkpoint").text;
+
+    assert.deepEqual(resumed.data.idMap, {
+      [`local_old-${sid("a").slice(0, 8)}`]: `local_${sid("a")}`,
+      [`local_old-${sid("b").slice(0, 8)}`]: `local_${sid("b")}`,
+      [`local_old-${sid("c").slice(0, 8)}`]: `local_${sid("c")}`,
+    });
+    assert.deepEqual(resumed.data.titles.find((entry) => entry.sessionId === `local_${sid("b")}`), { sessionId: `local_${sid("b")}`, title: "Episode 2" });
+    const toCoordinator = resumed.data.messages.find((message) => message.to === `local_${sid("a")}`);
+    assert.match(toCoordinator.text, new RegExp(`Episode 2: local_old-${sid("b").slice(0, 8)} → local_${sid("b")}`));
+    assert.match(resumed.data.messages.find((message) => message.to === `local_${sid("b")}`).text, /Card texts/);
+    assert.equal(resumed.data.messages.some((message) => message.to === `local_${sid("c")}`), false, "a session with no children and no artifacts gets no message");
+    assert.match(text, /not open in the app yet as local_c+/);
+    assert.match(text, /1 Code tab session is not open in the app yet/);
+    assert.match(text, /set_session_title local_b+-1111-4111-8111-111111111111 "Episode 2"/);
+    assert.match(text, /--relink/);
+  });
+
+  it("--relink writes parents of any depth and the titles into the new records, after a backup, only with the app closed", () => {
+    const { env, root, rails } = family();
+    const files = ["a", "b", "c"].map((letter) => reopen(env, sid(letter), root));
+    const before = readFileSync(files[2], "utf8");
+
+    assert.equal(rails("resume-checkpoint", "--relink", { CLAUDECODE: "1" }).code, 2, "refused inside a Claude Code session");
+    assert.match(rails("resume-checkpoint", "--relink", { MOKU_DESKTOP_RUNNING: "1" }).text, /desktop app is running/);
+    assert.equal(readFileSync(files[2], "utf8"), before, "nothing written while refused");
+
+    const result = rails("resume-checkpoint", "--relink", "--json").json();
+    const [coordinator, episode, cards] = files.map((file) => JSON.parse(readFileSync(file, "utf8")));
+
+    assert.equal(result.code, 0);
+    assert.equal(coordinator.spawnedFrom, undefined);
+    assert.equal(episode.spawnedFrom.sessionId, `local_${sid("a")}`);
+    assert.equal(cards.spawnedFrom.sessionId, `local_${sid("b")}`);
+    assert.equal(cards.spawnedFrom.taskId, "task_1");
+    assert.deepEqual([coordinator.title, episode.title, cards.title], ["Coordinator", "Episode 2", "Card texts"]);
+    assert.deepEqual(cards.peerReceipts, [{ messageId: "m1" }], "other fields stay");
+    assert.equal(readFileSync(join(result.data.backup, `local_${sid("c")}.json`), "utf8"), before);
+    assert.deepEqual(rails("resume-checkpoint", "--relink", "--json").json().data.linked, [], "a second run changes nothing");
+  });
+
+  it("--open opens only the Code tab sessions the app does not have yet, through a terminal, and only for the person", () => {
+    const { base, env, root, rails } = family();
+    reopen(env, sid("a"), root);
+    const bin = join(base, "bin");
+    mkdirSync(bin);
+    writeFileSync(join(bin, "script"), `#!/bin/sh\necho "$PWD $*" >> "${join(base, "opened.log")}"\n`);
+    chmodSync(join(bin, "script"), 0o755);
+    const path = { PATH: `${bin}:${process.env.PATH}` };
+
+    assert.equal(rails("resume-checkpoint", "--open", { ...path, CLAUDECODE: "1" }).code, 2);
+    const result = rails("resume-checkpoint", "--open", path);
+
+    assert.equal(result.code, 0, result.text);
+    assert.deepEqual(readFileSync(join(base, "opened.log"), "utf8").trim().split("\n").sort(), [
+      `${root} -q /dev/null claude --desktop --resume ${sid("b")}`,
+      `${root} -q /dev/null claude --desktop --resume ${sid("c")}`,
+    ].map((line) => line.replace(root, realpathSync(root))).sort());
+  });
+});
+
+describe("moku-rails checkpoint keeps the artifacts a session published", () => {
+  /** An Artifact publish and its result, as the transcript records them. */
+  function publish(id, input, url, { error = false } = {}) {
+    return [
+      { type: "assistant", timestamp: "2026-11-06T05:00:00.000Z", message: { role: "assistant", content: [{ type: "tool_use", id, name: "Artifact", input }] } },
+      {
+        type: "user",
+        message: { role: "user", content: [{ type: "tool_result", tool_use_id: id, is_error: error, content: error ? "Publish refused" : `Published ${input.file_path ?? ""} at ${url} (Version 1)` }] },
+        ...(error ? {} : { toolUseResult: { url, path: input.file_path, title: input.title ?? "" } }),
+      },
+    ];
+  }
+
+  it("copies the sources, rebuilds a deleted one from Write and Edit, keeps only the link otherwise, and writes a manifest", () => {
+    const { base, env, root, rails } = machine();
+    const scratch = join(base, "scratchpad");
+    mkdirSync(join(scratch, "data"), { recursive: true });
+    writeFileSync(join(scratch, "report.html"), "<title>Report</title>kept");
+    writeFileSync(join(scratch, "data", "rows.json"), "[1,2]");
+    const gone = join(scratch, "gone.html");
+    transcript(env.CLAUDE_CONFIG_DIR, {
+      id: ID_CLI,
+      cwd: root,
+      extra: [
+        ...publish("toolu_1", { file_path: join(scratch, "report.html"), title: "Report", files: { "data/rows.json": join(scratch, "data", "rows.json"), "../escape.txt": join(scratch, "report.html") } }, "https://claude.ai/artifact/AAA111"),
+        ...call("toolu_w", "Write", { file_path: gone, content: "<h1>Plan v1</h1>" }, "File created"),
+        ...call("toolu_e", "Edit", { file_path: gone, old_string: "v1", new_string: "v2" }, "Edited"),
+        ...publish("toolu_2", { file_path: gone }, "https://claude.ai/code/artifact/bbb-222"),
+        ...publish("toolu_3", { file_path: join(scratch, "never-written.html") }, "https://claude.ai/artifact/CCC333"),
+        ...publish("toolu_4", { file_path: join(scratch, "report.html") }, "https://claude.ai/artifact/DDD444", { error: true }),
+        ...call("toolu_5", "Artifact", { action: "read", url: "https://claude.ai/artifact/EEE555" }, "<html>someone else's</html>"),
+      ],
+    });
+
+    const saved = rails("checkpoint", "--include-temp", "--json").json().data;
+    const [session] = saved.sessions;
+    const byUrl = Object.fromEntries(session.artifacts.map((artifact) => [artifact.url, artifact]));
+
+    assert.deepEqual(Object.keys(byUrl).sort(), ["https://claude.ai/artifact/AAA111", "https://claude.ai/artifact/CCC333", "https://claude.ai/code/artifact/bbb-222"]);
+    const report = byUrl["https://claude.ai/artifact/AAA111"];
+    assert.equal(report.title, "Report");
+    assert.ok(report.dir.startsWith(join(dirname(saved.file), saved.file.split("/").at(-1).replace(/\.json$/, ""), "artifacts", ID_CLI)));
+    assert.deepEqual(report.files.map((file) => [file.published, file.status]).sort(), [["data/rows.json", "copied"], ["escape.txt", "copied"], ["report.html", "copied"]]);
+    assert.equal(readFileSync(join(report.dir, "data", "rows.json"), "utf8"), "[1,2]");
+
+    const rebuilt = byUrl["https://claude.ai/code/artifact/bbb-222"].files[0];
+    assert.equal(rebuilt.status, "restored");
+    assert.equal(readFileSync(rebuilt.copy, "utf8"), "<h1>Plan v2</h1>");
+    assert.deepEqual(byUrl["https://claude.ai/artifact/CCC333"].files.map((file) => [file.status, file.copy]), [["link-only", null]]);
+
+    const manifest = JSON.parse(readFileSync(join(dirname(report.dir), "manifest.json"), "utf8"));
+    assert.deepEqual(manifest.map((entry) => entry.url).sort(), Object.keys(byUrl).sort());
+    assert.equal(manifest[0].publishedAt, "2026-11-06T05:00:00.000Z");
+    assert.doesNotMatch(readFileSync(saved.file, "utf8"), /Plan v2|sk-do-not-copy/, "the checkpoint holds paths, never the content");
+
+    const resumed = rails("resume-checkpoint").text;
+    assert.match(resumed, /artifact: Report https:\/\/claude\.ai\/artifact\/AAA111 → .*artifacts/);
+    assert.match(resumed, /bbb-222 → .*rebuilt from the transcript/);
+    assert.match(resumed, /CCC333 → link only/);
+  });
+
+  it("tells each reopened session where the copies of its artifacts are", () => {
+    const { base, env, root, rails } = machine();
+    writeFileSync(join(base, "page.html"), "<p>page</p>");
+    transcript(env.CLAUDE_CONFIG_DIR, { id: sid("a"), cwd: root, entrypoint: "claude-desktop", extra: publish("toolu_1", { file_path: join(base, "page.html"), title: "Page" }, "https://claude.ai/artifact/PPP") });
+    record(env, { id: sid("a"), cwd: root, title: "Designer" });
+    rails("checkpoint", ACCOUNT_ENV);
+    reopen(env, sid("a"), root);
+
+    const [message] = rails("resume-checkpoint", "--json").json().data.messages;
+
+    assert.equal(message.to, `local_${sid("a")}`);
+    assert.match(message.text, /Page: https:\/\/claude\.ai\/artifact\/PPP → .*artifacts/);
+  });
+});
+
+describe("rebuild", () => {
+  it("applies the Edits after the last Write and says when one did not apply", async () => {
+    const { rebuild } = await import("../../lib/rails/artifacts.mjs");
+
+    assert.equal(rebuild([{ kind: "edit", input: { old_string: "a", new_string: "b" } }]), undefined);
+    assert.deepEqual(rebuild([
+      { kind: "write", input: { content: "old" } },
+      { kind: "write", input: { content: "x x $& y" } },
+      { kind: "edit", input: { old_string: "x", new_string: "z", replace_all: true } },
+      { kind: "edit", input: { old_string: "y", new_string: "$1" } },
+    ]), { content: "z z $& $1", complete: true });
+    assert.deepEqual(rebuild([{ kind: "write", input: { content: "abc" } }, { kind: "edit", input: { old_string: "nope", new_string: "-" } }]), { content: "abc", complete: false });
   });
 });

@@ -10,7 +10,7 @@ You describe an idea. It leads you by the hand, and refuses to let you skip the 
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.88.0-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.89.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugins-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
 [![tests](https://img.shields.io/badge/rails-node%3Atest-2b8a3e)](./plugins/moku/tests)
@@ -128,11 +128,17 @@ from what the repository shows (type, name, moku packages, plugins) and touches 
 Running it again changes nothing. `init` stays for a project that does not exist yet.
 
 Signing in again (an API key from the Console, a Team account, another sign-in) keeps the work going.
-`moku-rails checkpoint` writes `~/.claude/moku-checkpoints/<time>.json` with every session that worked on the rails in
-the last 48 hours: its id, folder, branch, uncommitted files, the open change with where it stopped, and the background
-tasks that had not reported back. The person signs in with Claude Code's own `claude auth login`, and
-`moku-rails resume-checkpoint` prints one `claude --resume <id>` per session (`--desktop` for a Code tab session), what
-moved meanwhile and the tasks to start again. No credential is read or written.
+`moku-rails checkpoint` writes `~/.claude/moku-checkpoints/<time>.json` with every open (not archived) session of the
+current account in the desktop app, at any age, and every terminal session that worked on the rails in the last 48
+hours: its id, the app's local id, title and parent, folder, branch, uncommitted files, the open change with where it
+stopped, and the background tasks that had not reported back. Beside it, `<time>/artifacts/<session>/` holds local
+copies of the artifacts each session published, with a manifest; a source that is gone is rebuilt from the session's
+Write and Edit calls, else only the link is kept. After the person signs in, `moku-rails resume-checkpoint` maps each
+old id to the new one (`local_<session id>`), names the titles to set again with `set_session_title`, and writes one
+message per session with its children's new ids and its artifact copies, for the conductor to send. Two steps write
+outside moku and are the person's, in a terminal: `--open` opens every session in the app through a pseudo-terminal,
+and `--relink` writes the sidebar nesting back into the app's records, only with the app closed and after a backup.
+No credential is read or written.
 
 | Invariant | Enforced by | What you see |
 |---|---|---|

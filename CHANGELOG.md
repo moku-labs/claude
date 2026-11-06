@@ -2,6 +2,35 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.89.0 (2026-11-06)
+
+### Changed
+- **The checkpoint keeps the sessions that are open, not the ones that were recent.** `moku-rails checkpoint` reads
+  the desktop app's records of the current account (named by the running session, else the account with the most
+  recent session) and keeps every session that is not archived, at any age and on the rails or not, with its title,
+  its local id and the session it was started from. Archived sessions and copies left under an earlier account are
+  out; terminal sessions still count when they worked on the rails in the last 48 hours. On the move of 2026-11-06 the
+  old checkpoint held 38 sessions, 18 of them live, and missed 3 live ones older than 48 hours. Sessions whose folder
+  or transcript is gone are listed as not kept.
+- **Restoring is one pass.** `moku-rails resume-checkpoint` maps every old local id to the new one
+  (`local_<session id>`), says which sessions the app has opened again, names the titles to set again with
+  `set_session_title` (the app renames some), and writes one message per session for `send_message`: a parent gets
+  the new ids of the sessions it started, to fix its notes and HANDOFF. The conductor and the prompt hook run it that
+  way.
+
+### Added
+- **Artifacts survive the move.** The checkpoint copies what each session published with the Artifact tool, and only
+  that session's publishes, into `~/.claude/moku-checkpoints/<time>/artifacts/<session>/` with a `manifest.json`
+  (link, title, source, time, status). A source that is gone, such as a scratchpad file, is rebuilt from the session's
+  last Write and the Edits after it; otherwise only the link is kept. After the resume each session is told where its
+  copies are.
+- **`resume-checkpoint --open` and `--relink`, the person's two steps.** `--open` opens every saved Code tab session the
+  app does not have yet, through `script` (`claude --desktop --resume` needs a terminal) with a pause of 3 s. `--relink`
+  writes the parent and the title back into the app's records of the reopened sessions, at any depth, after copying
+  each record into `<time>/desktop-backup/`. It refuses while the app runs, since the app writes its records back from
+  memory, and both refuse inside a Claude Code session. The app's records are undocumented; the report in
+  `research/resume-v2/report.html` weighs what is official and what is not.
+
 ## 0.88.0 (2026-11-05)
 
 ### Added
