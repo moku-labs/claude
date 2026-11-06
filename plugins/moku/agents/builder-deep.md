@@ -1,6 +1,6 @@
 ---
 name: moku-builder-deep
-description: Builds one Moku plugin with the same instructions as moku-builder at a higher reasoning effort. The orchestrator picks it for Complex and VeryComplex plugins, and to retry a plugin whose first build attempt failed.
+description: Builds one Moku plugin with the same instructions as moku-builder at a higher reasoning effort. The orchestrator picks it for VeryComplex plugins, and to retry a plugin whose first build attempt failed.
 model: opus
 effort: xhigh
 color: yellow

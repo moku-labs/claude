@@ -72,7 +72,9 @@ than the case name. Baselines of 2026-11-05: the hidden tests pass in every kept
   the fix from the source repository (read only, by `git archive`), `prompt.md` is the builder brief, `score.py`
   scores a run: the real fix's test, the board's 650 tests, tsc, 5 mutants. The brief goes to the builder arm directly
   (Agent tool, or `claude -p --agent moku:moku-builder`), not through the runner: the runner's case is the main thread.
-  On 2026-11-05: deep 324 s, high 123 s, Sonnet 76 s (medians, n=3), the same quality.
+  On 2026-11-05: deep 324 s, high 123 s, Sonnet 76 s (medians, n=3), the same quality. `run_arm.sh <sonnet|high|deep>`
+  spawns the arm through the Agent tool instead, so the builder stop hook checks it as in a real build; with it (0.88.0)
+  Sonnet left 0 new tsc errors in 3 of 3 runs, the hook's own check took 23–37 s.
 - `evals-manual/f2-validators/`: a plan and a framework with seeded holes; `run_f2.sh <plan|code> <high|medium> <rep>
   <out> <plugin copy>` runs one validator, `grade_f2.py <out>` counts the holes each report names. About $2 a run.
 

@@ -82,9 +82,21 @@ survived break and a new ignore are.
 
 ### Picking the builder
 
-`moku-builder` by default. `moku-builder-deep` for a plugin of tier Complex or VeryComplex, and for
-any plugin whose first attempt failed. A second failure on the deep variant comes back to you with
-the full error context instead of a third attempt.
+`moku-builder` by default, for every tier up to Complex. On 2026-11-05 it built a Complex plugin with
+the same hidden-test score as the deep builder at less than half the cost and time, so tier alone is no
+reason for more effort.
+
+| The unit | Builder |
+|---|---|
+| Tier Nano or Micro, a delta of one or two files, or a unit that only adds tests | `moku-builder` with `model: sonnet` on the `Agent` call |
+| Tier Standard or Complex, any other delta | `moku-builder` |
+| Tier VeryComplex | `moku-builder-deep` |
+| A unit whose first attempt failed (FAIL, no report, or red after it) | `moku-builder-deep`, whatever its tier |
+
+Sonnet is safe there only because the builder's stop is checked: the stop hook runs the project's
+`tsc` and the unit's tests when a builder reports PASS, drops the errors the tree had before the builder
+started, and blocks the builder once with what is left. A second failure on the deep variant comes back
+to you with the full error context instead of a third attempt.
 
 Spawn with `subagent_type: moku-builder` (or `moku-builder-deep`), never `general-purpose`. The agent
 already carries the TDD protocol, the filesystem rules, the scoped-lint contract and the JSON output
@@ -272,8 +284,8 @@ TDD costs roughly 30% more turns than writing the implementation alone. The tabl
 budget per tier for a net-new plugin. A delta reads the existing plugin first and often needs more.
 Builders have no hard stop: `moku-builder` and `moku-builder-deep` carry no `maxTurns`, so the harness
 never ends them mid-file (a limit only truncated real work; the only way to give a limited agent more
-turns is a `SendMessage` resume, since the Agent tool has no per-call override). Complex and VeryComplex
-plugins go to the deep builder for its higher reasoning effort. A builder works until the plugin is done
+turns is a `SendMessage` resume, since the Agent tool has no per-call override). Only VeryComplex
+plugins and retries go to the deep builder ("Picking the builder"). A builder works until the plugin is done
 or blocked and then reports (`agent-preamble.md` → "Turn budget and the report"), so the table below is
 the work to expect, not a point where it goes silent.
 

@@ -60,6 +60,8 @@ Which tests to write is `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/te
 4. Implement until the new tests pass and every pre-existing test still passes. Then the kill check on the logic files you changed.
 5. Preserve the public API unless the spec's `## Changes` says otherwise. If it changes, say so in the contract — the README-freshness check will want a README update.
 
+**Visible behaviour names its visual baselines.** When your change alters what a person sees — a screen, a popup, a prompt or a hint, text, an animation, or when or where something shows — find the visual baselines that capture it and name each one in the contract's `visualBaselines`, with what it shows that is now wrong or different. They live in `tests/visual/baselines/`, `__tests__/visual/`, `*-snapshots/` or `__screenshots__/`; search them by the screen, the node, the flow or the lesson your change touches. A baseline that was recorded with the bug you fix is the one most often missed: name it. Never update a baseline yourself; the e2e station records them again. A change nobody can see: `"visualBaselines": []`.
+
 **Existing tests and coverage.** Never delete or weaken an existing test, also not a useless one: report it in `blockers` with `delete` as the fix and the person decides. Never edit the coverage `include`, `exclude` or `thresholds`, and never add an ignore comment: when honest tests leave the logic under the threshold, list the uncovered lines with the reason in `blockers` and write no filler.
 
 **Test runs.** One run per edit, scoped to your plugin, with its output kept in a file that you read as often as you need. Never start the tests again to see another part of what they printed, and never run the project's whole test script: the orchestrator runs it once per wave. The rule and the command to keep the output are in `${CLAUDE_PLUGIN_ROOT}/skills/moku-testing/references/test-runs.md`; the Bash hook tells you when you repeat a run on files nobody edited.
@@ -103,6 +105,7 @@ Prose summary first, then the fenced block as your last message. A run that ends
   "lint": {"biome": "clean | N findings", "second": "oxlint | eslint | none", "secondResult": "clean | N findings"},
   "newDependencies": ["pkg@version", "..."],
   "publicApiChanged": true,
+  "visualBaselines": [{"baseline": "tests/visual/baselines/<screen>/<state>", "why": "what it shows that changes"}],
   "blockers": [{"file": "path", "line": N, "message": "...", "fix": "..."}]
 }
 ```
@@ -111,3 +114,5 @@ Prose summary first, then the fenced block as your last message. A run that ends
 - `preexistingGreen` — delta only.
 - `publicApiChanged` — true when the `api:`, events or `Config` surface changed.
 - `newDependencies` — packages for the orchestrator to add.
+- `visualBaselines` — the baselines a visible change makes stale, for the e2e station to record again; `[]` when nothing visible changed.
+- A report that says PASS is checked: the stop hook runs the project's `tsc` and your unit's tests, drops what was broken before you started, and sends you back once with what is left. Type errors in your test files count.

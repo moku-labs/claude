@@ -91,8 +91,10 @@ modules and tests the spec lists for it. Shared pieces (tokens, layout, header, 
 skeleton: build them first, yourself or as one unit, then fan the remaining units out.
 
 - One `moku:moku-builder` per unit, with the unit's section of the spec, its files and the test-first protocol.
-  Units write disjoint files, so they run in parallel up to the parallel-agent limit. Use `moku-builder-deep`
-  for a unit with real state or timing logic, and to retry a unit whose first attempt failed.
+  Units write disjoint files, so they run in parallel up to the parallel-agent limit. State or timing logic
+  is no reason for the deep builder: `moku-builder-deep` only retries a unit whose first attempt failed, or
+  builds one the plan calls VeryComplex. A unit of one or two files, or one that only adds tests, goes to
+  `moku-builder` with `model: sonnet`. The rules are `build-wave-execution.md` → "Picking the builder".
 - After the wave, one `moku:moku-code-reviewer` over the wave's diff.
 - The orchestrating session plans, dispatches, reconciles and verifies. It does not write the units itself:
   a session that builds everything alone skips the test-first protocol and the review, and costs several times

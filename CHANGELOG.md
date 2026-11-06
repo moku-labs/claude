@@ -2,7 +2,7 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
-## 0.88.0 (2026-11-05)
+## 0.88.1 (2026-11-06)
 
 ### Added
 - **The conductor offers `/compact` at a station boundary in a long session.** A PostToolUse hook
@@ -23,6 +23,34 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   says it in one line, because a question never loads the conductor. Verify hands fixes larger than a line or two to
   `moku-tweaker` or `moku-builder`.
 
+## 0.88.0 (2026-11-05)
+
+### Added
+- **A builder's PASS is checked, not trusted.** A new stop hook for `moku-builder` and `moku-builder-deep` runs the
+  project's `tsc --noEmit` and the tests of the builder's unit (its plugin or feature folder, or the files of its
+  report) when the report says PASS. Errors outside the unit, and errors the tree had before the builder started, are
+  left out: the start hook takes a `tsc` baseline in a detached process (builders of one wave share one run), and an
+  error is its file, code and message, not its line. A retry is compared with the baseline of the attempt that
+  failed. What is left blocks the builder once, with only the failed errors and tests, cut to about 4000 characters;
+  a second stop is never blocked, the person sees what still fails. A stop without a report stays the report hook's
+  business, a FAIL report is not checked. Every check is a line in `.planning/build/builder-checks/checks.jsonl`.
+  `MOKU_BUILDER_CHECK=off` turns it off.
+- **Visible behaviour names its visual baselines.** The builder's contract has `visualBaselines`: a change that alters
+  what a person sees names every baseline it makes stale, the one recorded with the bug included, and never updates
+  one itself. The web e2e tester starts from that list and searches for the ones the builders missed. Until now only
+  the deep builder caught a stale baseline on the real case (2 runs of 3; high and Sonnet 0 of 6).
+
+### Changed
+- **The deep builder only for VeryComplex and for retries.** `moku-builder` (high) builds every tier up to Complex;
+  `moku-builder-deep` takes a VeryComplex plugin and a unit whose first attempt failed. "Real state or timing logic" is
+  no longer a reason for it in a Layer-3 app. On `build-board` (tier Complex) the high builder scored the same hidden
+  tests as deep at less than half the cost and time. `moku-build-wave.js`: `DEEP_TIERS` is VeryComplex only.
+- **Sonnet for small units.** Tier Nano or Micro, a delta of one or two files and a tests-only unit go to
+  `moku-builder` with `model: sonnet` (the wave workflow does it for Nano and Micro). It ships with the stop hook: in
+  the A/B one Sonnet run in three left a type error in a test file that only the orchestrator's later `tsc` would have
+  caught.
+- **`moku-plan-checker` and `moku-architecture-validator` run at `effort: medium`.** On the seeded F2 fixtures medium
+  found 5 of 5 holes in every run, like high, 26–35 % faster and 22–25 % cheaper.
 ## 0.87.2 (2026-11-05)
 
 ### Fixed

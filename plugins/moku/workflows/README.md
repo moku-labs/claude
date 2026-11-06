@@ -21,8 +21,9 @@ Builds one wave without stopping, or every remaining wave with `{all: true}`. Bu
 in the one working tree: a git worktree has no `node_modules`, and its `.planning/` is a lane of its own,
 so it gives a builder neither tooling nor this wave. Builders write to disjoint plugin folders, and the
 prompt bans repo-wide commands and git mutations: a stray `git checkout` from one builder reverted a
-sibling in a real build. Complex and VeryComplex plugins go to `moku-builder-deep`; everything else to
-`moku-builder`.
+sibling in a real build. VeryComplex plugins go to `moku-builder-deep`, Nano and Micro ones to
+`moku-builder` on Sonnet, everything else to `moku-builder`. A plugin that fails is not retried here: the
+wave disposition decides, and the retry goes to the deep builder.
 
 Which wave is next comes from the rails, not from an agent's reading of `STATE.md`:
 
