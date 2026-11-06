@@ -148,7 +148,7 @@ The checker's one architecture BLOCKER is I1: a Layer-3 app that defines a frame
 - Include `onStart`/`onStop` only when there is a real resource to manage, and say why in the spec either way.
 - Every spec carries package dependencies, a testing strategy, verification criteria, JSDoc requirements per `moku-core/references/jsdoc-examples.md` (the contract and a scenario `@example` on every `Api` type member), and a consumer-API example with every plugin method typed.
 - Specs are self-contained: someone reading them implements the whole thing without asking further questions.
-- The existing code a spec builds on is summarised by `Explore`, asked what the spec needs (exports, events, config, callers), not read by you file by file. Read a spec or reference section with `offset` and `limit`, and do not re-read a spec to check it: the plan-checker reads it at the gate.
+- Read a spec or reference section with `offset` and `limit`, and do not re-read a spec to check it: the plan-checker reads it at the gate.
 - Record non-obvious trade-offs in `.planning/decisions.md` per `decision-knowledge-graph.md`, so a later agent does not undo an intentional choice.
 - Read `.planning/STATE.md` at the start of each stage and write it at the end, refreshing the `## Recovery` block so a cold session rehydrates in one read.
 - Plan never builds. No source files, no build references, no build steps. When the plan is approved, set `## Next Action:` and tell the user to run `/moku:build resume`.

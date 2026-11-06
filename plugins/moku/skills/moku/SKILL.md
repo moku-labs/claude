@@ -46,7 +46,7 @@ Stations run through their skills, with the Skill tool. You do not write source 
 
 Every call you make carries the whole conversation: in a long moku session 250k tokens and more, so one lookup of yours costs as much as a small agent's whole task. On real sessions most of your own calls were lookups through the shell, and a third of them read a file read before. Keep your turns for steering:
 
-- **Agents read, you steer.** Anything beyond one or two exact lookups (how something works, where it is used, what a spec, design or log says) goes to an agent with a question: `Explore`, or the station's builder, validator or tweaker when they will act on it. Take its summary and do not open its files again. A hand-back is the account of what changed; `git diff --stat` when you need the list.
+- **Take an agent's hand-back as it is.** Its summary is the account of what changed: do not open its files again to check; `git diff --stat` when you need the list.
 - **An exact lookup is Read or Grep, never the shell.** `Read` with `offset` and `limit` for the lines you need, `Grep` with a pattern and a path; not `cat`, `sed -n`, `head` or `grep` in Bash. A file you read and nobody changed since is not read again.
 - **Bash is one plain command per call** (`agent-preamble.md` rule 9 holds for you too): no `;` or `&&` chains, no `|` into `head` or `grep`, no `cd … &&`, no `VAR=…` prefix, no inline `python3 - <<EOF`. Never `sleep` to wait: reports and task notifications arrive by themselves.
 - **Tests: read the verdict, do not re-run it.** Builders, the quality validator and `moku-rails check tests` run them; tests, `tsc` and lint are not run again on a tree that did not change. When you must run one, run it scoped and read the summary line.
@@ -63,7 +63,7 @@ Every call you make carries the whole conversation: in a long moku session 250k 
 | An idea for later | `moku-rails idea "<text>"`, confirm it is kept, carry on. |
 | Work in a directory that holds moku code but no `.planning/moku.md` (a fresh clone, a second person's checkout; `moku-rails status` says "Next step: `moku-rails adopt`") | Run `moku-rails adopt`. It writes only `.planning/` from what the repository shows and touches no other file. Never run init here: init rewrites the tooling. Then classify the request as usual. |
 | Work on a project that does not exist yet | A short intake: two to four questions that decide the project type. Then propose creating the project and wait for a yes. Init comes before brainstorm and design, so everything after it lands in a real project. Then open the first change (type `project`). |
-| A fix, tweak, feature or refactor | Look at the code briefly (more than a file or two: one `Explore` question), pick type and size, open a change. |
+| A fix, tweak, feature or refactor | Look at the code briefly, pick type and size, open a change. |
 | A run of small edits they want to see at once ("move this", "recolor that", "make it like the reference", a list of nudges) | Open a size Q change and run the `moku:tweak` skill. Each edit is made at once, and the checks run one time at the end. |
 
 **Size decides the route.** Pick it after a short look at the code, tell the person, and let them raise it. They cannot lower it below the rails.

@@ -15,8 +15,8 @@ import { rememberStatus } from "../lib/hooks/seen.mjs";
 import { linkPlanning } from "../lib/hooks/worktree.mjs";
 import { status } from "../lib/rails/commands.mjs";
 
-/** Once per session start: every later call of the main thread carries what it read, so agents do the reading. */
-const MAIN_THREAD = "Your context is carried by every later call. Questions about the code beyond a lookup or two go to an `Explore` agent and come back as its summary; an exact lookup is Read with `offset`/`limit` or Grep, never `cat`, `sed` or `grep` in the shell; a file read and unchanged is not read again; one plain command per Bash call.";
+/** Once per session start: every later call of the main thread carries what it read, so it reads little and once. */
+const MAIN_THREAD = "Your context is carried by every later call. An exact lookup is Read with `offset`/`limit` or Grep, never `cat`, `sed` or `grep` in the shell; a file read and unchanged is not read again; one plain command per Bash call.";
 
 const { payload } = readHookInput();
 linkPlanning(payload.cwd ?? process.cwd());
