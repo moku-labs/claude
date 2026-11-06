@@ -218,9 +218,20 @@ gantt
 
 These diagrams help the user visualize the plan structure before approving.
 
+### 12. Stage DoD (a change the person agreed to finish in stages)
+
+Only when `.planning/changes/<id>/stages.md` exists. Each row of its `| Stage | What works after it | DoD |` table is one stage, and each stage closes on its own DoD. A stage once closed on green tests while its item was undone, because no test watched the item. So for every stage:
+
+- **BLOCKER** if the DoD only says the gates pass ("tests green", "tsc and lint clean", "check passes") and names no check of the item itself. `moku-rails stages set` refuses the plainest of these; you catch the ones that look specific and are not.
+- **BLOCKER** if the DoD's check would pass while the item is undone: a test that does not exercise the item, a grep for a name that exists before the change, a value copied from the plan and not from the spec. Check the expected values against the spec's `## Verification` and the acceptance criteria, not against the plan's own numbers.
+- **WARNING** if a stage is not a working increment of its own (it leaves the project red, or only adds types), or if the stages split one or two files: such a change goes in one go.
+
+Report each stage as `Stage N: <DoD> → OK | weak | wrong value (spec §…)`.
+
 ## Process
 
 1. Find all specification files (check `.planning/specs/` directory)
+1b. If `.planning/changes/<id>/stages.md` exists, read it for check 12
 2. Read each specification file
 3. Build the dependency graph
 4. Check each rule above systematically
@@ -277,6 +288,10 @@ These diagrams help the user visualize the plan structure before approving.
 | I5 no reinvented primitives | … | … | … | WARNING |
 | I6 ONE worker app (resource+runtime+deploy/cli); no facade; capability verified | … | … | … | BLOCKER |
 - Idiomatic, NOT flagged (expected in a full-stack app): multiple `createApp` instances [count], frameworks composed side-by-side [list], folder splits [list]
+
+### Stage DoD (only for a staged change)
+| Stage | DoD | Verdict |
+|-------|-----|---------|
 
 ### Diagrams
 [mermaid dependency graph]

@@ -77,6 +77,16 @@ A size-M change touches a known system. Replanning it from scratch throws away w
 
 Procedure in `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` (Delta Spec). One gate: present the delta, the touched specs and the plan-checker report, and wait for approval.
 
+### Stages, when the person agreed to them
+
+Stages are never the plan's own idea: the conductor offers them on a signal (the change grew twice, or a builder was cut off), and the person said yes. Then the plan, delta or full, also writes `.planning/changes/<id>/stages.md`:
+
+| Stage | What works after it | DoD |
+|---|---|---|
+| 1 | the increment, in a few words | the check of the item itself: a test by name that fails while the item is undone, a grep, a grader, a measured value |
+
+Each stage is a working increment that one builder run builds (which builder is the build skill's rule, not this one's). Its DoD proves the item, not only the gates: "tests green" passes while an item no test watches is undone. Take expected values from the spec and the acceptance criteria, never from the plan's own arithmetic. The plan-checker checks every DoD (its check 12). After the gate, `moku-rails stages set --milestone "<where the stages lead>"` takes the table; it refuses a DoD that only says the gates pass.
+
 ### Full plan
 
 Three stages, each ending in a user gate: analysis and structure, specifications, skeleton specification. Read `${CLAUDE_PLUGIN_ROOT}/skills/moku-core/references/plan-stages.md` for the per-stage work and `plan-templates.md` for every document template.
