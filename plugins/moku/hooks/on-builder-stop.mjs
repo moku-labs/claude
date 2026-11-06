@@ -36,10 +36,12 @@ const contract = extractContract(String(payload.last_assistant_message ?? "")) ?
 if (!contract) process.exit(0);
 
 const scope = unitScope(root, contract);
-const design = String(contract.verdict ?? "").toUpperCase() === "PASS" ? designVerdict(root, contract) : undefined;
+const design = designVerdict(root, contract);
 if (String(contract.verdict ?? "").toUpperCase() !== "PASS" || (!scope && !design)) {
-  logCheck(root, { agentType, agentId, verdict: contract.verdict ?? null, scope: scope ?? null, checked: false, baselineFile: baselineFileOf(root, agentId) ?? null });
+  logCheck(root, { agentType, agentId, verdict: contract.verdict ?? null, scope: scope ?? null, checked: false, design: design?.log ?? "none", baselineFile: baselineFileOf(root, agentId) ?? null });
   forgetBuilder(root, agentId);
+  // A FAIL is not checked, but questions waiting on the person still go to the orchestrator now
+  if (design?.message) console.log(JSON.stringify({ systemMessage: design.message }));
   process.exit(0);
 }
 

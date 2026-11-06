@@ -192,6 +192,13 @@ describe("the design check at the end of a UI unit", () => {
     assert.match(out.systemMessage, /Ask the person now.*D1 help·font: weight 800 is not vendored → proposal: 700/);
   });
 
+  it("send waiting deviations to the orchestrator also when the builder reports FAIL", () => {
+    const root = designProject({ result: { summary: { ...clean, verdict: "FAIL", open: 1, pendingDeviations: 1 }, rows: [] }, deviations: [{ id: "D1", element: "glow", prop: "shadow", reason: "no blur", proposal: "rings", decision: null }] });
+    const out = JSON.parse(stop(root, { last_assistant_message: report("FAIL", { design: { slug: "cards", verdict: "FAIL" } }) }).out);
+    assert.equal(out.decision, undefined);
+    assert.match(out.systemMessage, /Ask the person now.*D1 glow·shadow/);
+  });
+
   it("hand an unmeasurable unit to the orchestrator, and ignore a design never captured", () => {
     const out = JSON.parse(stop(designProject(), withDesign("unmeasured")).out);
     assert.match(out.systemMessage, /could not measure it here/);
