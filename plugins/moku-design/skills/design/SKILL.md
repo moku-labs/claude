@@ -2,7 +2,7 @@
 name: design
 description: Runs the moku design station. Explores the design of a change in rounds with the user and captures the result as a design context — a specification, never source. Three modes that can be combined - ui for screens and prototypes, api for the usage-first shape of a plugin or framework API, architecture for plugin boundaries and event flow. Use it when someone wants to see or decide how something will look, read or be structured before it is planned and built.
 when_to_use: A change needs its look, its public API shape or its plugin boundaries decided before planning. Not for writing source code and not for architecture debates without an artifact.
-argument-hint: "{what to design} or resume | list [--count N] [--medium web|cli|tui] [--mode ui,api,architecture]"
+argument-hint: "{what to design} or resume | list [--count N] [--medium web|game|cli|tui] [--mode ui,api,architecture]"
 allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent, AskUserQuestion, Skill, mcp__Claude_Browser__preview_start, mcp__Claude_Browser__preview_list, mcp__Claude_Browser__preview_stop, mcp__Claude_Browser__preview_logs, mcp__Claude_Browser__computer, mcp__Claude_Browser__read_page, mcp__Claude_Browser__navigate, mcp__Claude_Browser__resize_window, mcp__Claude_Browser__read_console_messages
 model: fable
 effort: high
@@ -84,10 +84,18 @@ frame ──┬── ui ──────────── rounds of concepts
 
 ## What each mode produces
 
-**`ui`** — `references/design-flow.md`. A shared concept spec with a feature checklist and frozen demo
-data, then rounds: N `design-generator` agents in parallel, one concept each; a gallery; screenshots; the
-review pass below; the human picks a winner, a mix or a new round; then polish with every change checked
-in a live preview.
+**`ui`** — `references/design-flow.md`. A shared concept spec with a feature checklist, state ids, target
+sizes and frozen demo data, then rounds: N `design-generator` agents in parallel, one concept each, each with
+its own look **and motion character**; `moku-proto-check` on every concept (every state at every size opens,
+every animation plays); a gallery where the motion plays; screenshots and a frame series of each signature
+moment; the review pass below; the human picks a winner, a mix or a new round, motion included; then polish
+by editing the winner in place, every change checked in a live preview.
+
+Motion and effects are part of the design from the first round, never an afterthought: every web and game
+concept carries a motion table with eight columns per row (trigger, duration, delay or order, curve, key
+values, sequence, sound, reduced motion), plays it live, opens every state by `?state=` and every target
+size by `?vp=`. Games in detail — screens and popups in and out, transitions, press, rewards and wins,
+errors, particles, idle, counters, loading; web shorter. See `references/design-motion.md`.
 
 **`api`** — `references/design-mode-api.md`. Two or three alternative usage snippets first — how consumer
 code reads — then the type-level sketch (`Config`, `State`, `api`, events) for each, then a comparison
@@ -100,10 +108,12 @@ decompositions as Mermaid diagrams — boundaries, dependency graph, event flow 
 
 Concept screenshots are reviewed twice, independently, before the user ever sees them: by this session
 against the checklist in `references/design-flow.md`, and by Astra. Load the `moku-astra` skill with the
-Skill tool for how to call her, triage her findings and what to do when she is unavailable. Merge both
-lists, triage, and present the merged findings together with the gallery so the user picks well informed.
+Skill tool for how to call her, triage her findings and what to do when she is unavailable. Both judge the motion
+too, from the frame series of each signature moment, not from still screenshots: does every event play, are
+the motion characters distinguishable, does the motion fit the art direction. Merge both lists, triage, and
+present the merged findings together with the gallery so the user picks well informed.
 
-Asset generation is offered at polish or capture, when the winner needs real art and only then. It is
+Asset generation is offered at polish or capture, for the winner only, when it needs real art and only then. It is
 never started automatically — image turns are expensive, and the user agrees to them first.
 
 ## Previews
@@ -164,6 +174,9 @@ shadows, colours, and first of all fonts. The procedure, the tolerances and the 
 
 - Six concepts that are the same template in different accent colours is a failed round. Give each
   generator a genuinely distinct direction and say so in the spawn prompt.
+- A round of still screenshots is not a round. Every web and game concept plays its motion, and the person
+  picks with the motion in view; motion invented after the pick is what came back as "flat".
+- Polish is an Edit of the winner, not a new generator run. A generator is for a new round.
 - A concept that drops a feature or invents its own demo data is not comparable. Same features, same
   frozen data, only the design varies.
 - Screenshots of a blank or erroring page produce confident findings about nothing. Check that each

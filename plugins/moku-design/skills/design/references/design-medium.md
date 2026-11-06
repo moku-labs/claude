@@ -67,10 +67,15 @@ The **process** (frame → generate N concepts → converge → polish → captu
 What changes is the **artifact** each generator produces and the **inventory** the synthesizer captures.
 
 ### `game`
-- **Concept artifact:** one self-contained HTML file per concept that shows the game's screens as still
-  frames at the game's reference size (portrait 1080×1920 scaled to a 390-wide phone frame, or landscape),
-  with the art direction, palette, type and the core-loop moment drawn in. No engine code: the engine
-  builds the real screen later.
+- **Concept artifact:** one self-contained HTML file per concept that shows the game's screens as frames at
+  the game's reference size (portrait 1080×1920 scaled to a 390-wide phone frame, or landscape), with the
+  art direction, palette, type and the core-loop moment drawn in, and **the motion playing**: screens and
+  popups open and close, buttons react, the reward flies, idle things breathe, counters roll — every
+  required game event of `design-motion.md` §2 in the concept's own motion character. Each screen and popup
+  opens by `?state=`, each target aspect ratio by `?vp=`, each animation by `?play=`. No engine code: the
+  engine builds the real screen later.
+- **Verification:** `moku-proto-check` on each concept (every state at every aspect ratio, every motion
+  plays), then the browser pane for the look.
 - **Art:** concept art and sprites come from Astra (`moku-astra generate`) for a handful of images, or
   from the `moku-ai` pack for batches. The person's own sketches and references go into the brief. An
   image is an art asset or a style reference, also when it shows a whole screen. It is never the
@@ -88,8 +93,11 @@ What changes is the **artifact** each generator produces and the **inventory** t
   and JS, Google-Fonts links only, no build step, no external assets. Open-in-a-browser is the demo.
 - **Art direction per concept:** a *distinct* font pairing, palette, personality, and signature
   interaction. Same features, same demo data — only the design varies.
-- **Verification:** served locally and **screenshotted** in a real browser; DOM/console checked (no
-  errors) before presenting.
+- **Motion, states, sizes:** the web events of `design-motion.md` §2 (page transitions, state changes,
+  reveals, hover, focus and press, menus and modals, loading, reduced motion) play live in each concept in
+  its own motion character; every state opens by `?state=`; phone, tablet and desktop open by `?vp=`.
+- **Verification:** `moku-proto-check` on each concept, then served locally and **screenshotted** in a real
+  browser; DOM/console checked (no errors) before presenting.
 - **Inventory (template §6):** screens / persistent regions / overlays / menus / modals / transient
   elements / recurring components (tables A–G).
 - **Re-implement-as:** moku-web islands, `@scope`/`@layer` CSS, `data-*` only, design tokens, one route

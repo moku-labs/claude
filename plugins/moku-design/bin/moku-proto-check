@@ -1,0 +1,99 @@
+#!/usr/bin/env node
+/**
+ * moku-proto-check: the cheap check of a design concept prototype, run by the generator before it reports
+ * and by the design station before a round is shown.
+ *
+ *   moku-proto-check <concept.html> [--out dir] [--medium game|web] [--static] [--json file]
+ *
+ * Static: the moku-design contract block — a motion table with all eight columns in every row, every
+ * required event covered, states, target sizes, adaptation rules, the motion character.
+ * Render (headless Chrome over DevTools, no dependencies): every ?state= at every ?vp= opens without errors,
+ * is not empty, has no horizontal scroll; every ?play= moves; ?t= pauses; reduced motion opens.
+ * One line per frame is printed, so nobody has to look at the screenshots; --out saves them anyway.
+ *
+ * The last line is the verdict: `proto-check: PASS — …` or `proto-check: FAIL — …`.
+ * Exit codes: 0 pass, 1 usage error, 2 findings, 3 no Chrome found (the static part ran; render not checked).
+ */
+
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+import { launch, findChrome } from "../lib/proto-check/cdp.mjs";
+import { checkContract, columnsPresent, COLUMNS, extractContract } from "../lib/proto-check/contract.mjs";
+import { describeFrame, renderCheck } from "../lib/proto-check/render.mjs";
+
+const NO_CHROME = 3;
+const FINDINGS = 2;
+
+const args = process.argv.slice(2);
+const file = args.find((arg) => !arg.startsWith("--") && !isFlagValue(arg));
+const flag = (name) => {
+  const at = args.indexOf(`--${name}`);
+  return at >= 0 ? (args[at + 1] ?? true) : undefined;
+};
+
+if (!file || !existsSync(file)) {
+  console.error("Usage: moku-proto-check <concept.html> [--out dir] [--medium game|web] [--static] [--json file]");
+  process.exit(1);
+}
+
+const path = resolve(file);
+const { contract, error } = extractContract(readFileSync(path, "utf8"));
+if (!contract) {
+  console.log(`proto-check: FAIL — ${error}`);
+  process.exit(FINDINGS);
+}
+
+// Static: the contract block
+const table = checkContract(contract, { medium: flag("medium") });
+console.log(`Motion table: ${table.rows} rows, ${table.fullRows} with all 8 columns; columns present ${columnsPresent(table)}/8 (${COLUMNS.map((name) => `${name} ${table.columns[name]}`).join(", ")})`);
+console.log(`Required ${table.medium} events: ${table.events.covered}/${table.events.required}${table.events.missing.length ? ` — missing ${table.events.missing.join(", ")}` : ""}`);
+console.log(`States ${table.states}, target sizes ${table.viewports}; motion character: ${contract.motionCharacter ?? "(none)"}`);
+
+const findings = [...table.findings];
+const warnings = [];
+let render;
+let exitCode = 0;
+
+// Render: a headless Chrome on the machine
+const chrome = flag("static") ? undefined : findChrome();
+if (chrome) {
+  const out = typeof flag("out") === "string" ? resolve(flag("out")) : undefined;
+  if (out) mkdirSync(out, { recursive: true });
+  const page = await launch(chrome);
+  try {
+    render = await renderCheck(page, path, contract, { out });
+  } finally {
+    page.close();
+  }
+  for (const frame of render.frames) console.log(`  ${describeFrame(frame)}`);
+  const live = render.motion.filter((row) => row.live).length;
+  console.log(`Motion live: ${live}/${render.motion.length}${render.frozen === undefined ? "" : `; ?t= pauses: ${render.frozen ? "yes" : "no"}`}${render.reduced ? `; reduced motion: ${render.reduced.animations} running` : ""}`);
+  findings.push(...render.findings);
+  warnings.push(...render.warnings);
+} else if (!flag("static")) {
+  console.log("Render: not checked — no Chrome found (set CHROME_PATH). Open each ?state= at each ?vp= in the browser pane instead.");
+  exitCode = NO_CHROME;
+}
+
+for (const warning of warnings) console.log(`warn: ${warning}`);
+for (const finding of findings) console.log(`FAIL: ${finding}`);
+
+const jsonOut = flag("json");
+if (typeof jsonOut === "string") writeFileSync(jsonOut, `${JSON.stringify({ file: path, table, render, findings, warnings }, null, 2)}\n`);
+
+const live = render ? `${render.motion.filter((row) => row.live).length}/${render.motion.length} live` : "render not checked";
+const summary = `${table.fullRows}/${table.rows} rows with 8/8 columns, events ${table.events.covered}/${table.events.required}, states ${table.states} × sizes ${table.viewports}, motion ${live}`;
+console.log(`proto-check: ${findings.length ? "FAIL" : "PASS"} — ${summary}${findings.length ? `, ${findings.length} finding(s)` : ""}`);
+process.exit(findings.length ? FINDINGS : exitCode);
+
+/**
+ * True when the argument is the value of a flag that takes one.
+ *
+ * @param {string} arg - A command-line argument.
+ * @returns {boolean}
+ */
+function isFlagValue(arg) {
+  const at = args.indexOf(arg);
+  return at > 0 && ["--out", "--medium", "--json"].includes(args[at - 1]);
+}

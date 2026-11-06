@@ -116,9 +116,23 @@ decision, each with the reason and how it is translated. Everything not listed h
 
 **Surface & rules —** {borders, cards, depth, elevation — the material language.}
 
-**Motion —** {what animates and how restrained; respect for "reduce motion".}
+**Motion character —** {the concept's motion in numbers, e.g. "springy, 6 % overshoot, 180–260 ms", and its
+signature moment by row id. Every animation is in the table of §2b.}
 
 **Theming —** {light/dark story; toggle location; what's remembered; OS-preference behaviour.}
+
+## 2b. Motion & effects
+> Every animation and effect, copied from the prototype's `moku-design` block. The prototype plays each one:
+> `index.html?play={id}`, paused at a moment with `&t={ms}`. The builder takes these numbers and invents
+> none; what the engine cannot do is an intended difference, asked before it is chosen. The rules are in
+> `design-motion.md` of the design skill.
+
+| id | Kind | Element (§6) | Trigger | Duration | Delay / order | Curve | Key values (from → peak → to) | Sequence | Sound | Reduced motion |
+|---|---|---|---|---|---|---|---|---|---|---|
+| {reward-in} | {reward} | {E2 reward popup} | {claim tapped} | {420 ms} | {0; coins 40 ms apart} | {cubic-bezier(.34,1.56,.64,1)} | {scale .6 → 1.08 @60 % → 1; opacity 0 → 1} | {after backdrop-in; with coins-burst} | {sfx.reward-chime @0 ms} | {fade 150 ms} |
+
+**No motion, on purpose —** {each required event of the medium, screen, popup or state with no row, and why;
+or `none`.}
 
 ## 3. How it is organised (information architecture)
 {The nesting / structure of the product, top to bottom. A small diagram is welcome:}
@@ -144,6 +158,21 @@ toasts. This section is what keeps the design coherent — be specific.}
 | Target units | {e.g. `CSS px`, or `game reference units, 1080×1920`} |
 | Conversion | {`target = prototype px × 1` for web, or e.g. `game units = prototype px × 1080 / 390`} |
 | Art | {`none`, or the folder of the generated art and what each file is used for. Art assets only, never layout} |
+
+**Target sizes** — each opens in the prototype by `?vp=WxH`, and the design check measures each one.
+| Id | Size (CSS px) | Safe area (top/bottom) | What it stands for |
+|---|---|---|---|
+| {phone} | {390×844} | {47/34 or —} | {iPhone 15, portrait} |
+
+**Adaptation rules** between the target sizes — checked on boxes: no horizontal scroll, no new overlap,
+gaps not below the minimum, no cut-off text, everything inside the safe area.
+- {what stretches, what stays fixed, each breakpoint, the smallest gaps, how text wraps, what moves into a
+  sheet or a second column}
+
+**States** — each opens in the prototype by `?state={id}` with no clicks.
+| State id | Screen or popup (§6) | What it shows |
+|---|---|---|
+| {shop.empty} | {A2 shop} | {no items yet, the empty illustration and the CTA} |
 
 {How the layout flows and responds: document-flow vs fixed window, how content grows, how it compacts
 on short screens, the footer, and the **full mobile behaviour** (reflow, bottom sheets, swipe, tap
@@ -277,5 +306,11 @@ Both keep §1, §8 and §9. See `design-mode-api.md` and `design-mode-architectu
 8. For a `ui` run, §2 has the **Typography** table with every face, weight, size, licence and the
    locales it covers, and the **Lettering as art** line. No sentence says that words or their effects
    are baked into the art, except for the names on that line.
-9. For an `api` or `architecture` run, its section carries the alternatives, the axes table and the
+9. For a `ui` run on web or game, §2b has the motion table with all eight columns (trigger, duration,
+   delay or order, curve, key values, sequence, sound, reduced motion) in every row, the required events of
+   the medium (`design-motion.md` §2) covered or listed under "No motion, on purpose", and every screen,
+   popup and state of §6 with its rows or its "no motion" line. Without it the design check fails.
+10. For a `ui` run on web or game, §5 lists the target sizes, the adaptation rules and every state with the
+   `?state=` id that opens it, and the prototype opens each of them (`moku-proto-check` says PASS).
+11. For an `api` or `architecture` run, its section carries the alternatives, the axes table and the
    recorded reasons for the rejected options.
