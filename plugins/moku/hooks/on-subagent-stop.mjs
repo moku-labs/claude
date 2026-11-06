@@ -6,7 +6,8 @@
  * report now (the hook's `reason` is the agent's next instruction). A report handed back through the
  * `SubagentHandback` tool is read from the transcript: it is not in the agent's last message. If it stops a second time without one,
  * the log says so and names whether the turn limit was hit, and the person sees the resume instruction.
- * The status skill reads the log. Silent outside projects with planning state.
+ * The status skill reads the log. Silent outside projects with planning state. A builder cut off (at its turn
+ * limit, or with no report after the reminder) is noted on the open change, so the conductor offers stages once.
  *
  * The harness can run this hook before the hand-back reaches the transcript file, so an unseen hand-back
  * is looked for again for up to a second before the agent is blocked. Each block that still happens leaves
@@ -21,6 +22,7 @@ import { MOKU_AGENT, RESUME_INSTRUCTION, forgetAgent, handedBack, turnBudget } f
 import { extractContract, summarize } from "../lib/hooks/contract.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
+import { EXECUTOR, recordCutoff } from "../lib/rails/stages.mjs";
 
 const { payload } = readHookInput();
 const root = rootForSession(payload);
@@ -42,6 +44,10 @@ if (!contract && payload.stop_hook_active !== true) {
   console.log(JSON.stringify({ decision: "block", reason: "You are ending without your report. Deliver it now: the output contract (fenced json) with an honest verdict on what is done and what is not. Report the work you have done and start no new work of your own. An assignment from the coordinator that arrived since still stands: do it, then report on it too." }));
   process.exit(0);
 }
+
+// A builder cut off (at its turn limit, or ended twice without its report) is a signal for stages: the
+// conductor offers them with the result
+if (EXECUTOR.test(agentType) && (!contract || turnBudget(payload).hitLimit)) recordCutoff(root);
 
 if (!existsSync(join(root, ".planning", "STATE.md"))) process.exit(0);
 

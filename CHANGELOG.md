@@ -32,6 +32,22 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 ### Added
 - Eval cases `design-round-motion-game` and `design-round-motion-web` (`evals/moku-design/`): round 1 with two
   concepts, scored by `moku-proto-check` on the kept sandboxes.
+## 0.90.0 (2026-11-06)
+
+### Added
+- **Stages are offered on a signal, never by default.** On ten labelled real tasks a request's wording did not predict
+  which work grows (kappa 0); 14 of 40 changes grew through `moku-rails scope` instead (61 of 67 scope entries). The
+  second `scope` entry of a change and a builder cut off (turn limit, or no report after the reminder) now print a
+  `Stages offer:` once, with the price: stages take 1.6–2× the time and money, and buy a smaller builder context
+  (−19% on build-board) and a cut-off run that loses no work. One scope entry stays silent. A quick-edit change never
+  gets the offer.
+- **`moku-rails stages`.** `set --milestone <name>` takes `.planning/changes/<id>/stages.md` (`| Stage | What works
+  after it | DoD |`) and sets the ledger's `milestone`; `done --evidence <what the check showed>` closes the current
+  stage on a committed tree; with no argument it says where the stages stand, and so does `status`. A staged change
+  closes after its last stage.
+- **A stage's DoD checks the item, not only the gates.** A stage of delta-fix once closed on green tests with its item
+  undone. `stages set` refuses a DoD and `stages done` refuses evidence that only say tests, lint or types pass; the
+  plan-checker's new check 12 catches a DoD that looks specific and would still pass with the item undone.
 
 ## 0.89.0 (2026-11-06)
 

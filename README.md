@@ -10,7 +10,7 @@ You describe an idea. It leads you by the hand, and refuses to let you skip the 
 
 <div align="center">
 
-[![version](https://img.shields.io/badge/version-0.89.0-1864ab)](./CHANGELOG.md)
+[![version](https://img.shields.io/badge/version-0.90.0-1864ab)](./CHANGELOG.md)
 [![claude code](https://img.shields.io/badge/Claude%20Code-plugins-d97757)](https://code.claude.com/docs/en/plugins)
 [![for](https://img.shields.io/badge/for-%40moku--labs%2Fcore-0b7285)](https://github.com/moku-labs/core)
 [![tests](https://img.shields.io/badge/rails-node%3Atest-2b8a3e)](./plugins/moku/tests)
@@ -146,6 +146,7 @@ No credential is read or written.
 | Every request is routed before code follows it | prompt hook (`UserPromptSubmit`) marks a typed message unrouted; the write gate waits for `open`, `enter`, `continue` or `scope`. A prompt the harness wrote (a subagent hand-back, a task notification, a CI event) routes nothing, and a subagent spawned from the station is not held by the flag | the conductor answers first, also in the middle of a build, and the builders keep working |
 | Every agent ends with a report | `SubagentStop` tells an agent that stops without its output contract to deliver it, once; the long-running agents have no turn limit, so nothing truncates them | a partial report with an honest verdict instead of "produced no report" |
 | New scope goes back to plan | `moku-rails scope` | "That is new. Let me add it to the plan first" |
+| Stages only on a signal, each proving its item | `moku-rails scope` (second entry) and `SubagentStop` (a builder cut off) print the offer once; `moku-rails stages set|done` refuse a DoD or evidence that only says the tests pass, and a stage on an uncommitted tree | "It has grown twice. Shall we finish it in stages? Slower and dearer, but nothing is lost if a run is cut off" |
 | Optional stations are skipped on your word only | `moku-rails enter plan|build|close` refuses while design, e2e or another optional station is neither done nor skipped | "Shall I draw it first, or skip the design?" |
 | No source files before init | write gate (`PreToolUse`) | "Let me create the project first, it takes a minute" |
 | No plugin code without a plan or an open change | write gate + `moku-rails enter build` | "I'll write down what we're building first" |

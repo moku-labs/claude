@@ -179,7 +179,7 @@ export function markWave(state, wave, status) {
  * @param {RegExp} header matches the header line of the table
  * @returns {string[][]} the cells of each row, trimmed, without the separator row
  */
-function tableRows(text, header) {
+export function tableRows(text, header) {
   const lines = text.split("\n");
   const start = lines.findIndex((line) => header.test(line));
   if (start === -1) return [];

@@ -18,6 +18,7 @@ import { currentAccountDir, desktopAppRunning, desktopRoot, openInDesktop, relin
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
+import { STAGES_FILE, currentStage, readStages, splitOffer, splitSignal, stageLine, stagesText, weakDod } from "./stages.mjs";
 import { parseTestOutput, readings } from "./test-output.mjs";
 import { reportLines, slowOffer, statusLine } from "./test-report.mjs";
 import { appendRun, earlierRun, fullKey, readRuns, saveOutput, slowThreshold, summarize, treeKey } from "./test-runs.mjs";
@@ -60,6 +61,10 @@ export function status({ root }) {
   if (isInitializing(root)) lines.push("Debt [init]: the init station started and never finished. Finish it with the init skill.");
   if (debts.length === 0) lines.push("Rails: clean. Ready for new work.");
   for (const debt of debts) lines.push(debt.kind === "paused" ? `Paused: ${debt.detail}` : `Debt [${debt.kind}]: ${debt.detail}`);
+  for (const change of ledger.changes.filter((entry) => entry.status === "open")) {
+    const staged = stageLine(change);
+    if (staged) lines.push(staged);
+  }
   if (ledger.ideas.length > 0) lines.push(`Backlog: ${ledger.ideas.length} idea(s) parked for later.`);
   const agents = runningAgents(root);
   if (agents.length > 0) lines.push(`Agents: ${describeAgents(agents)}.`);
@@ -800,9 +805,98 @@ export function scope({ root, positional, flags }) {
     change.checklist = { tests: false, verify: false, docs: false };
   }
 
+  // The second entry is growth, not iteration: the moment to offer stages, once
+  const signal = splitSignal(change);
+  if (signal === "scope") change.splitOffered = new Date().toISOString();
+
   saveLedger(root, ledger);
 
-  return ok(replans ? `Scope of ${change.id} grew. It is back in front of the plan station: write a delta spec for the new part, then build.` : `Scope note kept for ${change.id}.`);
+  const said = replans ? `Scope of ${change.id} grew. It is back in front of the plan station: write a delta spec for the new part, then build.` : `Scope note kept for ${change.id}.`;
+
+  return { code: 0, lines: [said, ...(signal === "scope" ? [splitOffer(change, signal)] : [])], data: { ok: true, offer: signal === "scope" } };
+}
+
+/**
+ * The stages of the open change. With no argument it says where they stand. `set` takes the stages the plan
+ * wrote in `.planning/changes/<id>/stages.md` and refuses a DoD that only says the gates pass. `done` closes
+ * the current stage on a committed tree, with the evidence that its DoD check showed the item done.
+ *
+ * @param {Args} args positional: [set | done]; flags: --milestone (set), --evidence (done), --change
+ * @returns {Result}
+ * @example
+ * stages({ root, positional: ["set"], flags: { milestone: "friends v1" } });
+ * stages({ root, positional: ["done"], flags: { evidence: "test \"sinceStart allocates nothing\" passes; no .slice( in rules.ts" } });
+ */
+export function stages({ root, positional, flags }) {
+  const [action] = positional;
+  if (action !== undefined && action !== "set" && action !== "done") return usage("moku-rails stages [set --milestone <name> | done --evidence <what the DoD check showed>]");
+
+  const ledger = loadLedger(root);
+  const change = findChange(ledger, optional(flags.change));
+
+  if (action === undefined) return { code: 0, lines: [stageLine(change) ?? `${change.id} is done in one go, with no stages.`], data: { stages: change.stages ?? null, milestone: change.milestone ?? null } };
+  if (action === "set") return setStages(root, ledger, change, optional(flags.milestone));
+
+  return finishStage(root, ledger, change, optional(flags.evidence));
+}
+
+/**
+ * Put the open change into the stages its plan wrote, and name the milestone they lead to.
+ *
+ * @param {string} root
+ * @param {import("./ledger.mjs").Ledger} ledger
+ * @param {import("./ledger.mjs").Change} change
+ * @param {string | undefined} milestone
+ * @returns {Result}
+ */
+function setStages(root, ledger, change, milestone) {
+  if (!milestone) return usage("moku-rails stages set --milestone <where the stages lead>");
+  if (change.stages?.some((stage) => stage.done)) return refused(`${change.id} already finished stage 1 of its stages. Its stages are not set again; a new part goes through \`moku-rails scope\`.`);
+
+  const text = stagesText(root, change.id);
+  if (text === undefined) return refused(`No .planning/changes/${change.id}/${STAGES_FILE}. Write the stages there first: a \`| Stage | What works after it | DoD |\` table.`);
+
+  const read = readStages(text);
+  if (read.problems.length > 0) return { code: REFUSED, lines: ["Refused: the stages cannot be taken as written.", ...read.problems], data: { ok: false, problems: read.problems } };
+
+  change.stages = read.stages;
+  change.milestone = milestone;
+  ledger.milestone = milestone;
+  saveLedger(root, ledger);
+
+  return { code: 0, lines: [`${change.id} goes in ${read.stages.length} stages toward "${milestone}".`, /** @type {string} */ (stageLine(change)), "Hand the builder this stage only. It is done when its DoD check shows the item done, not only when the tests are green."], data: { ok: true, stages: change.stages } };
+}
+
+/**
+ * Close the current stage. The tree must be committed, so a cut-off run of the next stage loses nothing,
+ * and the evidence must say what the DoD check showed, not only that the gates passed.
+ *
+ * @param {string} root
+ * @param {import("./ledger.mjs").Ledger} ledger
+ * @param {import("./ledger.mjs").Change} change
+ * @param {string | undefined} evidence
+ * @returns {Result}
+ */
+function finishStage(root, ledger, change, evidence) {
+  const current = currentStage(change);
+  if (!change.stages) return refused(`${change.id} has no stages. Set them with \`moku-rails stages set\`.`);
+  if (!current) return refused(`All stages of ${change.id} are done already.`);
+  if (!evidence) return usage("moku-rails stages done --evidence <what the DoD check showed>");
+  if (weakDod(evidence)) return refused(`The evidence "${evidence}" only says the gates pass. Stage ${current.number}'s DoD is: ${current.stage.dod}. Run that check and say what it showed.`);
+
+  const commit = cleanHead(root);
+  if (!commit) return refused(`Stage ${current.number} has uncommitted work. Commit it first: a committed stage survives a cut-off run of the next one.`);
+
+  current.stage.done = new Date().toISOString();
+  current.stage.commit = commit;
+  current.stage.evidence = evidence;
+
+  // The last stage reaches the milestone
+  const next = currentStage(change);
+  if (!next && ledger.milestone === change.milestone) ledger.milestone = null;
+  saveLedger(root, ledger);
+
+  return { code: 0, lines: [`Stage ${current.number} of ${change.id} is done on ${commit.slice(0, 7)}.`, /** @type {string} */ (stageLine(change))], data: { ok: true, stage: current.number, next: next?.number ?? null } };
 }
 
 /**

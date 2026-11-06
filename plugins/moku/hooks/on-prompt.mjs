@@ -27,6 +27,7 @@ import { DEFAULT_SINCE_HOURS, latestCheckpoint } from "../lib/rails/checkpoint.m
 import { status } from "../lib/rails/commands.mjs";
 import { loadLedger, markPrompt } from "../lib/rails/ledger.mjs";
 import { LOOP_STATIONS } from "../lib/rails/routes.mjs";
+import { takeSplitOffer } from "../lib/rails/stages.mjs";
 
 /**
  * The person is about to change their own Claude sign-in: an explicit first-person or "my account" phrase, a re-login,
@@ -101,6 +102,10 @@ if (railsMode() === "off") process.exit(0);
 if (isSystemPrompt(payload)) {
   const noReport = /produced no report|without (a|its) report|no report|marked as partial|reached (its |the )?(max(imum)? )?turn|turn limit|maxTurns/i.test(prompt);
   if (root && noReport) console.log(`moku: an agent ended without its report. ${RESUME_INSTRUCTION}`);
+
+  // A background builder cut off at its turn limit: its hand-back brings the stages offer, once
+  const offer = root ? takeSplitOffer(root) : undefined;
+  if (offer) console.log(offer);
   process.exit(0);
 }
 
