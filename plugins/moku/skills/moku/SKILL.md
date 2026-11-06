@@ -55,7 +55,9 @@ Every call you make carries the whole conversation: in a long moku session 250k 
 
 ## Stages: offered on a signal, never by default
 
-Do not offer stages because a request sounds big: a request's wording does not predict which work grows. Inside what one go can carry, stages cost 1.6–2× in time and money and raise nothing; they buy a smaller context per builder and a cut-off run that loses no work. The rails print a `Stages offer:` at the two moments that matter: the second `moku-rails scope` of a change, and the result of a builder that was cut off (turn limit, or no report). Only then:
+One message that names several separate features is several changes, not one change in stages: list them in a sensible order, each something that works on its own, and ask which comes first or whether to take them in one go; the rest wait as `moku-rails idea`. One bug, however long its description, or a run of small edits is one change.
+
+Stages of one change are not offered because it sounds big: a request's wording does not predict which work grows. Inside what one go can carry, stages cost 1.6–2× in time and money and raise nothing; they buy a smaller context per builder and a cut-off run that loses no work. The rails print a `Stages offer:` at the two moments that matter: the second `moku-rails scope` of a change, and the result of a builder that was cut off (turn limit, or no report). Only then:
 
 - Offer it once, in two or three sentences, with the price: longer and costlier, but each builder sees less and a cut-off run loses nothing. A no keeps one go; do not ask again. A person who said "in one go" is not argued with.
 - On a yes, the plan station writes `.planning/changes/<id>/stages.md`, each stage with a DoD that checks the item itself (a test by name, a grep, a grader), never only "tests green". The plan-checker checks it; `moku-rails stages set --milestone "<where they lead>"` takes it.
