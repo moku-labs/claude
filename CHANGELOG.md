@@ -2,7 +2,42 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
-## 0.90.0 (2026-11-06)
+## 0.91.0 (2026-11-06)
+
+### Added
+- **`moku-fidelity`, the design check as a tool** (moku-design `bin/`). The approved prototype is measured once into a
+  fixed inventory, `check/expected.json`: one row per element × property × size × state, decided at capture from
+  `spec.json`, the same on every run. The same casefile replay counted 75, 308 and 391 rows before. Now it counts 1218
+  every time. `capture`, `check` (`--url`/`--serve`/`--start`), `probe` and `ingest` (for the browser pane), `compare`,
+  `deviate`, `decide`, `status`. Schemas `moku-fidelity/spec@1`, `expected@1`, `result@1`, `deviations@1`.
+- **Appearance, not only boxes.** Rows for `drawn` (image, fill, gradient, stroke), fill, stroke, radius, shadow and
+  opacity next to position, size and the text rows. Page rows check adaptation: no horizontal scroll, no clipped text,
+  no new overlaps, inside the safe area. A row drawn as a sprite where the prototype draws a fill with a rim fails
+  `drawn` even when its box is exact. In all three casefile replays the blank rows were found this way. A box-only
+  check misses them. A per-element pixel diff lists "pairs to look at" as a diagnostic, never as a verdict.
+- **Tolerances with the unit conversion.** A game's lengths are divided by its frame's factor, unrounded, before
+  they are compared. `line-height: normal` is measured on the face itself. A value past its tolerance but within
+  twice it is `open`, never pass.
+- **Deviations are asked first.** What the project cannot follow (a missing face, an effect the engine forbids, §9
+  saying otherwise) is raised with `moku-fidelity deviate` before any replacement: reason, kind, proposal, when it
+  was asked, and the decision (`null` until the person answers). One deviation covers every element of one cause.
+- **The check runs at the end of a UI unit.** The builder runs it before its report, and the builder's stop hook
+  blocks once on a missing, stale or failing result. Open rows and waiting deviations go to the orchestrator as a
+  message: ask the person now, before the next wave. Every target size is measured. A size that was skipped fails.
+
+### Changed
+- `design-check.md`, build Step 7.6, the builder brief, design-flow E2b, `moku-web:e2e` and `moku-game:playtest` use
+  the tool.
+
+| 6 screens × 3 | before | after |
+|---|---|---|
+| Impossible item raised as a question before the choice | 0/18 | 18/18 |
+| Silent deviations (scorer v2) | 0/18* | 0/18 |
+| $ per run (build + check) | 2.19 | 1.51 (−31%) |
+| Minutes per run | 7.2 | 4.6 |
+
+\* The earlier 4/18 was an artifact of the scorer, which took `line-height: normal` as 1.2 em.
+Measured on the face, the baseline has no silent rows either.
 
 ### Added
 - **Stages are offered on a signal, never by default.** On ten labelled real tasks a request's wording did not predict
