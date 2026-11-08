@@ -59,6 +59,8 @@ Then allow the commands the session runs all the time, so the person is not aske
 node "${CLAUDE_PLUGIN_ROOT}/lib/hooks/allow-list.mjs" --root "/absolute/path/to/project"
 ```
 
+Once per project, `session start` or `adopt` ends with an offer: the person adds the project's `.planning/` to `permissions.additionalDirectories` of their `~/.claude/settings.json`, so worktree sessions stop asking for every planning write. Pass it in the hand-over as one line plus the command, in the person's language. Only the person runs `! moku-rails allow-planning --apply …` (copy the printed line as it is); never run it, never edit their settings, and the Bash hook refuses it from you. No offer printed means it is allowed already or was offered before: say nothing.
+
 From here on: every request is routed before code follows it, source files are refused before init and outside a writing station, and the conversation cannot end inside a station without a pause.
 
 ## 4. Hand over

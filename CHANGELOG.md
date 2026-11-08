@@ -2,6 +2,23 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.91.0 (2026-11-08)
+
+### Added
+- **The project's `.planning/` is offered once for the person's user settings.** A write through a lane's `.planning`
+  link asked the person every time: `additionalDirectories` lifts that only when it is there at session start, and the
+  worktree's `settings.local.json`, written by the SessionStart hook (#102), arrives too late. The person's
+  `~/.claude/settings.json` is read on the fly. `moku-rails session start`, `adopt` and `init done` now end, once per
+  project and only when the folder is not allowed yet, with one line for the person to type:
+  `! <moku-rails> allow-planning --apply --root <project>`. It adds the main checkout's `.planning/` and keeps every
+  other setting; a settings file that is not JSON is left alone. Before: open the file, find or create
+  `permissions.additionalDirectories`, paste the absolute path, keep the JSON valid. After: one line, copied as printed.
+  The offer is remembered in `.planning/.planning-access-offered`; `moku-rails allow-planning` reports where it stands
+  at any time. The agent never edits the person's settings: the Bash hook refuses `allow-planning --apply` from it,
+  and the person's `!` commands never reach that hook. The worktree's `settings.local.json` entry stays as the fallback.
+- **No test touches the real `~/.claude`.** `npm test` preloads `scripts/test-env.mjs`, which gives every test and
+  every process it spawns a throwaway `HOME` and `CLAUDE_CONFIG_DIR`.
+
 ## 0.90.0 (2026-11-06)
 
 ### Added
