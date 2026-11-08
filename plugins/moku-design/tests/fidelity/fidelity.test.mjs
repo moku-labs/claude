@@ -221,4 +221,22 @@ describe("the game probe", () => {
       Object.assign(globalThis, saved);
     }
   });
+
+  it("reads a game text's line height from its line box, not from the glyphs' natural height", () => {
+    const tree = { key: "root", rect: { x: 0, y: 0, w: 390, h: 844 }, children: [{ key: "name", type: "text", content: "The Door from Inside", rect: { x: 61, y: 276, w: 268, h: 25 }, style: {}, children: [] }] };
+    const glyphs = { text: "The Door from Inside", height: 25.8125, y: -0.51625, style: { fontFamily: "ui.fonts.alt-bold", fontSize: 21, fontWeight: "normal", lineHeight: 0, letterSpacing: 0, fill: 0xfbf3e2 } };
+    const saved = { doors: globalThis.doors, game: globalThis.game, document: globalThis.document, innerWidth: globalThis.innerWidth };
+    globalThis.innerWidth = 390;
+    globalThis.doors = { sources: { ui: "ui" }, read: () => tree };
+    globalThis.game = { ui: { find: () => 7 }, renderer: { sync: { displayOf: () => ({ children: [glyphs] }) } } };
+    globalThis.document = { querySelector: () => null, scrollingElement: null };
+    try {
+      const out = pageProbe({ elements: { name: { game: { key: "name" } } }, reference: 390, fonts: { "ui.fonts.alt-bold": { family: "Montserrat Alternates", weight: "700" } } });
+      assert.equal(out.name.lineHeight, 24.78);
+      assert.equal(out.name.family, "Montserrat Alternates");
+      assert.equal(out.name.weight, "700");
+    } finally {
+      Object.assign(globalThis, saved);
+    }
+  });
 });

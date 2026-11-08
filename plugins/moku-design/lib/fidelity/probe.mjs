@@ -163,8 +163,9 @@ export function pageProbe(input) {
         // The ui door names a text style; the drawn object (renderer.sync.displayOf) holds its numbers. Its
         // face is an asset key: `build.fonts` of the spec names the face and weight behind each key.
         let drawnText;
+        let shown;
         try {
-          const shown = game.renderer?.sync?.displayOf?.(game.ui?.find?.(ref.key ?? id));
+          shown = game.renderer?.sync?.displayOf?.(game.ui?.find?.(ref.key ?? id));
           drawnText = [shown, ...(shown?.children ?? [])].find((part) => typeof part?.style?.fontSize === "number");
         } catch {
           /* the style alone */
@@ -177,7 +178,9 @@ export function pageProbe(input) {
             fontFamily: face?.family ?? ts.fontFamily,
             fontWeight: face?.weight ?? ts.fontWeight,
             fontSize: ts.fontSize,
-            lineHeight: ts.lineHeight > 0 ? ts.lineHeight : round(drawnText.height / lines),
+            // With no line height of its own the glyphs are the face's natural height, centred in the line
+            // box the style sets: the box is the glyphs' height less twice their offset inside the element.
+            lineHeight: ts.lineHeight > 0 ? ts.lineHeight : round((drawnText.height + (drawnText !== shown ? 2 * (drawnText.y ?? 0) : 0)) / lines),
             letterSpacing: ts.letterSpacing ?? 0,
             fill: typeof ts.fill === "number" ? ts.fill : style.fill,
           });
