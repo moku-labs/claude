@@ -231,6 +231,15 @@ Read the actual prototype and the concept spec, then write
 
 Then run the checklist at the foot of the template and close any gap before moving on.
 
+### E2b — Fix the design check's inventory (`ui` only)
+
+Write `.planning/design/{SLUG}/spec.json` with every target size of §5 (a game's frames with their safe
+areas), the states the prototype shows (`?state=` queries) and the conversion, then run
+`moku-fidelity capture .planning/design/{SLUG}`. Elements need a `data-check` id in the prototype, or a
+selector in `spec.json`. The inventory it fixes is what the build is measured on, every time
+(`design-check.md`, Step 1). No headless browser here: capture through the browser pane with
+`moku-fidelity probe … --side expected` and `ingest`.
+
 ### E3 — Update the registry and state
 
 Write the `complete` row into `.planning/design/index.md`; set `## Stage: complete`, `## Winner:` and the

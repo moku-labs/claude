@@ -154,3 +154,54 @@ describe("the builder's own checks", () => {
     assert.match(reason, /TS2554/);
   });
 });
+
+describe("the design check at the end of a UI unit", () => {
+  /** A project whose design `cards` is captured, with a result and deviations as given. */
+  function designProject({ result, deviations } = {}) {
+    const root = project();
+    const dir = join(root, ".planning", "design", "cards");
+    mkdirSync(join(dir, "check"), { recursive: true });
+    writeFileSync(join(dir, "check", "expected.json"), JSON.stringify({ schema: "moku-fidelity/expected@1", complete: true, inventory: [] }));
+    if (result) writeFileSync(join(dir, "check", "result.json"), JSON.stringify({ at: new Date(Date.now() + 5000).toISOString(), ...result }));
+    if (deviations) writeFileSync(join(dir, "deviations.json"), JSON.stringify({ deviations }));
+    return root;
+  }
+  const withDesign = (verdict = "PASS") => ({ last_assistant_message: report("PASS", { design: { slug: "cards", verdict } }) });
+  const clean = { verdict: "PASS", rows: 10, pass: 10, decision: 0, open: 0, fail: 0, unmeasured: 0, pendingDeviations: 0, missingSizes: [] };
+
+  it("block a UI unit once when its design check never ran", () => {
+    const root = designProject();
+    const { decision, reason } = JSON.parse(stop(root, withDesign()).out);
+    assert.equal(decision, "block");
+    assert.match(reason, /moku-fidelity check \.planning\/design\/cards/);
+  });
+
+  it("block with the failing rows, so the builder fixes them in its own turn", () => {
+    const root = designProject({ result: { summary: { ...clean, verdict: "FAIL", fail: 1, pass: 9 }, rows: [{ row: "blank1|drawn|390x844|misted", result: "fail", expected: "fill+stroke", actual: "image (frost-row-locked)", note: "drawn differently" }] } });
+    const { decision, reason } = JSON.parse(stop(root, withDesign()).out);
+    assert.equal(decision, "block");
+    assert.match(reason, /blank1: drawn fill\+stroke → image/);
+  });
+
+  it("let a clean unit through, and send waiting deviations to the orchestrator without a block", () => {
+    assert.equal(stop(designProject({ result: { summary: clean, rows: [] } }), withDesign()).out, "");
+
+    const root = designProject({ result: { summary: { ...clean, verdict: "FAIL", open: 2, pendingDeviations: 1 }, rows: [] }, deviations: [{ id: "D1", element: "help", prop: "font", reason: "weight 800 is not vendored", proposal: "700", decision: null }] });
+    const out = JSON.parse(stop(root, withDesign()).out);
+    assert.equal(out.decision, undefined);
+    assert.match(out.systemMessage, /Ask the person now.*D1 help·font: weight 800 is not vendored → proposal: 700/);
+  });
+
+  it("send waiting deviations to the orchestrator also when the builder reports FAIL", () => {
+    const root = designProject({ result: { summary: { ...clean, verdict: "FAIL", open: 1, pendingDeviations: 1 }, rows: [] }, deviations: [{ id: "D1", element: "glow", prop: "shadow", reason: "no blur", proposal: "rings", decision: null }] });
+    const out = JSON.parse(stop(root, { last_assistant_message: report("FAIL", { design: { slug: "cards", verdict: "FAIL" } }) }).out);
+    assert.equal(out.decision, undefined);
+    assert.match(out.systemMessage, /Ask the person now.*D1 glow·shadow/);
+  });
+
+  it("hand an unmeasurable unit to the orchestrator, and ignore a design never captured", () => {
+    const out = JSON.parse(stop(designProject(), withDesign("unmeasured")).out);
+    assert.match(out.systemMessage, /could not measure it here/);
+    assert.equal(stop(project(), withDesign()).out, "");
+  });
+});

@@ -179,20 +179,25 @@ below and say so.
 The expected side is the approved HTML prototype at its frame, times the **Conversion** of the design
 context (`× 1080 / 390` for a portrait game). An image from Astra or `moku-ai` is not the expected side.
 
-How to read the game's side:
+How to read the game's side, with `moku-fidelity` (`references/design-check.md` of the pack):
 
-1. Set the pane so the game frame has the prototype's aspect, and bring each inventory row of §6 to the
-   state it names, from a scenario or by `doors.run`.
-2. Bounds: `capture { legend: true }` gives the rects of every keyed view as data; the element card of a
-   pick gives `ref x,y w×h` in reference units. Compare the reference units to prototype px × conversion.
-3. Fonts first: for every text element read its text style from the card (since game 0.14.11 `game.ui`
-   also names it: `textStyle` on a text node given a style key) and its `defineTextStyles`
-   entry: the font key, the size, the weight of the face behind the key. The face is the design's face,
-   not the body font the package ships. The font has the glyphs of every locale of `strings/`.
-4. Text is text: every word of the design's copy is a text element with a string key
+1. The inventory is fixed at capture (`spec.json` with the game's frames, their safe areas and
+   `"conversion": { "unit": "game", "reference": 1080 }`). Each inventory element maps to a ui key
+   (`elements.<id>.build.game.key`, or the same id) or a view (`{ "projection", "key" }`).
+2. `moku-fidelity check .planning/design/<slug> --url http://127.0.0.1:<port>/ --start "bunx moku-game dev --port <port>"`
+   (a free port) starts the game, reads its `game.ui` door at every frame and stops it: the rect in
+   reference units, what draws each element (an image, a nine-slice, a shape), and the text style read
+   from the drawn text (the face behind a font key comes from `build.fonts` of the spec). A state comes
+   from door steps in the spec (`build.run`: `restore` with a `$patch`, `answer`, `tap`, a `wait`), written
+   by the builder. A dev server you start yourself in the background, stop before your turn ends.
+3. In the editor instead (no playwright): `moku-fidelity probe <dir> --side actual --frame` gives the
+   expression for the game iframe; run it with `javascript_tool` at each frame and state, save it, and
+   `moku-fidelity ingest` it. Shots with the Shot button, saved beside the prototype's.
+4. Fonts first: the face behind each text style key is the design's face, not the body font the package
+   ships, and the font has the glyphs of every locale of `strings/`.
+5. Text is text: every word of the design's copy is a text element with a string key
    (`doors.sources.ui`). A word found only inside a texture is a FAIL, unless §2 of the design context
    lists it as lettering that is art. A lip, a shadow or an outline on a word is its text style.
-5. One shot per row with the Shot button, saved as `check/actual/<row>.jpg` beside the prototype's shot.
 
 Failed rows go into the fix loop of Step 6. The verdict line and the open rows go into Step 7.
 
