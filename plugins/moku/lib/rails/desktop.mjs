@@ -24,6 +24,10 @@ import { basename, join } from "node:path";
  * @property {string} cwd
  * @property {number} lastActivityAt
  * @property {Record<string, any> | null} spawnedFrom the side-session link to the parent, as the app wrote it
+ * @property {string} branch the branch the app had the session on, empty when it named none
+ * @property {string | null} worktreePath the worktree the app made for the session, null when it made none
+ * @property {string} originCwd the folder the session was started from, the repository of its worktree
+ * @property {string | null} permissionMode the permission mode the session runs in, such as `auto`
  * @property {string} file
  */
 
@@ -113,43 +117,51 @@ export function desktopAppRunning() {
 /** The pause between two sessions opened in the app, so each gets its record before the next one starts. */
 const OPEN_PAUSE_MS = Number(process.env.MOKU_OPEN_PAUSE_MS ?? 3000);
 
+/** The permission modes `claude --permission-mode` takes; `default` is the mode a session gets without the flag. */
+export const CLI_PERMISSION_MODES = new Set(["acceptEdits", "auto", "bypassPermissions", "manual", "dontAsk", "plan"]);
+
 /**
- * Open one session in the desktop app under the current sign-in. `claude --desktop --resume` hands the session to
- * the app only from a terminal, so it runs under `script`, which gives it one; then a pause.
+ * Open one session in the desktop app under the current sign-in, in the permission mode it had. `claude --desktop
+ * --resume` hands the session to the app only from a terminal, so it runs under `script`, which gives it one; then a
+ * pause.
  *
  * @param {string} cwd
  * @param {string} cliSessionId
+ * @param {string | null} [permissionMode] the mode the session had, passed on when the CLI knows it
  * @returns {boolean} whether the command succeeded
  */
-export function openInDesktop(cwd, cliSessionId) {
-  const run = spawnSync("script", ["-q", "/dev/null", "claude", "--desktop", "--resume", cliSessionId], { cwd, stdio: ["ignore", "ignore", "ignore"], timeout: 60_000 });
+export function openInDesktop(cwd, cliSessionId, permissionMode = null) {
+  const mode = permissionMode && CLI_PERMISSION_MODES.has(permissionMode) ? ["--permission-mode", permissionMode] : [];
+  const run = spawnSync("script", ["-q", "/dev/null", "claude", "--desktop", "--resume", cliSessionId, ...mode], { cwd, stdio: ["ignore", "ignore", "ignore"], timeout: 60_000 });
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, OPEN_PAUSE_MS);
 
   return run.status === 0;
 }
 
 /**
- * Write the parent link and the title back into the records of sessions opened again, after copying each record
- * into the backup folder. A parent is set only when the parent was opened again too; nesting of any depth follows,
+ * Write the parent link, the title and the permission mode back into the records of sessions opened again, after
+ * copying each record into the backup folder. A parent is set only when the parent was opened again too; nesting of any depth follows,
  * since each session points at its own parent.
  *
- * @param {{ localId: string, cliSessionId: string, title: string, parent: string | null, spawnedFrom: Record<string, any> | null, file: string }[]} sessions
+ * @param {{ localId: string, cliSessionId: string, title: string, parent: string | null, spawnedFrom: Record<string, any> | null, permissionMode?: string | null, file: string }[]} sessions
  *   each saved session with `file`, the record it has now
  * @param {Map<string, string>} idMap old local id → new local id
  * @param {string} backupDir
- * @returns {{ linked: string[], titled: string[] }} the new ids whose parent or title was written
+ * @returns {{ linked: string[], titled: string[], moded: string[] }} the new ids whose parent, title or mode was written
  */
 export function relinkSessions(sessions, idMap, backupDir) {
   mkdirSync(backupDir, { recursive: true });
   const linked = [];
   const titled = [];
+  const moded = [];
 
   for (const session of sessions) {
     const record = JSON.parse(readFileSync(session.file, "utf8"));
     const parentNow = session.parent ? idMap.get(session.parent) : undefined;
     const wantsParent = Boolean(parentNow && session.spawnedFrom && record.spawnedFrom?.sessionId !== parentNow);
     const wantsTitle = Boolean(session.title && record.title !== session.title);
-    if (!wantsParent && !wantsTitle) continue;
+    const wantsMode = Boolean(session.permissionMode && record.permissionMode !== session.permissionMode);
+    if (!wantsParent && !wantsTitle && !wantsMode) continue;
 
     copyFileSync(session.file, join(backupDir, basename(session.file)));
     if (wantsParent) {
@@ -160,6 +172,10 @@ export function relinkSessions(sessions, idMap, backupDir) {
       record.title = session.title;
       titled.push(record.sessionId);
     }
+    if (wantsMode) {
+      record.permissionMode = session.permissionMode;
+      moded.push(record.sessionId);
+    }
 
     // Written whole and read back, so a record that does not parse is never left behind
     const text = JSON.stringify(record);
@@ -167,7 +183,7 @@ export function relinkSessions(sessions, idMap, backupDir) {
     writeFileSync(session.file, text);
   }
 
-  return { linked, titled };
+  return { linked, titled, moded };
 }
 
 /**
@@ -211,6 +227,10 @@ function toRecord(file) {
       cwd: typeof data.cwd === "string" ? data.cwd : "",
       lastActivityAt: Number(data.lastActivityAt) || 0,
       spawnedFrom: data.spawnedFrom && typeof data.spawnedFrom === "object" ? data.spawnedFrom : null,
+      branch: typeof data.branch === "string" ? data.branch : "",
+      worktreePath: typeof data.worktreePath === "string" && data.worktreePath ? data.worktreePath : null,
+      originCwd: typeof data.originCwd === "string" ? data.originCwd : "",
+      permissionMode: typeof data.permissionMode === "string" && data.permissionMode ? data.permissionMode : null,
       file,
     };
   } catch {

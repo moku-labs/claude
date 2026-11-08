@@ -2,6 +2,37 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.94.0 (2026-11-08)
+
+### Changed
+- **Resume v3: the saved sessions come back in one pass**, from the live restore of eight sessions on 2026-11-08.
+  - *Asked with typos.* The prompt hook reads «востонови все 4 моку сесии», «восстанови сесси», «верни сессии» and
+    "restor my sesions" as a request for the saved sessions: words lower-cased, `ё` as `е`, a doubled letter read
+    once, a long verb stem one letter off. "The sessions table", "a session cookie" and «сессии пользователей» are
+    the app's own sessions and do not count. On the first prompt under another account, while a fresh checkpoint has
+    sessions not open there yet, the hook offers the restore once and names the command.
+  - *A removed worktree is not dropped.* `checkpoint` keeps a session whose folder is gone with its repository and
+    branch while the branch exists, and names it lost when the branch is gone too. `resume-checkpoint --open` adds the
+    worktree again at its old path from that branch before it opens the session.
+  - *A branch held by the old worktree.* For a worktree the app made, which it replaces with a new one on resume,
+    `--open` gives the old folder a detached HEAD on the same commit (every file stays), so the app can check the
+    branch out. `resume-checkpoint --carry` then copies the uncommitted and untracked files to the folder the app
+    opened the session in; a file that changed there is left as it is, and nothing is deleted.
+  - *`--open` does it all at once.* It opens the sessions parents first, then prints, and keeps in
+    `<checkpoint>/resume-actions.json`, the titles the app changed, one message for each session whose id or whose
+    side sessions' ids changed (no more "id X (was X)"), the files to carry and the nesting. Its output is the list of
+    actions for the session that runs the resume: nothing runs a second time.
+  - *Nesting.* The app keeps a side session's parent when it adopts the session through `--open`; sessions opened by
+    hand later lost it. All sessions now go through `--open`, and the output says which side sessions the app nested
+    itself. Only for the others it hands over one line for Terminal.app: quit Claude → `--relink` → open Claude.
+  - *The permission mode comes back.* Two sessions opened in `default` instead of `auto` and asked about every edit.
+    `checkpoint` keeps each session's mode (the last one its transcript records, else the app's record); `--open`
+    passes it as `--permission-mode`, then checks the app's record. A mode the app did not keep is named in the
+    output, and the same Terminal.app line writes it back with `--relink`, after the same backup.
+  - *`--help` / `-h`* on any `moku-rails` command prints its usage and runs nothing (`checkpoint --help` wrote a
+    checkpoint). In free text (`guard-bash`, `idea`, `scope`, `guard`) only a first `-h` counts. A second
+    `checkpoint` that finds everything as the newest one has it writes no new file and says so.
+
 ## 0.93.1 (2026-11-08)
 
 ### Fixed

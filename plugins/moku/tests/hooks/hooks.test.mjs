@@ -559,6 +559,45 @@ describe("prompt hook on the rails", () => {
     assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "восстанови сессии" }, env).out, /resume-checkpoint/, "stale checkpoint");
   });
 
+  it("reads a request for the sessions back through typos, and not a session of the app being built", () => {
+    const root = project({ initialized: true });
+    const home = join(mkdtempSync(join(tmpdir(), "moku-home-")), "moku");
+    const env = { MOKU_HOME: home };
+    const dir = join(dirname(home), "moku-checkpoints");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "2026-11-08T10-50-35Z.json"), "{}\n");
+    const asks = ["востонови все 4 моку сесии", "восстанови сесси", "верни сессии", "вастанови сесии пожалуйста", "подними все сессии", "restor my sesions", "resume all sessions", "bring my sessions back", "reopen the saved sessions"];
+    const work = ["восстанови удалённый файл", "верни кнопку назад", "верно, сессия логина истекает", "restore the session cookie after login", "restore the sessions table from the backup", "верни сессии пользователей в админке", "resume playback of the video", "сколько серий осталось"];
+
+    for (const prompt of asks) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails resume-checkpoint/, prompt);
+    for (const prompt of asks.slice(0, 2)) assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt }, env).out, /resume-checkpoint --open/, `off the rails: ${prompt}`);
+    for (const prompt of work) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /resume-checkpoint/, prompt);
+  });
+
+  it("offers the restore once, on the first prompt under another account while saved sessions wait", () => {
+    const base = mkdtempSync(join(tmpdir(), "moku-account-"));
+    const home = join(base, "moku");
+    const desktop = join(base, "desktop");
+    const oldDir = join(desktop, "old-account", "org");
+    const newDir = join(desktop, "new-account", "org");
+    for (const dir of [oldDir, newDir]) mkdirSync(dir, { recursive: true });
+    writeFileSync(join(newDir, "local_new-1.json"), JSON.stringify({ sessionId: "local_new-1", cliSessionId: "new-1", cwd: base, lastActivityAt: Date.now() }));
+    const dir = join(base, "moku-checkpoints");
+    mkdirSync(dir, { recursive: true });
+    const saved = (/** @type {string} */ desktopDir) => JSON.stringify({ version: 2, savedAt: "2026-11-08T10:50:35.000Z", configDir: base, desktopDir, sessions: [{ id: "saved-1", cwd: base, surface: "desktop", localId: "local_saved-1", title: "Game", parent: null, branch: "", uncommitted: [], unfinished: [], artifacts: [], transcript: "x", lastActivityAt: "" }] });
+    const file = join(dir, "2026-11-08T10-50-35Z.json");
+    const env = { MOKU_HOME: home, MOKU_DESKTOP_SESSIONS: desktop, CLAUDE_CODE_ACCOUNT_UUID: "new-account", CLAUDE_CODE_ORGANIZATION_UUID: "org" };
+
+    writeFileSync(file, saved(newDir));
+    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "привет" }, env).out, /signed in under another account/, "same account: no offer");
+
+    writeFileSync(file, saved(oldDir));
+    const first = hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "привет" }, env).out;
+    assert.match(first, /signed in under another account since the checkpoint .*1 not open here yet/);
+    assert.match(first, /resume-checkpoint --open/);
+    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "что дальше?" }, env).out, /signed in under another account/, "offered once");
+  });
+
   it("closes the free pass: an open change inside build does not admit a new request until it is routed", () => {
     const root = project({ initialized: true });
     building(root);

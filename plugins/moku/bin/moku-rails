@@ -8,6 +8,7 @@
 
 import * as commands from "../lib/rails/commands.mjs";
 import { withLedger } from "../lib/rails/ledger.mjs";
+import { COMMAND_USAGE, asksForHelp } from "../lib/rails/usage.mjs";
 
 const HANDLERS = {
   session: commands.session,
@@ -49,8 +50,15 @@ const handler = HANDLERS[name];
 
 // Unknown command: list what exists
 if (!handler) {
-  console.error(`Usage: moku-rails <${Object.keys(HANDLERS).join("|")}> [args] [--json]`);
-  process.exit(1);
+  const asked = name === undefined || name === "--help" || name === "-h" || name === "help";
+  (asked ? console.log : console.error)(`Usage: moku-rails <${Object.keys(HANDLERS).join("|")}> [args] [--json]\nEach command prints its own usage with --help or -h.`);
+  process.exit(asked && name !== undefined ? 0 : 1);
+}
+
+// Help is printed before anything runs: asking how a command works never runs it
+if (asksForHelp(name, rest)) {
+  console.log(`Usage: ${COMMAND_USAGE[name] ?? `moku-rails ${name}`}`);
+  process.exit(0);
 }
 
 // Run the handler; a thrown error is a plain failure, never a refusal
