@@ -85,6 +85,10 @@ moku-fidelity check .planning/design/{slug} --url http://localhost:5173/route --
 moku-fidelity check .planning/design/{slug} --serve dist          # a static build
 ```
 
+`--start` starts the app on a free port, waits for it and stops it after the measurement. Prefer it to a
+server of your own: a dev server left running in the background keeps a headless run (`claude -p`)
+waiting until it is killed. If you do start one, stop it before your turn ends.
+
 It measures the build on the inventory's rows at every size and state, compares, and writes
 `check/actual.json`, `check/result.json` (every row) and `check/design-check.md` (the report). Exit 0 is
 PASS. Lengths are compared in prototype px: the build's value divided by the conversion of its size,

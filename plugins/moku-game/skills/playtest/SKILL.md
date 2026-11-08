@@ -184,10 +184,12 @@ How to read the game's side, with `moku-fidelity` (`references/design-check.md` 
 1. The inventory is fixed at capture (`spec.json` with the game's frames, their safe areas and
    `"conversion": { "unit": "game", "reference": 1080 }`). Each inventory element maps to a ui key
    (`elements.<id>.build.game.key`, or the same id) or a view (`{ "projection", "key" }`).
-2. `moku-fidelity check .planning/design/<slug> --url <the game page> --start "bun run dev"` reads the
-   game page's `game.ui` door at every frame: the rect in reference units, the type (`image`, `icon` and a
-   `nineSlice` draw an image; `fill` and `stroke` a shape; `text` its words and text style). A state that
-   needs a flow position comes from door commands in the spec (`build.run`, e.g. `restore` a bookmark).
+2. `moku-fidelity check .planning/design/<slug> --url http://127.0.0.1:<port>/ --start "bunx moku-game dev --port <port>"`
+   (a free port) starts the game, reads its `game.ui` door at every frame and stops it: the rect in
+   reference units, what draws each element (an image, a nine-slice, a shape), and the text style read
+   from the drawn text (the face behind a font key comes from `build.fonts` of the spec). A state comes
+   from door steps in the spec (`build.run`: `restore` with a `$patch`, `answer`, `tap`, a `wait`), written
+   by the builder. A dev server you start yourself in the background, stop before your turn ends.
 3. In the editor instead (no playwright): `moku-fidelity probe <dir> --side actual --frame` gives the
    expression for the game iframe; run it with `javascript_tool` at each frame and state, save it, and
    `moku-fidelity ingest` it. Shots with the Shot button, saved beside the prototype's.

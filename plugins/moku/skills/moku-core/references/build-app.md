@@ -262,7 +262,9 @@ read `references/design-check.md` under the base directory it prints. The tool i
    person. **Ask the person then**, before the next wave, and record each answer with
    `moku-fidelity decide`.
 3. Here, after the last wave: `moku-fidelity check` once more on the whole screen at every target size,
-   the app from Step 7, or the game page (`moku-game:playtest` → "The design check").
+   the app from Step 7, or the game page (`moku-game:playtest` → "The design check"). Let `--start
+   "<dev command>"` start the app and stop it after the measurement; a dev server you start in the
+   background yourself, stop before your turn ends, or a headless run waits on it forever.
 4. Fix what fails, measure again: one round. What still fails goes to the person as a deviation with a
    proposal. A difference that is intended is a decided deviation, never a pass by silence. Look at the
    pairs the report lists.
