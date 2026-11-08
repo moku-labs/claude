@@ -12,6 +12,8 @@
  *   moku-fidelity ingest  <design-dir> --side expected|actual --size WxH --state <id> --file <probe.json>
  *   moku-fidelity deviate <design-dir> --element <id[,id…]> [--prop <p[,p…]>] --kind <kind> --reason "…" --proposal "…" [--by <agent>]
  *   moku-fidelity decide  <design-dir> <D1> --answer accept|reject|other [--words "…"]
+ *   moku-fidelity motion  <design-dir> --id <row> [--duration … --delay … --curve … --keys … --sequence … --sound … --reduced … --trigger …] | --file <rows.json> | --probe
+ *                                                                 what the build plays, per motion row
  *   moku-fidelity status  <design-dir>                            the last result as one JSON line
  *
  * <design-dir> is `.planning/design/{slug}`. `--unit` and `--elements` check one builder's elements only, into
@@ -28,13 +30,15 @@ import { addDeviation, decide, readDeviations } from "../lib/fidelity/deviations
 import { ACTUAL_SCHEMA, EXPECTED_SCHEMA, PAGE, RESULT_SCHEMA, buildInventory, normalizeSpec, parseSizes } from "../lib/fidelity/inventory.mjs";
 import { boxDiff, readPng } from "../lib/fidelity/png.mjs";
 import { probeExpression } from "../lib/fidelity/probe.mjs";
+import { MOTION, MOTION_PROBE, MOTION_SCHEMA, buildMotionInventory, motionFromPrototype } from "../lib/fidelity/motion.mjs";
 import { renderReport } from "../lib/fidelity/report.mjs";
+import { COLUMNS } from "../lib/proto-check/contract.mjs";
 
 const USAGE = 2;
 const [command, dirArg, ...rest] = process.argv.slice(2);
 const flags = parseFlags(rest);
 
-const COMMANDS = { capture, check, measure, compare, probe, ingest, deviate, decide: decideCmd, status };
+const COMMANDS = { capture, check, measure, compare, probe, ingest, deviate, decide: decideCmd, motion, status };
 if (!COMMANDS[command] || !dirArg) {
   const doc = readFileSync(new URL(import.meta.url), "utf8").split("\n");
   const from = doc.findIndex((line) => line.includes("moku-fidelity capture"));
@@ -47,7 +51,7 @@ const dir = resolve(dirArg);
 const checkDir = join(dir, "check");
 // A unit run (`--unit <name> --elements a,b`) checks only its own elements, beside the screen's files
 const unitDir = flags.unit ? join(checkDir, "units", String(flags.unit).replace(/[^\w.-]/g, "_")) : checkDir;
-const files = { spec: join(dir, "spec.json"), expected: join(checkDir, "expected.json"), actual: join(unitDir, "actual.json"), result: join(unitDir, "result.json"), report: join(unitDir, "design-check.md"), shots: join(unitDir, "actual"), deviations: join(dir, "deviations.json") };
+const files = { spec: join(dir, "spec.json"), expected: join(checkDir, "expected.json"), actual: join(unitDir, "actual.json"), result: join(unitDir, "result.json"), report: join(unitDir, "design-check.md"), motion: join(unitDir, "motion.json"), shots: join(unitDir, "actual"), deviations: join(dir, "deviations.json") };
 
 try {
   process.exit((await COMMANDS[command]()) ?? 0);
@@ -109,7 +113,7 @@ async function measure() {
 /** Compare what is measured and write `result.json` and `design-check.md`. */
 async function compare() {
   const expected = needExpected();
-  const actual = readJson(files.actual) ?? { values: {} };
+  const actual = { ...(readJson(files.actual) ?? { values: {} }), motion: readJson(files.motion)?.rows };
   const deviations = readDeviations(files.deviations);
   const { rows, summary } = compareAll(expected, actual, deviations);
   const look = lookList(expected, actual, rows);
@@ -196,6 +200,29 @@ async function decideCmd() {
   return 0;
 }
 
+/** Record what the build plays for one motion row (flags) or many (`--file`, id → column → value); `--probe` prints the pane expression. */
+async function motion() {
+  if (flags.probe) {
+    console.log(MOTION_PROBE);
+    return 0;
+  }
+
+  const expected = needExpected();
+  const known = new Set((expected.spec.animations ?? []).map((entry) => entry.id));
+  const incoming = flags.file ? JSON.parse(readFileSync(resolve(flags.file), "utf8")) : flags.id ? { [flags.id]: Object.fromEntries(COLUMNS.filter((column) => flags[column] !== undefined).map((column) => [column, String(flags[column])])) } : undefined;
+  if (!incoming) throw usage("--id <row> --duration … (any of the eight columns), or --file <rows.json>, or --probe");
+  const unknown = Object.keys(incoming).filter((id) => !known.has(id));
+  if (unknown.length > 0) throw usage(`not a row of the motion table: ${unknown.join(", ")}`);
+
+  const record = readJson(files.motion) ?? { schema: MOTION_SCHEMA, rows: {} };
+  for (const [id, values] of Object.entries(incoming)) record.rows[id] = { ...(record.rows[id] ?? {}), ...values };
+  record.measuredAt = new Date().toISOString();
+  writeJson(files.motion, record);
+  const left = [...known].filter((id) => COLUMNS.some((column) => record.rows[id]?.[column] === undefined));
+  console.log(left.length ? `took ${Object.keys(incoming).join(", ")}; motion rows still to measure: ${left.join(", ")}` : "every motion row measured: run compare");
+  return 0;
+}
+
 /** The last result as one JSON line: verdict, counts, when, and what it was measured against. */
 async function status() {
   const result = readJson(files.result);
@@ -221,7 +248,11 @@ function loadSpec(write) {
   if (flags.prototype) merged.prototype = flags.prototype;
 
   const spec = normalizeSpec(merged);
-  if (write && (flags.sizes || flags.game || flags.states || flags.prototype || !existsSync(files.spec))) writeJson(files.spec, spec);
+  // The motion table comes from the prototype's moku-design block unless spec.json already holds one
+  const prototype = join(dir, spec.prototype);
+  const fromPrototype = spec.animations === undefined && existsSync(prototype) ? motionFromPrototype(readFileSync(prototype, "utf8")) : undefined;
+  if (fromPrototype) spec.animations = fromPrototype;
+  if (write && (fromPrototype || flags.sizes || flags.game || flags.states || flags.prototype || !existsSync(files.spec))) writeJson(files.spec, spec);
   return spec;
 }
 
@@ -231,7 +262,7 @@ function loadSpec(write) {
  */
 function writeExpected(spec, values) {
   const complete = missingCells(spec, values).length === 0;
-  const expected = { schema: EXPECTED_SCHEMA, prototype: spec.prototype, capturedAt: new Date().toISOString(), complete, spec, inventory: complete ? buildInventory(spec, values) : [], values };
+  const expected = { schema: EXPECTED_SCHEMA, prototype: spec.prototype, capturedAt: new Date().toISOString(), complete, spec, inventory: complete ? [...buildInventory(spec, values), ...buildMotionInventory(spec)] : [], values };
   writeJson(files.expected, expected);
   return expected;
 }
@@ -250,7 +281,8 @@ function needExpected() {
   const own = new Set(String(flags.elements).split(",").map((id) => id.trim()).filter(Boolean));
   const unknown = [...own].filter((id) => !expected.inventory.some((row) => row.el === id));
   if (unknown.length > 0) throw usage(`not in the inventory: ${unknown.join(", ")}`);
-  return { ...expected, inventory: expected.inventory.filter((row) => own.has(row.el)) };
+  // A unit's motion rows are those that move its own elements
+  return { ...expected, inventory: expected.inventory.filter((row) => own.has(row.el) || (row.el.startsWith(MOTION) && own.has(row.target))) };
 }
 
 async function needChromium() {
@@ -283,7 +315,7 @@ async function openBuild() {
  */
 function inventoryElements(expected) {
   const now = readJson(files.spec)?.elements ?? {};
-  const ids = [...new Set(expected.inventory.map((row) => row.el).filter((id) => id !== PAGE))];
+  const ids = [...new Set(expected.inventory.map((row) => row.el).filter((id) => id !== PAGE && !id.startsWith(MOTION)))];
   return Object.fromEntries(ids.map((id) => [id, now[id]?.build ?? expected.spec.elements?.[id]?.build ?? { selector: `[data-check="${id}"]`, game: { key: id } }]));
 }
 
@@ -332,7 +364,7 @@ function countElements(values) {
 function sameSpec(p, q) {
   const prototypeSide = (elements) => (elements ? Object.fromEntries(Object.entries(elements).map(([id, def]) => [id, def.selector ?? null])) : null);
   const states = (list) => list.map((state) => ({ id: state.id, query: state.query, origin: state.origin }));
-  const key = (spec) => JSON.stringify({ sizes: spec.sizes, states: states(spec.states), conversion: spec.conversion, elements: prototypeSide(spec.elements), prototype: spec.prototype });
+  const key = (spec) => JSON.stringify({ sizes: spec.sizes, states: states(spec.states), conversion: spec.conversion, elements: prototypeSide(spec.elements), prototype: spec.prototype, animations: spec.animations ?? null });
   return key(p) === key(q);
 }
 

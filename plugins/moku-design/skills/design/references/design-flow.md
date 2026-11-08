@@ -293,7 +293,9 @@ areas), the states the prototype shows (`?state=` queries) and the conversion, t
 `moku-fidelity capture .planning/design/{SLUG}`. Elements need a `data-check` id in the prototype, or a
 selector in `spec.json`. The inventory it fixes is what the build is measured on, every time
 (`design-check.md`, Step 1). No headless browser here: capture through the browser pane with
-`moku-fidelity probe … --side expected` and `ingest`.
+`moku-fidelity probe … --side expected` and `ingest`. Capture copies the prototype's motion table (its
+`moku-design` block) into `spec.json` as `animations`, so each motion row × column is a row of the check too;
+keep it equal to §2b.
 
 ### E3 — Update the registry and state
 

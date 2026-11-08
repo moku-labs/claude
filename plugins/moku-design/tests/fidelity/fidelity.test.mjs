@@ -11,6 +11,7 @@ import { compareAll, compareRow, normalizeGradient, toPrototypePx } from "../../
 import { addDeviation, decide, readDeviations } from "../../lib/fidelity/deviations.mjs";
 import { buildInventory, normalizeSpec } from "../../lib/fidelity/inventory.mjs";
 import { boxDiff, decodePng } from "../../lib/fidelity/png.mjs";
+import { buildMotionInventory, compareMotion, motionFromPrototype, sameMotionValue } from "../../lib/fidelity/motion.mjs";
 import { pageProbe } from "../../lib/fidelity/probe.mjs";
 
 const BIN = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "bin", "moku-fidelity");
@@ -150,23 +151,61 @@ describe("moku-fidelity through the browser pane (probe → ingest → compare)"
       return file;
     };
 
-    writeFileSync(join(dir, "spec.json"), JSON.stringify({ sizes: [{ w: 390, h: 844 }], states: [{ id: "misted", query: "?state=misted" }] }));
+    writeFileSync(join(dir, "spec.json"), JSON.stringify({ sizes: [{ w: 390, h: 844 }], states: [{ id: "misted", query: "?state=misted" }], animations: [REVEAL] }));
     const page = { "@page": { scrollW: 390, innerW: 390, clipped: [] } };
     assert.equal(run("ingest", dir, "--side", "expected", "--size", "390x844", "--state", "misted", "--file", probe(join(dir, "e.json"), { blank1: box(), ...page })).status, 0);
     const expected = JSON.parse(readFileSync(join(dir, "check", "expected.json"), "utf8"));
-    assert.equal(expected.inventory.length, 9 + 3);
+    // blank1's 9 rows, 3 page rules, the 8 columns of the one motion row
+    assert.equal(expected.inventory.length, 9 + 3 + 8);
 
     run("ingest", dir, "--side", "actual", "--size", "390x844", "--state", "misted", "--file", probe(join(dir, "a.json"), { blank1: box({ drawn: ["image"], stroke: null, fill: "rgba(0, 0, 0, 0)" }), ...page }));
     const compared = run("compare", dir);
     assert.equal(compared.status, 1);
     assert.match(compared.stdout, /^Verdict: FAIL/m);
-    assert.match(readFileSync(join(dir, "check", "design-check.md"), "utf8"), /^Verdict: FAIL {4}Rows: 12/m);
+    assert.match(readFileSync(join(dir, "check", "design-check.md"), "utf8"), /^Verdict: FAIL {4}Rows: 20/m);
 
     const raised = run("deviate", dir, "--element", "blank1", "--kind", "conflict", "--reason", "today's row is a sprite", "--proposal", "keep the sprite");
     assert.match(raised.stdout, /D1 raised/);
     run("decide", dir, "D1", "--answer", "accept", "--words", "keep today's row");
+    // The motion rows are unmeasured until the build's motion is recorded
+    assert.equal(run("compare", dir).status, 1);
+    const { id, element, state, ...columns } = REVEAL;
+    assert.equal(run("motion", dir, "--id", id, ...Object.entries({ ...columns, duration: "330ms" }).flatMap(([key, value]) => [`--${key}`, value])).status, 0);
     assert.equal(run("compare", dir).status, 0);
+    assert.match(readFileSync(join(dir, "check", "design-check.md"), "utf8"), /^## Motion \(8\/8 rows pass\)/m);
     assert.match(readFileSync(join(dir, "check", "design-check.md"), "utf8"), /^Verdict: PASS/m);
+  });
+});
+
+const REVEAL = { id: "reveal", element: "blank1", state: "misted", trigger: "state enters", duration: "320ms", delay: "0ms", curve: "cubic-bezier(.2,.8,.2,1)", keys: "opacity 0 → 1, y 12px → 0px", sequence: "after the title", sound: "none", reduced: "opacity only, 120ms" };
+
+describe("motion rows", () => {
+  const spec = normalizeSpec({ sizes: [{ w: 390, h: 844 }], animations: [REVEAL] });
+
+  it("are each row of the motion table × its eight columns, and one failing row when there is no table", () => {
+    assert.equal(buildMotionInventory(spec).length, 8);
+    const none = buildMotionInventory(normalizeSpec({ sizes: [{ w: 390, h: 844 }] }));
+    assert.deepEqual(none.map((item) => item.el), ["motion:table"]);
+    assert.equal(compareMotion(none[0], spec, {}).result, "fail");
+  });
+
+  it("judge timing by 16 ms (a frame in a game), curves by their numbers, key values by px 1 and unitless 0.01", () => {
+    assert.ok(sameMotionValue("duration", "320ms", "0.335s"));
+    assert.ok(!sameMotionValue("duration", "320ms", "340ms"));
+    assert.ok(sameMotionValue("delay", "0ms", "16.6ms", true));
+    assert.ok(sameMotionValue("curve", "cubic-bezier(.2,.8,.2,1)", "cubic-bezier(0.2, 0.8, 0.2, 1)"));
+    assert.ok(!sameMotionValue("curve", "cubic-bezier(.2,.8,.2,1)", "ease-out"));
+    assert.ok(sameMotionValue("keys", "opacity 0 → 1, y 12px → 0px", "opacity 0.005 → 1, y 12.8px → 0px"));
+    assert.ok(!sameMotionValue("keys", "scale 1 → 1.08", "scale 1 → 1.1"));
+    assert.ok(sameMotionValue("sound", "none", " None."));
+  });
+
+  it("leave a row nobody measured unmeasured, and read the table from the prototype's block", () => {
+    const [first] = buildMotionInventory(spec);
+    assert.equal(compareMotion(first, spec, undefined).result, "unmeasured");
+    const html = `<script type="application/json" id="moku-design">${JSON.stringify({ motion: [{ ...REVEAL, kind: "reveal" }] })}</script>`;
+    assert.deepEqual(motionFromPrototype(html), [REVEAL]);
+    assert.equal(motionFromPrototype("<html></html>"), undefined);
   });
 });
 

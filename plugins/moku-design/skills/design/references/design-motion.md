@@ -199,7 +199,9 @@ moku-proto-check .planning/design/{slug}/concepts/r1c2.html --out .planning/desi
   reduced variant — and invents none. What the engine cannot do is an intended difference in the shared
   format, asked before it is chosen (for example "spring not available → ease-out-back, same peak").
 - A change with UI and no motion table in its design context does not pass the design check. Each row of the
-  table, at the end of the build, either matches or is an asked and decided difference.
+  table, at the end of the build, either matches or is an asked and decided difference. `moku-fidelity`
+  carries the table in `spec.json` (`animations`), fails the check with no table, and compares what the
+  builder records with `moku-fidelity motion` (`design-check.md`, "Motion").
 - Measuring: web by `document.getAnimations()` and the computed `transition` and `animation` (duration,
   delay, curve, keyframes; values at control points with `currentTime` paused; reduced motion by emulated
   media); a game by stepping the engine's own time (`now`) frame by frame and reading the node's position,

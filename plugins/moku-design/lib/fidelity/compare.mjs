@@ -21,6 +21,7 @@
  */
 
 import { PAGE, factor } from "./inventory.mjs";
+import { MOTION, compareMotion } from "./motion.mjs";
 
 /**
  * Tolerances in prototype px: a floor, and for lengths that scale a share of the length itself.
@@ -35,13 +36,15 @@ const allow = (floor, share, value) => Math.max(floor, share * Math.abs(Number(v
  * Compare every row of the inventory.
  *
  * @param {{ spec: any, inventory: any[], values: any }} expected the file `check/expected.json`
- * @param {{ values: any }} actual the file `check/actual.json`
+ * @param {{ values: any, motion?: any }} actual the file `check/actual.json`, with `motion.json`'s rows as `motion`
  * @param {any[]} [deviations] the entries of `deviations.json`
  * @returns {{ rows: any[], summary: any }}
  */
 export function compareAll(expected, actual, deviations = []) {
   const sizes = new Map(expected.spec.sizes.map((size) => [size.id, size]));
   const rows = expected.inventory.map((item) => {
+    if (item.el.startsWith(MOTION)) return applyDeviation({ ...item, ...compareMotion(item, expected.spec, actual.motion) }, deviations);
+
     const size = sizes.get(item.size);
     const k = factor(expected.spec.conversion, size);
     const exp = expected.values[item.size]?.[item.state];

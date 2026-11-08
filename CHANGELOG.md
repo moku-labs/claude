@@ -28,8 +28,15 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 - **Capture copies the motion.** `design-context.md` gets §2b, the motion table, and in §5 the target sizes, the
   adaptation rules and the states. A UI design context without the motion table is not finished. The plan's
   `## Design Reference` and the builder's brief carry the unit's motion rows; the builder invents no animation.
+- **The design check measures motion.** `moku-fidelity` keeps the prototype's motion table in `spec.json`
+  (`animations`, copied from the prototype at capture) and makes each row × column a row of the fixed inventory.
+  A design with no motion table fails (`motion:table`); "no motion on purpose" is a deviation the person decides.
+  Timing within 16 ms (a game: one frame), the same curve numbers, key values within 1 px or 0.01, the same
+  sequence, sound and reduced variant. The report gets a `## Motion` block.
 
 ### Added
+- `moku-fidelity motion <dir>`: records what the build plays per motion row (`--id … --duration …`, `--file`),
+  `--probe` prints the `getAnimations()` expression for the browser pane. An unrecorded row is `unmeasured`.
 - Eval cases `design-round-motion-game` and `design-round-motion-web` (`evals/moku-design/`): round 1 with two
   concepts, scored by `moku-proto-check` on the kept sandboxes.
 
