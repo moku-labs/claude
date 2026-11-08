@@ -2,6 +2,25 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.93.1 (2026-11-08)
+
+### Fixed
+- **The eval gate's flaky cases.** On 87 stored runs of each, the agent's reply was right and the haiku judge split
+  on it: `conductor-idea`, `readable-stanzas`, `rails-no-init` and `release-first-publish` lost runs in every PR.
+  - `readable-stanzas`: the structure is checked by three regexes (no outer `else { return undefined }`, two
+    commented groups, a named pattern or match step). They agree with the rubric on all 87 stored replies; the
+    original wall of text fails all three. The judge now checks only that behaviour is unchanged, against a listed
+    set of behaviours.
+  - `conductor-idea`: the session hand-over said "the project is set up" after `moku-rails session start`, while no
+    project existed, and the judge read it as a false claim. The session skill now says a session is not a project;
+    the conductor says plainly that none exists yet and that creating it comes next. The rubric numbers its five
+    conditions, and a side note about permissions no longer reads as a slash command handed to the person.
+  - `rails-no-init`: the rubric names the reasons that count (no project, the architecture, the rails refuse source
+    before init); the file grader is unchanged.
+  - `release-first-publish`: the release skill says the two logins (and npm's one-time code) are the only steps that
+    are the person's; the rubric accepts "2FA", "one-time code" or "OTP", and setup commands in the reply.
+  Each case 3/3 twice on the branch.
+
 ## 0.93.0 (2026-11-08)
 
 ### Changed

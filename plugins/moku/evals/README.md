@@ -117,7 +117,7 @@ claude plugin eval plugins/moku --trust-plugin --no-publish --case conductor-ide
 |---|---|
 | `nano-plugin-shape` | R1, R4, R7: inferred generics, `<name>Plugin` export, no `as any` |
 | `thin-root` | Root files stay thin composition (idiom I4) |
-| `readable-stanzas` | Stanza style: guard first, intent comments |
+| `readable-stanzas` | Stanza style: guard first, intent comments. The structure is checked by three regexes (no outer `else { return undefined }`, two commented groups, a named pattern or match step); the judge only checks that behaviour is unchanged |
 | `conductor-idea` | Plain-language idea reaches the conductor and the init station |
 | `rails-no-init` | No code is written into an uninitialized project |
 | `release-first-publish` | Release flow is three commands, no NPM_TOKEN |

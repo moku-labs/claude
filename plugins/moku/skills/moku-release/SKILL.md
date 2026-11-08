@@ -72,7 +72,9 @@ They come from the `moku-release` bin in `@moku-labs/ci`, a dev dependency of ev
 ## What only the human can do
 
 Two logins, once per machine. Ask the person to run them; never handle credentials, one-time codes
-or tokens yourself, and never suggest an `NPM_TOKEN` secret.
+or tokens yourself, and never suggest an `NPM_TOKEN` secret. Say in the answer that these logins (and
+npm's one-time code at the first publish) are the only steps that are theirs: the rest is commands you
+can run.
 
 ```bash
 gh auth login

@@ -97,7 +97,7 @@ moku-rails open 2026-09-26-streak-midnight --size S --type fix --title "Streak b
 ## A new project, step by step
 
 1. Engage with the idea in the person's own words. Ask only what decides the shape: app or framework, UI or not, backend or not. A person who wants to make a game needs no shape questions: it is a game on `@moku-labs/game`.
-2. Say what it is in moku terms in one sentence ("a Layer-3 web app on `@moku-labs/web`") and propose: "Shall I create the project?"
+2. Say what it is in moku terms in one sentence ("a Layer-3 web app on `@moku-labs/web`") and propose: "Shall I create the project?" Say plainly that no project exists yet (a started session is not one) and that creating it is the next step, before the idea is discussed, designed or planned.
 3. On yes, run `moku:init`. It leaves `.planning/moku.md`, which the rails read as "initialized".
    For a game, init also installs everything, scaffolds a hello world and opens it in the editor in the browser pane, so the person sees the setup works before any idea work starts.
 4. Open the first change, size L, type `project`: a new project always has the full route. Propose the next station: brainstorm when the person brought an idea and not a task, design when there is UI or a public API to shape, otherwise plan.
