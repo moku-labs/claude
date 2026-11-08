@@ -54,8 +54,15 @@ export function designVerdict(root, contract) {
   const missing = Array.isArray(summary.missingSizes) ? summary.missingSizes : [];
   if (failing.length > 0 || missing.length > 0) {
     const lines = [`The design check of ${slug} fails: ${summary.fail} failing and ${summary.unmeasured} unmeasured rows${missing.length ? `, sizes not measured: ${missing.join(", ")}` : ""}. Fix them inside your unit and run the check again. A row the project cannot follow (a face, an effect, a rule): raise it with \`moku-fidelity deviate\` and build the proposal, never a silent substitute.`];
-    for (const row of failing.slice(0, MAX_ROWS)) lines.push(`  ${row.row}: expected ${row.expected}, actual ${row.actual}${row.note ? ` — ${row.note}` : ""}`);
-    if (failing.length > MAX_ROWS) lines.push(`  … ${failing.length - MAX_ROWS} more in .planning/design/${slug}/check/design-check.md`);
+    const elements = new Map();
+    for (const row of failing) {
+      const [el, prop] = row.el && row.prop ? [row.el, row.prop] : String(row.row ?? "").split("|");
+      const props = elements.get(el) ?? new Map();
+      if (!props.has(prop)) props.set(prop, row);
+      elements.set(el, props);
+    }
+    for (const [el, props] of [...elements].slice(0, MAX_ROWS)) lines.push(`  ${el}: ${[...props].map(([prop, row]) => `${prop} ${row.expected} → ${row.actual}`).join("; ")}`);
+    if (elements.size > MAX_ROWS) lines.push(`  … ${elements.size - MAX_ROWS} more elements in .planning/design/${slug}/check/design-check.md`);
     return { block: lines.join("\n"), log: { slug, design: "fail", fail: summary.fail, unmeasured: summary.unmeasured } };
   }
 

@@ -17,7 +17,7 @@ export function renderReport({ slug, spec, summary, rows, deviations, look, date
   const sizes = spec.sizes.map((size) => `${size.id}${size.target ? "" : " (in between)"}`).join(", ");
   const lines = [
     `# Design check — ${slug} — ${date ?? new Date().toISOString().slice(0, 10)}`,
-    `Verdict: ${summary.verdict}    Rows: ${summary.rows}    Pass: ${summary.pass}    By decision: ${summary.decision}    Open: ${summary.open}    Fail: ${summary.fail}    Unmeasured: ${summary.unmeasured}`,
+    `Verdict: ${summary.verdict}    Rows: ${summary.rows}    Pass: ${summary.pass}    By decision: ${summary.decision}    Open: ${summary.open}    Fail: ${summary.fail}    Unmeasured: ${summary.unmeasured}${summary.covered ? `    In a picture: ${summary.covered}` : ""}`,
     `Prototype: ${spec.prototype}    Sizes: ${sizes}    States: ${spec.states.map((state) => state.id).join(", ")}    Conversion: ${conversion}`,
     `Waiting on the person: ${summary.pendingDeviations} deviation(s)${summary.missingSizes.length ? `    Not measured: ${summary.missingSizes.join(", ")}` : ""}`,
     "",
@@ -30,9 +30,9 @@ export function renderReport({ slug, spec, summary, rows, deviations, look, date
     for (const entry of pending) lines.push(`| ${entry.id} | ${entry.element}${entry.prop ? ` · ${entry.prop}` : ""} | ${cell(entry.reason)} (${entry.kind}) | ${cell(entry.proposal)} | ${entry.asked} by ${entry.by} |`);
   }
 
-  section(lines, "Fonts", rows.filter((row) => row.prop === "font" && row.result !== "pass"));
-  section(lines, "Fail", rows.filter((row) => row.result === "fail" && row.prop !== "font"));
-  section(lines, "Open", rows.filter((row) => row.result === "open"));
+  section(lines, "Fonts", rows.filter((row) => row.prop === "font" && row.result === "fail"));
+  byElement(lines, "Fail", rows.filter((row) => row.result === "fail" && row.prop !== "font"));
+  byDeviation(lines, rows.filter((row) => row.result === "open"));
   collapsed(lines, "Unmeasured", rows.filter((row) => row.result === "unmeasured"));
   section(lines, "By decision", rows.filter((row) => row.result === "decision"));
 
@@ -55,6 +55,56 @@ function section(lines, title, rows) {
   lines.push("", `## ${title} (${rows.length})`, "", "| Row | Element | Property | Size · state | Expected | Actual | Note |", "|---|---|---|---|---|---|---|");
   for (const row of rows.slice(0, MAX_LINES)) lines.push(`| ${row.row} | ${row.el === PAGE ? "page" : row.el} | ${row.prop} | ${row.size} · ${row.state} | ${cell(row.expected)} | ${cell(row.actual)} | ${cell(row.note ?? "")} |`);
   if (rows.length > MAX_LINES) lines.push(`| … | ${rows.length - MAX_LINES} more in check/result.json | | | | | |`);
+}
+
+/**
+ * Failing rows, one line per element: each property once, with its first expected → actual and where else it
+ * fails. What to fix reads at a glance; every row stays in check/result.json.
+ *
+ * @param {string[]} lines
+ * @param {string} title
+ * @param {any[]} rows
+ */
+function byElement(lines, title, rows) {
+  if (rows.length === 0) return;
+
+  const elements = new Map();
+  for (const row of rows) {
+    const props = elements.get(row.el) ?? new Map();
+    const seen = props.get(row.prop);
+    props.set(row.prop, seen ? { ...seen, where: [...seen.where, `${row.size} · ${row.state}`] } : { row, where: [`${row.size} · ${row.state}`] });
+    elements.set(row.el, props);
+  }
+
+  lines.push("", `## ${title} (${rows.length} rows, ${elements.size} elements)`, "", "| Element | What differs (prototype → build) | Where |", "|---|---|---|");
+  for (const [el, props] of [...elements].slice(0, MAX_LINES)) {
+    const what = [...props].map(([prop, { row }]) => `${prop}: ${cell(row.expected)} → ${cell(row.actual)}`).join("; ");
+    const where = [...new Set([...props.values()].flatMap((entry) => entry.where))];
+    lines.push(`| ${el === PAGE ? "page" : el} | ${what} | ${where.length > 3 ? `${where.slice(0, 3).join(", ")} +${where.length - 3}` : where.join(", ")} |`);
+  }
+  if (elements.size > MAX_LINES) lines.push(`| … | ${elements.size - MAX_LINES} more elements in check/result.json | |`);
+}
+
+/**
+ * Open rows, one line per deviation that holds them.
+ *
+ * @param {string[]} lines
+ * @param {any[]} rows
+ */
+function byDeviation(lines, rows) {
+  if (rows.length === 0) return;
+
+  const groups = new Map();
+  for (const row of rows) {
+    const key = row.deviation ?? "—";
+    const group = groups.get(key) ?? { count: 0, elements: new Set() };
+    group.count++;
+    group.elements.add(row.el);
+    groups.set(key, group);
+  }
+
+  lines.push("", `## Open (${rows.length}), waiting on the person`, "", "| Deviation | Rows | Elements |", "|---|---|---|");
+  for (const [key, group] of groups) lines.push(`| ${key} | ${group.count} | ${[...group.elements].join(", ")} |`);
 }
 
 /**

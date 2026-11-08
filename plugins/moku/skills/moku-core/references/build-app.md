@@ -263,8 +263,9 @@ read `references/design-check.md` under the base directory it prints. The tool i
    `moku-fidelity decide`.
 3. Here, after the last wave: `moku-fidelity check` once more on the whole screen at every target size,
    the app from Step 7, or the game page (`moku-game:playtest` → "The design check").
-4. Fix what fails, measure again, at most two rounds. A difference that is intended is a decided
-   deviation, never a pass by silence. Look at the pairs the report lists.
+4. Fix what fails, measure again: one round. What still fails goes to the person as a deviation with a
+   proposal. A difference that is intended is a decided deviation, never a pass by silence. Look at the
+   pairs the report lists.
 5. Show the verdict line, the questions, the open rows and the pairs of shots from
    `.planning/design/<slug>/check/design-check.md`.
 

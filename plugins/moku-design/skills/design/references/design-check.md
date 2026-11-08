@@ -92,16 +92,26 @@ unrounded. Read the report's head and its Fail and Open sections; `result.json` 
 and is not read whole. A game page is measured once its doors answer and its ui tree is still: use
 `check` on it, not a script of your own.
 
-| Property | pass | open (borderline) | fail |
-|---|---|---|---|
-| Position | ≤ 2 px | ≤ 4 px | more |
-| Size, radius, shadow, stroke width, font size, line height | ≤ 1 px | ≤ 2 px | more |
-| Letter spacing | ≤ 0.25 px | ≤ 0.5 px | more |
-| Colour, fill, stroke colour | every channel ±1, alpha ±0.02 | — | else |
-| Drawn, font family and weight, words, present | the same | — | else |
+| Property | pass | fail |
+|---|---|---|
+| Position | the gap from its nearest edge to the nearest edge of its container or a sibling, within max(3 px, 4 % of the gap) | else |
+| Size | within max(3 px, 3 % of the length); a one-line text box by its height only | else |
+| Radius | within max(2 px, 15 %) | else |
+| Font size · line height · letter spacing | 0.5 px · max(0.5 px, 2 %) · 0.3 px | else |
+| Shadow, stroke width | 1 px | else |
+| Colour, fill, stroke colour | every channel ±1, alpha ±0.02 | else |
+| Drawn, font family and weight, words, present | the same | else |
 
-A borderline row is open, never a pass: the build is fixed, or the person decides it. A row nobody
-measured (an element missing, a size skipped) is `unmeasured` and counts against the verdict too.
+The tolerances were chosen on data: on a real episode they catch all three fixes its person made by eye,
+and on 540 planted defects every one, while device pixels, rounding and a layout stretched to another
+device fail nothing. Type is strict (a line height 1 px off on a 21 px face was one of those fixes);
+geometry is judged the way a layout is built, so a local shift fails and an adaptation does not. An
+element the build draws as a picture where the prototype paints it fails `drawn` once; its fill, stroke,
+radius and shadow are `covered` (inside the picture), not failed again. A row nobody measured (an element
+missing, a size skipped) is `unmeasured` and counts against the verdict.
+
+The report lists failing rows one line per element (what differs, prototype → build, and where), open
+rows one line per deviation. Read that; `result.json` is for tools.
 
 **Without playwright in the project** the tool says so (exit 3). Measure in the browser pane instead,
 with the same probe:
@@ -149,8 +159,10 @@ Never move the prototype, never widen a tolerance, and never mark a row decided 
 
 ## Step 4 — fix, then check again
 
-A failing row is a defect of the build. Fix the source, run `check` again. At most **two rounds** after
-the builder's own; then list what is still open and ask the person. Do not start a third round alone.
+A failing row is a defect of the build. Fix the source, run `check` again: **one round** after the
+builder's own. What still fails then goes to the person as a question (a deviation with a proposal), not
+into another round. Fix what the report names; do not chase what it does not (a pixel the tolerance passes
+is not a defect), and do not re-take visual baselines to make a check pass.
 
 Then look at the **Look at these pairs** list of the report: elements whose pixels differ most while all
 their rows pass. It is a diagnostic, never a verdict: open both shots, and a difference the eye sees is a

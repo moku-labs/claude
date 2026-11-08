@@ -138,10 +138,10 @@ directory it prints. Pack absent: follow rule 5 of `references/e2e-testing.md` a
 
 The tool is `moku-fidelity`: `moku-fidelity check .planning/design/<slug> --url <the running app>`
 measures the app on the fixed inventory captured from the approved prototype, at every target size and
-state, by the same tolerances as the builder's check (fonts first, what draws each element, borderline
-values open, never pass). No playwright in the project: measure through the browser pane with
+state, by the same tolerances as the builder's check (fonts first, type strict, what draws each element,
+geometry by the gaps a layout is built from). No playwright in the project: measure through the browser pane with
 `moku-fidelity probe` and `ingest`. Deviations waiting on the person are asked now. Failed rows go to
-`moku-web-ux-reviewer` as fixes; at most two rounds. With the verdict at FAIL the station is not done:
+`moku-web-ux-reviewer` as fixes; one round, then what still fails is a question for the person. With the verdict at FAIL the station is not done:
 `moku-rails pause`, show the open rows and ask. The rails refuse `done e2e` for a change tied to a
 design until the report says `Verdict: PASS`.
 

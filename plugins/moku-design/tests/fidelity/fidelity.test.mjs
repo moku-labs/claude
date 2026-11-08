@@ -41,20 +41,36 @@ describe("the comparison", () => {
     assert.equal(result.result, "fail");
     assert.match(result.note, /prototype paints fill\+stroke, the build image \(frost-row-locked\.png\)/);
     assert.equal(compareRow(row("blank1", "size"), { blank1: box() }, { blank1: sprite }, 1, { h: 844 }).result, "pass");
-    assert.equal(compareRow(row("blank1", "stroke"), { blank1: box() }, { blank1: sprite }, 1, { h: 844 }).result, "fail");
+    assert.equal(compareRow(row("blank1", "stroke"), { blank1: box() }, { blank1: sprite }, 1, { h: 844 }).result, "covered", "inside the picture: the drawn row carries it");
   });
 
-  it("calls a value past its tolerance but within twice it open, never pass", () => {
-    const at = (lineHeight) => compareRow(row("t", "line-height"), { t: text({ lineHeight: 13 }) }, { t: text({ lineHeight }) }, 1, { h: 844 }).result;
-    assert.equal(at(14), "pass");
-    assert.equal(at(14.3), "open");
-    assert.equal(at(15.5), "fail");
+  it("is strict on type: a line height 1 px off on a 21 px face fails, 0.4 px passes", () => {
+    const at = (lineHeight) => compareRow(row("t", "line-height"), { t: text({ size: 21, lineHeight: 24.78 }) }, { t: text({ size: 21, lineHeight }) }, 1, { h: 844 }).result;
+    assert.equal(at(25.18), "pass");
+    assert.equal(at(25.81), "fail");
+  });
+
+  it("fails a local shift and passes the same layout stretched to another device", () => {
+    const page = { card: box({ x: 20, y: 100, w: 350, h: 300 }), title: text({ x: 36, y: 116, w: 200, h: 31, lineHeight: 31 }), price: text({ x: 36, y: 160, w: 120, h: 31, lineHeight: 31 }) };
+    const stretch = (b, s) => ({ ...b, x: 195 + (b.x - 195) * s, w: b.w * s, y: b.y * s, h: b.h * s });
+    const stretched = Object.fromEntries(Object.entries(page).map(([id, b]) => [id, stretch(b, 1.03)]));
+    assert.equal(compareRow(row("price", "position"), page, stretched, 1, { h: 844 }).result, "pass");
+    const shifted = { ...page, price: { ...page.price, y: page.price.y + 8 } };
+    assert.equal(compareRow(row("price", "position"), page, shifted, 1, { h: 844 }).result, "fail");
+    assert.equal(compareRow(row("price", "position"), page, { ...page, price: { ...page.price, y: page.price.y + 1.5 } }, 1, { h: 844 }).result, "pass", "device pixels and rounding never fail");
+  });
+
+  it("compares a one-line text box by its height: a game measures glyphs, a page the block", () => {
+    const want = { count: text({ w: 268, h: 17, size: 13, lineHeight: 17 }) };
+    assert.equal(compareRow(row("count", "size"), want, { count: text({ w: 77, h: 17, size: 13, lineHeight: 17 }) }, 1, { h: 844 }).result, "pass");
+    assert.equal(compareRow(row("count", "size"), want, { count: text({ w: 77, h: 30, size: 13, lineHeight: 17 }) }, 1, { h: 844 }).result, "fail");
   });
 
   it("compares game units in prototype px with the exact factor of each frame", () => {
     const k = 1080 / 768;
     const game = toPrototypePx(text({ lineHeight: 38 * k + 1.1 * k, size: 32 * k }), k);
-    assert.equal(compareRow(row("t", "line-height"), { t: text({ lineHeight: 38 }) }, { t: text({ lineHeight: 38 * k + 1.1 * k }) }, k, { h: 1024 }).result, "open");
+    assert.equal(compareRow(row("t", "line-height"), { t: text({ lineHeight: 38 }) }, { t: text({ lineHeight: 38 * k + 1.1 * k }) }, k, { h: 1024 }).result, "fail");
+    assert.equal(compareRow(row("t", "line-height"), { t: text({ lineHeight: 38 }) }, { t: text({ lineHeight: 38 * k + 0.4 * k }) }, k, { h: 1024 }).result, "pass");
     assert.ok(Math.abs(game.size - 32) < 1e-9);
   });
 
@@ -110,7 +126,8 @@ describe("deviations", () => {
     const one = { id: "D1", element: ["a", "b"], prop: ["drawn", "fill", "stroke"], kind: "conflict", reason: "the kit draws rows as a sprite", proposal: "keep the sprite", decision: null };
     const rows = compareAll(expected, actual, [one]).rows.filter((item) => ["drawn", "fill", "stroke"].includes(item.prop));
     assert.equal(rows.length, 6);
-    assert.ok(rows.every((item) => item.result === "open" && item.deviation === "D1"));
+    assert.ok(rows.filter((item) => item.prop === "drawn").every((item) => item.result === "open" && item.deviation === "D1"));
+    assert.ok(rows.filter((item) => item.prop !== "drawn").every((item) => item.result === "covered"), "fill and stroke are inside the picture");
   });
 });
 

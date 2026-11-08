@@ -1,26 +1,35 @@
 /**
- * The comparison of the design check: every inventory row gets one result, by fixed tolerances.
+ * The comparison of the design check: every inventory row gets one result.
  *
  * Results:
  * - `pass` — within the tolerance.
- * - `open` — borderline (past the tolerance, within twice it) or waiting on the person (a pending deviation).
- *   A borderline row is never a pass: the build is fixed or the person decides.
- * - `fail` — past twice the tolerance, a different value, or drawn by something else.
+ * - `open` — waiting on the person: a pending deviation names the row.
+ * - `fail` — past the tolerance, a different value, or drawn by something else.
+ * - `covered` — the build draws the element as a picture where the prototype paints it: its fill, stroke,
+ *   radius and shadow are inside the picture, and the `drawn` row of the element carries the difference.
  * - `decision` — the person (or §9 of the design context) decided the build differs here.
- * - `unmeasured` — the build side has no value for the row. Counted against the verdict like an open row.
+ * - `unmeasured` — the build side has no value for the row. Counted against the verdict.
  *
  * Lengths are compared in prototype px: the build's value in target units is divided by the conversion
- * factor of its size (web 1; game `reference / width`), unrounded, so a game frame of 768 compares as exactly
- * as one of 390.
+ * factor of its size (web 1; game `reference / width`), unrounded. The tolerances were chosen on data (PR6:
+ * three human fixes of a real episode, 540 planted defects, planted jitter, rounding and a proportional
+ * stretch across five viewports): type is strict, geometry is judged the way a layout is built.
+ * - A position is the gap from the element's nearest edge to the nearest edge of its container or of a
+ *   sibling, so a local shift fails and an adaptation that stretches the whole layout passes.
+ * - Sizes, radii and gaps get a floor of a few px (device pixels, rounding) and a share of their own length.
+ * - A one-line text box is compared by its height only: a page measures the block, a game the glyphs.
  */
 
 import { PAGE, factor } from "./inventory.mjs";
 
-/** Tolerances in prototype px (letter spacing tighter: it is set in tenths). */
-export const TOLERANCE = { position: 2, size: 1, radius: 1, shadow: 1, stroke: 1, type: 1, letterSpacing: 0.25, alpha: 0.02, channel: 1 };
+/**
+ * Tolerances in prototype px: a floor, and for lengths that scale a share of the length itself.
+ * Type is strict (a line height 1 px off on a 21 px face was a real defect a person fixed).
+ */
+export const TOLERANCE = { gap: 3, gapShare: 0.04, size: 3, sizeShare: 0.03, radius: 2, radiusShare: 0.15, shadow: 1, stroke: 1, fontSize: 0.5, lineHeight: 0.5, lineHeightShare: 0.02, letterSpacing: 0.3, alpha: 0.02, channel: 1 };
 
-/** How far past a tolerance a value is still borderline (open) instead of a fail, as a multiple of it. */
-export const BORDERLINE = 2;
+/** The tolerance of one length: its floor, or its share of the expected value when that is larger. */
+const allow = (floor, share, value) => Math.max(floor, share * Math.abs(Number(value) || 0));
 
 /**
  * Compare every row of the inventory.
@@ -69,20 +78,26 @@ export function compareRow(item, exp, act, k, size) {
 
   if (!a || !a.present) return { result: "unmeasured", expected: "", actual: "missing", note: "the element is missing on the build" };
 
+  // Painted in the prototype, a picture in the build: the drawn row says so once, the rest is inside the picture
+  if (["fill", "stroke", "radius", "shadow"].includes(item.prop) && (a.drawn ?? []).includes("image") && !(e.drawn ?? []).includes("image")) {
+    return { result: "covered", expected: "", actual: `image${a.image ? ` (${a.image})` : ""}`, note: "drawn as a picture: see the drawn row" };
+  }
+
+  const oneLine = e.text !== undefined && Number.isFinite(e.lineHeight) && e.h < 1.5 * e.lineHeight;
   const COMPARE = {
-    position: () => lengths([e.x, e.y], [a.x, a.y], TOLERANCE.position, fmtPair),
-    size: () => lengths([e.w, e.h], [a.w, a.h], TOLERANCE.size, fmtSize),
+    position: () => position(item.el, exp, act, k, e, a),
+    size: () => (oneLine ? { ...lengths([e.h], [a.h], [allow(TOLERANCE.size, TOLERANCE.sizeShare, e.h)], fmtPx), expected: fmtSize([e.w, e.h]), actual: fmtSize([a.w, a.h]) } : lengths([e.w, e.h], [a.w, a.h], [allow(TOLERANCE.size, TOLERANCE.sizeShare, e.w), allow(TOLERANCE.size, TOLERANCE.sizeShare, e.h)], fmtSize)),
     drawn: () => drawn(e, a),
     fill: () => fill(e, a),
     stroke: () => stroke(e, a),
-    radius: () => lengths([pill(e)], [pill(a)], TOLERANCE.radius, fmtPx),
+    radius: () => lengths([pill(e)], [pill(a)], [allow(TOLERANCE.radius, TOLERANCE.radiusShare, pill(e))], fmtPx),
     shadow: () => shadow(e.shadow, a.shadow),
     opacity: () => alpha(e.opacity, a.opacity),
     words: () => same(e.text, a.text ?? "(none)"),
     font: () => font(e, a),
-    "font-size": () => lengths([e.size], [a.size], TOLERANCE.type, fmtPx),
-    "line-height": () => lengths([e.lineHeight], [a.lineHeight], TOLERANCE.type, fmtPx),
-    "letter-spacing": () => lengths([e.letterSpacing ?? 0], [a.letterSpacing ?? 0], TOLERANCE.letterSpacing, fmtPx),
+    "font-size": () => lengths([e.size], [a.size], [TOLERANCE.fontSize], fmtPx),
+    "line-height": () => lengths([e.lineHeight], [a.lineHeight], [allow(TOLERANCE.lineHeight, TOLERANCE.lineHeightShare, e.lineHeight)], fmtPx),
+    "letter-spacing": () => lengths([e.letterSpacing ?? 0], [a.letterSpacing ?? 0], [TOLERANCE.letterSpacing], fmtPx),
     color: () => colour(e.color, a.color),
   };
 
@@ -91,24 +106,85 @@ export function compareRow(item, exp, act, k, size) {
 }
 
 /**
- * Lengths, each within the tolerance: pass; any past it but within the borderline: open; else fail.
+ * Lengths, each within its tolerance: pass; else fail. There is no borderline band: the tolerances are the
+ * line between noise and a defect.
  *
  * @param {number[]} want
  * @param {number[]} got
- * @param {number} tolerance
+ * @param {number | number[]} tolerance one for all, or one per value
  * @param {(values: number[]) => string} format
  * @returns {{ result: string, expected: string, actual: string, note?: string }}
  * @example
- * lengths([13], [14.3], 1, fmtPx); // { result: "open", note: "borderline: 1.3 px off, tolerance 1" … }
+ * lengths([13], [14.3], [0.5], fmtPx); // { result: "fail", note: "1.3 px off, tolerance 0.5" … }
  */
 export function lengths(want, got, tolerance, format) {
+  const tol = (index) => (Array.isArray(tolerance) ? tolerance[index] : tolerance);
   const bad = got.some((value) => !Number.isFinite(value));
-  const worst = bad ? Number.POSITIVE_INFINITY : Math.max(...want.map((value, index) => Math.abs(value - got[index])));
+  const off = bad ? [] : want.map((value, index) => Math.abs(value - got[index]));
+  const over = off.findIndex((value, index) => value > tol(index) + 1e-6);
   const base = { expected: format(want), actual: bad ? "(none)" : format(got) };
 
-  if (worst <= tolerance + 1e-6) return { result: "pass", ...base };
-  if (worst <= tolerance * BORDERLINE + 1e-6) return { result: "open", ...base, note: `borderline: ${round(worst)} px off, tolerance ${tolerance}; fix it or the person decides` };
-  return { result: "fail", ...base, note: bad ? "no value" : `${round(worst)} px off, tolerance ${tolerance}` };
+  if (bad) return { result: "fail", ...base, note: "no value" };
+  if (over === -1) return { result: "pass", ...base };
+  return { result: "fail", ...base, note: `${round(off[over])} px off, tolerance ${round(tol(over))}` };
+}
+
+/**
+ * A position, per axis: the gap from the element's edge nearest to an edge of its container or of a sibling
+ * (in the prototype), against the gap between the same two edges in the build, within max(3 px, 4 % of the gap).
+ * A local shift moves that gap by its full amount; a layout stretched to another device moves it a little.
+ *
+ * @param {string} id
+ * @param {Record<string, any>} exp
+ * @param {Record<string, any>} act
+ * @param {number} k
+ * @param {Record<string, any>} e
+ * @param {Record<string, any>} a
+ */
+function position(id, exp, act, k, e, a) {
+  const family = containers(exp);
+  const parent = family[id];
+  const refs = Object.keys(family).filter((other) => other !== id && (other === parent || family[other] === parent) && family[other] !== id && act[other]?.present);
+  const boxes = refs.map((other) => [exp[other], toPrototypePx(act[other], k)]);
+  if (!parent) boxes.push([{ x: 0, y: 0, w: Number.POSITIVE_INFINITY, h: Number.POSITIVE_INFINITY }, { x: 0, y: 0, w: Number.POSITIVE_INFINITY, h: Number.POSITIVE_INFINITY }]);
+
+  const base = { expected: fmtPair([e.x, e.y]), actual: fmtPair([a.x, a.y]) };
+  for (const [axis, dim] of [["x", "w"], ["y", "h"]]) {
+    const gaps = [];
+    for (const [rp, rb] of boxes) {
+      const pairs = [[e[axis], a[axis]], [e[axis] + e[dim], a[axis] + a[dim]]];
+      const edges = [[rp[axis], rb[axis]], [rp[axis] + rp[dim], rb[axis] + rb[dim]]];
+      for (const [pe, pa] of pairs) for (const [qe, qa] of edges) if (Number.isFinite(qe)) gaps.push([pe - qe, pa - qa]);
+    }
+    if (gaps.length === 0) continue;
+    gaps.sort((p, q) => Math.abs(p[0]) - Math.abs(q[0]));
+    const [want, got] = gaps[0];
+    const tolerance = allow(TOLERANCE.gap, TOLERANCE.gapShare, want);
+    if (Math.abs(want - got) > tolerance + 1e-6) return { result: "fail", ...base, note: `${axis}: the gap to the nearest edge is ${round(got)} px, the prototype's ${round(want)} (tolerance ${round(tolerance)})` };
+  }
+  return { result: "pass", ...base };
+}
+
+const CONTAINERS = new WeakMap();
+
+/**
+ * Each present element's container in the prototype: the smallest other element that holds its box.
+ *
+ * @param {Record<string, any>} exp
+ * @returns {Record<string, string | undefined>}
+ */
+function containers(exp) {
+  if (CONTAINERS.has(exp)) return CONTAINERS.get(exp);
+  const ids = Object.keys(exp).filter((id) => id !== PAGE && exp[id]?.present && Number.isFinite(exp[id].w));
+  const area = (id) => exp[id].w * exp[id].h;
+  const holds = (p, b) => p.x <= b.x + 0.5 && p.y <= b.y + 0.5 && p.x + p.w >= b.x + b.w - 0.5 && p.y + p.h >= b.y + b.h - 0.5;
+  const out = {};
+  for (const id of ids) {
+    const best = ids.filter((other) => other !== id && area(other) > area(id) && holds(exp[other], exp[id])).sort((p, q) => area(p) - area(q))[0];
+    out[id] = best;
+  }
+  CONTAINERS.set(exp, out);
+  return out;
 }
 
 // --- appearance --------------------------------------------------------------
@@ -143,7 +219,7 @@ function stroke(e, a) {
   if (!want && !got) return { result: "pass", expected: "none", actual: "none" };
   if (!want || !got) return { result: "fail", expected: fmtStroke(want), actual: fmtStroke(got), note: want ? "the build has no stroke" : "the build has a stroke the prototype lacks" };
 
-  const width = lengths([want.width], [got.width], TOLERANCE.stroke, fmtPx);
+  const width = lengths([want.width], [got.width], [TOLERANCE.stroke], fmtPx);
   const col = colour(want.color, got.color);
   const result = [width.result, col.result].includes("fail") ? "fail" : [width.result, col.result].includes("open") ? "open" : "pass";
 
@@ -175,8 +251,7 @@ function alpha(want, got) {
   const diff = Math.abs(p - q);
   const base = { expected: String(round(p)), actual: String(round(q)) };
 
-  if (diff <= TOLERANCE.alpha) return { result: "pass", ...base };
-  return diff <= TOLERANCE.alpha * BORDERLINE ? { result: "open", ...base, note: "borderline opacity" } : { result: "fail", ...base };
+  return diff <= TOLERANCE.alpha + 1e-6 ? { result: "pass", ...base } : { result: "fail", ...base };
 }
 
 /** @param {string | undefined} want @param {string | undefined} got */
@@ -189,7 +264,7 @@ function shadow(want, got) {
 
   let worst = "pass";
   for (let index = 0; index < p.length; index++) {
-    const len = lengths(p[index].lengths, q[index].lengths, TOLERANCE.shadow, fmtPx).result;
+    const len = lengths(p[index].lengths, q[index].lengths, [TOLERANCE.shadow, TOLERANCE.shadow, TOLERANCE.shadow, TOLERANCE.shadow], fmtPx).result;
     const col = colour(fmtColour(p[index].colour), fmtColour(q[index].colour)).result;
     const inset = p[index].inset === q[index].inset ? "pass" : "fail";
     worst = [worst, len, col, inset].includes("fail") ? "fail" : [worst, len, col].includes("open") ? "open" : "pass";
@@ -270,7 +345,7 @@ function comparePage(prop, exp, act, k, size) {
  * @param {any[]} deviations
  */
 export function applyDeviation(row, deviations) {
-  if (row.result === "pass") return row;
+  if (row.result === "pass" || row.result === "covered") return row;
 
   const match = deviations.find((entry) => (entry.element === row.el || (Array.isArray(entry.element) && entry.element.includes(row.el))) && (!entry.prop || entry.prop === row.prop || (Array.isArray(entry.prop) && entry.prop.includes(row.prop))) && (!entry.sizes || entry.sizes.includes(row.size)) && (!entry.states || entry.states.includes(row.state)));
   if (!match) return row;
@@ -295,7 +370,7 @@ export function summarize(rows, spec, actual, deviations) {
   const count = (result) => rows.filter((row) => row.result === result).length;
   const pending = deviations.filter((entry) => !entry.decision?.answer);
   const missingSizes = spec.sizes.filter((size) => size.target && !actual.values?.[size.id]).map((size) => size.id);
-  const summary = { rows: rows.length, pass: count("pass"), decision: count("decision"), open: count("open"), fail: count("fail"), unmeasured: count("unmeasured"), pendingDeviations: pending.length, missingSizes };
+  const summary = { rows: rows.length, pass: count("pass"), decision: count("decision"), open: count("open"), fail: count("fail"), covered: count("covered"), unmeasured: count("unmeasured"), pendingDeviations: pending.length, missingSizes };
   const pass = summary.fail === 0 && summary.open === 0 && summary.unmeasured === 0 && pending.length === 0 && missingSizes.length === 0;
 
   return { verdict: pass ? "PASS" : "FAIL", ...summary };

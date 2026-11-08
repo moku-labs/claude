@@ -180,7 +180,7 @@ describe("the design check at the end of a UI unit", () => {
     const root = designProject({ result: { summary: { ...clean, verdict: "FAIL", fail: 1, pass: 9 }, rows: [{ row: "blank1|drawn|390x844|misted", result: "fail", expected: "fill+stroke", actual: "image (frost-row-locked)", note: "drawn differently" }] } });
     const { decision, reason } = JSON.parse(stop(root, withDesign()).out);
     assert.equal(decision, "block");
-    assert.match(reason, /blank1\|drawn\|390x844\|misted: expected fill\+stroke, actual image/);
+    assert.match(reason, /blank1: drawn fill\+stroke → image/);
   });
 
   it("let a clean unit through, and send waiting deviations to the orchestrator without a block", () => {
