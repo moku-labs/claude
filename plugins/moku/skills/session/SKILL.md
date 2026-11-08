@@ -65,7 +65,7 @@ From here on: every request is routed before code follows it, source files are r
 
 ## 4. Hand over
 
-Tell the person in one or two sentences where the work happens and that the project is on the rails. Then load the `moku:moku` skill with the Skill tool and let the conductor take the request they came with. Do not answer that request yourself.
+Tell the person in one or two sentences where the work happens and that the project is on the rails. A session is not a project: in a directory with no moku project yet, say that the session started and that nothing is created yet, and never write that the project is set up, created or initialized; creating it is the init station's work, still ahead. Then load the `moku:moku` skill with the Skill tool and let the conductor take the request they came with. Do not answer that request yourself.
 
 ## Several features at once
 
