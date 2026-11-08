@@ -16,11 +16,14 @@
  */
 
 import { statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 import { RESUME_INSTRUCTION } from "../lib/hooks/agents.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
 import { isSystemPrompt, promptText } from "../lib/hooks/origin.mjs";
+import { accountOffer } from "../lib/hooks/resume-offer.mjs";
+import { appSessionsOnly, asksToResume } from "../lib/hooks/resume-words.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
 import { rememberStatus, statusChanged } from "../lib/hooks/seen.mjs";
 import { DEFAULT_SINCE_HOURS, latestCheckpoint } from "../lib/rails/checkpoint.mjs";
@@ -58,7 +61,10 @@ const RESUME = [
   /(восстанови|восстановить|продолжи|продолжить|верни|вернуть|подними|поднять|разверни|развернуть|открой)\w*\s+[^.?!\n]{0,30}(сесси|работу|прогресс)/i,
 ];
 
-const RESUME_HINT = (file) => `A checkpoint of the moku sessions is on this machine (${file}). If the person means those sessions (after signing in again, "restore the sessions"), run \`moku-rails resume-checkpoint --json\` and do it in one pass: if Code tab sessions are not open in the app yet, hand the person \`moku-rails resume-checkpoint --open\` to run in their own terminal with the app open, then run it again; set each title in \`data.titles\` with set_session_title and send each message in \`data.messages\` with send_message (new ids for the parents, the artifact copies for each session); then show the person the map of old and new ids, the background tasks to start again, and, if they want the sidebar nesting back, \`moku-rails resume-checkpoint --relink\` to run in a terminal with the app closed. If they mean the change in front of them ("continue the work on F152"), ignore this line. Never sign in or out yourself, and never read a token, \`.credentials.json\` or the Keychain.`;
+/** This plugin's CLI, by absolute path: a line the person runs must not depend on their PATH. */
+const RAILS_BIN = fileURLToPath(new URL("../bin/moku-rails", import.meta.url));
+
+const RESUME_HINT = (file) => `A checkpoint of the moku sessions is on this machine (${file}). If the person means those sessions (after signing in again, "restore the sessions"), run \`${RAILS_BIN} resume-checkpoint --json\` once. If Code tab sessions are not open in the app yet, hand the person \`${RAILS_BIN} resume-checkpoint --open\` to run with the app open (the app's own terminal works): it adds removed worktrees again, frees their branches, opens the sessions parents first and prints everything left, so nothing runs a second time. Then do what that output lists, and only that: set_session_title for each title it names, send_message for each message (data.messages, or the resume-actions.json it names), \`--carry\` when it says so, and the one Terminal.app line for the sidebar nesting only when it says side sessions are not nested. Show the person the map of old and new ids, what was lost, and the background tasks to start again. If they mean the change in front of them ("continue the work on F152"), ignore this line. Never sign in or out yourself, and never read a token, \`.credentials.json\` or the Keychain.`;
 
 /**
  * The newest checkpoint if it is recent enough to resume, else undefined.
@@ -84,7 +90,8 @@ function freshCheckpoint() {
  * resumeHint("восстанови сессии"); // "A checkpoint of the moku sessions is on this machine (...)..."
  */
 function resumeHint(text) {
-  if (!RESUME.some((pattern) => pattern.test(text))) return undefined;
+  const asks = asksToResume(text) || (RESUME.some((pattern) => pattern.test(text)) && !appSessionsOnly(text));
+  if (!asks) return undefined;
 
   const file = freshCheckpoint();
   return file ? RESUME_HINT(file) : undefined;
@@ -109,9 +116,10 @@ if (isSystemPrompt(payload)) {
   process.exit(0);
 }
 
-// Off the rails: other projects are never disturbed, except a request for the saved sessions back
+// Off the rails: other projects are never disturbed, except a request for the saved sessions back, or the first
+// prompt under a new account while the saved sessions wait
 if (!root) {
-  const hint = resumeHint(prompt);
+  const hint = resumeHint(prompt) ?? accountOffer(freshCheckpoint(), RAILS_BIN);
   if (hint) {
     console.log(hint);
     process.exit(0);
@@ -133,7 +141,7 @@ if (tweaking) {
 
 // Signing in again ends the sessions: the checkpoint keeps them, a pause keeps only the change
 const signingIn = SIGN_IN.some((pattern) => pattern.test(prompt));
-const resuming = signingIn ? undefined : resumeHint(prompt);
+const resuming = signingIn ? undefined : (resumeHint(prompt) ?? accountOffer(freshCheckpoint(), RAILS_BIN));
 
 const report = status({ root, positional: [], flags: {} });
 const changed = statusChanged(root, payload.session_id, report.lines);

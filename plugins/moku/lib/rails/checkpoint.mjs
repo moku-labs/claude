@@ -21,6 +21,7 @@ import { basename, dirname, join, relative, sep } from "node:path";
 import { mokuHome, rootForSession } from "../hooks/root.mjs";
 import { saveArtifacts } from "./artifacts.mjs";
 import { desktopRoot, readRecords, reopenedRecord } from "./desktop.mjs";
+import { branchExists, mainCheckout } from "./worktrees.mjs";
 import { loadLedger } from "./ledger.mjs";
 import { routeFor } from "./routes.mjs";
 
@@ -48,6 +49,10 @@ import { routeFor } from "./routes.mjs";
  * @property {string} lastActivityAt
  * @property {SavedChange | null} change the open change of its lane
  * @property {string} branch
+ * @property {string | null} [repo] the main checkout of its repository, where a gone worktree is added again
+ * @property {boolean} [worktreeByApp] whether the app made the session's worktree; it makes a new one on resume
+ * @property {boolean} [folderGone] whether its folder was gone at the save; the resume adds it again from the branch
+ * @property {string | null} [permissionMode] the permission mode it ran in, from its transcript, else the app's record
  * @property {string[]} uncommitted the files git reports as changed or new
  * @property {{ kind: "agent" | "bash", description: string }[]} unfinished background tasks that had not reported back
  */
@@ -68,6 +73,7 @@ import { routeFor } from "./routes.mjs";
  * @property {string | null} newId the local id under the new sign-in, `local_<id>`, null for a terminal session
  * @property {boolean} opened whether the app has the session under the new sign-in already
  * @property {string | null} file the app's record of the reopened session
+ * @property {import("./desktop.mjs").DesktopRecord | null} record that record, read
  */
 
 /** How far back a terminal session counts as open, unless `--since` says otherwise. */
@@ -81,6 +87,9 @@ const LAUNCHED = /^(Async agent launched|Command running in background)/;
 
 /** Words that mark a command as one that may carry a credential. */
 const SECRET_LIKE = /key|token|secret|passw|auth|credential|bearer/i;
+
+/** The permission mode a transcript line records. */
+const PERMISSION_MODE = /"permissionMode":"([A-Za-z]+)"/;
 
 /** How a background task reports back: a notification naming the tool call that started it. */
 const REPORTED = /<tool-use-id>([^<]+)<\/tool-use-id>/g;
@@ -132,8 +141,13 @@ export function collectSessions({ config, sinceMs, now = Date.now(), includeTemp
     const head = transcript ? readHead(transcript) : {};
     const cwd = head.cwd ?? record.cwd;
     if (!transcript) skipped.push({ id: record.cliSessionId, title: record.title, reason: `its transcript is not in ${config}` });
-    else if (!cwd || !existsSync(cwd)) skipped.push({ id: record.cliSessionId, title: record.title, reason: `its folder ${cwd || "(none)"} is gone` });
-    else sessions.push(savedSession({ config, transcript, cwd, surface: "desktop", record, artifactsDir }));
+    else if (cwd && existsSync(cwd)) sessions.push(savedSession({ config, transcript, cwd, surface: "desktop", record, artifactsDir }));
+    else {
+      // A removed worktree: the session comes back when its branch is still there to add the folder from
+      const gone = goneFolder(cwd, record);
+      if (gone.reason) skipped.push({ id: record.cliSessionId, title: record.title, reason: gone.reason });
+      else sessions.push(savedSession({ config, transcript, cwd, surface: "desktop", record, artifactsDir }));
+    }
   }
 
   // Terminal sessions, which the app does not list: recent ones on the rails
@@ -154,6 +168,24 @@ export function collectSessions({ config, sinceMs, now = Date.now(), includeTemp
 }
 
 /**
+ * Whether a session whose folder is gone can come back: its repository and its branch, from the app's record, must
+ * still exist. The reason it cannot, when it cannot.
+ *
+ * @param {string | undefined} cwd
+ * @param {import("./desktop.mjs").DesktopRecord} record
+ * @returns {{ reason?: string }}
+ */
+function goneFolder(cwd, record) {
+  const repo = record.originCwd;
+  if (!cwd) return { reason: "the app names no folder for it" };
+  if (!repo || !existsSync(repo) || repo === cwd) return { reason: `its folder ${cwd} is gone, and so is its repository` };
+  if (!record.branch) return { reason: `its folder ${cwd} is gone and the app names no branch to add it again from` };
+  if (!branchExists(repo, record.branch)) return { reason: `lost: its folder ${cwd} is gone and its branch ${record.branch} no longer exists in ${repo}` };
+
+  return {};
+}
+
+/**
  * Where a session stands, for the checkpoint: its rails, its tree, its unfinished tasks and copies of its artifacts.
  *
  * @param {{ config: string, transcript: string, cwd: string, surface: "desktop" | "cli", record?: import("./desktop.mjs").DesktopRecord, artifactsDir?: string }} options
@@ -161,8 +193,10 @@ export function collectSessions({ config, sinceMs, now = Date.now(), includeTemp
  */
 function savedSession({ config, transcript, cwd, surface, record, artifactsDir }) {
   const id = basename(transcript, ".jsonl");
-  const root = rootForSession({ cwd, session_id: id }) ?? null;
-  const { entries, reported } = toolEntries(transcript);
+  const folderGone = !existsSync(cwd);
+  const root = folderGone ? null : (rootForSession({ cwd, session_id: id }) ?? null);
+  const { entries, reported, permissionMode } = toolEntries(transcript);
+  const tree = folderGone ? { branch: record?.branch ?? "", uncommitted: [] } : gitState(cwd);
 
   return {
     id,
@@ -176,7 +210,12 @@ function savedSession({ config, transcript, cwd, surface, record, artifactsDir }
     transcript: relative(config, transcript),
     lastActivityAt: new Date(statSync(transcript).mtimeMs).toISOString(),
     change: root ? openChange(root) : null,
-    ...gitState(cwd),
+    ...tree,
+    repo: (record?.originCwd && existsSync(record.originCwd) ? record.originCwd : undefined) ?? (folderGone ? null : (mainCheckout(cwd) ?? null)),
+    worktreeByApp: Boolean(record?.worktreePath),
+    // The transcript says what the session ran in; the app's record can lag behind it
+    permissionMode: permissionMode ?? record?.permissionMode ?? null,
+    folderGone,
     unfinished: unfinishedTasks(entries, reported),
     artifacts: artifactsDir ? saveArtifacts(entries, cwd, join(artifactsDir, id)) : [],
   };
@@ -202,10 +241,10 @@ export function checkpointFolder(savedAt) {
  */
 export function reopenedSessions(checkpoint, root = desktopRoot()) {
   return checkpoint.sessions.map((session) => {
-    if (session.surface !== "desktop") return { session, newId: null, opened: false, file: null };
+    if (session.surface !== "desktop") return { session, newId: null, opened: false, file: null, record: null };
 
-    const record = reopenedRecord(root, session.id, checkpoint.desktopDir ?? undefined);
-    return { session, newId: `local_${session.id}`, opened: Boolean(record), file: record?.file ?? null };
+    const record = reopenedRecord(root, session.id, checkpoint.desktopDir ?? undefined) ?? null;
+    return { session, newId: `local_${session.id}`, opened: Boolean(record), file: record?.file ?? null, record };
   });
 }
 
@@ -224,21 +263,25 @@ export function idMap(reopened) {
  * and HANDOFF), and where the copies of its artifacts are. Sessions with nothing of that get none.
  *
  * @param {Reopened[]} reopened
+ * @param {Map<string, string[]>} [notes] more lines for a session, by its new id, such as where its files went
  * @returns {{ to: string, title: string, text: string }[]}
  */
-export function resumeMessages(reopened) {
+export function resumeMessages(reopened, notes = new Map()) {
   const map = idMap(reopened);
   const messages = [];
 
   for (const { session, newId } of reopened) {
     if (!newId) continue;
-    const children = reopened.filter((entry) => entry.session.parent && entry.session.parent === session.localId && entry.newId);
-    const artifacts = session.artifacts ?? [];
-    if (children.length === 0 && artifacts.length === 0) continue;
+    // Only an id that changed is news: a session whose id and children's ids stayed gets no message
+    const moved = Boolean(session.localId && session.localId !== newId);
+    const children = reopened.filter((entry) => entry.session.parent && entry.session.parent === session.localId && entry.newId && entry.newId !== entry.session.localId);
+    const extra = notes.get(newId) ?? [];
+    if (!moved && children.length === 0 && extra.length === 0) continue;
 
-    const lines = [`The sessions moved to a new sign-in: every session has a new id. Yours: ${newId} (was ${session.localId}).`];
+    const artifacts = session.artifacts ?? [];
+    const lines = [moved ? `The sessions moved to a new sign-in, and your id changed: ${newId} (was ${session.localId}).` : `The sessions moved to a new sign-in. Your id stays ${newId}.`];
     if (children.length > 0) {
-      lines.push("The sessions you started, old id → new id. Replace the old ids wherever you wrote them (notes, HANDOFF, memory) and message them by the new one:");
+      lines.push("The sessions you started whose id changed, old id → new id. Replace the old ids wherever you wrote them (notes, HANDOFF, memory) and message them by the new one:");
       for (const child of children) lines.push(`- ${child.session.title || child.session.id}: ${child.session.localId} → ${child.newId}`);
     }
     if (artifacts.length > 0) {
@@ -246,11 +289,61 @@ export function resumeMessages(reopened) {
       for (const artifact of artifacts) lines.push(`- ${artifact.title || artifact.url}: ${artifact.url} → ${artifactWhere(artifact)}`);
     }
     if (session.parent && !map.has(session.parent)) lines.push(`The session that started you (${session.parent}) was not in the checkpoint.`);
+    lines.push(...extra);
 
     messages.push({ to: newId, title: session.title, text: lines.join("\n") });
   }
 
   return messages;
+}
+
+/**
+ * The saved sessions in an order where a parent comes before the sessions it started, so the app knows the parent
+ * by the time it opens a side session.
+ *
+ * @param {Reopened[]} reopened
+ * @returns {Reopened[]}
+ */
+export function parentsFirst(reopened) {
+  const byLocal = new Map(reopened.filter((entry) => entry.session.localId).map((entry) => [entry.session.localId, entry]));
+  const depth = (/** @type {Reopened} */ entry) => {
+    let level = 0;
+    for (let parent = entry.session.parent; parent && byLocal.has(parent) && level < 32; parent = byLocal.get(parent)?.session.parent) level += 1;
+    return level;
+  };
+
+  return reopened.map((entry, index) => ({ entry, index, level: depth(entry) })).sort((a, b) => a.level - b.level || a.index - b.index).map((item) => item.entry);
+}
+
+/**
+ * Whether two checkpoints keep the same sessions in the same state. When each session's last activity is the only
+ * difference (the session that runs the checkpoint is active), a second file would only be a duplicate.
+ *
+ * @param {Checkpoint} a
+ * @param {Checkpoint} b
+ * @returns {boolean}
+ */
+export function sameCheckpoint(a, b) {
+  const shape = (/** @type {Checkpoint} */ checkpoint) =>
+    stableJson({
+      desktopDir: checkpoint.desktopDir ?? null,
+      skipped: checkpoint.skipped ?? [],
+      sessions: checkpoint.sessions.map(({ lastActivityAt, artifacts, ...rest }) => ({ ...rest, artifacts: (artifacts ?? []).map((artifact) => ({ url: artifact.url, title: artifact.title, files: artifact.files.map((file) => ({ published: file.published, status: file.status })) })) })),
+    });
+
+  return shape(a) === shape(b);
+}
+
+/**
+ * JSON with the keys of every object sorted, so two values compare by content and not by the order keys came in.
+ *
+ * @param {unknown} value
+ * @returns {string}
+ */
+function stableJson(value) {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (value && typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(/** @type {Record<string, unknown>} */ (value)[key])}`).join(",")}}`;
+  return JSON.stringify(value) ?? "null";
 }
 
 /**
@@ -415,27 +508,30 @@ function readHead(transcript) {
  * background task reported back. Lines of the conversation without a tool call are never parsed.
  *
  * @param {string} transcript
- * @returns {{ entries: Record<string, any>[], reported: Set<string> }}
+ * @returns {{ entries: Record<string, any>[], reported: Set<string>, permissionMode: string | null }} with the last
+ *   permission mode the transcript records
  */
 function toolEntries(transcript) {
   const entries = [];
   const reported = new Set();
+  let permissionMode = null;
   let text = "";
   try {
     text = readFileSync(transcript, "utf8");
   } catch {
-    return { entries, reported };
+    return { entries, reported, permissionMode };
   }
 
   for (const line of text.split("\n")) {
     for (const match of line.matchAll(REPORTED)) reported.add(match[1]);
+    permissionMode = PERMISSION_MODE.exec(line)?.[1] ?? permissionMode;
     if (!line.includes("tool_use")) continue;
 
     const entry = parseLine(line);
     if (entry) entries.push(entry);
   }
 
-  return { entries, reported };
+  return { entries, reported, permissionMode };
 }
 
 /**

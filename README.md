@@ -133,11 +133,17 @@ current account in the desktop app, at any age, and every terminal session that 
 hours: its id, the app's local id, title and parent, folder, branch, uncommitted files, the open change with where it
 stopped, and the background tasks that had not reported back. Beside it, `<time>/artifacts/<session>/` holds local
 copies of the artifacts each session published, with a manifest; a source that is gone is rebuilt from the session's
-Write and Edit calls, else only the link is kept. After the person signs in, `moku-rails resume-checkpoint` maps each
-old id to the new one (`local_<session id>`), names the titles to set again with `set_session_title`, and writes one
-message per session with its children's new ids and its artifact copies, for the conductor to send. Two steps write
-outside moku and are the person's, in a terminal: `--open` opens every session in the app through a pseudo-terminal,
-and `--relink` writes the sidebar nesting back into the app's records, only with the app closed and after a backup.
+Write and Edit calls, else only the link is kept. A session whose worktree was removed is kept with its repository
+and branch while the branch exists, and named as lost when it does not. A second run that finds everything as the
+newest checkpoint has it writes no new file. `--help` or `-h` on any `moku-rails` command prints its usage and runs
+nothing. After the person signs in, the prompt hook offers the restore once, on the first prompt under the new account,
+and reads «восстанови сессии» through typos. `moku-rails resume-checkpoint` maps each old id to the new one
+(`local_<session id>`). `--open` is the person's step, with the app open: it adds removed worktrees again from their
+branches, frees a branch an old worktree holds (a detached HEAD, every file kept), opens the sessions parents first so
+the app nests the side sessions itself, in the permission mode each one ran in, and prints in the same run the titles the app changed, one message for each
+session whose id or whose side sessions' ids changed, and the side sessions or permission modes the app did not keep. `--carry` copies
+uncommitted files to the folder the app opened a session in, overwriting nothing that changed. `--relink` writes the
+missing nesting and modes into the app's records, only with the app closed and after a backup, through one line for Terminal.app.
 No credential is read or written.
 
 | Invariant | Enforced by | What you see |
