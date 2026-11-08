@@ -85,6 +85,17 @@ prototype and measures it element by element and by pixels at five viewports. A 
 minutes per screen, costs $2–4, and waits when two heavy runs are already on the machine. It stays out of CI: run it
 nightly or by hand, and see `research/plan/baseline-design.md` for the commands.
 
+The design station's own rounds have two cases in `evals/moku-design/`: `design-round-motion-game` and
+`design-round-motion-web` run round 1 of a design with two concepts and check that each concept carries a motion
+table, plays it live and opens every state and size by URL. A run spawns two generators (about 110 thousand
+tokens and 6 minutes each). Score the kept sandboxes with `moku-proto-check <concept> --json <out>`: rows with
+all eight columns, required events, states × sizes, motion live.
+
+```bash
+PATH="$PWD/plugins/moku/bin:$PWD/plugins/moku-design/bin:$PATH" claude plugin eval . --case 'design-round-motion-*' \
+  --scaffold --trust-plugin --no-publish --keep-temp --allow-tools Write Edit Bash Agent Task --runs 1 --ablation none -j 2
+```
+
 Keep at most two heavy runs (`claude plugin eval`, `claude -p`) on one machine at a time; they share one rate limit
 and the times stop being comparable.
 

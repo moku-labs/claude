@@ -5,6 +5,7 @@
  */
 
 import { PAGE } from "./inventory.mjs";
+import { MOTION } from "./motion.mjs";
 
 const MAX_LINES = 60;
 
@@ -35,6 +36,7 @@ export function renderReport({ slug, spec, summary, rows, deviations, look, date
   byDeviation(lines, rows.filter((row) => row.result === "open"));
   collapsed(lines, "Unmeasured", rows.filter((row) => row.result === "unmeasured"));
   section(lines, "By decision", rows.filter((row) => row.result === "decision"));
+  motionSection(lines, rows.filter((row) => row.el.startsWith(MOTION)));
 
   if (look.length > 0) {
     lines.push("", "## Look at these pairs (pixel diff, a diagnostic)", "", "Elements whose pixels differ most while their rows pass. Open both shots; a difference the eye sees is a finding: name the property.", "", "| Element | Size · state | Differs | Expected | Actual |", "|---|---|---|---|---|");
@@ -125,6 +127,27 @@ function collapsed(lines, title, rows) {
 
   lines.push("", `## ${title} (${rows.length})`, "", "| Element · size · state | Rows | Why |", "|---|---|---|");
   for (const [key, group] of [...groups].slice(0, MAX_LINES)) lines.push(`| ${key} | ${group.count} | ${cell(group.note)} |`);
+}
+
+/**
+ * Every motion row, one line per row of the motion table: the columns that pass are counted, the others named.
+ *
+ * @param {string[]} lines
+ * @param {any[]} rows
+ */
+function motionSection(lines, rows) {
+  if (rows.length === 0) return;
+
+  const byMotion = new Map();
+  for (const row of rows) byMotion.set(row.el, [...(byMotion.get(row.el) ?? []), row]);
+  const passing = rows.filter((row) => row.result === "pass" || row.result === "decision").length;
+
+  lines.push("", `## Motion (${passing}/${rows.length} rows pass)`, "", "| Motion | State | Pass | Differs (prototype → build) |", "|---|---|---|---|");
+  for (const [el, items] of [...byMotion].slice(0, MAX_LINES)) {
+    const good = items.filter((row) => row.result === "pass" || row.result === "decision").length;
+    const bad = items.filter((row) => row.result !== "pass" && row.result !== "decision").map((row) => (row.result === "fail" && row.actual !== "none" ? `${row.prop}: ${cell(row.expected)} → ${cell(row.actual)}` : `${row.prop}: ${row.result}`));
+    lines.push(`| ${el.slice(MOTION.length)} | ${items[0].state} | ${good}/${items.length} | ${bad.length ? bad.join("; ") : "—"} |`);
+  }
 }
 
 /** @param {unknown} value */

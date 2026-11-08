@@ -71,13 +71,14 @@ rehydrates in one read.
 ## Target: {what is being designed — e.g. "the settings page" | "a delete-confirmation popup" | "whole app (kanban tracker)"}
 ## Scope: {app | page | element | api | architecture}
 ## Modes: {ui | api | architecture — comma-separated when several apply}
-## Medium: {web | cli | tui — ui mode only}
+## Medium: {web | game | cli | tui — ui mode only}
 ## Stage: {framing | round-{N}-generating | round-{N}-presented | winner-polish | iterating | alternatives-presented | complete}
 ## Round: {N}
 ## Concepts: {count generated this round}
 ## Winner: {concept id, e.g. r2c3 | (none)}
 ## ConceptSpec: {.planning/design/{slug}/concept-spec.md | (pending)}
 ## BrainstormContext: {.planning/context-{name}.md | (none) — consumed to ground concepts, if any}
+## Decisions: {the person's decisions after the pick, in their words — e.g. a new animation added at polish | (none)}
 ## Created: {ISO}
 ## Last Updated: {ISO}
 ## Next Action: {the exact next step, e.g. "Run /moku-design:design resume to review round 1"}
@@ -98,10 +99,10 @@ rehydrates in one read.
 Outcome values: `generating` | `presented` | `winner` | `mix` | `new-round`
 
 ## Concepts
-| ID | Round | Art direction | File | Status |
-|----|-------|---------------|------|--------|
-| r1c1 | 1 | Editorial / Swiss | concepts/r1c1.html | removed |
-| r2c3 | 2 | Warm brutalist | concepts/r2c3.html → index.html | winner |
+| ID | Round | Art direction | Motion character | File | Proto-check | Status |
+|----|-------|---------------|------------------|------|-------------|--------|
+| r1c1 | 1 | Editorial / Swiss | crisp, 120 ms, no travel | concepts/r1c1.html | PASS | removed |
+| r2c3 | 2 | Warm brutalist | heavy ease-in-out, 400 ms | concepts/r2c3.html → index.html | PASS | winner |
 
 Concept Status values: `generating` | `built` | `failed` | `removed` | `winner`
 ```

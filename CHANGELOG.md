@@ -2,6 +2,44 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.93.0 (2026-11-08)
+
+### Changed
+- **Motion is part of every design concept, from the first round.** Each web and game concept carries a motion
+  table with eight columns in every row — trigger, duration, delay or order, curve, key values, sequence, sound,
+  reduced motion — and plays it live. Games in detail (screens and popups in and out, transitions, press, disabled,
+  rewards, wins, errors, particles, idle, counters, loading), web shorter (page transitions, state changes, reveals,
+  hover, focus, press, menus, modals, loading). Every art direction names its motion character in numbers and its
+  signature moment; two concepts with the same motion fail the round like two with the same palette. Before: no
+  design context had a full table, the median named 3 of the 8 columns; 10 of 27 complaints were motion or states.
+  New reference `design-motion.md`.
+- **States and sizes open by URL.** Every screen, popup and state of the concept spec opens by `?state=<id>`, every
+  target size by `?vp=WxH` (web: phone, tablet, desktop; game: at least two aspect ratios with safe areas), and each
+  animation by `?play=<id>`, paused at a moment by `&t=<ms>`. Adaptation rules for the sizes between are written
+  into the concept and the design context. The design check's `spec.json` states plug into `?state=`.
+- **The generator checks its own render.** `moku-proto-check` (new, no dependencies: a headless Chrome on the
+  machine over DevTools) opens every state at every size, describes each frame in one line, plays every motion,
+  checks that `?t=` pauses and that reduced motion opens, and ends with a `proto-check: PASS|FAIL` line. The
+  generator fixes its FAIL lines with Edit before it reports; a concept whose motion does not play is a FAIL. Where
+  no Chrome starts (an eval sandbox) the static part still runs and it exits 3.
+- **Polish edits the winner in place; art only for the winner.** No generator run to polish (a third of all
+  generator runs were that, about ten minutes each). After the pick motion is polished, not added; a new animation is
+  a new round or the person's decision in `state.md`. Real art is never made for every concept.
+- **Capture copies the motion.** `design-context.md` gets §2b, the motion table, and in §5 the target sizes, the
+  adaptation rules and the states. A UI design context without the motion table is not finished. The plan's
+  `## Design Reference` and the builder's brief carry the unit's motion rows; the builder invents no animation.
+- **The design check measures motion.** `moku-fidelity` keeps the prototype's motion table in `spec.json`
+  (`animations`, copied from the prototype at capture) and makes each row × column a row of the fixed inventory.
+  A design with no motion table fails (`motion:table`); "no motion on purpose" is a deviation the person decides.
+  Timing within 16 ms (a game: one frame), the same curve numbers, key values within 1 px or 0.01, the same
+  sequence, sound and reduced variant. The report gets a `## Motion` block.
+
+### Added
+- `moku-fidelity motion <dir>`: records what the build plays per motion row (`--id … --duration …`, `--file`),
+  `--probe` prints the `getAnimations()` expression for the browser pane. An unrecorded row is `unmeasured`.
+- Eval cases `design-round-motion-game` and `design-round-motion-web` (`evals/moku-design/`): round 1 with two
+  concepts, scored by `moku-proto-check` on the kept sandboxes.
+
 ## 0.92.0 (2026-11-08)
 
 ### Added

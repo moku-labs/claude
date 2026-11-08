@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fixture — good web concept</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.4 system-ui, sans-serif; background: #f6f1e7; color: #1d1a16; }
+  main { padding: 24px; max-width: 960px; margin: 0 auto; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin: 12px 0; }
+  button { font: inherit; padding: 10px 16px; border-radius: 8px; border: 0; background: #1d1a16; color: #fff; }
+  .modal { position: fixed; inset: auto 16px 16px; background: #fff; padding: 16px; border-radius: 12px; display: none; }
+  [data-state="checkout.modal"] .modal { display: block; }
+</style>
+<script type="application/json" id="moku-design">
+{
+  "concept": "fixture",
+  "medium": "web",
+  "motionCharacter": "calm, ease-out, 160-240 ms, no overshoot",
+  "signature": "modal-in",
+  "viewports": [
+    { "id": "phone", "size": "390x844" },
+    { "id": "tablet", "size": "768x1024" },
+    { "id": "desktop", "size": "1440x900" }
+  ],
+  "adaptation": ["Cards stack below 768, two columns above", "Modal is a bottom sheet below 768"],
+  "states": [
+    { "id": "checkout.default", "label": "Checkout" },
+    { "id": "checkout.modal", "label": "Confirm modal" }
+  ],
+  "motion": [
+    { "id": "reveal", "kind": "reveal", "element": "A1.cards", "trigger": "page load", "duration": "240ms", "delay": "60ms stagger per card",
+      "curve": "cubic-bezier(.2,.7,.2,1)", "keys": "opacity 0→1; y 12→0", "sequence": "after page-in", "sound": "none", "reduced": "opacity only, 120ms" },
+    { "id": "modal-in", "kind": "modal", "element": "E1.confirm", "trigger": "tap Pay", "duration": "220ms", "delay": "0",
+      "curve": "ease-out", "keys": "y 40→0; opacity 0→1", "sequence": "with backdrop fade", "sound": "none", "reduced": "fade 120ms" }
+  ],
+  "noMotion": {
+    "page-transition": "single page", "state-change": "covered by modal-in", "hover": "colour only, instant",
+    "focus": "outline, instant", "press": "none by design", "menu": "no menu", "loading": "no loading"
+  }
+}
+</script>
+</head>
+<body>
+<main>
+  <h1>Checkout</h1>
+  <div class="card">Oat flat white × 2</div>
+  <div class="card">Total €7.40</div>
+  <button id="pay">Pay</button>
+  <div class="modal" id="modal" role="dialog"><svg width="16" height="16"><circle cx="8" cy="8" r="6"/></svg><h2>Confirm payment</h2><button>Confirm</button></div>
+</main>
+<script>
+  const params = new URLSearchParams(location.search);
+  const root = document.documentElement;
+  const MOTION = {
+    reveal: () => document.querySelectorAll(".card").forEach((el, i) =>
+      el.animate([{ opacity: 0, transform: "translateY(12px)" }, { opacity: 1, transform: "none" }],
+        { duration: 240, delay: i * 60, easing: "cubic-bezier(.2,.7,.2,1)", fill: "both" })),
+    "modal-in": () => {
+      setState("checkout.modal");
+      document.getElementById("modal").animate([{ opacity: 0, transform: "translateY(40px)" }, { opacity: 1, transform: "none" }],
+        { duration: 220, easing: "ease-out", fill: "both" });
+    }
+  };
+  function setState(id) { root.dataset.state = id; }
+  setState(params.get("state") || "checkout.default");
+  if (params.get("vp")) root.dataset.vp = params.get("vp");
+  const play = params.get("play");
+  if (play && MOTION[play]) {
+    root.dataset.play = play;
+    MOTION[play]();
+    if (params.has("t")) document.getAnimations().forEach((a) => { a.pause(); a.currentTime = Number(params.get("t")); });
+  }
+  document.getElementById("pay").addEventListener("click", () => MOTION["modal-in"]());
+</script>
+</body>
+</html>
