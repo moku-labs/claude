@@ -218,6 +218,9 @@ function linkTarget(path) {
  * for every such write, in auto mode too, and an `allow` from a hook does not lift it. Inside an
  * additional directory the write is judged like any write in the project. Only that one folder is added;
  * every other rule of the file stays. A settings file that is not JSON, or one git tracks, is left alone.
+ * Claude Code reads this file too late for the session that starts here; the entry that works at once is
+ * the person's own, in `~/.claude/settings.json`, which `moku-rails allow-planning` offers. This stays as
+ * the fallback for the sessions after.
  *
  * @param {string} top worktree root
  * @param {string} shared the main checkout's `.planning/`

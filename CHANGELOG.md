@@ -2,7 +2,7 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
-## UNRELEASED-PR7 (2026-11-06)
+## 0.93.0 (2026-11-08)
 
 ### Changed
 - **Motion is part of every design concept, from the first round.** Each web and game concept carries a motion
@@ -32,6 +32,85 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 ### Added
 - Eval cases `design-round-motion-game` and `design-round-motion-web` (`evals/moku-design/`): round 1 with two
   concepts, scored by `moku-proto-check` on the kept sandboxes.
+
+## 0.92.0 (2026-11-08)
+
+### Added
+- **`moku-fidelity`, the design check as a tool** (moku-design `bin/`). The approved prototype is measured once into a
+  fixed inventory, `check/expected.json`: one row per element × property × size × state, decided at capture from
+  `spec.json`, the same on every run. The same casefile replay counted 75, 308 and 391 rows before. Now it counts 1218
+  every time. `capture`, `check` (`--url`/`--serve`/`--start`), `probe` and `ingest` (for the browser pane), `compare`,
+  `deviate`, `decide`, `status`. Schemas `moku-fidelity/spec@1`, `expected@1`, `result@1`, `deviations@1`.
+- **Appearance, not only boxes.** Rows for `drawn` (image, fill, gradient, stroke), fill, stroke, radius, shadow and
+  opacity next to position, size and the text rows. Page rows check adaptation: no horizontal scroll, no clipped text,
+  no new overlaps, inside the safe area. A row drawn as a sprite where the prototype draws a fill with a rim fails
+  `drawn` even when its box is exact. In all three casefile replays the blank rows were found this way. A box-only
+  check misses them. A per-element pixel diff lists "pairs to look at" as a diagnostic, never as a verdict.
+- **Tolerances chosen on data, with the unit conversion.** A game's lengths are divided by its frame's factor,
+  unrounded. Type is strict: font size 0.5 px, line height max(0.5 px, 2 %). A person fixed a line height 1 px off on a
+  21 px face, and a fixed 2 px rule misses that. Geometry is judged the way a layout is built. A position is the gap from
+  the element's nearest edge to the nearest edge of its container or of a sibling, within max(3 px, 4 % of the gap). A
+  size is within max(3 px, 3 %). A one-line text box is compared by its height. An element drawn as a picture fails
+  `drawn` once, and its fill, stroke, radius and shadow are `covered`. Six rules were compared offline on stored
+  measurements: the real episode, 540 planted defects, and planted jitter, rounding and a proportional stretch over
+  five viewports. This rule found 3/3 human fixes and 540/540 planted defects (the fixed rule found 83 %). It flagged
+  0 box rows of sub-pixel noise, and 23 rows of stretch noise against 3041 for the fixed rule. It halved the rows sent
+  to the orchestrator.
+- **A game is read as it is drawn.** States are reached by door steps in `spec.json` (`restore` with a `$patch` of the
+  live bookmark, `answer`, `tap`, a `wait`; a refusal while a node enters is retried). The builder writes the
+  `build` side of the spec: the keys, the way to each state, and the faces behind font keys (`build.fonts`). Text
+  style comes from the drawn text. Its line height comes from the line box the glyphs are centred in, not from the
+  face's natural height. Paint of unmeasured children counts for the nearest measured element.
+- **Deviations are asked first.** What the project cannot follow (a missing face, an effect the engine forbids, §9
+  saying otherwise) is raised with `moku-fidelity deviate` before any replacement: reason, kind, proposal, when it
+  was asked, and the decision (`null` until the person answers). One deviation covers every element of one cause.
+- **The check runs at the end of a UI unit.** The builder runs it before its report, and the builder's stop hook
+  blocks once on a missing, stale or failing result. Open rows and waiting deviations go to the orchestrator as a
+  message: ask the person now, before the next wave. Every target size is measured. A size that was skipped fails.
+
+### Changed
+- `design-check.md`, build Step 7.6, the builder brief, design-flow E2b, `moku-web:e2e` and `moku-game:playtest` use
+  the tool. The report lists failing rows one line per element and open rows one line per deviation. One fix round
+  follows; what still fails goes to the person as a question. `--start` owns the app server. A server started by hand
+  is stopped before the turn ends, because a headless run waits on it forever.
+
+| 6 screens × 3 | before | after |
+|---|---|---|
+| Impossible item raised as a question before the choice | 0/18 | 18/18 |
+| Silent deviations (scorer v2) | 0/18* | 0/18 |
+| $ per run (build + check) | 2.19 | 1.51 (−31%) |
+| Minutes per run | 7.2 | 4.6 |
+
+\* The earlier 4/18 was an artifact of the scorer, which took `line-height: normal` as 1.2 em.
+Measured on the face, the baseline has no silent rows either.
+
+| casefile replay (the real episode) | before | after |
+|---|---|---|
+| Rows of the check | 75 / 308 / 391 | 1218 ×3 |
+| Blank rows (the person's fix) found | 0/3 | 3/3, asked as a question |
+| Episode name and small line line heights | found as open, fixed in 1 of 3 | found 3/3; fixed and confirmed in the run that fixes |
+| Measure and ask, no fixes: $ / min | 4.18 / 13, 3.16 / 8 | 2.11 / 7, 2.43 / 10 |
+| One fix round: $ / min | 7.85 / 28 | 7.54 / 20 |
+| Measurement alone, no model | — | 29 s, the same rows on every run |
+
+
+## 0.91.0 (2026-11-08)
+
+### Added
+- **The project's `.planning/` is offered once for the person's user settings.** A write through a lane's `.planning`
+  link asked the person every time: `additionalDirectories` lifts that only when it is there at session start, and the
+  worktree's `settings.local.json`, written by the SessionStart hook (#102), arrives too late. The person's
+  `~/.claude/settings.json` is read on the fly. `moku-rails session start`, `adopt` and `init done` now end, once per
+  project and only when the folder is not allowed yet, with one line for the person to type:
+  `! <moku-rails> allow-planning --apply --root <project>`. It adds the main checkout's `.planning/` and keeps every
+  other setting; a settings file that is not JSON is left alone. Before: open the file, find or create
+  `permissions.additionalDirectories`, paste the absolute path, keep the JSON valid. After: one line, copied as printed.
+  The offer is remembered in `.planning/.planning-access-offered`; `moku-rails allow-planning` reports where it stands
+  at any time. The agent never edits the person's settings: the Bash hook refuses `allow-planning --apply` from it,
+  and the person's `!` commands never reach that hook. The worktree's `settings.local.json` entry stays as the fallback.
+- **No test touches the real `~/.claude`.** `npm test` preloads `scripts/test-env.mjs`, which gives every test and
+  every process it spawns a throwaway `HOME` and `CLAUDE_CONFIG_DIR`.
+
 ## 0.90.0 (2026-11-06)
 
 ### Added

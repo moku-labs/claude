@@ -136,12 +136,12 @@ check without being asked. The procedure, the tolerances and the report are in t
 load `moku-design:design` with the Skill tool and read `references/design-check.md` under the base
 directory it prints. Pack absent: follow rule 5 of `references/e2e-testing.md` and say so.
 
-Expected is the approved HTML prototype, measured in the browser at its frame with
-`getBoundingClientRect()` and `getComputedStyle()`. Actual is the running app, the same script, the same
-screens, states, viewports and demo data. Fonts first: family, weight, size, line height and letter
-spacing of every text, and the real face loaded (`document.fonts.check`), not a fallback. Then every
-word is a DOM text node from the i18n table, none is inside an image. Failed rows go to
-`moku-web-ux-reviewer` as fixes; at most two rounds. With the verdict at FAIL the station is not done:
+The tool is `moku-fidelity`: `moku-fidelity check .planning/design/<slug> --url <the running app>`
+measures the app on the fixed inventory captured from the approved prototype, at every target size and
+state, by the same tolerances as the builder's check (fonts first, type strict, what draws each element,
+geometry by the gaps a layout is built from). No playwright in the project: measure through the browser pane with
+`moku-fidelity probe` and `ingest`. Deviations waiting on the person are asked now. Failed rows go to
+`moku-web-ux-reviewer` as fixes; one round, then what still fails is a question for the person. With the verdict at FAIL the station is not done:
 `moku-rails pause`, show the open rows and ask. The rails refuse `done e2e` for a change tied to a
 design until the report says `Verdict: PASS`.
 

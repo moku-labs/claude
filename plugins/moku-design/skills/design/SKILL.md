@@ -163,12 +163,20 @@ and hand the context path to the plan station.
 
 ## The design check
 
-After a build, the build is compared to the approved prototype by measurement: positions, sizes, radii,
-shadows, colours, and first of all fonts. The procedure, the tolerances and the report are in
-`references/design-check.md`. The build station runs it at its end and the e2e station runs it again
-(`moku-web:e2e`, `moku-game:playtest`); the person never has to ask for it. Invoked directly with
+After a build, the build is compared to the approved prototype by measurement with `moku-fidelity`:
+positions, sizes, radii, shadows, colours, what draws each element (fill, stroke, image, gradient), and
+first of all fonts, at every target size and state. The procedure, the tolerances and the report are in
+`references/design-check.md`.
+
+At capture of a `ui` design, write `.planning/design/{slug}/spec.json` (the target sizes of §5, the states
+the prototype shows, the conversion) and run `moku-fidelity capture .planning/design/{slug}`: the fixed
+inventory the check measures every time is decided then, from the accepted prototype.
+
+Each builder of a UI unit runs the check before its report and raises a deviation before it writes any
+replacement; the build station runs it again at its end and the e2e station once more
+(`moku-web:e2e`, `moku-game:playtest`). The person never has to ask for it. Invoked directly with
 "check the build against the design", run that reference for the named slug and write nothing but its
-`check/` folder.
+`check/` folder and `deviations.json`.
 
 ## Gotchas
 
