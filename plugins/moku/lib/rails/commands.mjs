@@ -8,6 +8,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { PROJECT_TYPES, adoptProject, detectProject, planningIgnored } from "./adopt.mjs";
@@ -16,6 +17,7 @@ import { guardShell, guardWrite } from "./guard.mjs";
 import { DEFAULT_SINCE_HOURS, artifactWhere, checkpointFolder, checkpointsDir, collectSessions, configDir, describeSession, driftNotes, idMap, latestCheckpoint, readCheckpoint, reopenedSessions, resumeCommand, resumeMessages, writeCheckpoint } from "./checkpoint.mjs";
 import { currentAccountDir, desktopAppRunning, desktopRoot, openInDesktop, relinkSessions } from "./desktop.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
+import { applyAccess, applyCommand, offerLines, offerOnce, planningAccess, userSettingsFile } from "./planning-access.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
 import { LOOP_STATIONS, OPTIONAL_STATIONS, WRITING_STATIONS, routeFor, tweakTier } from "./routes.mjs";
 import { STAGES_FILE, currentStage, readStages, splitOffer, splitSignal, stageLine, stagesText, weakDod } from "./stages.mjs";
@@ -30,6 +32,9 @@ import { isDone, markWave, nextWave, readWaves } from "./waves.mjs";
 
 /** Exit code for "the rails refuse this move". Distinct from 1, a usage or runtime error. */
 const REFUSED = 2;
+
+/** This CLI, by absolute path: the line a person types after `!` must not depend on their PATH. */
+const RAILS_BIN = fileURLToPath(new URL("../../bin/moku-rails", import.meta.url));
 
 /** `status` speaks of the test runs of the last day; `tests` has the whole log. */
 const RECENT_TESTS_MS = 24 * 60 * 60 * 1000;
@@ -450,8 +455,10 @@ function adoptExisting(root, type) {
   if (type && kept.includes("moku.md") && type !== shown) lines.push(`The marker already says type: ${shown}; it was kept. Edit .planning/moku.md to change it.`);
   if (!planningIgnored(root)) lines.push("Warning: git does not ignore .planning/ here. It is local state: add `.planning` to .gitignore so it is never committed.");
   lines.push("Next step: open the first change (the conductor does it).");
+  const offer = offerOnce(root, RAILS_BIN, userSettingsFile());
+  lines.push(...offer.lines);
 
-  return { code: 0, lines, data: { ok: true, created, kept, type: shown, seen: seen ?? null } };
+  return { code: 0, lines, data: { ok: true, created, kept, type: shown, seen: seen ?? null, planningAccess: offer.data } };
 }
 
 /**
@@ -593,7 +600,9 @@ export function session({ root, positional }) {
   const created = activate(root);
   const report = status({ root, positional: [], flags: {} });
 
-  return { code: 0, lines: [`${created ? "Session started" : "Session already active"} in ${root}. The rails and their hooks act here from now on.`, ...report.lines], data: report.data };
+  const offer = offerOnce(root, RAILS_BIN, userSettingsFile());
+
+  return { code: 0, lines: [`${created ? "Session started" : "Session already active"} in ${root}. The rails and their hooks act here from now on.`, ...report.lines, ...offer.lines], data: { ...report.data, planningAccess: offer.data } };
 }
 
 /**
@@ -921,7 +930,35 @@ export function init({ root, positional }) {
   if (!isInitialized(root)) return refused("The project marker .planning/moku.md is missing. Write it as the last step of init, then run `moku-rails init done`.");
 
   setInitializing(root, false);
-  return ok("Init station done. The project is initialized.");
+  const offer = offerOnce(root, RAILS_BIN, userSettingsFile());
+
+  return { code: 0, lines: ["Init station done. The project is initialized.", ...offer.lines], data: { planningAccess: offer.data } };
+}
+
+/**
+ * The project's `.planning/` in the person's user settings, so worktree sessions write into it without a
+ * prompt each time. Without `--apply` it says where things stand and prints the line; `--apply` writes the
+ * one folder into `permissions.additionalDirectories` and keeps the rest. Only the person runs `--apply`,
+ * with `!` in the prompt: the Bash hook refuses it from the agent.
+ *
+ * @param {Args} args flags: --apply
+ * @returns {Result}
+ * @example
+ * allowPlanning({ root, positional: [], flags: {} }); // "Not yet allowed: … ! /…/moku-rails allow-planning --apply --root /work/site"
+ */
+export function allowPlanning({ root, flags }) {
+  const file = userSettingsFile();
+  if (flags.apply) {
+    const result = applyAccess(root, file);
+    if (result.error) return fail(result.error);
+    return ok(result.changed ? `Added ${result.dir} to permissions.additionalDirectories in ${result.file}. Worktree sessions write into it without asking from now on.` : `Already allowed: ${result.file} covers ${result.dir}. Nothing changed.`);
+  }
+
+  const access = planningAccess(root, file);
+  const apply = applyCommand(RAILS_BIN, root);
+  if (access.allowed) return { code: 0, lines: [`Allowed: ${access.file} covers ${access.dir}.`], data: access };
+
+  return { code: 0, lines: [`Not yet allowed: ${access.dir} is not in permissions.additionalDirectories of ${access.file}.`, ...offerLines(access, apply).slice(1)], data: { ...access, command: apply } };
 }
 
 /**

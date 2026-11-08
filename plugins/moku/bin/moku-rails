@@ -32,6 +32,7 @@ const HANDLERS = {
   waves: commands.waves,
   tests: commands.tests,
   init: commands.init,
+  "allow-planning": commands.allowPlanning,
   guard: commands.guard,
   "guard-bash": commands.guardBash,
   "may-stop": commands.mayStop,
