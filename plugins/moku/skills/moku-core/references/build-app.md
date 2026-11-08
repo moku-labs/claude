@@ -337,6 +337,10 @@ context:
 - the prototype path: `.planning/design/<slug>/index.html` and `styles.scss`,
 - the conversion from prototype px to the target's units (web `× 1`; a game
   `× reference width / frame width`, for example `× 1080 / 390`),
+- the motion: the unit's rows of the motion table in §2b of the design context, with the states and
+  target sizes of §5. Every animation is built from its row — duration, delay, curve, key values,
+  sequence, sound, reduced variant — and checked against it like the layout; what the engine cannot do
+  is an intended difference, asked before it is chosen,
 - the art assets the unit uses.
 
 A generated image, from Astra or any other tool, is an art asset or a style reference. It is never a

@@ -22,6 +22,7 @@ raised before anything is chosen, and the person decides it.
 | Sizes | Every target size of §5 of `design-context.md`, each one measured: phone, tablet, desktop, or the game's frames with their safe areas |
 | States | Every state the prototype can show (`?state=` in its URL), the same on the build |
 | Conversion | Web × 1. A game: target units = prototype px × reference / frame width (1080 / 390 for a portrait frame) |
+| Motion | The prototype's motion table (`spec.json` `animations`, the same as §2b of the design context) against what the build plays, recorded in `motion.json` |
 | Intended differences | `deviations.json` with a decision; §9 of the design context and `decisions.md` are entered there as decided deviations |
 
 A generated image is on neither side. It is compared to nothing.
@@ -187,6 +188,50 @@ sprite or an atlas: a baked word cannot be translated, resized or read by a scre
 `words` row. The one exception is lettering that is art, listed by name in the **Lettering as art** line
 of §2. An effect on text (a lip, a shadow, an outline, a gradient) is built with the text style.
 
+## Motion
+
+Motion is part of the design and is checked like the layout, row by row. The table is the prototype's
+motion table (`design-motion.md` of this skill): capture copies it from the prototype's `moku-design` block
+into `spec.json` as `animations` when `spec.json` has none, and each row × column (trigger, duration,
+delay, curve, key values, sequence, sound, reduced) becomes a row of the inventory, element
+`motion:<row id>`, size `all`, in the state the row names.
+
+- **No table, no pass.** A design with no motion table gets one row, `motion:table`, that fails. The build
+  never invents motion to fill the gap: the design station writes the table. A screen with no motion on
+  purpose is a deviation the person decides (`--element motion:table --kind by-design-context`).
+- **The build side** is `motion.json` beside `actual.json`, written by whoever measures it:
+
+  ```bash
+  moku-fidelity motion .planning/design/{slug} --id reward-in --trigger "claim tapped" --duration 420ms \
+    --delay 0ms --curve "cubic-bezier(.34,1.56,.64,1)" --keys "scale 0.6 → 1.08 → 1, opacity 0 → 1" \
+    --sequence "after the coin burst" --sound "sfx.reward" --reduced "opacity only, 120ms"
+  moku-fidelity motion .planning/design/{slug} --file motion-rows.json   # id → column → value, many rows
+  moku-fidelity motion .planning/design/{slug} --probe                   # the getAnimations() expression for the pane
+  ```
+
+  Record what was measured, never the table's own cell. A motion row nobody recorded is `unmeasured` and
+  counts against the verdict.
+
+| Column | Passes when |
+|---|---|
+| Duration, delay | within 16 ms on the web; a game, one frame of a 60 fps fixed step |
+| Curve | the same named curve, or the same numbers (cubic-bezier, steps, spring) within 0.001 |
+| Key values | the same values in order: px within 1 prototype px (converted), degrees within 1, opacity and scale within 0.01 |
+| Trigger, sequence, sound, reduced | the same words (case, spaces and closing punctuation aside): the same order, the same sound key, the reduced variant that plays under reduced motion |
+
+How the build is measured:
+- **Web.** Start the motion, then `document.getAnimations()` (the `--probe` expression) and the computed
+  `transition` and `animation` give duration, delay, curve and keyframes; values at the control points with
+  the animation paused at `currentTime`; the reduced variant under emulated `prefers-reduced-motion`.
+- **Game.** Never by wall-clock video. Step the engine's own time (`now`) frame by frame in the editor or
+  headless and read the node's position, scale, alpha and frame at the control points; sounds from the event
+  log, the key and its moment within one frame; particles by the emitter's parameters.
+
+What the engine cannot play is a deviation raised before the replacement is written
+(`--element motion:reward-in --prop curve --kind impossible --proposal "ease-out-back, same peak"`). The
+report lists every motion row under `## Motion`. A unit run (`--unit … --elements a,b`) checks the motion
+rows that move its own elements.
+
 ## The report
 
 `check/design-check.md`, rewritten by every `compare`:
@@ -198,7 +243,7 @@ Prototype: index.html    Sizes: 390x844, 768x1024, 1440x900    States: default  
 Waiting on the person: 1 deviation(s)
 
 ## Questions for the person
-## Fonts · ## Fail · ## Open · ## Unmeasured · ## By decision
+## Fonts · ## Fail · ## Open · ## Unmeasured · ## By decision · ## Motion
 ## Look at these pairs (pixel diff, a diagnostic)
 ```
 
