@@ -2,7 +2,7 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
-## 0.91.0 (2026-11-06)
+## 0.92.0 (2026-11-08)
 
 ### Added
 - **`moku-fidelity`, the design check as a tool** (moku-design `bin/`). The approved prototype is measured once into a
@@ -15,9 +15,21 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
   no new overlaps, inside the safe area. A row drawn as a sprite where the prototype draws a fill with a rim fails
   `drawn` even when its box is exact. In all three casefile replays the blank rows were found this way. A box-only
   check misses them. A per-element pixel diff lists "pairs to look at" as a diagnostic, never as a verdict.
-- **Tolerances with the unit conversion.** A game's lengths are divided by its frame's factor, unrounded, before
-  they are compared. `line-height: normal` is measured on the face itself. A value past its tolerance but within
-  twice it is `open`, never pass.
+- **Tolerances chosen on data, with the unit conversion.** A game's lengths are divided by its frame's factor,
+  unrounded. Type is strict: font size 0.5 px, line height max(0.5 px, 2 %). A person fixed a line height 1 px off on a
+  21 px face, and a fixed 2 px rule misses that. Geometry is judged the way a layout is built. A position is the gap from
+  the element's nearest edge to the nearest edge of its container or of a sibling, within max(3 px, 4 % of the gap). A
+  size is within max(3 px, 3 %). A one-line text box is compared by its height. An element drawn as a picture fails
+  `drawn` once, and its fill, stroke, radius and shadow are `covered`. Six rules were compared offline on stored
+  measurements: the real episode, 540 planted defects, and planted jitter, rounding and a proportional stretch over
+  five viewports. This rule found 3/3 human fixes and 540/540 planted defects (the fixed rule found 83 %). It flagged
+  0 box rows of sub-pixel noise, and 23 rows of stretch noise against 3041 for the fixed rule. It halved the rows sent
+  to the orchestrator.
+- **A game is read as it is drawn.** States are reached by door steps in `spec.json` (`restore` with a `$patch` of the
+  live bookmark, `answer`, `tap`, a `wait`; a refusal while a node enters is retried). The builder writes the
+  `build` side of the spec: the keys, the way to each state, and the faces behind font keys (`build.fonts`). Text
+  style comes from the drawn text. Its line height comes from the line box the glyphs are centred in, not from the
+  face's natural height. Paint of unmeasured children counts for the nearest measured element.
 - **Deviations are asked first.** What the project cannot follow (a missing face, an effect the engine forbids, §9
   saying otherwise) is raised with `moku-fidelity deviate` before any replacement: reason, kind, proposal, when it
   was asked, and the decision (`null` until the person answers). One deviation covers every element of one cause.
@@ -27,7 +39,9 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 
 ### Changed
 - `design-check.md`, build Step 7.6, the builder brief, design-flow E2b, `moku-web:e2e` and `moku-game:playtest` use
-  the tool.
+  the tool. The report lists failing rows one line per element and open rows one line per deviation. One fix round
+  follows; what still fails goes to the person as a question. `--start` owns the app server. A server started by hand
+  is stopped before the turn ends, because a headless run waits on it forever.
 
 | 6 screens × 3 | before | after |
 |---|---|---|
@@ -38,6 +52,35 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
 
 \* The earlier 4/18 was an artifact of the scorer, which took `line-height: normal` as 1.2 em.
 Measured on the face, the baseline has no silent rows either.
+
+| casefile replay (the real episode) | before | after |
+|---|---|---|
+| Rows of the check | 75 / 308 / 391 | 1218 ×3 |
+| Blank rows (the person's fix) found | 0/3 | 3/3, asked as a question |
+| Episode name and small line line heights | found as open, fixed in 1 of 3 | found 3/3; fixed and confirmed in the run that fixes |
+| Measure and ask, no fixes: $ / min | 4.18 / 13, 3.16 / 8 | 2.11 / 7, 2.43 / 10 |
+| One fix round: $ / min | 7.85 / 28 | 7.54 / 20 |
+| Measurement alone, no model | — | 29 s, the same rows on every run |
+
+
+## 0.91.0 (2026-11-08)
+
+### Added
+- **The project's `.planning/` is offered once for the person's user settings.** A write through a lane's `.planning`
+  link asked the person every time: `additionalDirectories` lifts that only when it is there at session start, and the
+  worktree's `settings.local.json`, written by the SessionStart hook (#102), arrives too late. The person's
+  `~/.claude/settings.json` is read on the fly. `moku-rails session start`, `adopt` and `init done` now end, once per
+  project and only when the folder is not allowed yet, with one line for the person to type:
+  `! <moku-rails> allow-planning --apply --root <project>`. It adds the main checkout's `.planning/` and keeps every
+  other setting; a settings file that is not JSON is left alone. Before: open the file, find or create
+  `permissions.additionalDirectories`, paste the absolute path, keep the JSON valid. After: one line, copied as printed.
+  The offer is remembered in `.planning/.planning-access-offered`; `moku-rails allow-planning` reports where it stands
+  at any time. The agent never edits the person's settings: the Bash hook refuses `allow-planning --apply` from it,
+  and the person's `!` commands never reach that hook. The worktree's `settings.local.json` entry stays as the fallback.
+- **No test touches the real `~/.claude`.** `npm test` preloads `scripts/test-env.mjs`, which gives every test and
+  every process it spawns a throwaway `HOME` and `CLAUDE_CONFIG_DIR`.
+
+## 0.90.0 (2026-11-06)
 
 ### Added
 - **Stages are offered on a signal, never by default.** On ten labelled real tasks a request's wording did not predict

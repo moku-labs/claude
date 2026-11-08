@@ -199,6 +199,8 @@ created: 2026-09-19
 `type` is `framework`, `consumer`, `tools` or `game`. `core_version` is the installed `@moku-labs/core`
 version, or empty for a library. Get the date from `date +%F`.
 
+When `init done` ends with the once-per-project `allow-planning` offer, pass its line to the person as it is; only they run it, with `!`.
+
 ## Step 6.5 — the first commit
 
 The scaffold is the project's first commit. Without it the rails see every file as uncommitted work that

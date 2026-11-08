@@ -15,12 +15,19 @@ import { isSubagent } from "../lib/hooks/origin.mjs";
 import { bindSession, rootForSession } from "../lib/hooks/root.mjs";
 import { facts } from "../lib/rails/commands.mjs";
 import { guardShell } from "../lib/rails/guard.mjs";
+import { isApplyCommand } from "../lib/rails/planning-access.mjs";
 
 const { payload } = readHookInput();
 const command = payload.tool_input?.command;
 const mode = railsMode();
 
 if (typeof command !== "string" || mode === "off") process.exit(0);
+
+// The person's user settings are theirs: they run `allow-planning --apply` with `!`, which never reaches this hook
+if (isApplyCommand(command)) {
+  console.error("moku rails: only the person runs `moku-rails allow-planning --apply`, with `!` in the prompt. Give them the line; do not run it.");
+  process.exit(2);
+}
 
 // A session that starts in another directory is remembered, so later hooks find that project
 bindSession(payload);
