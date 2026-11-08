@@ -131,7 +131,7 @@ export async function measureAll(chromium, { url, spec, elements, shots, side, o
         await page.goto(joinQuery(url, query), { waitUntil: "load" });
         await settle(page, side === "actual" ? state.build?.run : undefined);
         const frame = side === "expected" ? (state.origin ?? origin) : state.build?.origin;
-        values[size.id][state.id] = await page.evaluate(pageProbe, { elements, reference: spec.conversion.reference ?? 1080, origin: frame });
+        values[size.id][state.id] = await page.evaluate(pageProbe, { elements, reference: spec.conversion.reference ?? 1080, origin: frame, fonts: side === "actual" ? spec.build?.fonts : undefined });
         mkdirSync(join(shots, size.id), { recursive: true });
         const shot = join(shots, size.id, `${state.id}.png`);
         if (frame) await page.locator(frame).first().screenshot({ path: shot });
@@ -152,7 +152,7 @@ export async function measureAll(chromium, { url, spec, elements, shots, side, o
  * mounts late, or a command that reloads the page, is waited for instead of read empty.
  *
  * @param {any} page
- * @param {{ command: string, input?: any }[] | undefined} run
+ * @param {{ command: string, input?: any, wait?: number }[] | undefined} run  `wait`: ms to let pass before the command
  */
 async function settle(page, run) {
   const freeze = () => page.addStyleTag({ content: "*,*::before,*::after{animation:none!important;transition:none!important;caret-color:transparent!important}" }).catch(() => {});
@@ -167,6 +167,7 @@ async function settle(page, run) {
 
   await waitForDoors(page);
   for (const step of run ?? []) {
+    if (Number(step.wait) > 0) await page.waitForTimeout(Number(step.wait));
     try {
       await page.evaluate(runDoorStep, step);
     } catch (error) {
@@ -175,6 +176,7 @@ async function settle(page, run) {
     }
     await page.waitForLoadState("load").catch(() => {});
     await waitForDoors(page);
+    await waitForStableUi(page);
   }
   await freeze();
   await waitForStableUi(page);
@@ -206,14 +208,17 @@ async function runDoorStep({ command, input }) {
     return doors.run(game, doors.commands[command], value);
   };
 
+  // A node still entering answers `{ value: false }` instead of throwing: that is a refusal too.
   const deadline = Date.now() + 10_000;
   for (;;) {
     try {
-      return await once();
+      const out = await once();
+      if (out?.value !== false) return out;
+      if (Date.now() > deadline) throw new Error(`the game refused "${command}" for 10 s (it answered false)`);
     } catch (error) {
       if (Date.now() > deadline) throw error;
-      await new Promise((ok) => setTimeout(ok, 250));
     }
+    await new Promise((ok) => setTimeout(ok, 250));
   }
 }
 

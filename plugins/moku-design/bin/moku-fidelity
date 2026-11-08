@@ -94,8 +94,9 @@ async function measure() {
   const target = await openBuild();
   try {
     // How the build reaches each state may be written after capture, like the element mapping
-    const now = readJson(files.spec)?.states ?? [];
-    const spec = { ...expected.spec, states: expected.spec.states.map((state) => ({ ...state, build: now.find((item) => item.id === state.id)?.build ?? state.build })) };
+    const current = readJson(files.spec);
+    const now = current?.states ?? [];
+    const spec = { ...expected.spec, build: current?.build ?? expected.spec.build, states: expected.spec.states.map((state) => ({ ...state, build: now.find((item) => item.id === state.id)?.build ?? state.build })) };
     const values = await measureAll(chromium, { url: target.url, spec, elements: inventoryElements(expected), shots: files.shots, side: "actual" });
     writeJson(files.actual, { schema: ACTUAL_SCHEMA, url: target.url, measuredAt: new Date().toISOString(), values });
     console.log(`measured the build at ${expected.spec.sizes.map((size) => size.id).join(", ")} × ${expected.spec.states.map((state) => state.id).join(", ")}`);
@@ -132,7 +133,7 @@ async function probe() {
   const expected = side === "actual" ? needExpected() : undefined;
   const spec = expected?.spec ?? loadSpec(true);
   const elements = side === "actual" ? inventoryElements(expected) : (spec.elements ?? null);
-  const expression = probeExpression(elements, spec.conversion.reference ?? 1080, side === "expected" ? flags.origin : undefined);
+  const expression = probeExpression(elements, spec.conversion.reference ?? 1080, side === "expected" ? flags.origin : undefined, side === "actual" ? (readJson(files.spec)?.build ?? spec.build)?.fonts : undefined);
   console.log(flags.frame ? `document.querySelector('iframe[data-game-frame]').contentWindow.eval(${JSON.stringify(expression)})` : expression);
   return 0;
 }

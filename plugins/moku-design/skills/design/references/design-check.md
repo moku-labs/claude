@@ -48,7 +48,13 @@ A generated image is on neither side. It is compared to nothing.
 - A prototype that shows its states as frames of one board page: give each state `"origin": "#f8"` (the
   frame's selector, its top-left is 0,0) and write element selectors with `{origin}` (`"{origin} .head h2"`).
 - A state of the build that needs more than the URL: `"build": { "query": "…" }`, or in a game
-  `"build": { "run": [{ "command": "restore", "input": { "bookmark": … } }] }` (door commands, run in order).
+  `"build": { "run": [ … ] }`, door commands run in order: `{ "command": "restore", "input": { "bookmark": { "$patch": { "path": "ward", "player": { "settings": { "locale": "ru" } } } } } }`
+  restores the live bookmark with the patch merged in; then `{ "command": "answer", "input": { "intent": "casefile" } }`,
+  `{ "command": "tap", "input": { "key": "caseSlot:03" } }`. A command the game refuses while a node is still
+  entering is retried for 10 s; a step that must wait out a delay of the game's own (taps ignored while a
+  sheet opens) carries `"wait": <ms>`. A key may be a list (`["caseList:ep01", "caseList:mist"]`): the first
+  on screen. In a game whose text faces are asset keys, `"build": { "fonts": { "<key>": { "family": …, "weight": … } } }`
+  names the face behind each key. The builder of the unit writes these `build` entries: it knows its keys.
 
 ```bash
 moku-fidelity capture .planning/design/{slug}

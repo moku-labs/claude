@@ -16,7 +16,7 @@
 /**
  * Runs in the page.
  *
- * @param {{ elements?: Record<string, { selector?: string, game?: { key?: string, projection?: string } }> | null, reference?: number, origin?: string }} input
+ * @param {{ elements?: Record<string, { selector?: string, game?: { key?: string, projection?: string } }> | null, reference?: number, origin?: string, fonts?: Record<string, { family: string, weight?: string }> }} input
  *   `origin`: a selector whose top-left corner is 0,0 (a frame inside a gallery page); `{origin}` in an element's
  *   selector stands for it, so one selector serves every frame (`{origin} .head h2`)
  * @returns {Record<string, any>}
@@ -55,7 +55,7 @@ export function pageProbe(input) {
 
     // The keys the inventory measures. Paint of any other descendant (a keyed nine-slice body, a sprite
     // child) belongs to the nearest measured ancestor: a row drawn as a sprite child is drawn as an image.
-    const measured = new Set(wanted ? Object.entries(wanted).map(([id, el]) => el?.game?.key ?? id) : byKey.keys());
+    const measured = new Set(wanted ? Object.entries(wanted).flatMap(([id, el]) => [el?.game?.key ?? id].flat()) : byKey.keys());
 
     // What draws a ui element is also in the components of its entity and of its descendants up to the
     // next measured element: Sprite and NineSlice are images, Shape is a fill and a stroke. Best effort: a
@@ -108,7 +108,9 @@ export function pageProbe(input) {
     const toRef = box ? reference / box.width : 1;
     const ids = wanted ? Object.keys(wanted) : [...byKey.keys()];
     for (const id of ids) {
-      const ref = wanted?.[id]?.game ?? { key: id };
+      // A key may be a list: the first one on screen (one element shown under another key in another state).
+      const given = wanted?.[id]?.game ?? { key: id };
+      const ref = Array.isArray(given.key) ? { ...given, key: given.key.find((key) => byKey.has(key)) ?? given.key[0] } : given;
       if (ref.projection) {
         const rect = doors.read(game, doors.sources.locate, { target: { projection: ref.projection, key: ref.key } });
         out[id] = rect && box ? { present: true, x: (rect.x - box.x) * toRef, y: (rect.y - box.y) * toRef, w: rect.w * toRef, h: rect.h * toRef, drawn: ref.drawn ?? [], source: "locate" } : { present: false };
@@ -121,7 +123,7 @@ export function pageProbe(input) {
         continue;
       }
 
-      const style = node.style ?? {};
+      const style = { ...(node.style ?? {}) };
       const a = style.alpha ?? 1;
       const drawn = [];
       if (node.type === "image" || node.type === "icon" || style.nineSlice) drawn.push("image");
@@ -158,6 +160,28 @@ export function pageProbe(input) {
         source: "game.ui",
       };
       if (node.type === "text" && node.content !== undefined) {
+        // The ui door names a text style; the drawn object (renderer.sync.displayOf) holds its numbers. Its
+        // face is an asset key: `build.fonts` of the spec names the face and weight behind each key.
+        let drawnText;
+        try {
+          const shown = game.renderer?.sync?.displayOf?.(game.ui?.find?.(ref.key ?? id));
+          drawnText = [shown, ...(shown?.children ?? [])].find((part) => typeof part?.style?.fontSize === "number");
+        } catch {
+          /* the style alone */
+        }
+        if (drawnText) {
+          const ts = drawnText.style;
+          const face = input?.fonts?.[ts.fontFamily];
+          const lines = Math.max(1, String(drawnText.text ?? node.content).split("\n").length);
+          Object.assign(style, {
+            fontFamily: face?.family ?? ts.fontFamily,
+            fontWeight: face?.weight ?? ts.fontWeight,
+            fontSize: ts.fontSize,
+            lineHeight: ts.lineHeight > 0 ? ts.lineHeight : round(drawnText.height / lines),
+            letterSpacing: ts.letterSpacing ?? 0,
+            fill: typeof ts.fill === "number" ? ts.fill : style.fill,
+          });
+        }
         Object.assign(element, {
           text: String(node.content).replace(/\s+/g, " ").trim(),
           family: style.fontFamily ?? style.font,
@@ -310,6 +334,6 @@ export function pageProbe(input) {
  * @param {string} [origin]
  * @returns {string}
  */
-export function probeExpression(elements, reference = 1080, origin = undefined) {
-  return `JSON.stringify((${pageProbe.toString()})(${JSON.stringify({ elements, reference, origin })}))`;
+export function probeExpression(elements, reference = 1080, origin = undefined, fonts = undefined) {
+  return `JSON.stringify((${pageProbe.toString()})(${JSON.stringify({ elements, reference, origin, fonts })}))`;
 }
