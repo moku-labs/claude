@@ -102,8 +102,10 @@ A request that is really about building, planning or e2e testing belongs to `mok
 Spawn these with the `Agent` tool in parallel batches. The batch size is the parallel-agent limit:
 `MAX_AGENTS=${CLAUDE_PLUGIN_OPTION_MAX_PARALLEL_AGENTS:-5}`, or the project's `maxParallelAgents` when set
 (`plugin-settings.md`). Five validators with a limit of two run as 2, 2 and 1. Agent types are namespaced
-(`moku:<name>`), or they do not launch. They may run in the background: a prompt the harness writes while
-they run closes no gate, and ending your turn to wait for their hand-backs is legitimate inside the station.
+(`moku:<name>`), or they do not launch. Run them in the foreground, all in one response: they run in parallel
+and their reports come back in this turn, with no wake-up per validator. In the background (only when the person
+wants to keep talking meanwhile) a prompt the harness writes while they run closes no gate, ending your turn to
+wait is legitimate, and a report that arrives while others still run gets one short line and no tool calls.
 Only this session spawns agents; no agent spawns another. Commit after each green cycle, before the next.
 
 | Agent | Covers |

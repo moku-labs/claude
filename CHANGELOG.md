@@ -2,6 +2,35 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.95.0 (2026-11-10)
+
+### Changed
+- **Less of the subscription limit per build**, from the week of 2026-11-07 (59 % of an Ultra 20x week in one working
+  day: deep builders 26 %, builders 29 %, the main sessions 32 %).
+  - *`moku-builder` on Sonnet 5.5.* On `build-board-high` (3 runs each) Sonnet built the Complex board with 41 of 41
+    hidden tests in 3 of 3 runs and graders 1.0 in 3 of 3, Opus 41 of 41 with graders 1.0 in 2 of 3; $1.50 against
+    $2.86 a build, 7.5 against 10 minutes, no retry to the deep builder in either. The routing table loses its
+    "Sonnet for Nano and Micro" row: every first build is Sonnet, the stop hook still re-runs its tsc and tests.
+  - *`moku-builder-deep`: `effort: high`, and a ceiling.* It stays on Opus (the escalation is never weaker than the
+    first attempt). A new PreToolUse hook, `on-deep-ceiling.mjs`, stops a deep run at 300k tokens of context or 120
+    tool calls: one refused call with the hand-back instruction, six grace calls, then every call refused until it
+    reports `PARTIAL` with `ceiling`, `done` and `remaining`. The build station hands `remaining` to a fresh
+    `moku-builder`. The numbers: a deep run averaged 203 calls, 624k and $56; replaying the week's series with a
+    restart at 300k halves the deep cache reads. `MOKU_DEEP_CEILING=off|_TOKENS|_STEPS` move it. On
+    `build-board-deep` (3 runs each, 41 of 41 hidden tests in every run): Opus xhigh $5.36 and 20 min, Opus high
+    with the ceiling $2.69 and 9.6 min, Sonnet high with the ceiling $1.33 and 6.5 min. The ceiling was not met
+    there (peak 185–237k at xhigh, about 110k at high); a live run with a ceiling of 3 calls handed back
+    `PARTIAL` with `remaining` as designed. Sonnet held the quality, but this case is a Complex plugin the plain
+    builder also builds, not a failed first attempt, so the deep model stays Opus.
+  - *A retry starts clean.* A failed build is retried by a fresh deep builder with the diagnostician's diagnosis and
+    the list of what exists, never by resuming the failed run with its context.
+  - *Fewer wake-ups.* Build, verify and the conductor spawn a wave's agents in the foreground, in one response, so
+    their reports return in the same turn; the background only when the person wants to keep talking. A task
+    notification that arrives while other agents of the session still run gets one line from the prompt hook: reply
+    briefly with no tool calls, act on the reports together when the last one is in.
+  - *A new session after a close.* `moku-rails close` ends with "Next task: in a new session, this one to the
+    archive", and the PostToolUse hook asks the conductor to offer it in one sentence, with the context size.
+
 ## 0.94.0 (2026-11-08)
 
 ### Changed

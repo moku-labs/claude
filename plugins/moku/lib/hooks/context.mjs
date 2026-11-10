@@ -14,11 +14,12 @@ const TAIL_BYTES = 512 * 1024;
  * of the file is read, so a transcript of hundreds of megabytes costs no more than a small one.
  *
  * @param {string | undefined} transcriptPath the `transcript_path` of a hook payload
+ * @param {{ sidechain?: boolean }} [options] `sidechain: true` reads a subagent's own transcript, whose calls are all sidechain
  * @returns {number | undefined} tokens, or undefined when no usage is found or the file cannot be read
  * @example
  * lastContextTokens(payload.transcript_path); // 452118
  */
-export function lastContextTokens(transcriptPath) {
+export function lastContextTokens(transcriptPath, options = {}) {
   if (typeof transcriptPath !== "string" || !transcriptPath) return undefined;
 
   let text;
@@ -39,24 +40,26 @@ export function lastContextTokens(transcriptPath) {
 
   const lines = text.split("\n");
   for (let i = lines.length - 1; i >= 0; i--) {
-    const usage = usageOf(lines[i]);
+    const usage = usageOf(lines[i], options.sidechain === true);
     if (usage) return (usage.input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0);
   }
   return undefined;
 }
 
 /**
- * The usage of one transcript line when it is an assistant message of the main thread, else undefined.
+ * The usage of one transcript line when it is an assistant message of the main thread (or of any thread, with
+ * `sidechain`), else undefined.
  *
  * @param {string} line
+ * @param {boolean} sidechain
  * @returns {Record<string, number> | undefined}
  */
-function usageOf(line) {
+function usageOf(line, sidechain) {
   if (!line.includes('"usage"')) return undefined;
 
   try {
     const entry = JSON.parse(line);
-    if (entry.type !== "assistant" || entry.isSidechain) return undefined;
+    if (entry.type !== "assistant" || (entry.isSidechain && !sidechain)) return undefined;
     return entry.message?.usage;
   } catch {
     return undefined;

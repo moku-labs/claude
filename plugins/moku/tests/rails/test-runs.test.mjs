@@ -366,11 +366,11 @@ describe("moku-rails close, with the log", () => {
     assert.match(closed.text, /Change no test without a yes\./);
   });
 
-  it("closes with one line when no test is slow", () => {
+  it("closes with only the new-session line when no test is slow", () => {
     const { root } = project();
     built(root);
     for (const item of ["tests", "verify", "docs"]) rails(root, "check", item);
 
-    assert.equal(rails(root, "close").text.trim(), "Closed 2026-10-09-fix.");
+    assert.match(rails(root, "close").text.trim(), /^Closed 2026-10-09-fix\.\nNext task: in a new session/);
   });
 });

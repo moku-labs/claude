@@ -64,9 +64,11 @@ describe("compact hint at a station boundary", () => {
     assert.match(context, /`\/compact`/);
   });
 
-  it("offers it after `moku-rails close` too", () => {
+  it("offers a new session after `moku-rails close` instead, with the context size", () => {
     const root = project();
-    assert.match(hook(done(root, transcript(root, 500_000), "moku-rails close --change 2026-11-05-x")).out, /\/compact/);
+    const out = hook(done(root, transcript(root, 500_000), "moku-rails close --change 2026-11-05-x")).out;
+    assert.match(out, /about 500k tokens/);
+    assert.match(out, /new session/);
   });
 
   it("stays silent under the threshold, for other commands, in a subagent and off the rails", () => {

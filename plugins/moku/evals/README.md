@@ -40,8 +40,8 @@ npm run evals:long -- --case build-board-high --max-cost-usd 10
 
 | Case | Guards | One run |
 |---|---|---|
-| `build-board-high` | A Complex plugin built by `moku-builder` from a spec; 41 hidden tests | $2.5, 9 min |
-| `build-board-deep` | The same build by `moku-builder-deep` | $5.7, 22 min |
+| `build-board-high` | A Complex plugin built by `moku-builder` from a spec; 41 hidden tests | $1.5, 7.5 min (Sonnet builder) |
+| `build-board-deep` | The same build by `moku-builder-deep` | $2.7, 10 min (Opus high) |
 | `build-board-staged` | The same build in three stages, a deep builder each | $9.1, 36 min |
 | `delta-fix-perframe` | Two behaviour-preserving per-frame fixes on an open change, tests kept | $0.55, 2 min |
 | `delta-fix-staged` | The same fixes in two stages | $0.58, 2 min |
@@ -63,7 +63,9 @@ python3 -I plugins/moku/evals-manual/score_kept_runs.py <aggregate-result.json> 
 The scorer copies the hidden test into each kept sandbox and runs it with `bun test`, with the agent's own tests and
 the tokens of the run. The routing finding of 2026-11-05 holds: a Complex spec sends even `build-board-high` to the
 deep builder now and then (build/SKILL.md, "deep for tier Complex"), so read `agent_types` in the scored rows rather
-than the case name. Baselines of 2026-11-05: the hidden tests pass in every kept build (41/41 in 11 of 11), the
+than the case name. On 2026-11-10 (0.95.0, 3 runs each, 41/41 in every run): `build-board-high` with the
+builder on Sonnet $1.50 and 7.5 min, on Opus $2.86 and 10 min; `build-board-deep` at Opus xhigh $5.36 and 20 min,
+Opus high with the ceiling $2.69 and 9.6 min, Sonnet $1.33 and 6.5 min. Baselines of 2026-11-05: the hidden tests pass in every kept build (41/41 in 11 of 11), the
 `split-*` cases offer stages in one run of three with or without the plugin.
 
 ### Manual harnesses
