@@ -16,7 +16,12 @@ Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/cha
     tool calls: one refused call with the hand-back instruction, six grace calls, then every call refused until it
     reports `PARTIAL` with `ceiling`, `done` and `remaining`. The build station hands `remaining` to a fresh
     `moku-builder`. The numbers: a deep run averaged 203 calls, 624k and $56; replaying the week's series with a
-    restart at 300k halves the deep cache reads. `MOKU_DEEP_CEILING=off|_TOKENS|_STEPS` move it.
+    restart at 300k halves the deep cache reads. `MOKU_DEEP_CEILING=off|_TOKENS|_STEPS` move it. On
+    `build-board-deep` (3 runs each, 41 of 41 hidden tests in every run): Opus xhigh $5.36 and 20 min, Opus high
+    with the ceiling $2.69 and 9.6 min, Sonnet high with the ceiling $1.33 and 6.5 min. The ceiling was not met
+    there (peak 185–237k at xhigh, about 110k at high); a live run with a ceiling of 3 calls handed back
+    `PARTIAL` with `remaining` as designed. Sonnet held the quality, but this case is a Complex plugin the plain
+    builder also builds, not a failed first attempt, so the deep model stays Opus.
   - *A retry starts clean.* A failed build is retried by a fresh deep builder with the diagnostician's diagnosis and
     the list of what exists, never by resuming the failed run with its context.
   - *Fewer wake-ups.* Build, verify and the conductor spawn a wave's agents in the foreground, in one response, so
