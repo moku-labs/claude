@@ -82,21 +82,37 @@ survived break and a new ignore are.
 
 ### Picking the builder
 
-`moku-builder` by default, for every tier up to Complex. On 2026-11-05 it built a Complex plugin with
-the same hidden-test score as the deep builder at less than half the cost and time, so tier alone is no
-reason for more effort.
+`moku-builder` by default, for every tier up to Complex. It runs on Sonnet 5.5 at high effort: on
+2026-11-10 it built the Complex board of `build-board-high` with 41 of 41 hidden tests in 3 of 3 runs,
+as Opus did, at about half the cost ($1.50 against $2.86 a build) and three quarters of the time, with no
+retry to the deep builder. The deep builder stays on Opus: it is the escalation, never weaker than the
+first attempt.
 
 | The unit | Builder |
 |---|---|
-| Tier Nano or Micro, a delta of one or two files, or a unit that only adds tests | `moku-builder` with `model: sonnet` on the `Agent` call |
-| Tier Standard or Complex, any other delta | `moku-builder` |
-| Tier VeryComplex | `moku-builder-deep` |
+| Any tier up to Complex, any delta, a unit that only adds tests | `moku-builder` (Sonnet) |
+| Tier VeryComplex | `moku-builder-deep` (Opus) |
 | A unit whose first attempt failed (FAIL, no report, or red after it) | `moku-builder-deep`, whatever its tier |
 
-Sonnet is safe there only because the builder's stop is checked: the stop hook runs the project's
+Sonnet is safe as the first builder because its stop is checked: the stop hook runs the project's
 `tsc` and the unit's tests when a builder reports PASS, drops the errors the tree had before the builder
 started, and blocks the builder once with what is left. A second failure on the deep variant comes back
 to you with the full error context instead of a third attempt.
+
+**A retry starts clean.** Never resume the failed builder with `SendMessage` to try again: its context is
+the attempt that failed, and every call of the retry would pay for it again. Ask `moku-error-diagnostician`
+for a diagnosis of what is on disk (the failing check's output, the files), then spawn a fresh
+`moku-builder-deep` with the spec, the mode `delta`, a list of what already exists and the diagnosis:
+root causes and the proposed fix per cause, nothing of the failed run's transcript. (The one resume
+`agent-preamble.md` allows is for a missing report, not for more work.)
+
+**The deep builder's ceiling.** A deep run stops at 300k tokens of context or 120 tool calls
+(`builder-deep.md` → "The ceiling") and reports `PARTIAL` with `"ceiling": true`, `done` and `remaining`.
+That is a hand-over, not a failure, and it does not count as the unit's failed attempt. Spawn a fresh
+`moku-builder` (not the deep one, and not a resume) on the same plugin with mode `delta`, the spec, the
+`done` list as what exists, and the `remaining` list as the whole task: "finish exactly these, keep the
+existing tests green". Its report is the unit's report. A second ceiling on the same unit goes to you as
+`agent-incomplete` with both `remaining` lists; do not chain a third builder without reading why.
 
 Spawn with `subagent_type: moku-builder` (or `moku-builder-deep`), never `general-purpose`. The agent
 already carries the TDD protocol, the filesystem rules, the scoped-lint contract and the JSON output
@@ -342,8 +358,10 @@ Zero means the tests are all `it.todo()` stubs — mark `agent-incomplete`, note
 RED phase skipped".
 
 `agent-incomplete` and `agent-failed` plugins do not go through gap closure — that is for verification
-failures, not build failures. Re-spawn the builder (the deep variant on the second attempt) with a note
-about what already exists on disk. If that also fails, mark `needs-manual`, carry on with the rest of
+failures, not build failures. Re-spawn the builder (the deep variant on the second attempt) fresh, never
+as a resume, with a note about what already exists on disk and the diagnosis ("A retry starts clean"). A
+`PARTIAL` with `"ceiling": true` is the exception: its `remaining` goes to a fresh `moku-builder` ("The deep
+builder's ceiling"). If that also fails, mark `needs-manual`, carry on with the rest of
 the wave, and report those plugins at the end. They are excluded from verification.
 
 ### Wave table format

@@ -1,7 +1,7 @@
 ---
 name: moku-builder
 description: Builds one Moku plugin in its own directory from a spec and skeleton, test-first, with scoped lint and a JSON output contract. Handles both a net-new plugin and a delta on an existing one; the orchestrator runs several in parallel on disjoint plugins.
-model: opus
+model: sonnet
 effort: high
 color: yellow
 skills:
@@ -96,7 +96,7 @@ Prose summary first, then the fenced block as your last message. A run that ends
   "agent": "moku-builder",
   "plugin": "{name}",
   "mode": "greenfield | delta",
-  "verdict": "PASS | FAIL",
+  "verdict": "PASS | FAIL | PARTIAL",
   "files": ["src/plugins/{name}/index.ts", "..."],
   "tests": {"unit": N, "integration": N, "pass": true, "preexistingGreen": true},
   "behaviours": [{"criterion": "a line of the spec's Verification", "test": "path:line"}],
@@ -107,11 +107,15 @@ Prose summary first, then the fenced block as your last message. A run that ends
   "publicApiChanged": true,
   "visualBaselines": [{"baseline": "tests/visual/baselines/<screen>/<state>", "why": "what it shows that changes"}],
   "design": {"slug": "<slug>", "unit": "<name, when the check ran with --unit>", "verdict": "PASS | FAIL | unmeasured", "rows": N, "fail": N, "open": N, "deviations": ["D1"]},
-  "blockers": [{"file": "path", "line": N, "message": "...", "fix": "..."}]
+  "blockers": [{"file": "path", "line": N, "message": "...", "fix": "..."}],
+  "ceiling": true,
+  "done": ["types.ts, state.ts: green, 14 tests"],
+  "remaining": [{"what": "api.ts undo: the 20-record limit", "state": "test written, red", "next": "make the ring buffer drop the oldest"}]
 }
 ```
 
 - `verdict: PASS` needs passing tests, both linters clean in your scope, (delta) a still-green pre-existing suite, a test for every behaviour in `behaviours`, and `killed.killed` equal to `killed.of`.
+- `PARTIAL`, `ceiling`, `done`, `remaining` — only when the ceiling hook of the deep builder stopped the run (below). `remaining` is the work a fresh builder takes over: each open file, behaviour or red test with its next step.
 - `preexistingGreen` — delta only.
 - `publicApiChanged` — true when the `api:`, events or `Config` surface changed.
 - `newDependencies` — packages for the orchestrator to add.

@@ -9,7 +9,9 @@
  * teammate message, a subagent's own spawn prompt) is not a request: the routing flag stays as it is, so
  * builders running in the background keep their gate open, and nothing is printed, so the standing and the
  * routing rule appear once per typed message and never on an agent's reply. The one exception: a hand-back
- * that says an agent produced no report gets the one resume instruction.
+ * that says an agent produced no report gets the one resume instruction, and a task notification that arrives
+ * while other agents of this session still run gets the batching line: one short reply, the reports taken together
+ * when the last one is in.
  * The standing itself is repeated only when it changed since the session last saw it (here or at session
  * start, compaction included); the routing rule comes with every typed message.
  * Off the rails: silent, except for one hint when the person names moku.
@@ -18,10 +20,10 @@
 import { statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-import { RESUME_INSTRUCTION } from "../lib/hooks/agents.mjs";
+import { RESUME_INSTRUCTION, describeAgents, runningAgents } from "../lib/hooks/agents.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
-import { isSystemPrompt, promptText } from "../lib/hooks/origin.mjs";
+import { isSubagent, isSystemPrompt, promptText } from "../lib/hooks/origin.mjs";
 import { accountOffer } from "../lib/hooks/resume-offer.mjs";
 import { appSessionsOnly, asksToResume } from "../lib/hooks/resume-words.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
@@ -97,6 +99,27 @@ function resumeHint(text) {
   return file ? RESUME_HINT(file) : undefined;
 }
 
+/**
+ * The batching line for a task notification that arrives while other agents of the same session still run, else
+ * undefined. A notification of anything else (a shell command, a workflow) and a session with nothing left running
+ * get nothing.
+ *
+ * @param {string} projectRoot
+ * @param {unknown} sessionId the session the notification woke
+ * @param {string} text the prompt the harness wrote
+ * @returns {string | undefined}
+ * @example
+ * batchHint(root, "s1", "<task-notification>…"); // "moku: 2 agent(s) running: moku:moku-builder ×2 …"
+ */
+function batchHint(projectRoot, sessionId, text) {
+  if (!/<task-notification\b/.test(text)) return undefined;
+
+  const others = runningAgents(projectRoot).filter((agent) => !agent.session || agent.session === sessionId);
+  if (others.length === 0) return undefined;
+
+  return `moku: this report is one of a batch, and ${describeAgents(others)} in this session. Do not act on it yet: reply in one short line ("got <agent>, waiting for ${others.length}") with no tool calls and end the turn. Read and act on all the reports together when the last one is in. Every wake-up re-reads the whole conversation, so one per batch is the price, not one per agent. A report that says FAIL or blocks the others is the exception: act on it now.`;
+}
+
 const CHECKPOINT_HINT = "The person is about to sign in again. Run `moku-rails checkpoint`, not `pause`: it saves every open session of this account on this machine (id, title, parent, folder, where it stopped, background tasks, local copies of the artifacts each published). If a change is open inside a station, also run `moku-rails pause --reason \"signing in again\"` before you answer, so the turn can end. Then, in your last message, tell them to close the sessions, sign in themselves with `claude auth login`, and then say \"restore the sessions\": `moku-rails resume-checkpoint` brings them back in one pass. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
 
 const { payload } = readHookInput();
@@ -113,6 +136,10 @@ if (isSystemPrompt(payload)) {
   // A background builder cut off at its turn limit: its hand-back brings the stages offer, once
   const offer = root ? takeSplitOffer(root) : undefined;
   if (offer) console.log(offer);
+
+  // Every wake-up re-reads the whole conversation: while siblings still run, the reports are taken in one batch
+  const batch = root && !noReport && !isSubagent(payload) ? batchHint(root, payload.session_id, prompt) : undefined;
+  if (batch) console.log(batch);
   process.exit(0);
 }
 

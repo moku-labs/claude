@@ -295,6 +295,9 @@ function confirm(root, ledger, change, item, how = "") {
   return ok(`Checklist "${item}" confirmed for ${change.id}${how}.`);
 }
 
+/** The last line of a close: the next task starts best in a new session, which reads the standing from `.planning/`. */
+export const NEXT_SESSION = "Next task: in a new session, this one to the archive. It starts from `moku-rails status`; everything this change decided is in .planning/.";
+
 /**
  * Close a change. Refused until every required station and checklist item is done.
  *
@@ -317,7 +320,7 @@ export function close({ root, flags }) {
   // Slow tests are offered to the person here, as a follow-up; the close itself never waits for them
   const offer = slowOffer(summarize(readRuns(root), slowThreshold(root)));
 
-  return { code: 0, lines: [`Closed ${change.id}.`, ...(offer ? [offer] : [])] };
+  return { code: 0, lines: [`Closed ${change.id}.`, ...(offer ? [offer] : []), NEXT_SESSION] };
 }
 
 /**

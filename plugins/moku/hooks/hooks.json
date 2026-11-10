@@ -12,6 +12,9 @@
       ] }
     ],
     "PreToolUse": [
+      { "matcher": "*", "hooks": [
+        { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/on-deep-ceiling.mjs", "timeout": 5 }
+      ] },
       { "matcher": "Write|Edit", "hooks": [
         { "type": "command", "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pre-write.mjs", "timeout": 10 }
       ] },
