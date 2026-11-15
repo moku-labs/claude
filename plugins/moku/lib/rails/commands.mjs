@@ -307,8 +307,17 @@ export const NEXT_SESSION = "Next task: in a new session, this one to the archiv
  * close({ root, positional: [], flags: {} });
  */
 export function close({ root, flags }) {
-  const ledger = loadLedger(root);
-  const change = findChange(ledger, optional(flags.change));
+  let ledger = loadLedger(root);
+  let change = findChange(ledger, optional(flags.change));
+
+  // Only the checklist is missing: close proves it itself instead of refusing and waiting for the same checks
+  const proved = proveChecklist(root, flags, change);
+  if (proved.refused) return proved.refused;
+  if (proved.items.length > 0) {
+    ledger = loadLedger(root);
+    change = findChange(ledger, change.id);
+  }
+
   const verdict = canClose(change);
   if (!verdict.ok) return { code: REFUSED, lines: [`Refused: ${verdict.reason}`, `Next step: ${verdict.missing}`], data: verdict };
 
@@ -320,7 +329,35 @@ export function close({ root, flags }) {
   // Slow tests are offered to the person here, as a follow-up; the close itself never waits for them
   const offer = slowOffer(summarize(readRuns(root), slowThreshold(root)));
 
-  return { code: 0, lines: [`Closed ${change.id}.`, ...(offer ? [offer] : []), NEXT_SESSION] };
+  const confirmedHere = proved.items.length > 0 ? [`Confirmed at close: ${proved.items.join(", ")}${proved.items.includes("docs") ? " (docs: say in the report what the change updated, or that it needed nothing)" : ""}.`] : [];
+  return { code: 0, lines: [...confirmedHere, `Closed ${change.id}.`, ...(offer ? [offer] : []), NEXT_SESSION] };
+}
+
+/**
+ * When every station of a change is done and only checklist items are open, confirm them the way `check`
+ * would: `tests` by a green run of the project's test script (or the tree it already passed on), `verify` only
+ * when the verify station is done, `docs` as close's own confirmation. In the week of 2026-11-08 ten closes were
+ * refused for `tests` or `docs` and passed seconds later, after the same two checks.
+ *
+ * @param {string} root
+ * @param {Record<string, unknown>} flags
+ * @param {import("./ledger.mjs").Change} change
+ * @returns {{ items: string[], refused?: Result }}
+ */
+function proveChecklist(root, flags, change) {
+  const allChecked = Object.fromEntries(CLOSE_CHECKLIST.map((item) => [item, true]));
+  if (!canClose({ ...change, checklist: allChecked }).ok) return { items: [] };
+
+  const items = [];
+  for (const item of CLOSE_CHECKLIST) {
+    if (change.checklist[item] === true) continue;
+    if (item === "verify" && !change.done.includes("verify")) return { items };
+
+    const result = check({ root, positional: [item], flags: { ...flags, change: change.id } });
+    if (result.code !== 0) return { items, refused: result };
+    items.push(item);
+  }
+  return { items };
 }
 
 /**

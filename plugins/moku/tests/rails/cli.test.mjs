@@ -55,10 +55,10 @@ describe("moku-rails: the habit tracker walkthrough", () => {
       assert.equal(rails(root, "done", station).code, 0, `done ${station}`);
     }
 
-    assert.equal(rails(root, "close").code, 2, "close must wait for the checklist");
-    for (const item of ["tests", "verify", "docs"]) rails(root, "check", item);
-
-    assert.equal(rails(root, "close").code, 0);
+    // Every station is done: close proves the open checklist itself, running the test script for `tests`
+    const closed = rails(root, "close");
+    assert.equal(closed.code, 0);
+    assert.match(closed.text, /Confirmed at close: tests, verify, docs/);
     assert.match(rails(root, "status").text, /Rails: clean/);
   });
 

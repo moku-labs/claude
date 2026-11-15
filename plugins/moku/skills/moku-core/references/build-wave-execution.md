@@ -106,7 +106,7 @@ for a diagnosis of what is on disk (the failing check's output, the files), then
 root causes and the proposed fix per cause, nothing of the failed run's transcript. (The one resume
 `agent-preamble.md` allows is for a missing report, not for more work.)
 
-**The deep builder's ceiling.** A deep run stops at 300k tokens of context or 120 tool calls
+**The deep builder's ceiling.** A deep run stops at 600k tokens of context or 300 tool calls
 (`builder-deep.md` → "The ceiling") and reports `PARTIAL` with `"ceiling": true`, `done` and `remaining`.
 That is a hand-over, not a failure, and it does not count as the unit's failed attempt. Spawn a fresh
 `moku-builder` (not the deep one, and not a resume) on the same plugin with mode `delta`, the spec, the

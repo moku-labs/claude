@@ -8,6 +8,10 @@
  * deep cache reads by half (cap_sim: 200k saves 58 % with twice the restarts, 400k only 40 %). 120 calls is the
  * same point counted in steps (about 2.5k of context per call), and 1.7 times the 70 turns a Complex plugin is
  * expected to take, so a healthy run never meets it.
+ *
+ * Raised to 600k and 300 calls after the week of 2026-11-08: at 300k/120, 45 of 66 deep runs met the ceiling, 39 of
+ * them by the call count with the context still under 300k, and each one cost a fresh builder that re-read the spec
+ * to finish the rest. The ceiling now only stops a run that has clearly lost its way.
  */
 
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -17,8 +21,8 @@ import { basename, dirname, join } from "node:path";
 import { lastContextTokens } from "./context.mjs";
 
 export const DEEP = /(^|:)moku-builder-deep$/;
-export const CEILING_TOKENS = 300_000;
-export const CEILING_STEPS = 120;
+export const CEILING_TOKENS = 600_000;
+export const CEILING_STEPS = 300;
 /** Tool calls left after the warning, to leave the file in hand compiling and write the report. */
 export const GRACE_STEPS = 6;
 
@@ -28,7 +32,7 @@ export const GRACE_STEPS = 6;
  * @param {NodeJS.ProcessEnv} [env]
  * @returns {{ tokens: number, steps: number, off: boolean }}
  * @example
- * ceilingLimits({ MOKU_DEEP_CEILING_STEPS: "80" }); // { tokens: 300000, steps: 80, off: false }
+ * ceilingLimits({ MOKU_DEEP_CEILING_STEPS: "80" }); // { tokens: 600000, steps: 80, off: false }
  */
 export function ceilingLimits(env = process.env) {
   const positive = (/** @type {string | undefined} */ value, fallback) => {

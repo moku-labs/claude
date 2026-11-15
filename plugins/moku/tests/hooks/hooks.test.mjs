@@ -807,6 +807,16 @@ describe("agents running inside a station", () => {
     assert.match(hook("on-stop.mjs", { cwd: root, background_tasks: [] }).out, /"decision":"block"/);
   });
 
+  it("let the turn end while a background command runs, or on a question to the person", () => {
+    const root = project({ initialized: true });
+    building(root);
+
+    assert.equal(hook("on-stop.mjs", { cwd: root, background_tasks: [{ type: "shell", id: "b1", command: "bun run test" }] }).out, "");
+    assert.equal(hook("on-stop.mjs", { cwd: root, last_assistant_message: "The fix is in. Shall I commit it?" }).out, "");
+    assert.equal(hook("on-stop.mjs", { cwd: root, last_assistant_message: "Which one, **A** or **B?**" }).out, "");
+    assert.match(hook("on-stop.mjs", { cwd: root, last_assistant_message: "Done with the first file." }).out, /"decision":"block"/);
+  });
+
   it("are the second witness for the write gate: a write without agent_id is not held by the routed flag while they run", () => {
     const root = project({ initialized: true });
     building(root);
@@ -851,12 +861,12 @@ describe("agents running inside a station", () => {
     building(root);
     writeFileSync(join(root, ".planning", "STATE.md"), "## Phase: build\n");
     const transcript = join(root, "agent.jsonl");
-    writeFileSync(transcript, Array.from({ length: 100 }, (_, i) => JSON.stringify({ type: "assistant", message: { id: `msg_${i}` } })).join("\n") + "\n");
+    writeFileSync(transcript, Array.from({ length: 200 }, (_, i) => JSON.stringify({ type: "assistant", message: { id: `msg_${i}` } })).join("\n") + "\n");
 
     const result = hook("on-subagent-stop.mjs", { cwd: root, agent_id: "agent-9", agent_type: "moku:moku-skeptic", stop_hook_active: true, last_assistant_message: "Still checking...", agent_transcript_path: transcript });
 
-    assert.match(JSON.parse(result.out).systemMessage, /no report \(turn limit: 100\/100\)/);
-    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /turn limit: 100\/100/);
+    assert.match(JSON.parse(result.out).systemMessage, /no report \(turn limit: 200\/200\)/);
+    assert.match(readFileSync(join(root, ".planning", "build", "agent-log.md"), "utf8"), /turn limit: 200\/200/);
   });
 
   it("a foreground agent result without a contract gets the resume instruction through the Agent hook", () => {
