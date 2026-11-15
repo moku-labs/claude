@@ -293,7 +293,9 @@ describe("moku-rails resume-checkpoint after a new sign-in", () => {
   /** Three generations of sessions saved under the old account: a coordinator, its side session, and that one's. */
   function family() {
     const m = machine();
-    for (const letter of ["a", "b", "c"]) transcript(m.env.CLAUDE_CONFIG_DIR, { id: sid(letter), cwd: m.root, entrypoint: "claude-desktop" });
+    // a, b, c newest first, one second apart: a checkpoint keeps sessions newest first by transcript time, and three
+    // transcripts written in the same millisecond left their order to the directory listing
+    for (const [age, letter] of ["a", "b", "c"].entries()) transcript(m.env.CLAUDE_CONFIG_DIR, { id: sid(letter), cwd: m.root, entrypoint: "claude-desktop", ageHours: age / 3600 });
     record(m.env, { id: sid("a"), cwd: m.root, title: "Coordinator" });
     record(m.env, { id: sid("b"), cwd: m.root, title: "Episode 2", parent: `local_old-${sid("a").slice(0, 8)}` });
     record(m.env, { id: sid("c"), cwd: m.root, title: "Card texts", parent: `local_old-${sid("b").slice(0, 8)}` });
@@ -710,7 +712,9 @@ function family3(m) {
 /** Three generations saved under the old account, as in the suite above: a coordinator, its side session, and that one's. */
 function family() {
   const m = machine();
-  for (const letter of ["a", "b", "c"]) transcript(m.env.CLAUDE_CONFIG_DIR, { id: sid(letter), cwd: m.root, entrypoint: "claude-desktop" });
+  // a, b, c newest first, one second apart: a checkpoint keeps sessions newest first by transcript time, and three
+  // transcripts written in the same millisecond left their order to the directory listing
+  for (const [age, letter] of ["a", "b", "c"].entries()) transcript(m.env.CLAUDE_CONFIG_DIR, { id: sid(letter), cwd: m.root, entrypoint: "claude-desktop", ageHours: age / 3600 });
   record(m.env, { id: sid("a"), cwd: m.root, title: "Coordinator" });
   record(m.env, { id: sid("b"), cwd: m.root, title: "Episode 2", parent: `local_old-${sid("a").slice(0, 8)}` });
   record(m.env, { id: sid("c"), cwd: m.root, title: "Card texts", parent: `local_old-${sid("b").slice(0, 8)}` });
