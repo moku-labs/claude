@@ -87,9 +87,9 @@ When `moku-design` is installed and its `astra` option is on, also check that `c
 For a game, also check the editor is wired as the working mode: `@moku-labs/editor` in
 `devDependencies`, an `editor` script, `.mcp.json` with a `moku-editor` server, `.claude/launch.json`
 with `game-editor`, and whether the `mcp__moku-editor__*` tools are listed in this session. Report each
-missing piece with its fix (`bunx moku-editor mcp-config --port 3000` prints the `.mcp.json`; the tools
-appear after the person approves the server and restarts the session). Listed tools: call `moku_status`
-and report what it says. Do not start the editor for this check.
+missing piece with its fix (`bunx moku-editor mcp-config` prints the `.mcp.json`, with no port: each
+checkout finds its own editor; the tools appear after the person approves the server and restarts the
+session). Listed tools: call `moku_status` and report what it says. Do not start the editor for this check.
 
 ## Check 4 — tooling
 

@@ -607,6 +607,7 @@ page ships prebuilt in `dist/tools/`. The package ships `llms.txt` and `llms-ful
 
 | Version | What changed |
 |---|---|
+| 0.10.22 | The MCP bridge finds this checkout's editor on any port: it reads `.moku/editor.json` again on every tool call and ignores one that names another root (a copied `.moku/`). A bin it starts with no `--port` takes a free port, not 3000. `.mcp.json` pins no port: `["moku-editor", "mcp"]` |
 | 0.10.20 | Dev dependency only: the editor is developed against game 0.15.90 |
 | 0.10.19 | `__MOKU_GAME_EDITOR__ === "off"`: an agent with no link, no socket and no retry (the store-signed test app). A door toggle draws `choices` under its switch |
 | 0.10.18 | `moku-editor --packed` serves `dist/assets`, starts no keys watch, and stops with `no packed build in "<root>/dist/assets"` when there is no pack. New art shows only after `moku-game pack`. `moku-editor mcp --packed` passes it on; `mcp-config --packed` is an error |
@@ -818,8 +819,9 @@ off, because TypeScript 7 has no JS API.
 
 ## MCP for Claude Code
 
-`claude mcp add moku-editor -- bunx moku-editor mcp --port 3000` in a moku-game folder (`moku-editor
-mcp-config` prints the `.mcp.json` snippet). The bridge is a separate process and a hub tools client. It
+`claude mcp add moku-editor -- bunx moku-editor mcp` in a moku-game folder (`moku-editor
+mcp-config` prints the `.mcp.json` snippet). Pin no port: since 0.10.22 the bridge finds this checkout's bin on any
+port and starts its own on a free port. The bridge is a separate process and a hub tools client. It
 uses a running bin through `.moku/editor.json`, or starts one and owns it. In a moku-game folder it needs
 no html: it starts the engine page, at startup and on `moku_start {}` (0.10.3). After a restart of the bin
 it reconnects 0, 1, 3 and 7 s after the close and keeps its door tools for 8 s (0.10.0). `moku-editor mcp --packed`

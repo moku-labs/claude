@@ -2,6 +2,19 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.97.1 (2026-11-16)
+
+### Fixed
+- **The editor's MCP server pins no port.** Since editor 0.10.22 the bridge finds this checkout's running editor on
+  any port, a git worktree's too, and a bin it starts itself takes a free port. `bunx moku-editor mcp-config` prints
+  `"args": ["moku-editor", "mcp"]`, and that is now what the plugins tell an agent to write in `.mcp.json`: the old
+  `--port 3000` sent every worktree to the main checkout's port.
+  - `moku-game`: the set-up check and the editor section of the skill, `references/editor.md`,
+    `references/hello-world.md` ("Claude Code files") and `references/plugin-index.md` (MCP section, a 0.10.22 row).
+  - `moku`: `check` names `bunx moku-editor mcp-config` with no port.
+  - The `game-mcp-setup` eval's grader expects the args to end right after `"mcp"`, so a pinned port fails it.
+  - `moku-game dev [--port 3000]` and the editor bin's own `--port` are unchanged: those are the servers' ports.
+
 ## 0.97.0 (2026-11-15)
 
 ### Changed

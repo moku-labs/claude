@@ -324,9 +324,10 @@ ffmpeg -y -framerate 10 -pattern_type glob -i '.moku/captures/<yyyy-mm-dd>/serie
 
 ## 6. What the editor can and cannot do yet
 
-- **MCP.** `moku-editor mcp` is a stdio MCP server: `claude mcp add moku-editor -- bunx moku-editor mcp
-  --port 3000` (no HTML file for a shell game; `bunx moku-editor mcp-config --port 3000` prints the
-  `.mcp.json`). It uses the running bin or starts one, and lists 22 `moku_*` tools (`moku_status`,
+- **MCP.** `moku-editor mcp` is a stdio MCP server: `claude mcp add moku-editor -- bunx moku-editor mcp`
+  (no HTML file for a shell game, no port; `bunx moku-editor mcp-config` prints the `.mcp.json`). Pin no
+  port: the bridge finds this checkout's running editor on any port, a git worktree's too, and a bin it
+  starts itself takes a free port (editor 0.10.22), so one `.mcp.json` serves every worktree. It uses the running bin or starts one, and lists 22 `moku_*` tools (`moku_status`,
   `moku_read`, `moku_run`, `moku_wait`, `moku_screenshot`, `moku_series`, `moku_reference`,
   `moku_selection`, `moku_select`, `moku_files_read`, `moku_files_write`, `moku_reload` and the rest)
   plus one tool per command door (`game_tap`, `cheat_…`, `raw_game_restore`). Since 0.10.3:
