@@ -14,13 +14,13 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { homedir, tmpdir } from "node:os";
 import { basename, dirname, join, relative, sep } from "node:path";
 
 import { mokuHome, rootForSession } from "../hooks/root.mjs";
 import { saveArtifacts } from "./artifacts.mjs";
-import { desktopRoot, readRecords, reopenedRecord } from "./desktop.mjs";
+import { currentAccountDir, desktopRoot, readRecords, reopenedRecord } from "./desktop.mjs";
 import { branchExists, mainCheckout } from "./worktrees.mjs";
 import { loadLedger } from "./ledger.mjs";
 import { routeFor } from "./routes.mjs";
@@ -44,6 +44,7 @@ import { routeFor } from "./routes.mjs";
  * @property {string} title the title the app showed
  * @property {string | null} parent the old local id of the session it was started from
  * @property {Record<string, any> | null} spawnedFrom the app's link to that parent, as it was
+ * @property {boolean} [detached] whether the person had moved the side session to the top level before the save
  * @property {import("./artifacts.mjs").SavedArtifact[]} artifacts local copies of what it published
  * @property {string} transcript the transcript, relative to the config folder
  * @property {string} lastActivityAt
@@ -65,13 +66,17 @@ import { routeFor } from "./routes.mjs";
  * @property {string | null} [desktopDir] the desktop app's folder of the account the sessions were saved from
  * @property {SavedSession[]} sessions
  * @property {{ id: string, title: string, reason: string }[]} [skipped] open sessions that could not be kept
+ * @property {boolean} [auto] written by the hook on its own, not on request
  */
 
 /**
  * @typedef {object} Reopened
  * @property {SavedSession} session
  * @property {string | null} newId the local id under the new sign-in, `local_<id>`, null for a terminal session
- * @property {boolean} opened whether the app has the session under the new sign-in already
+ * @property {boolean} opened whether the app has the session under the current sign-in, in the list and not archived
+ * @property {"open" | "archived" | "missing" | "terminal"} state open; kept by the current account but archived, so
+ *   `unarchive_session` brings it back; not in the current account at all, so `--open` brings it back; or a terminal
+ *   session the app does not list
  * @property {string | null} file the app's record of the reopened session
  * @property {import("./desktop.mjs").DesktopRecord | null} record that record, read
  */
@@ -207,6 +212,7 @@ function savedSession({ config, transcript, cwd, surface, record, artifactsDir }
     title: record?.title ?? "",
     parent: typeof record?.spawnedFrom?.sessionId === "string" ? record.spawnedFrom.sessionId : null,
     spawnedFrom: record?.spawnedFrom ?? null,
+    detached: record?.detached === true,
     transcript: relative(config, transcript),
     lastActivityAt: new Date(statSync(transcript).mtimeMs).toISOString(),
     change: root ? openChange(root) : null,
@@ -232,20 +238,39 @@ export function checkpointFolder(savedAt) {
 }
 
 /**
- * Where each saved session stands under the new sign-in: the local id the app gives it (`local_<id>`) and whether
- * the app has opened it already.
+ * Where each saved session stands under the current sign-in: the local id the app gives it (`local_<id>`, or its
+ * old one when the sessions come back to the account they were saved from), and whether the current account lists
+ * it, keeps it archived, or does not have it. Only the current account's records count.
  *
  * @param {Checkpoint} checkpoint
  * @param {string} [root] the desktop root
+ * @param {string | undefined} [current] the current account folder
  * @returns {Reopened[]}
  */
-export function reopenedSessions(checkpoint, root = desktopRoot()) {
+export function reopenedSessions(checkpoint, root = desktopRoot(), current = currentAccountDir(root)) {
   return checkpoint.sessions.map((session) => {
-    if (session.surface !== "desktop") return { session, newId: null, opened: false, file: null, record: null };
+    if (session.surface !== "desktop") return { session, newId: null, opened: false, state: "terminal", file: null, record: null };
 
-    const record = reopenedRecord(root, session.id, checkpoint.desktopDir ?? undefined) ?? null;
-    return { session, newId: `local_${session.id}`, opened: Boolean(record), file: record?.file ?? null, record };
+    const record = reopenedRecord(root, session.id, checkpoint.desktopDir ?? undefined, current, session.localId) ?? null;
+    const state = !record ? "missing" : record.archived ? "archived" : "open";
+    return { session, newId: record?.localId ?? `local_${session.id}`, opened: state === "open", state, file: record?.file ?? null, record };
   });
+}
+
+/**
+ * The checkpoint to restore: the newest one saved from another account than the current one, so a checkpoint the
+ * new sign-in writes on its own never hides the one taken before it; the newest of all when every checkpoint is of
+ * the current account.
+ *
+ * @param {string | undefined} [current] the current account folder
+ * @returns {string | undefined}
+ */
+export function checkpointToRestore(current = currentAccountDir(desktopRoot())) {
+  if (!existsSync(checkpointsDir())) return undefined;
+
+  const files = readdirSync(checkpointsDir()).filter((name) => name.endsWith(".json")).sort().reverse().map((name) => join(checkpointsDir(), name));
+  const other = current ? files.find((file) => { const saved = readCheckpoint(file); return saved?.desktopDir && saved.desktopDir !== current; }) : undefined;
+  return other ?? files[0];
 }
 
 /**
@@ -373,6 +398,29 @@ export function writeCheckpoint(checkpoint) {
   writeFileSync(file, `${JSON.stringify(checkpoint, null, 2)}\n`);
 
   return file;
+}
+
+/** How many checkpoints the hook wrote on its own are kept; older ones go. Checkpoints made on request all stay. */
+export const AUTO_KEEP = 12;
+
+/**
+ * Remove the checkpoints the hook wrote on its own beyond the newest `keep`, each with its folder of artifacts.
+ * A checkpoint made on request is never removed, and neither is the one a resume would restore now.
+ *
+ * @param {number} [keep]
+ * @param {string | undefined} [protect] a checkpoint file that stays whatever its age
+ * @returns {string[]} the files removed
+ */
+export function pruneAuto(keep = AUTO_KEEP, protect) {
+  if (!existsSync(checkpointsDir())) return [];
+
+  const auto = readdirSync(checkpointsDir()).filter((name) => name.endsWith(".json")).sort().reverse().map((name) => join(checkpointsDir(), name)).filter((file) => readCheckpoint(file)?.auto === true);
+  const removed = auto.slice(keep).filter((file) => file !== protect);
+  for (const file of removed) {
+    rmSync(file, { force: true });
+    rmSync(file.replace(/\.json$/, ""), { recursive: true, force: true });
+  }
+  return removed;
 }
 
 /**

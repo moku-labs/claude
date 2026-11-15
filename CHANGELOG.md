@@ -2,6 +2,30 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.96.0 (2026-11-15)
+
+### Changed
+- **Restoring the sessions takes no script.** From the restores of 2026-11-11 (17 sessions) and 2026-11-15 (7
+  sessions): `--open` opened 0 of 10 and 0 of 3, five and four sessions were taken as open when they were not, two
+  worktree sessions came back in the main checkout, and the person ran four hand-written scripts to finish.
+  - *Opening works.* `--open` runs `claude --desktop --resume` in its own terminal (the `script` wrapper with no input
+    opened nothing), refuses outside a terminal before touching anything and names `run_in_terminal`, and counts a
+    session as opened only when the app has written its record.
+  - *Only the current sign-in counts.* A record in another account folder is no longer "open"; a record the current
+    account keeps archived (its flag or `archived-sessions.idx`) is named as archived and brought back with
+    `unarchive_session`. Restoring into the account the sessions were saved from works too.
+  - *The branch stays in its worktree.* Freeing it sent the session to the main checkout with the folder name as its
+    branch; a session the app opens in another folder gets `--carry`.
+  - *The session does every step itself.* `resume-checkpoint --json` returns `data.steps`, the tool calls in order;
+    modes go back with `set_session_permission_mode`, not through Terminal.app. Run again it checks the app's records,
+    says what is restored and what is not and why, and lists only what is left; `--sent` keeps a delivered message
+    from being listed twice. A side session the app moved to the top level (`lineageDetached`) counts as not nested,
+    and `--relink` clears the flag. The nesting is the one step that quits the app: on the person's yes,
+    `--relink-in-terminal` starts it in Terminal.app.
+  - *The checkpoint is kept on its own.* The Stop hook starts `moku-rails checkpoint --auto` in the background at most
+    every 20 minutes, the prompt hook at once when the person speaks of signing in. The restore takes the newest
+    checkpoint of another account, so one the new sign-in writes never hides it; the newest 12 automatic ones stay.
+
 ## 0.95.0 (2026-11-10)
 
 ### Changed

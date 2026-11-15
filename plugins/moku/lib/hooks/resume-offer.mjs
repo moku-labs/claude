@@ -36,13 +36,13 @@ export function accountOffer(file, rails) {
   const offered = readOffered(marker);
   if (offered.includes(current)) return undefined;
 
-  const waiting = reopenedSessions(saved, root).filter((entry) => entry.newId && !entry.opened).length;
+  const waiting = reopenedSessions(saved, root, current).filter((entry) => entry.newId && !entry.opened).length;
   if (waiting === 0) return undefined;
 
   mkdirSync(checkpointFolder(saved.savedAt), { recursive: true });
   writeFileSync(marker, `${JSON.stringify([...offered, current])}\n`);
 
-  return `The person signed in under another account since the checkpoint ${file} (${saved.sessions.length} session${saved.sessions.length === 1 ? "" : "s"}, ${waiting} not open here yet). Answer what they asked first; then, in one line, offer to restore those sessions, and name the command they run with the app open: \`${rails} resume-checkpoint --open\`. Say this once; if they decline, do not bring it up again.`;
+  return `The person signed in under another account since the checkpoint ${file} (${saved.sessions.length} session${saved.sessions.length === 1 ? "" : "s"}, ${waiting} not open here yet). Answer what they asked first; then, in one line, offer to restore those sessions: on a yes you do it yourself, starting with \`${rails} resume-checkpoint --json\` and its data.steps, and the person runs nothing. Say this once; if they decline, do not bring it up again.`;
 }
 
 /**

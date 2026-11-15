@@ -17,12 +17,14 @@ export const COMMAND_USAGE = {
   park: "moku-rails park <id> --reason <why>",
   resume: "moku-rails resume <id>  (a parked change; for saved sessions see resume-checkpoint)",
   adopt: "moku-rails adopt [<id>] [--type framework|consumer|tools|game]",
-  checkpoint: "moku-rails checkpoint [--since <hours>] [--config-dir <dir>] [--include-temp] [--account <uuid> --org <uuid>]  (saves every open session before a new sign-in; writes no second file when nothing changed)",
+  checkpoint: "moku-rails checkpoint [--since <hours>] [--config-dir <dir>] [--include-temp] [--account <uuid> --org <uuid>] [--auto]  (saves every open session before a new sign-in; writes no second file when nothing changed)",
   "resume-checkpoint":
-    "moku-rails resume-checkpoint [<file>] [--desktop|--cli] [--config-dir <dir>]  (the steps that continue each saved session)\n" +
-    "  --open    the person's step, with the app open: adds gone worktrees again, frees branches, opens the sessions parents first, prints the titles and messages left\n" +
+    "moku-rails resume-checkpoint [<file>] [--desktop|--cli] [--config-dir <dir>]  (where each saved session stands now, and data.steps: the tool calls that restore it; safe to run again)\n" +
+    "  --open    in a terminal only (run_in_terminal, the app's Terminal panel): adds gone worktrees again, opens the sessions the app lacks parents first, checks each in the app's records\n" +
+    "  --sent    marks the messages listed now as delivered, so no later run lists them again\n" +
     "  --carry   copies uncommitted files to the folder the app opened a session in, overwriting nothing that changed\n" +
-    "  --relink  the person's step, from Terminal.app with the app closed: writes the parents and permission modes the app did not keep, after a backup",
+    "  --relink  from Terminal.app with the app closed: writes the parents the app did not keep, after a backup\n" +
+    "  --relink-in-terminal  opens Terminal.app with the line that quits Claude, relinks and opens it again (ask the person first)",
   continue: "moku-rails continue [--change <id>] [--note <what>]",
   scope: "moku-rails scope <what is new> [--change <id>]",
   stages: "moku-rails stages [set --milestone <name> | done --evidence <what the DoD check showed>]",
