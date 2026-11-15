@@ -41,7 +41,7 @@ a full run that the commit hook then ran a second time.
 | The coverage step | `bun run test:coverage`. It runs every test | `bun run test` beside it on the same tree |
 | A verify fix cycle | `bun run test` once, after the last fix of the cycle | One run per fix |
 | A commit whose hook runs the whole script | Nothing. The hook runs it | The script before or after the commit |
-| The close of a change | `moku-rails check tests`, always | Another run when it answers `green on <sha>, not run again` |
+| The close of a change | `moku-rails close` (it runs `check tests` itself), always | Another run when it answers `green on <sha>, not run again` |
 
 ## What the commit hook proves
 

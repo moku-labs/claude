@@ -168,7 +168,8 @@ describe("moku-rails check tests: one green run per tree", () => {
 
     assert.equal(again.code, 0);
     assert.doesNotMatch(again.text, /not run again/);
-    assert.equal(runs(), 3);
+    // the red check, close running it again on the red tree, and the check on the old green commit
+    assert.equal(runs(), 4);
   });
 
   it("a green script that prints more than 1 MB is green, not a timeout", () => {

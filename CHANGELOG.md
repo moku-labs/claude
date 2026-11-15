@@ -2,6 +2,33 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.97.0 (2026-11-15)
+
+### Changed
+- **Fewer walls to hit**, from the test week of 2026-11-08 (`research/token-efficiency/scripts/week_extract.py`).
+  - *The deep builder's ceiling is 600k of context or 300 tool calls* (was 300k / 120). At the old numbers 45 of 66
+    deep runs met it, 39 of them by the call count with the context still under 300k, and each stop cost a fresh
+    builder that re-read the spec to finish the rest (21 such builders in the week). It now only stops a run that
+    has lost its way. `MOKU_DEEP_CEILING=off|_TOKENS|_STEPS` still move it.
+  - *The ceiling never refuses the hand-back.* `SubagentHandback` is neither refused nor counted: in the week the
+    hook refused the report it was asking for 7 times.
+  - *The Stop hook lets a turn end while a background command runs* (tests, a visual re-record, a commit with its
+    hooks), or when the turn ends on a question to the person. 50 of the 58 blocks of the week were turns waiting on
+    a background command, each followed by `pause` and `continue` for nothing.
+  - *`moku-rails close` proves the open checklist itself* when every station is done: it runs the test script for
+    `tests` (once per tree, as `check tests` does), confirms `verify` when the verify station is done and `docs`,
+    and prints `Confirmed at close: …`. It refuses only for a real gap: a station not done, or a red script. Ten
+    closes of the week were refused for `tests` or `docs` and passed seconds later after the same checks.
+  - *Turn budgets:* `moku-tweaker` 80 (was 40), `moku-skeptic` 200 (was 100). The read-only agents keep 300; no run
+    of the week came near any of them.
+- **Fewer permission prompts.**
+  - *A discussion page is published from the scratchpad.* In a worktree `.planning` links into the main checkout,
+    outside the working folder, so every publish of `.planning/discussion/*.html` asked for approval (42 times in
+    the week). The brainstorm reference now copies the page to the session's scratchpad and publishes the copy,
+    to the same link on every round.
+  - *Patterns with `$`, `${…}` or backticks go in single quotes* (agent preamble): in double quotes the shell
+    expands them and Claude Code's removal check refused 5 such `grep` and `cp` calls as unresolvable targets.
+
 ## 0.96.0 (2026-11-15)
 
 ### Changed

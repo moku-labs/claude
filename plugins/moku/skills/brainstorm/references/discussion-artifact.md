@@ -29,6 +29,8 @@ Every fact about the project comes from reading it. Every claim about Moku cites
 
 Write the page source to `.planning/discussion/{NAME}.html`. It stays there as the record.
 
+**Publish from inside the session's folders.** In a worktree `.planning` is a link into the main checkout's `.planning/lanes/<lane>/`, outside the working folder, and every publish of a file there stops the person with an approval (42 of them in the week of 2026-11-08). So copy the page into the session's scratchpad directory (`cp` of that one file is enough) and publish the copy; for each later round, copy again to the same scratchpad path and publish it, which keeps the same link. The `.planning/discussion/` file stays the record you edit.
+
 **When the `Artifact` tool is available** (load it and `ArtifactComments` with ToolSearch when they are listed as deferred): load the `artifact-design` skill first, and `artifact-diagramming` for the diagrams, then publish the file. The page is private to the person. Give them the link and say how to respond: comment on any part of the page, or answer the open questions by number in chat. When the person wants to correct text on the page themselves, load `artifact-capabilities` and give the page the capability that lets a document be edited in place; their saved edits come back as a new version you re-read.
 
 **When it is not available**: write the same page as one self-contained HTML file (inline CSS, inline SVG diagrams, no external scripts) and open it for the person (`open .planning/discussion/{NAME}.html`, or the browser preview tool when the session has one). They respond in chat, by section name and question number.

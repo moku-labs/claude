@@ -12,7 +12,7 @@ export const COMMAND_USAGE = {
   done: "moku-rails done <station> [--change <id>] [--design <slug>] [--no-design-check]",
   skip: "moku-rails skip <station> --reason <why>",
   check: "moku-rails check tests|verify|docs  (confirms a closing-checklist item; tests runs the test script)",
-  close: "moku-rails close [--change <id>]",
+  close: "moku-rails close [--change <id>]  (with every station done, confirms the open checklist itself: runs the test script for tests)",
   pause: "moku-rails pause --reason <why>",
   park: "moku-rails park <id> --reason <why>",
   resume: "moku-rails resume <id>  (a parked change; for saved sessions see resume-checkpoint)",

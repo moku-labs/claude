@@ -2,10 +2,12 @@
 /**
  * Stop hook: the session may not end while a change sits inside a writing station.
  *
- * Two ends of a turn are legitimate inside a station: the station is paused for the user
- * (`moku-rails pause`), or agents spawned from it are still running (the station records them, and the
- * harness lists them as background tasks). A turn that ends while builders run in the background is
- * waiting for their hand-backs, not walking away, so no pause is required for it.
+ * Four ends of a turn are legitimate inside a station: the station is paused for the user
+ * (`moku-rails pause`); agents spawned from it are still running (the station records them, and the
+ * harness lists them as background tasks); a background command still runs (tests, a visual re-record, a
+ * commit with its hooks), whose end wakes the session; or the turn ends on a question to the person.
+ * None of them is walking away, so no pause is required. In the week of 2026-11-08, 50 of 58 blocks were
+ * turns waiting on a background command, and each one made the session run `pause` and `continue` for nothing.
  */
 
 import { existsSync, readFileSync } from "node:fs";
@@ -34,8 +36,11 @@ if (!payload.agent_id) forgetFinished(root, payload.session_id, payload.backgrou
 // Already continuing because of this hook: never block twice, that would loop
 if (payload.stop_hook_active === true) process.exit(0);
 
-// Agents still running inside the station: the turn ends to wait for them, which is what it should do
-if (waitingForAgents(root, payload)) process.exit(0);
+// Agents or commands still running inside the station: the turn ends to wait for them, which is what it should do
+if (waitingForWork(root, payload)) process.exit(0);
+
+// The turn ends on a question: the station waits for the person's answer
+if (asksThePerson(payload.last_assistant_message)) process.exit(0);
 
 // A change abandoned inside build, verify or e2e
 // A loop station (tweak) hands the turn back after every edit: that is how it works, not an abandoned station
@@ -48,17 +53,27 @@ const waveActive = existsSync(state) && /\|\s*(active|building|in-progress)\s*\|
 if (waveActive && !pausedForUser(root)) block("A build wave is still active in .planning/STATE.md. Complete it, or pause the change if you are waiting for the user.");
 
 /**
- * True when agents spawned from the station are still running: recorded by the SubagentStart hook under
- * `.planning/agents/`, or listed by the harness in the payload's `background_tasks`.
+ * True when work started from the station is still running: agents recorded by the SubagentStart hook under
+ * `.planning/agents/`, or any task the harness lists in the payload's `background_tasks` (an agent or a
+ * background shell command; its end wakes the session).
  *
  * @param {string} projectRoot
  * @param {Record<string, any>} hookPayload
  */
-function waitingForAgents(projectRoot, hookPayload) {
+function waitingForWork(projectRoot, hookPayload) {
   if (runningAgents(projectRoot).length > 0) return true;
 
   const tasks = Array.isArray(hookPayload.background_tasks) ? hookPayload.background_tasks : [];
-  return tasks.some((task) => task && (task.type === "subagent" || task.type === "agent" || typeof task.agent_type === "string"));
+  return tasks.some((task) => task && typeof task === "object");
+}
+
+/**
+ * True when the turn's last words end on a question to the person.
+ *
+ * @param {unknown} message the payload's `last_assistant_message`
+ */
+function asksThePerson(message) {
+  return typeof message === "string" && /\?\s*$/.test(message.replace(/[`*_)\]]+\s*$/, ""));
 }
 
 /**

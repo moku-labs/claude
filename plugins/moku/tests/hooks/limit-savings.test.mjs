@@ -43,9 +43,9 @@ describe("the deep builder's ceiling", () => {
     assert.equal(agentTranscript({ transcript_path: join(dir, "agent-x.jsonl") }), join(dir, "agent-x.jsonl"));
   });
 
-  it("defaults to 300k and 120, follows positive overrides and the off switch", () => {
-    assert.deepEqual(ceilingLimits({}), { tokens: 300_000, steps: 120, off: false });
-    assert.deepEqual(ceilingLimits({ MOKU_DEEP_CEILING_STEPS: "80", MOKU_DEEP_CEILING_TOKENS: "nope" }), { tokens: 300_000, steps: 80, off: false });
+  it("defaults to 600k and 300, follows positive overrides and the off switch", () => {
+    assert.deepEqual(ceilingLimits({}), { tokens: 600_000, steps: 300, off: false });
+    assert.deepEqual(ceilingLimits({ MOKU_DEEP_CEILING_STEPS: "80", MOKU_DEEP_CEILING_TOKENS: "nope" }), { tokens: 600_000, steps: 80, off: false });
     assert.equal(ceilingLimits({ MOKU_DEEP_CEILING: "off" }).off, true);
   });
 
@@ -69,17 +69,26 @@ describe("the deep builder's ceiling", () => {
 
   it("refuses the call with the hand-back instruction, and leaves every other agent alone", () => {
     const id = `deep-${process.pid}-${Date.now()}`;
-    const big = sessionWithAgent(id, 350_000);
+    const big = sessionWithAgent(id, 650_000);
 
     const refused = JSON.parse(hook("on-deep-ceiling.mjs", deep(id, big.main)).out).hookSpecificOutput;
     assert.equal(refused.permissionDecision, "deny");
-    assert.match(refused.permissionDecisionReason, /about 350k tokens/);
+    assert.match(refused.permissionDecisionReason, /about 650k tokens/);
     assert.match(refused.permissionDecisionReason, /"verdict": "PARTIAL"/);
     assert.match(refused.permissionDecisionReason, /remaining/);
 
     assert.equal(hook("on-deep-ceiling.mjs", { ...deep(`${id}-b`, big.main), agent_type: "moku:moku-builder" }).out, "");
     assert.equal(hook("on-deep-ceiling.mjs", { ...deep(`${id}-c`, big.main), agent_id: undefined }).out, "");
     assert.equal(hook("on-deep-ceiling.mjs", deep(`${id}-d`, big.main), { MOKU_DEEP_CEILING: "off" }).out, "");
+  });
+
+  it("never refuses the hand-back, even past the ceiling", () => {
+    const id = `deep-hb-${process.pid}-${Date.now()}`;
+    const big = sessionWithAgent(id, 650_000);
+    for (let i = 0; i < 10; i++) hook("on-deep-ceiling.mjs", deep(id, big.main));
+
+    assert.match(hook("on-deep-ceiling.mjs", deep(id, big.main)).out, /"deny"/);
+    assert.equal(hook("on-deep-ceiling.mjs", { ...deep(id, big.main), tool_name: "SubagentHandback" }).out, "");
   });
 });
 

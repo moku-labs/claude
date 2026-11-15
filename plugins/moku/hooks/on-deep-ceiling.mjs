@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PreToolUse hook for `moku-builder-deep`: the run's ceiling. At 300k of context or 120 tool calls (the reasons are
+ * PreToolUse hook for `moku-builder-deep`: the run's ceiling. At 600k of context or 300 tool calls (the reasons are
  * in lib/hooks/ceiling.mjs) one call is refused with the hand-back instruction, a few more are allowed to leave the
  * file in hand compiling, and then every call is refused until the agent reports `PARTIAL` with `remaining`.
  *
@@ -11,10 +11,16 @@
 import { DEEP, ceilingLimits, ceilingMessage, step } from "../lib/hooks/ceiling.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 
+/** The tools that hand the report back to the caller. */
+const HANDBACK = new Set(["SubagentHandback"]);
+
 const { payload } = readHookInput();
 const limits = ceilingLimits();
 
 if (limits.off || !payload.agent_id || !DEEP.test(String(payload.agent_type ?? ""))) process.exit(0);
+
+// Delivering the report is what the ceiling asks for: never refuse it, never count it
+if (HANDBACK.has(String(payload.tool_name ?? ""))) process.exit(0);
 
 const at = step(payload, limits, process.env.MOKU_DEEP_CEILING_DIR || undefined);
 if (at.state === "under" || at.state === "grace") process.exit(0);

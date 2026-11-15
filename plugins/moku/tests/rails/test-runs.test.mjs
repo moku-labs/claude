@@ -340,16 +340,17 @@ describe("moku-rails close, with the log", () => {
     const { root, turnRed } = project();
     built(root);
 
-    // A green run by an agent on this very tree is in the log; it is not the rails' own check
+    // A green run by an agent on this very tree is in the log; it is not the rails' own check,
+    // so close runs the script itself, and the script is red now
     appendRun(root, run({ key: fullKey(root), tree: treeKey(root) }));
     rails(root, "check", "verify");
     rails(root, "check", "docs");
+    turnRed();
     const early = rails(root, "close");
     assert.equal(early.code, 2);
-    assert.match(early.text, /tests/);
+    assert.match(early.text, /red/);
 
     // A red check confirms nothing, and close keeps refusing
-    turnRed();
     assert.equal(rails(root, "check", "tests").code, 2);
     assert.equal(rails(root, "close").code, 2);
   });
