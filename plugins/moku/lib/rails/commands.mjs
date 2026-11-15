@@ -14,8 +14,8 @@ import { describeAgents, runningAgents } from "../hooks/agents.mjs";
 import { PROJECT_TYPES, adoptProject, detectProject, planningIgnored } from "./adopt.mjs";
 import { commitHook } from "./commit-hook.mjs";
 import { guardShell, guardWrite } from "./guard.mjs";
-import { DEFAULT_SINCE_HOURS, artifactWhere, checkpointFolder, checkpointsDir, collectSessions, configDir, describeSession, driftNotes, idMap, latestCheckpoint, parentsFirst, readCheckpoint, reopenedSessions, resumeCommand, resumeMessages, sameCheckpoint, writeCheckpoint } from "./checkpoint.mjs";
-import { currentAccountDir, desktopAppRunning, desktopRoot, openInDesktop, relinkSessions } from "./desktop.mjs";
+import { DEFAULT_SINCE_HOURS, artifactWhere, checkpointFolder, checkpointsDir, collectSessions, configDir, describeSession, driftNotes, checkpointToRestore, idMap, latestCheckpoint, parentsFirst, pruneAuto, readCheckpoint, reopenedSessions, resumeCommand, resumeMessages, sameCheckpoint, writeCheckpoint } from "./checkpoint.mjs";
+import { currentAccountDir, desktopAppRunning, desktopRoot, inTerminal, openInDesktop, relinkSessions } from "./desktop.mjs";
 import { activate, adoptChange, findChange, isInitialized, isInitializing, isOnRails, loadLedger, markRouted, newChange, projectType, saveLedger, setInitializing } from "./ledger.mjs";
 import { applyAccess, applyCommand, offerLines, offerOnce, planningAccess, userSettingsFile } from "./planning-access.mjs";
 import { cleanHead, headCommit, reconcile } from "./reconcile.mjs";
@@ -645,7 +645,7 @@ export function checkpoint({ root, flags }) {
   if (sessions.length === 0) return ok(`No open session in ${config}${desktopDir ? " or in the desktop app" : ""}, and no moku session active in the last ${hours} h. Nothing to save.`);
 
   /** @type {import("./checkpoint.mjs").Checkpoint} */
-  const saved = { version: 2, savedAt, configDir: config, desktopDir: desktopDir ?? null, sessions, skipped };
+  const saved = { version: 2, savedAt, configDir: config, desktopDir: desktopDir ?? null, sessions, skipped, ...(flags.auto === true ? { auto: true } : {}) };
   const artifacts = sessions.reduce((count, session) => count + session.artifacts.length, 0);
   const summary = [
     ...sessions.flatMap((session) => [`- ${describeSession(session)}`, ...sessionNotes(session)]),
@@ -665,10 +665,13 @@ export function checkpoint({ root, flags }) {
   if (previousFile && previous && sameCheckpoint(previous, saved)) {
     const fresh = checkpointFolder(savedAt);
     if (fresh !== previousFile.replace(/\.json$/, "")) rmSync(fresh, { recursive: true, force: true });
+    // Asked for by the person: the file stands as their checkpoint, and pruning never removes it
+    if (flags.auto !== true && previous.auto) writeFileSync(previousFile, `${JSON.stringify({ ...previous, auto: undefined }, null, 2)}\n`);
     return { code: 0, lines: [`Nothing changed since the checkpoint ${previousFile}: no second file written. It keeps ${sessions.length} session${sessions.length === 1 ? "" : "s"}:`, ...summary, ...steps], data: { file: previousFile, unchanged: true, sessions, skipped } };
   }
 
   const file = writeCheckpoint(saved);
+  if (flags.auto === true) pruneAuto(undefined, checkpointToRestore());
   const lines = [
     `Saved ${sessions.length} session${sessions.length === 1 ? "" : "s"} to ${file}:`,
     ...summary,
@@ -680,68 +683,158 @@ export function checkpoint({ root, flags }) {
 }
 
 /**
- * Turn a checkpoint, the newest unless a file is named, back into the steps that continue each session under the
- * current sign-in: the command, the new local id, the title to set again, and one message per session whose id or
- * whose side sessions' ids changed. Three steps act outside moku: `--open` is the person's, in a terminal with the
- * app open; it adds gone worktrees again, frees branches, opens every Code tab session (parents first, so the app
- * nests the side sessions itself) and prints the rest in the same run. `--carry` copies uncommitted files to the
- * folder the app opened a session in. `--relink` writes the parents and titles back into the app's records, with the
- * app closed and a backup first, only for what the app did not nest itself.
+ * Turn a checkpoint back into the sessions it kept, under the current sign-in. Without a flag it reads where each
+ * session stands now (open, archived in this account, or not in the app yet) and returns, in `data.steps`, the tool
+ * calls the session that runs it makes, in order: `unarchive_session` for an archived one, one `run_in_terminal` of
+ * `--open` for those the app does not have, then `set_session_title`, `set_session_permission_mode` and
+ * `send_message`. Run again after the steps, it checks the result and says what is restored and what is not, and why;
+ * a second run never repeats a step that is done. The checkpoint is the newest one saved from another account than
+ * the current one, unless a file is named. `--open` runs only in a terminal: the app's Terminal panel or any other.
+ * `--carry` copies uncommitted files to the folder the app opened a session in. `--relink` writes the parents the app
+ * did not keep, with the app closed; `--relink-in-terminal` starts it in Terminal.app, which quits and reopens the app.
  *
- * @param {Args} args positional: [file]; flags: --config-dir <dir>, --desktop, --cli, --open, --carry, --relink
+ * @param {Args} args positional: [file]; flags: --config-dir <dir>, --desktop, --cli, --open, --carry, --relink,
+ *   --relink-in-terminal, --sent
  * @returns {Result}
  * @example
  * resumeCheckpoint({ root, positional: [], flags: {} });
  */
 export function resumeCheckpoint({ positional, flags }) {
   const config = typeof flags["config-dir"] === "string" ? flags["config-dir"] : configDir();
-  const named = positional[0] ?? [flags.open, flags.relink, flags.carry].find((value) => typeof value === "string");
-  const file = named ?? latestCheckpoint();
+  const named = positional[0] ?? [flags.open, flags.relink, flags.carry, flags["relink-in-terminal"], flags.sent].find((value) => typeof value === "string");
+  const file = named ?? checkpointToRestore();
   const saved = file ? readCheckpoint(file) : undefined;
   if (!file || !saved) return refused(file ? `${file} is not a moku checkpoint.` : `there is no checkpoint in ${checkpointsDir()}. Run \`moku-rails checkpoint\` first.`);
 
   if (flags.open) return openSessions(saved, file);
   if (flags.relink) return relink(saved, file);
+  if (flags["relink-in-terminal"]) return relinkInTerminal(saved, file);
   if (flags.carry) return carry(saved);
+  if (flags.sent) return markSent(saved);
 
   const surface = flags.desktop ? "desktop" : flags.cli ? "cli" : undefined;
   const reopened = reopenedSessions(saved);
-  const sessions = reopened.map(({ session, newId, opened }) => ({ ...session, newId, opened, command: resumeCommand(session, surface), drift: driftNotes(session, config) }));
-  const lines = [`Checkpoint of ${saved.savedAt}, ${sessions.length} session${sessions.length === 1 ? "" : "s"}. Continue each with:`];
+  const sessions = reopened.map(({ session, newId, opened, state }) => ({ ...session, newId, opened, state, command: resumeCommand(session, surface), drift: driftNotes(session, config) }));
+  const actions = resumeActions(reopened, sentMessages(saved));
+  const report = restoreReport(saved, reopened);
+  const steps = restoreSteps(reopened, actions, file);
+
+  const lines = [report.head, ...report.lines];
   for (const session of sessions) {
     const artifacts = session.artifacts.map((artifact) => `  artifact: ${artifact.title || artifact.url} ${artifact.url} → ${artifactWhere(artifact)}`);
     const folder = session.folderGone && !existsSync(session.cwd) ? [`  folder gone: \`--open\` adds it again from ${session.branch} before it opens the session`] : [];
     lines.push(`- ${describeSession(session)}`, `  ${session.command}`, ...whereNow(session), ...folder, ...sessionNotes(session), ...artifacts, ...session.drift.map((note) => `  note: ${note}`));
   }
   if (config !== saved.configDir) lines.push(`The checkpoint was saved from ${saved.configDir} and Claude Code reads ${config} now: a session resumes only from the config folder that holds its transcript.`);
-
-  const actions = resumeActions(reopened);
-  const waiting = reopened.filter((entry) => entry.newId && !entry.opened).length;
-  if (waiting > 0) lines.push(`${waiting} Code tab session${waiting === 1 ? " is" : "s are"} not open in the app yet. The person opens them with the app open, in its own terminal or any other: \`${RAILS_BIN} resume-checkpoint --open\`. It adds gone worktrees again, opens the sessions parents first and prints the titles and messages left to do, so this command need not run again.`);
-  lines.push(...actionLines(actions, file));
+  lines.push(...stepLines(steps), ...nestingLines(actions, file));
   lines.push("Each session continues with its conversation; background tasks and the prompt cache do not carry over.");
 
-  return { code: 0, lines, data: { file, savedAt: saved.savedAt, configDir: saved.configDir, sessions, idMap: Object.fromEntries(idMap(reopened)), ...actions, skipped: saved.skipped ?? [] } };
+  return { code: 0, lines, data: { file, savedAt: saved.savedAt, configDir: saved.configDir, done: report.done, restored: report.restored, notRestored: report.notRestored, steps, sessions, idMap: Object.fromEntries(idMap(reopened)), ...actions, skipped: saved.skipped ?? [] } };
 }
 
 /**
- * Where a saved Code tab session is under the new sign-in, in one line: open or not, and its id, with the old one
- * only when it changed.
+ * What is restored and what is not, and why, from the app's records of the current account: the check a resume ends
+ * with.
  *
- * @param {{ newId: string | null, opened: boolean, localId: string | null }} session
+ * @param {import("./checkpoint.mjs").Checkpoint} saved
+ * @param {import("./checkpoint.mjs").Reopened[]} reopened
+ * @returns {{ head: string, lines: string[], done: boolean, restored: { sessionId: string, title: string }[], notRestored: { id: string, title: string, why: string }[] }}
+ */
+function restoreReport(saved, reopened) {
+  const desktop = reopened.filter((entry) => entry.newId);
+  const restored = desktop.filter((entry) => entry.opened).map((entry) => ({ sessionId: /** @type {string} */ (entry.newId), title: entry.session.title }));
+  const notRestored = [
+    ...desktop.filter((entry) => entry.state === "archived").map((entry) => ({ id: /** @type {string} */ (entry.newId), title: entry.session.title, why: "archived in this account: unarchive_session brings it back" })),
+    ...desktop.filter((entry) => entry.state === "missing").map((entry) => ({ id: /** @type {string} */ (entry.newId), title: entry.session.title, why: entry.session.folderGone && !existsSync(entry.session.cwd) ? `not in the app yet, and its folder is gone: \`--open\` adds it again from ${entry.session.branch}` : "not in the app yet: `--open` opens it" })),
+    ...(saved.skipped ?? []).map((entry) => ({ id: entry.id, title: entry.title, why: `not kept at the save: ${entry.reason}` })),
+  ];
+  const done = notRestored.filter((entry) => !entry.why.startsWith("not kept")).length === 0;
+  const head = `Restore from ${saved.savedAt}: ${restored.length} of ${desktop.length} Code tab session${desktop.length === 1 ? "" : "s"} open in the app${done ? ", nothing left to open" : ""}.`;
+  const lines = notRestored.map((entry) => `Not restored: "${entry.title || entry.id}" ${entry.id}: ${entry.why}.`);
+
+  return { head, lines, done, restored, notRestored };
+}
+
+/**
+ * The tool calls that finish the resume from where it stands, in order. Only calls the session that runs the resume
+ * can make: nothing here is the person's.
+ *
+ * @param {import("./checkpoint.mjs").Reopened[]} reopened
+ * @param {ResumeActions} actions
+ * @param {string} file the checkpoint
+ * @returns {{ tool: string, input: Record<string, string>, why: string }[]}
+ */
+function restoreSteps(reopened, actions, file) {
+  const steps = [];
+  for (const entry of reopened.filter((item) => item.state === "archived")) steps.push({ tool: "unarchive_session", input: { session_id: /** @type {string} */ (entry.newId) }, why: `"${entry.session.title}" is archived in this account` });
+
+  const missing = reopened.filter((entry) => entry.state === "missing").length;
+  if (missing > 0) steps.push({ tool: "run_in_terminal", input: { command: `${shellQuote(RAILS_BIN)} resume-checkpoint --open ${shellQuote(file)}`, title: "moku resume" }, why: `${missing} session${missing === 1 ? " is" : "s are"} not in the app yet; read_terminal until it prints "Restore", then run \`resume-checkpoint --json\` again for the steps after it` });
+
+  for (const entry of actions.titles) steps.push({ tool: "set_session_title", input: { session_id: entry.sessionId, title: entry.title }, why: "the app renamed it" });
+  for (const entry of actions.modes) if (APP_MODES.has(entry.saved)) steps.push({ tool: "set_session_permission_mode", input: { session_id: entry.sessionId, mode: entry.saved }, why: `it ran in ${entry.saved}, the app opened it in ${entry.now}` });
+  for (const message of actions.messages) steps.push({ tool: "send_message", input: { session_id: message.to, message: message.text }, why: `"${message.title}": ids changed` });
+  if (actions.messages.length > 0) steps.push({ tool: "Bash", input: { command: `${shellQuote(RAILS_BIN)} resume-checkpoint --sent ${shellQuote(file)}` }, why: "after the messages are delivered: no later run sends them again" });
+  if (actions.carry.length > 0) steps.push({ tool: "Bash", input: { command: `${shellQuote(RAILS_BIN)} resume-checkpoint --carry ${shellQuote(file)}` }, why: "the app opened a session in another folder than its uncommitted files" });
+
+  return steps;
+}
+
+/** The permission modes `set_session_permission_mode` takes. */
+const APP_MODES = new Set(["default", "acceptEdits", "plan", "auto", "bypassPermissions"]);
+
+/**
+ * The steps as lines for the session that runs the resume.
+ *
+ * @param {{ tool: string, input: Record<string, string>, why: string }[]} steps
+ * @returns {string[]}
+ */
+function stepLines(steps) {
+  if (steps.length === 0) return ["No step left for the session: every session the app has is in the list, with its title, its mode and its messages."];
+
+  return [`Steps for the session that runs the resume, in order, with its own tools (data.steps has each input whole):`, ...steps.map((step, index) => `${index + 1}. ${step.tool} ${step.tool === "send_message" ? step.input.session_id : JSON.stringify(step.input)} (${step.why})`)];
+}
+
+/**
+ * The one step left to the person: the sidebar nesting, which no tool of a session writes and the app keeps only in
+ * its records, written while it is closed.
+ *
+ * @param {ResumeActions} actions
+ * @param {string} file the checkpoint
+ * @returns {string[]}
+ */
+function nestingLines(actions, file) {
+  const lines = [];
+  if (actions.nesting.nested.length > 0) lines.push(`The app nested ${actions.nesting.nested.length} side session${actions.nesting.nested.length === 1 ? "" : "s"} under ${actions.nesting.nested.length === 1 ? "its parent" : "their parents"} itself.`);
+  const { unnested } = actions.nesting;
+  if (unnested.length === 0) return lines;
+
+  lines.push(
+    `${unnested.length} side session${unnested.length === 1 ? " is" : "s are"} not nested under ${unnested.length === 1 ? "its parent" : "their parents"}: ${unnested.map((entry) => `"${entry.title}"`).join(", ")}. Each works as it is; only the sidebar shows it at the top level. The app keeps the nesting only in its records, written while it is closed, so this one step quits the app: ask the person first. On a yes, run \`${RAILS_BIN} resume-checkpoint --relink-in-terminal\`: it opens Terminal.app with the line that quits Claude, writes the parents after a backup and opens Claude again. The line itself, for the person to run in Terminal.app:`,
+    `  ${relinkLine(file)}`,
+  );
+  return lines;
+}
+
+/**
+ * Where a saved Code tab session is under the current sign-in, in one line.
+ *
+ * @param {{ newId: string | null, state?: string, localId: string | null }} session
  * @returns {string[]}
  */
 function whereNow(session) {
   if (!session.newId) return [];
 
   const id = session.localId && session.localId !== session.newId ? `${session.newId} (was ${session.localId})` : `${session.newId} (same id)`;
-  return [`  ${session.opened ? "open in the app as" : "not open in the app yet, will be"} ${id}`];
+  const where = session.state === "open" ? "open in the app as" : session.state === "archived" ? "archived in this account as" : "not open in the app yet, will be";
+  return [`  ${where} ${id}`];
 }
 
 /**
  * @typedef {object} ResumeActions
  * @property {{ sessionId: string, title: string }[]} titles the titles the app changed, to set again
- * @property {{ to: string, title: string, text: string }[]} messages one per open session whose id or side sessions' ids changed
+ * @property {{ to: string, title: string, text: string }[]} messages one per open session whose id or side sessions' ids
+ *   changed, not sent yet
  * @property {{ sessionId: string, title: string, from: string, files: number }[]} carry sessions the app may open in a new
  *   worktree, with uncommitted files in the old one
  * @property {{ nested: string[], unnested: { sessionId: string, title: string, parent: string }[] }} nesting side
@@ -751,67 +844,85 @@ function whereNow(session) {
  */
 
 /**
- * What is left after the sessions are open: the titles to set, the messages to send, the files to carry, and the
- * side sessions the app did not nest.
+ * What is left after the sessions are open: the titles to set, the messages to send, the files to carry, the modes
+ * and the side sessions the app did not nest.
  *
  * @param {import("./checkpoint.mjs").Reopened[]} reopened
+ * @param {Set<string>} [sent] the sessions whose message was delivered already
  * @returns {ResumeActions}
  */
-function resumeActions(reopened) {
+function resumeActions(reopened, sent = new Set()) {
   const map = idMap(reopened);
   const opened = reopened.filter((entry) => entry.opened && entry.newId);
 
-  // A worktree the app made: it checks the branch out in a new one, and the files not committed stay behind
+  // The app opened the session in another folder than the one its uncommitted files are in
   const carryList = [];
   const notes = new Map();
   for (const entry of opened) {
-    if (!entry.session.worktreeByApp || !existsSync(entry.session.cwd)) continue;
+    const now = entry.record?.cwd;
+    if (!now || !existsSync(entry.session.cwd) || samePath(now, entry.session.cwd)) continue;
     const left = changedFiles(entry.session.cwd).length;
     if (left === 0) continue;
     carryList.push({ sessionId: /** @type {string} */ (entry.newId), title: entry.session.title, from: entry.session.cwd, files: left });
-    notes.set(entry.newId, [`The app may open you in a new worktree of ${entry.session.branch}. Your ${left} uncommitted file${left === 1 ? "" : "s"} stay in ${entry.session.cwd}: if your folder is another one, run \`${RAILS_BIN} resume-checkpoint --carry\` first. It copies them over and overwrites nothing that changed.`]);
+    notes.set(entry.newId, [`The app opened you in ${now}. Your ${left} uncommitted file${left === 1 ? "" : "s"} stay in ${entry.session.cwd}: the resume copies them over with \`${RAILS_BIN} resume-checkpoint --carry\`, overwriting nothing that changed.`]);
   }
 
   const titles = opened.filter((entry) => entry.session.title && entry.record?.title !== entry.session.title).map((entry) => ({ sessionId: /** @type {string} */ (entry.newId), title: entry.session.title }));
-  const messages = resumeMessages(reopened, notes).filter((message) => opened.some((entry) => entry.newId === message.to));
+  const messages = resumeMessages(reopened, notes).filter((message) => opened.some((entry) => entry.newId === message.to) && !sent.has(message.to));
 
   const nested = [];
   const unnested = [];
   for (const entry of opened) {
     const parent = entry.session.parent ? map.get(entry.session.parent) : undefined;
     if (!parent || !opened.some((other) => other.newId === parent)) continue;
-    if (entry.record?.spawnedFrom?.sessionId === parent) nested.push(/** @type {string} */ (entry.newId));
+    if (entry.session.detached) continue;
+    if (entry.record?.spawnedFrom?.sessionId === parent && !entry.record.detached) nested.push(/** @type {string} */ (entry.newId));
     else unnested.push({ sessionId: /** @type {string} */ (entry.newId), title: entry.session.title, parent });
   }
 
   const modes = opened
-    .filter((entry) => entry.session.permissionMode && entry.record && entry.record.permissionMode !== entry.session.permissionMode)
+    .filter((entry) => entry.session.permissionMode && entry.record && (entry.record.permissionMode ?? "default") !== entry.session.permissionMode)
     .map((entry) => ({ sessionId: /** @type {string} */ (entry.newId), title: entry.session.title, saved: /** @type {string} */ (entry.session.permissionMode), now: entry.record?.permissionMode ?? "default" }));
 
   return { titles, messages, carry: carryList, nesting: { nested, unnested }, modes };
 }
 
 /**
- * The lines that tell the session running the resume what is left, so it acts on one run.
+ * The file that remembers which sessions got their message.
  *
- * @param {ResumeActions} actions
- * @param {string} file the checkpoint
- * @returns {string[]}
+ * @param {import("./checkpoint.mjs").Checkpoint} saved
+ * @returns {string}
  */
-function actionLines(actions, file) {
-  const lines = [];
-  if (actions.titles.length > 0) lines.push("Set these titles again with set_session_title (the app renamed them):", ...actions.titles.map((entry) => `  set_session_title ${entry.sessionId} ${JSON.stringify(entry.title)}`));
-  if (actions.messages.length > 0) lines.push(`Send each of these ${actions.messages.length} session${actions.messages.length === 1 ? "" : "s"} its message with send_message (the full text is in --json, data.messages): ${actions.messages.map((message) => `${message.to} "${message.title}"`).join(", ")}.`);
-  if (actions.carry.length > 0) lines.push(`After the messages, run \`${RAILS_BIN} resume-checkpoint --carry\`: ${actions.carry.map((entry) => `"${entry.title}" has ${entry.files} uncommitted file${entry.files === 1 ? "" : "s"} in ${entry.from}`).join("; ")}. It copies them to the folder the app opened the session in.`);
-  if (actions.nesting.nested.length > 0) lines.push(`The app nested ${actions.nesting.nested.length} side session${actions.nesting.nested.length === 1 ? "" : "s"} under ${actions.nesting.nested.length === 1 ? "its parent" : "their parents"} itself.`);
-  const { unnested } = actions.nesting;
-  if (actions.modes.length > 0) lines.push(`${actions.modes.length} session${actions.modes.length === 1 ? "" : "s"} opened in another permission mode than ${actions.modes.length === 1 ? "it" : "they"} ran in: ${actions.modes.map((entry) => `"${entry.title}" ${entry.now} → ${entry.saved}`).join(", ")}. The person sets it back in each session's mode menu, or the Terminal.app line below writes it into the app's records.`);
-  if (unnested.length > 0) lines.push(`${unnested.length} side session${unnested.length === 1 ? " is" : "s are"} not nested under ${unnested.length === 1 ? "its parent" : "their parents"}: ${unnested.map((entry) => `"${entry.title}"`).join(", ")}. Only the app's records bring it back, written while the app is closed.`);
-  if (unnested.length > 0 || actions.modes.length > 0) {
-    lines.push(`The person runs this one line in Terminal.app, not in the app's terminal, which closes with the app: it quits Claude, writes ${[unnested.length > 0 ? "the parents" : "", actions.modes.length > 0 ? "the permission modes" : ""].filter(Boolean).join(" and ")} after a backup, and opens Claude again:`, `  ${relinkLine(file)}`);
-  }
+function sentFile(saved) {
+  return join(checkpointFolder(saved.savedAt), "messages-sent.json");
+}
 
-  return lines;
+/**
+ * @param {import("./checkpoint.mjs").Checkpoint} saved
+ * @returns {Set<string>}
+ */
+function sentMessages(saved) {
+  try {
+    const list = JSON.parse(readFileSync(sentFile(saved), "utf8"));
+    return new Set(Array.isArray(list) ? list : []);
+  } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Record that the messages the resume lists now were delivered, so a later run does not list them again.
+ *
+ * @param {import("./checkpoint.mjs").Checkpoint} saved
+ * @returns {Result}
+ */
+function markSent(saved) {
+  const sent = sentMessages(saved);
+  const now = resumeActions(reopenedSessions(saved), sent).messages.map((message) => message.to);
+  mkdirSync(checkpointFolder(saved.savedAt), { recursive: true });
+  writeFileSync(sentFile(saved), `${JSON.stringify([...sent, ...now])}\n`);
+
+  return { code: 0, lines: [now.length > 0 ? `Marked ${now.length} message${now.length === 1 ? "" : "s"} as delivered: ${now.join(", ")}.` : "No message was waiting."], data: { marked: now } };
 }
 
 /**
@@ -825,50 +936,76 @@ function relinkLine(file) {
 }
 
 /**
- * Open every saved Code tab session in the desktop app that is not open there yet, parents before the sessions they
- * started, after giving each its folder back. Then, in the same run, everything that is left: the titles, the
- * messages, the files to carry and the nesting, also kept in `<checkpoint>/resume-actions.json`. The person's step,
- * with the app open and signed in.
+ * Open Terminal.app with the relink line, so the nesting is written without the person typing anything: Terminal.app
+ * outlives the app it quits. Run only after the person agreed, since it quits every session.
+ *
+ * @param {import("./checkpoint.mjs").Checkpoint} saved
+ * @param {string} file the checkpoint
+ * @returns {Result}
+ */
+function relinkInTerminal(saved, file) {
+  const { unnested } = resumeActions(reopenedSessions(saved)).nesting;
+  if (unnested.length === 0) return ok("Every side session is nested under its parent already: nothing to relink, the app stays open.");
+
+  const line = relinkLine(file);
+  const script = `tell application "Terminal" to do script ${JSON.stringify(line)}`;
+  if (process.env.MOKU_DRY_RUN === "1") return { code: 0, lines: [`Would run in Terminal.app: ${line}`], data: { line, script } };
+
+  const run = spawnSync("osascript", ["-e", script, "-e", 'tell application "Terminal" to activate'], { encoding: "utf8", timeout: 30_000 });
+  if (run.status !== 0) return fail(`Terminal.app did not take the line (${(run.stderr || "").trim() || `exit ${run.status}`}). The person runs it there themselves: ${line}`);
+
+  return { code: 0, lines: [`Terminal.app runs the relink now: Claude quits, ${unnested.length} side session${unnested.length === 1 ? " is" : "s are"} nested again after a backup, and Claude opens again. After that, say "restore the sessions" once more: the check confirms the nesting.`], data: { line } };
+}
+
+/**
+ * Open every saved Code tab session the current account does not have, parents before the sessions they started,
+ * after giving each gone folder back, and check each one in the app's records. Then, in the same run, what is left.
+ * It runs only in a terminal: the app's Terminal panel (`run_in_terminal`) or any other; outside one it touches
+ * nothing.
  *
  * @param {import("./checkpoint.mjs").Checkpoint} saved
  * @param {string} file the checkpoint
  * @returns {Result}
  */
 function openSessions(saved, file) {
-  if (process.env.CLAUDECODE) return refused(`\`--open\` is the person's step: they run \`${RAILS_BIN} resume-checkpoint --open\` with the desktop app open, in its terminal or any other.`);
+  if (!inTerminal()) return refused(`\`--open\` needs a terminal, and this is none (the Bash tool or a \`!\` line). Run it with run_in_terminal, in the app's Terminal panel: ${RAILS_BIN} resume-checkpoint --open ${shellQuote(file)}. Nothing was changed.`);
 
-  const todo = parentsFirst(reopenedSessions(saved).filter((entry) => entry.newId && !entry.opened));
+  const root = desktopRoot();
+  const accountDir = currentAccountDir(root);
+  const todo = parentsFirst(reopenedSessions(saved, root, accountDir).filter((entry) => entry.state === "missing"));
   const lines = [];
   const failed = [];
   for (const entry of todo) {
     const { session } = entry;
-    const folder = prepareFolder({ cwd: session.cwd, repo: session.repo, branch: session.branch, releaseBranch: session.worktreeByApp === true });
+    // The branch stays in the session's own folder: freeing it sent two sessions to the main checkout on 2026-11-15
+    const folder = prepareFolder({ cwd: session.cwd, repo: session.repo, branch: session.branch });
     if (folder.line) lines.push(folder.line);
     if (folder.state === "lost" || folder.state === "blocked") {
-      failed.push({ session, why: folder.state });
+      failed.push({ session, why: folder.state === "lost" ? "lost: its folder and its branch are gone" : folder.line });
       continue;
     }
-    if (!openInDesktop(session.cwd, session.id, session.permissionMode ?? null)) failed.push({ session, why: "open" });
+
+    const opened = openInDesktop(session.cwd, session.id, { permissionMode: session.permissionMode ?? null, accountDir, root });
+    if (!opened.ok) failed.push({ session, why: opened.why ?? "the app did not open it" });
+    else if (opened.record && !samePath(opened.record.cwd, session.cwd)) lines.push(`"${session.title}" opened in ${opened.record.cwd}, not in ${session.cwd}.`);
   }
 
-  const reopened = reopenedSessions(saved);
-  const actions = resumeActions(reopened);
-  const open = reopened.filter((entry) => entry.newId && entry.opened).length;
-  const total = reopened.filter((entry) => entry.newId).length;
-  const head = todo.length === 0 ? `Every Code tab session of the checkpoint is open in the app already (${open}).` : `Opened ${todo.length - failed.length} of ${todo.length} session${todo.length === 1 ? "" : "s"} in the app; ${open} of ${total} are open there now.`;
-  for (const { session, why } of failed) lines.push(why === "lost" ? `Not opened, lost: ${describeSession(session)}.` : `Did not open: ${describeSession(session)}. Run \`${resumeCommand(session, "desktop")}\` in a terminal.`);
-  for (const entry of reopened.filter((item) => item.opened && item.newId)) lines.push(`- ${entry.session.title || entry.session.id.slice(0, 8)}: ${entry.newId}${entry.session.localId && entry.session.localId !== entry.newId ? ` (was ${entry.session.localId})` : ""}`);
+  const reopened = reopenedSessions(saved, root, accountDir);
+  const actions = resumeActions(reopened, sentMessages(saved));
+  const report = restoreReport(saved, reopened);
+  for (const { session, why } of failed) lines.push(`Did not open "${session.title || session.id.slice(0, 8)}": ${why}.`);
 
   const actionsFile = join(checkpointFolder(saved.savedAt), "resume-actions.json");
   mkdirSync(checkpointFolder(saved.savedAt), { recursive: true });
   writeFileSync(actionsFile, `${JSON.stringify({ checkpoint: file, ...actions }, null, 2)}\n`);
-  const next = actionLines(actions, file);
-  const pending = actions.titles.length + actions.messages.length + actions.carry.length + actions.nesting.unnested.length + actions.modes.length;
+
+  const steps = restoreSteps(reopened, actions, file).filter((step) => step.tool !== "run_in_terminal");
+  const left = steps.length > 0 || actions.nesting.unnested.length > 0 ? [...stepLines(steps), ...nestingLines(actions, file), `The same list is in ${actionsFile}; \`${RAILS_BIN} resume-checkpoint --json\` checks it again at any time.`] : [...nestingLines(actions, file), "Nothing else to do: every title and permission mode is as it was, no message is waiting, and the side sessions are nested."];
 
   return {
     code: failed.length > 0 ? 1 : 0,
-    lines: [head, ...lines, ...(pending > 0 ? [`For the session that runs the resume (the same list is in ${actionsFile}):`, ...next] : [...next, "Nothing else to do: every title and permission mode is as it was, no id changed, and the side sessions are nested."])],
-    data: { opened: todo.length - failed.length, failed: failed.map((entry) => entry.session.id), actionsFile, ...actions },
+    lines: [todo.length === 0 ? "Every Code tab session of the checkpoint the app can open is open in the app already." : `Opened ${todo.length - failed.length} of ${todo.length} session${todo.length === 1 ? "" : "s"} the app did not have.`, ...lines, report.head, ...report.lines, ...left],
+    data: { opened: todo.length - failed.length, failed: failed.map((entry) => ({ id: entry.session.id, why: entry.why })), actionsFile, done: report.done, restored: report.restored, notRestored: report.notRestored, steps, ...actions },
   };
 }
 

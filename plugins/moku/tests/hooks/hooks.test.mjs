@@ -570,7 +570,7 @@ describe("prompt hook on the rails", () => {
     const work = ["восстанови удалённый файл", "верни кнопку назад", "верно, сессия логина истекает", "restore the session cookie after login", "restore the sessions table from the backup", "верни сессии пользователей в админке", "resume playback of the video", "сколько серий осталось"];
 
     for (const prompt of asks) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails resume-checkpoint/, prompt);
-    for (const prompt of asks.slice(0, 2)) assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt }, env).out, /resume-checkpoint --open/, `off the rails: ${prompt}`);
+    for (const prompt of asks.slice(0, 2)) assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt }, env).out, /resume-checkpoint --json.*data\.steps.*run_in_terminal.*never Bash/, `off the rails: ${prompt}`);
     for (const prompt of work) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /resume-checkpoint/, prompt);
   });
 
@@ -594,7 +594,7 @@ describe("prompt hook on the rails", () => {
     writeFileSync(file, saved(oldDir));
     const first = hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "привет" }, env).out;
     assert.match(first, /signed in under another account since the checkpoint .*1 not open here yet/);
-    assert.match(first, /resume-checkpoint --open/);
+    assert.match(first, /resume-checkpoint --json\` and its data\.steps, and the person runs nothing/);
     assert.doesNotMatch(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "что дальше?" }, env).out, /signed in under another account/, "offered once");
   });
 

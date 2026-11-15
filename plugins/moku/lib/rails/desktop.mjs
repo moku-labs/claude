@@ -11,7 +11,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, join } from "node:path";
 
@@ -28,6 +28,7 @@ import { basename, join } from "node:path";
  * @property {string | null} worktreePath the worktree the app made for the session, null when it made none
  * @property {string} originCwd the folder the session was started from, the repository of its worktree
  * @property {string | null} permissionMode the permission mode the session runs in, such as `auto`
+ * @property {boolean} detached whether the side session was moved to the top level (`lineageDetached`)
  * @property {string} file
  */
 
@@ -70,7 +71,8 @@ export function readRecords(dir) {
 export function currentAccountDir(root, named = {}) {
   const account = named.account ?? process.env.CLAUDE_CODE_ACCOUNT_UUID;
   const org = named.org ?? process.env.CLAUDE_CODE_ORGANIZATION_UUID;
-  if (account && org && existsSync(join(root, account, org))) return join(root, account, org);
+  // The account the running session names is the current one, even before the app keeps a record there
+  if (account && org) return join(root, account, org);
 
   let newest;
   for (const dir of accountDirs(root)) {
@@ -83,22 +85,42 @@ export function currentAccountDir(root, named = {}) {
 }
 
 /**
- * The record of a session opened again under another account: `local_<cliSessionId>.json` in any account folder
- * but the one it was saved from, the newest when there are several.
+ * The record the current account keeps of a saved session: `local_<cliSessionId>.json`, or, when the sessions are
+ * restored into the account they were saved from, the record under its old local id. A record in any other account
+ * folder is not the current sign-in's and never counts: the machine may have held three or four sign-ins, each with
+ * old records of the same sessions (on 2026-11-11 five sessions were taken as open from such a folder).
  *
  * @param {string} root the desktop root
  * @param {string} cliSessionId
- * @param {string | undefined} savedFrom the account folder of the checkpoint, never the answer
+ * @param {string | undefined} savedFrom the account folder of the checkpoint
+ * @param {string | undefined} [current] the account folder of the current sign-in
+ * @param {string | null} [oldLocalId] the local id the session had when it was saved
  * @returns {DesktopRecord | undefined}
  */
-export function reopenedRecord(root, cliSessionId, savedFrom) {
-  const candidates = accountDirs(root)
-    .filter((dir) => dir !== savedFrom)
-    .map((dir) => join(dir, `local_${cliSessionId}.json`))
-    .filter((file) => existsSync(file))
-    .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
+export function reopenedRecord(root, cliSessionId, savedFrom, current = currentAccountDir(root), oldLocalId = null) {
+  if (!current) return undefined;
+  const names = [`local_${cliSessionId}.json`, ...(current === savedFrom && oldLocalId ? [`${oldLocalId}.json`] : [])];
+  const file = names.map((name) => join(current, name)).find((path) => existsSync(path));
+  if (!file) return undefined;
 
-  return candidates.length > 0 ? toRecord(candidates[0]) : undefined;
+  const found = toRecord(file);
+  return found && archivedIds(current).has(found.localId) ? { ...found, archived: true } : found;
+}
+
+/**
+ * The local ids the app lists as archived in an account folder's `archived-sessions.idx`, beside each record's own
+ * flag.
+ *
+ * @param {string} dir
+ * @returns {Set<string>}
+ */
+function archivedIds(dir) {
+  try {
+    const index = JSON.parse(readFileSync(join(dir, "archived-sessions.idx"), "utf8"));
+    return new Set(Array.isArray(index?.archived) ? index.archived.filter((id) => typeof id === "string") : []);
+  } catch {
+    return new Set();
+  }
 }
 
 /**
@@ -117,25 +139,51 @@ export function desktopAppRunning() {
 /** The pause between two sessions opened in the app, so each gets its record before the next one starts. */
 const OPEN_PAUSE_MS = Number(process.env.MOKU_OPEN_PAUSE_MS ?? 3000);
 
+/** How long the app may take to write the record of a session it was asked to open. */
+const OPEN_WAIT_MS = Number(process.env.MOKU_OPEN_WAIT_MS ?? 20_000);
+
+/**
+ * Whether this process writes to a terminal, the only place `claude --desktop` hands a session to the app. The
+ * Bash tool and the `!` prompt of a session are no terminal; the app's Terminal panel (`run_in_terminal`) and
+ * Terminal.app are.
+ *
+ * @returns {boolean}
+ */
+export function inTerminal() {
+  if (process.env.MOKU_FORCE_TTY !== undefined) return process.env.MOKU_FORCE_TTY === "1";
+  return Boolean(process.stdout.isTTY);
+}
+
 /** The permission modes `claude --permission-mode` takes; `default` is the mode a session gets without the flag. */
 export const CLI_PERMISSION_MODES = new Set(["acceptEdits", "auto", "bypassPermissions", "manual", "dontAsk", "plan"]);
 
 /**
- * Open one session in the desktop app under the current sign-in, in the permission mode it had. `claude --desktop
- * --resume` hands the session to the app only from a terminal, so it runs under `script`, which gives it one; then a
- * pause.
+ * Open one session in the desktop app under the current sign-in, in the permission mode it had, and wait until the
+ * app has written its record. `claude --desktop --resume` hands the session over only from a terminal, so it runs
+ * here with this process's own terminal (its output on stderr, which is the terminal too, so stdout stays the report); the earlier way, under `script` with no input, opened none of 13 sessions
+ * on 2026-11-11 and 2026-11-15. The answer is the app's record, not the command's exit code.
  *
  * @param {string} cwd
  * @param {string} cliSessionId
- * @param {string | null} [permissionMode] the mode the session had, passed on when the CLI knows it
- * @returns {boolean} whether the command succeeded
+ * @param {{ permissionMode?: string | null, accountDir?: string, root?: string }} [options]
+ * @returns {{ ok: boolean, record?: DesktopRecord, why?: string }}
  */
-export function openInDesktop(cwd, cliSessionId, permissionMode = null) {
+export function openInDesktop(cwd, cliSessionId, { permissionMode = null, accountDir, root = desktopRoot() } = {}) {
   const mode = permissionMode && CLI_PERMISSION_MODES.has(permissionMode) ? ["--permission-mode", permissionMode] : [];
-  const run = spawnSync("script", ["-q", "/dev/null", "claude", "--desktop", "--resume", cliSessionId, ...mode], { cwd, stdio: ["ignore", "ignore", "ignore"], timeout: 60_000 });
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, OPEN_PAUSE_MS);
+  const run = spawnSync("claude", ["--desktop", "--resume", cliSessionId, ...mode], { cwd, stdio: [0, 2, 2], timeout: 60_000 });
+  if (run.error) return { ok: false, why: `\`claude\` did not start: ${run.error.message}` };
 
-  return run.status === 0;
+  const deadline = Date.now() + OPEN_WAIT_MS;
+  for (;;) {
+    const dir = accountDir ?? currentAccountDir(root);
+    const record = dir ? reopenedRecord(root, cliSessionId, undefined, dir) : undefined;
+    if (record && !record.archived) {
+      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, OPEN_PAUSE_MS);
+      return { ok: true, record };
+    }
+    if (Date.now() >= deadline) return { ok: false, why: run.status === 0 ? `the app wrote no record of it within ${Math.round(OPEN_WAIT_MS / 1000)} s` : `\`claude --desktop\` exited with ${run.status}` };
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250);
+  }
 }
 
 /**
@@ -143,7 +191,7 @@ export function openInDesktop(cwd, cliSessionId, permissionMode = null) {
  * copying each record into the backup folder. A parent is set only when the parent was opened again too; nesting of any depth follows,
  * since each session points at its own parent.
  *
- * @param {{ localId: string, cliSessionId: string, title: string, parent: string | null, spawnedFrom: Record<string, any> | null, permissionMode?: string | null, file: string }[]} sessions
+ * @param {{ localId: string, cliSessionId: string, title: string, parent: string | null, spawnedFrom: Record<string, any> | null, detached?: boolean, permissionMode?: string | null, file: string }[]} sessions
  *   each saved session with `file`, the record it has now
  * @param {Map<string, string>} idMap old local id → new local id
  * @param {string} backupDir
@@ -158,7 +206,8 @@ export function relinkSessions(sessions, idMap, backupDir) {
   for (const session of sessions) {
     const record = JSON.parse(readFileSync(session.file, "utf8"));
     const parentNow = session.parent ? idMap.get(session.parent) : undefined;
-    const wantsParent = Boolean(parentNow && session.spawnedFrom && record.spawnedFrom?.sessionId !== parentNow);
+    // A side session the app moved to the top level keeps its parent link but shows at the top: the flag goes too
+    const wantsParent = Boolean(parentNow && session.spawnedFrom && !session.detached && (record.spawnedFrom?.sessionId !== parentNow || record.lineageDetached === true));
     const wantsTitle = Boolean(session.title && record.title !== session.title);
     const wantsMode = Boolean(session.permissionMode && record.permissionMode !== session.permissionMode);
     if (!wantsParent && !wantsTitle && !wantsMode) continue;
@@ -166,6 +215,8 @@ export function relinkSessions(sessions, idMap, backupDir) {
     copyFileSync(session.file, join(backupDir, basename(session.file)));
     if (wantsParent) {
       record.spawnedFrom = { ...session.spawnedFrom, sessionId: parentNow };
+      delete record.lineageDetached;
+      delete record.lineageDetachedBy;
       linked.push(record.sessionId);
     }
     if (wantsTitle) {
@@ -231,6 +282,7 @@ function toRecord(file) {
       worktreePath: typeof data.worktreePath === "string" && data.worktreePath ? data.worktreePath : null,
       originCwd: typeof data.originCwd === "string" ? data.originCwd : "",
       permissionMode: typeof data.permissionMode === "string" && data.permissionMode ? data.permissionMode : null,
+      detached: data.lineageDetached === true,
       file,
     };
   } catch {

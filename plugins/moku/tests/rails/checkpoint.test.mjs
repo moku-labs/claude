@@ -21,7 +21,7 @@ function machine() {
   const railsAt = (/** @type {string} */ dir, /** @type {string[]} */ ...args) => {
     const extra = typeof args.at(-1) === "object" ? /** @type {Record<string, string>} */ (args.pop()) : {};
     const run = spawnSync("node", [CLI, ...args, "--root", dir], { encoding: "utf8", env: { ...env, ...extra } });
-    return { code: run.status, text: `${run.stdout}${run.stderr}`, json: () => JSON.parse(run.stdout || run.stderr) };
+    return { code: run.status, text: `${run.stdout}${run.stderr}`, json: () => JSON.parse(run.stdout || run.stderr.slice(run.stderr.indexOf("{"))) };
   };
   const rails = (/** @type {string[]} */ ...args) => railsAt(root, ...args);
   rails("session", "start");
@@ -246,6 +246,7 @@ function reopen(env, id, cwd) {
 }
 
 const ACCOUNT_ENV = { CLAUDE_CODE_ACCOUNT_UUID: OLD_ACCOUNT, CLAUDE_CODE_ORGANIZATION_UUID: ORG };
+const NEW_ENV = { CLAUDE_CODE_ACCOUNT_UUID: NEW_ACCOUNT, CLAUDE_CODE_ORGANIZATION_UUID: ORG };
 
 describe("moku-rails checkpoint with the desktop app's sessions", () => {
   it("keeps every open session of the current account, at any age and off the rails, and no archived or other-account one", () => {
@@ -319,8 +320,10 @@ describe("moku-rails resume-checkpoint after a new sign-in", () => {
     assert.match(resumed.data.messages.find((message) => message.to === `local_${sid("b")}`).text, /Card texts/);
     assert.equal(resumed.data.messages.some((message) => message.to === `local_${sid("c")}`), false, "a session with no children and no artifacts gets no message");
     assert.match(text, /not open in the app yet, will be local_c+/);
-    assert.match(text, /1 Code tab session is not open in the app yet/);
-    assert.match(text, /set_session_title local_b+-1111-4111-8111-111111111111 "Episode 2"/);
+    assert.match(text, /Not restored: "Card texts" local_c+-1111-4111-8111-111111111111: not in the app yet/);
+    assert.deepEqual(resumed.data.steps.filter((step) => step.tool === "run_in_terminal").map((step) => step.input.title), ["moku resume"], "one terminal run opens what is missing");
+    assert.match(resumed.data.steps.find((step) => step.tool === "run_in_terminal").input.command, /resume-checkpoint --open/);
+    assert.match(text, /set_session_title \{"session_id":"local_b+-1111-4111-8111-111111111111","title":"Episode 2"\}/);
     assert.match(text, /--relink/);
   });
 
@@ -359,23 +362,22 @@ describe("moku-rails resume-checkpoint after a new sign-in", () => {
     assert.match(result.lines.join("\n"), /2 sessions are not open in the app yet/);
   });
 
-  it("--open opens only the Code tab sessions the app does not have yet, through a terminal, and only for the person", () => {
+  it("--open opens only the Code tab sessions the app does not have yet, only in a terminal, and checks each in the app's records", () => {
     const { base, env, root, rails } = family();
     reopen(env, sid("a"), root);
-    const bin = join(base, "bin");
-    mkdirSync(bin);
-    writeFileSync(join(bin, "script"), `#!/bin/sh\necho "$PWD $*" >> "${join(base, "opened.log")}"\n`);
-    chmodSync(join(bin, "script"), 0o755);
-    const path = { PATH: `${bin}:${process.env.PATH}` };
+    const app = fakeApp(base, env);
 
-    assert.equal(rails("resume-checkpoint", "--open", { ...path, CLAUDECODE: "1" }).code, 2);
-    const result = rails("resume-checkpoint", "--open", path);
+    const outside = rails("resume-checkpoint", "--open", { ...app.path, MOKU_FORCE_TTY: "0" });
+    assert.equal(outside.code, 2, "the Bash tool is no terminal: refused before anything is touched");
+    assert.match(outside.text, /run_in_terminal/);
+    assert.equal(existsSync(join(base, "opened.log")), false);
 
-    assert.equal(result.code, 0, result.text);
-    assert.deepEqual(readFileSync(join(base, "opened.log"), "utf8").trim().split("\n").sort(), [
-      `${root} -q /dev/null claude --desktop --resume ${sid("b")}`,
-      `${root} -q /dev/null claude --desktop --resume ${sid("c")}`,
-    ].map((line) => line.replace(root, realpathSync(root))).sort());
+    const result = rails("resume-checkpoint", "--open", "--json", app.path).json();
+
+    assert.equal(result.code, 0, result.lines.join("\n"));
+    assert.deepEqual(app.opened().sort(), [sid("b"), sid("c")].sort());
+    assert.match(result.lines.join("\n"), /Restore from .*: 3 of 3 Code tab sessions open in the app, nothing left to open/);
+    assert.equal(result.data.done, true);
   });
 });
 
@@ -480,7 +482,7 @@ function fakeApp(base, env, { nests = [] } = {}) {
   const log = join(base, "opened.log");
   const dir = join(env.MOKU_DESKTOP_SESSIONS, NEW_ACCOUNT, ORG);
   const parents = Object.fromEntries(nests);
-  writeFileSync(join(bin, "script"), `#!/usr/bin/env node
+  writeFileSync(join(bin, "claude"), `#!/usr/bin/env node
 const { appendFileSync, mkdirSync, writeFileSync } = require("node:fs");
 const argv = process.argv.slice(2);
 const id = argv[argv.indexOf("--resume") + 1];
@@ -488,12 +490,12 @@ appendFileSync(${JSON.stringify(log)}, id + "\\n");
 appendFileSync(${JSON.stringify(log)} + ".argv", argv.join(" ") + "\\n");
 mkdirSync(${JSON.stringify(dir)}, { recursive: true });
 const parents = ${JSON.stringify(parents)};
-const data = { sessionId: "local_" + id, cliSessionId: id, cwd: process.cwd(), title: "renamed by the app", lastActivityAt: Date.now(), permissionMode: "default" };
+const data = { sessionId: "local_" + id, cliSessionId: id, cwd: process.env.FAKE_APP_CWD || process.cwd(), title: "renamed by the app", lastActivityAt: Date.now(), permissionMode: "default" };
 if (parents[id]) data.spawnedFrom = { sessionId: parents[id], sideSession: true };
 writeFileSync(${JSON.stringify(dir)} + "/local_" + id + ".json", JSON.stringify(data));
 `);
-  chmodSync(join(bin, "script"), 0o755);
-  return { path: { PATH: `${bin}:${process.env.PATH}` }, opened: () => readFileSync(log, "utf8").trim().split("\n"), argv: () => readFileSync(`${log}.argv`, "utf8").trim().split("\n") };
+  chmodSync(join(bin, "claude"), 0o755);
+  return { path: { PATH: `${bin}:${process.env.PATH}`, ...NEW_ENV, MOKU_FORCE_TTY: "1", MOKU_OPEN_WAIT_MS: "2000" }, opened: () => readFileSync(log, "utf8").trim().split("\n"), argv: () => readFileSync(`${log}.argv`, "utf8").trim().split("\n") };
 }
 
 /** A repository with a branch checked out in a worktree under `.claude/worktrees/<name>`. */
@@ -607,6 +609,7 @@ describe("moku-rails resume-checkpoint v3: worktrees, one pass, nesting", () => 
     const twice = rails("resume-checkpoint", "--open", "--json", app.path).json();
     assert.equal(app.opened().length, 3);
     assert.match(twice.lines[0], /open in the app already/);
+    assert.equal(twice.data.done, true);
   });
 
   it("sends nothing when no id changed and the app kept the titles and the nesting", () => {
@@ -623,7 +626,7 @@ describe("moku-rails resume-checkpoint v3: worktrees, one pass, nesting", () => 
     assert.match(run.lines.join("\n"), /Nothing else to do/);
   });
 
-  it("frees a branch the old worktree holds for the app's new one, then carries the uncommitted files there, deleting nothing", () => {
+  it("keeps the branch in the session's own worktree (freeing it sent two sessions to the main checkout on 2026-11-15), and carries files when the app opens it elsewhere", () => {
     const { base, env, root, rails } = machine();
     const old = worktree(root, "f126-old", "claude/f126");
     mkdirSync(join(old, "perf"));
@@ -632,30 +635,28 @@ describe("moku-rails resume-checkpoint v3: worktrees, one pass, nesting", () => 
     transcript(env.CLAUDE_CONFIG_DIR, { id: sid("a"), cwd: old, entrypoint: "claude-desktop", folder: "a" });
     record(env, { id: sid("a"), cwd: old, title: "F126", extra: { branch: "claude/f126", originCwd: realpathSync(root), worktreePath: old } });
     rails("checkpoint", ACCOUNT_ENV);
-    const app = fakeApp(base, env);
 
-    const run = rails("resume-checkpoint", "--open", "--json", app.path).json();
-
-    assert.equal(execFileSync("git", ["-C", old, "branch", "--show-current"], { encoding: "utf8" }).trim(), "", "the old worktree is detached");
-    assert.ok(existsSync(join(old, "perf", "run.json")), "its files stay");
-    assert.match(run.lines.join("\n"), /Released claude\/f126 from .*f126-old/);
-    assert.equal(run.data.carry.length, 1);
-    assert.match(run.data.messages[0].text, /resume-checkpoint --carry/);
-
-    // The app checks the branch out in a worktree of its own and moves the session there
+    // The app opens the session in a worktree of its own
     const moved = join(root, ".claude", "worktrees", "xenodochial");
-    execFileSync("git", ["-C", root, "worktree", "add", "-q", moved, "claude/f126"]);
+    execFileSync("git", ["-C", root, "worktree", "add", "-q", "-b", "claude/f126-2", moved]);
     writeFileSync(join(moved, "kept.ts"), "theirs");
     execFileSync("git", ["-C", moved, "add", "kept.ts"]);
-    const file = join(env.MOKU_DESKTOP_SESSIONS, NEW_ACCOUNT, ORG, `local_${sid("a")}.json`);
-    writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, "utf8")), cwd: realpathSync(moved) }));
+    const app = fakeApp(base, env);
 
-    const carried = rails("resume-checkpoint", "--carry", "--json", { CLAUDECODE: "1" }).json();
+    const run = rails("resume-checkpoint", "--open", "--json", { ...app.path, FAKE_APP_CWD: realpathSync(moved) }).json();
+
+    assert.equal(execFileSync("git", ["-C", old, "branch", "--show-current"], { encoding: "utf8" }).trim(), "claude/f126", "the old worktree keeps its branch");
+    assert.doesNotMatch(run.lines.join("\n"), /Released/);
+    assert.match(run.lines.join("\n"), /"F126" opened in .*xenodochial, not in .*f126-old/);
+    assert.equal(run.data.carry.length, 1);
+    assert.match(run.data.messages[0].text, /resume-checkpoint --carry/);
+    assert.ok(run.data.steps.some((step) => step.tool === "Bash" && /--carry/.test(step.input.command)));
+
+    const carried = rails("resume-checkpoint", "--carry", "--json", { ...NEW_ENV, CLAUDECODE: "1" }).json();
 
     assert.equal(carried.code, 0);
     assert.deepEqual(carried.data.moved[0].copied, ["perf/run.json"]);
     assert.deepEqual(carried.data.moved[0].kept, ["kept.ts"], "a file that changed in the new folder is left as it is");
-    assert.equal(readFileSync(join(moved, "perf", "run.json"), "utf8"), "{}");
     assert.equal(readFileSync(join(moved, "kept.ts"), "utf8"), "theirs");
     assert.ok(existsSync(join(old, "perf", "run.json")), "the old folder keeps its copy");
   });
@@ -674,8 +675,8 @@ describe("moku-rails resume-checkpoint v3: worktrees, one pass, nesting", () => 
 
     assert.match(app.argv()[0], new RegExp(`--resume ${sid("a")} --permission-mode auto$`));
     assert.deepEqual(run.data.modes, [{ sessionId: `local_${sid("a")}`, title: "Cards", saved: "auto", now: "default" }]);
-    assert.match(run.lines.join("\n"), /"Cards" default → auto.*mode menu/);
-    assert.match(run.lines.join("\n"), /writes the permission modes after a backup/);
+    assert.deepEqual(run.data.steps.find((step) => step.tool === "set_session_permission_mode").input, { session_id: `local_${sid("a")}`, mode: "auto" }, "the session sets the mode back itself, the app stays open");
+    assert.doesNotMatch(run.lines.join("\n"), /osascript/, "no Terminal.app step for a mode");
 
     const relinked = rails("resume-checkpoint", "--relink", "--json").json();
     const file = join(env.MOKU_DESKTOP_SESSIONS, NEW_ACCOUNT, ORG, `local_${sid("a")}.json`);
@@ -705,3 +706,139 @@ function family3(m) {
   m.rails("checkpoint", ACCOUNT_ENV);
   return m;
 }
+
+/** Three generations saved under the old account, as in the suite above: a coordinator, its side session, and that one's. */
+function family() {
+  const m = machine();
+  for (const letter of ["a", "b", "c"]) transcript(m.env.CLAUDE_CONFIG_DIR, { id: sid(letter), cwd: m.root, entrypoint: "claude-desktop" });
+  record(m.env, { id: sid("a"), cwd: m.root, title: "Coordinator" });
+  record(m.env, { id: sid("b"), cwd: m.root, title: "Episode 2", parent: `local_old-${sid("a").slice(0, 8)}` });
+  record(m.env, { id: sid("c"), cwd: m.root, title: "Card texts", parent: `local_old-${sid("b").slice(0, 8)}` });
+  m.rails("checkpoint", ACCOUNT_ENV);
+  return m;
+}
+
+describe("moku-rails resume-checkpoint v4: the restores of 2026-11-11 and 2026-11-15", () => {
+  it("takes no record of another account for an open session: only the current sign-in's records count", () => {
+    const { env, root, rails } = family();
+    // An earlier sign-in kept records of the same sessions (11-11: five sessions were taken as open from such a folder)
+    for (const letter of ["a", "b"]) record(env, { account: OTHER_ACCOUNT, id: sid(letter), localId: `local_${sid(letter)}`, cwd: root, activity: 1 });
+    mkdirSync(join(env.MOKU_DESKTOP_SESSIONS, NEW_ACCOUNT, ORG), { recursive: true });
+
+    const resumed = rails("resume-checkpoint", "--json", NEW_ENV).json();
+
+    assert.deepEqual(resumed.data.sessions.map((session) => session.state), ["missing", "missing", "missing"]);
+    assert.equal(resumed.data.done, false);
+    assert.equal(resumed.data.steps.filter((step) => step.tool === "run_in_terminal").length, 1);
+  });
+
+  it("names a session the current account keeps archived, and brings it back with unarchive_session, not --open", () => {
+    const { env, root, rails } = family();
+    // 11-15: the account had old archived records of the coordinator and the store from an earlier sign-in
+    record(env, { account: NEW_ACCOUNT, id: sid("a"), localId: `local_${sid("a")}`, cwd: root, title: "Coordinator", archived: true });
+    record(env, { account: NEW_ACCOUNT, id: sid("b"), localId: `local_${sid("b")}`, cwd: root, title: "Episode 2" });
+    writeFileSync(join(env.MOKU_DESKTOP_SESSIONS, NEW_ACCOUNT, ORG, "archived-sessions.idx"), JSON.stringify({ v: 1, archived: [`local_${sid("b")}`] }));
+
+    const resumed = rails("resume-checkpoint", "--json", NEW_ENV).json();
+
+    const state = Object.fromEntries(resumed.data.sessions.map((session) => [session.id, session.state]));
+    assert.deepEqual(state, { [sid("a")]: "archived", [sid("b")]: "archived", [sid("c")]: "missing" });
+    assert.deepEqual(resumed.data.steps.filter((step) => step.tool === "unarchive_session").map((step) => step.input.session_id).sort(), [`local_${sid("a")}`, `local_${sid("b")}`]);
+    assert.match(resumed.lines.join("\n"), /Not restored: "Coordinator" .*archived in this account: unarchive_session brings it back/);
+    assert.equal(resumed.data.messages.length, 0, "no message goes to a session that cannot take it yet");
+  });
+
+  it("restores into the account the sessions were saved from: their records under the old ids count", () => {
+    const { rails } = family();
+
+    const resumed = rails("resume-checkpoint", "--json", ACCOUNT_ENV).json();
+
+    assert.equal(resumed.data.done, true);
+    assert.deepEqual(resumed.data.sessions.map((session) => session.newId), ["a", "b", "c"].map((letter) => `local_old-${sid(letter).slice(0, 8)}`));
+    assert.deepEqual(resumed.data.steps, []);
+  });
+
+  it("does not call a session opened when the app wrote no record of it, whatever the command's exit code", () => {
+    const { base, env, rails } = family();
+    const bin = join(base, "bin");
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(join(bin, "claude"), "#!/bin/sh\necho \"Opening session in Claude Desktop\"\n");
+    chmodSync(join(bin, "claude"), 0o755);
+
+    const run = rails("resume-checkpoint", "--open", "--json", { PATH: `${bin}:${process.env.PATH}`, ...NEW_ENV, MOKU_FORCE_TTY: "1", MOKU_OPEN_WAIT_MS: "300" }).json();
+
+    assert.equal(run.code, 1);
+    assert.equal(run.data.opened, 0);
+    assert.match(run.data.failed[0].why, /the app wrote no record of it/);
+    assert.match(run.lines.join("\n"), /Restore from .*: 0 of 3/);
+  });
+
+  it("is safe to run again: a delivered message is not listed twice, and a finished resume has no step left", () => {
+    const { base, env, rails } = family();
+    const app = fakeApp(base, env, { nests: [[sid("b"), `local_${sid("a")}`], [sid("c"), `local_${sid("b")}`]] });
+    rails("resume-checkpoint", "--open", app.path);
+
+    const first = rails("resume-checkpoint", "--json", NEW_ENV).json();
+    assert.ok(first.data.steps.some((step) => step.tool === "send_message"));
+    assert.ok(first.data.steps.some((step) => step.tool === "Bash" && /--sent/.test(step.input.command)));
+    assert.equal(rails("resume-checkpoint", "--sent", "--json", NEW_ENV).json().data.marked.length, first.data.messages.length);
+
+    // The titles are set back, as the session does with set_session_title
+    for (const letter of ["a", "b", "c"]) {
+      const file = join(env.MOKU_DESKTOP_SESSIONS, NEW_ACCOUNT, ORG, `local_${sid(letter)}.json`);
+      const title = { a: "Coordinator", b: "Episode 2", c: "Card texts" }[letter];
+      writeFileSync(file, JSON.stringify({ ...JSON.parse(readFileSync(file, "utf8")), title }));
+    }
+
+    const again = rails("resume-checkpoint", "--json", NEW_ENV).json();
+    assert.deepEqual(again.data.steps, []);
+    assert.equal(again.data.done, true);
+    assert.match(again.lines.join("\n"), /No step left for the session/);
+  });
+
+  it("counts a side session the app moved to the top level as not nested, and --relink clears that flag", () => {
+    const { env, root, rails } = family3(machine());
+    reopen(env, sid("a"), root);
+    const side = record(env, { account: NEW_ACCOUNT, id: sid("b"), localId: `local_${sid("b")}`, cwd: root, title: "Side", parent: `local_${sid("a")}`, extra: { lineageDetached: true, lineageDetachedBy: "user" } });
+
+    const resumed = rails("resume-checkpoint", "--json").json();
+    assert.deepEqual(resumed.data.nesting.unnested.map((entry) => entry.title), ["Side"]);
+    assert.match(resumed.lines.join("\n"), /ask the person first.*--relink-in-terminal/);
+    assert.match(rails("resume-checkpoint", "--relink-in-terminal", { MOKU_DRY_RUN: "1" }).text, /Would run in Terminal\.app: osascript -e 'quit app "Claude"'/);
+
+    rails("resume-checkpoint", "--relink");
+    const written = JSON.parse(readFileSync(side, "utf8"));
+    assert.equal(written.lineageDetached, undefined);
+    assert.equal(written.spawnedFrom.sessionId, `local_${sid("a")}`);
+  });
+
+  it("restores from the newest checkpoint of another account, so one the new sign-in writes on its own never hides it", () => {
+    const { env, root, rails } = family();
+    const before = checkpoints(env).filter((file) => file.endsWith(".json"));
+    reopen(env, sid("a"), root);
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1100);
+    rails("checkpoint", "--auto", NEW_ENV);
+    assert.equal(checkpoints(env).filter((file) => file.endsWith(".json")).length, 2, "the new account's own checkpoint is written");
+
+    assert.equal(rails("resume-checkpoint", "--json", NEW_ENV).json().data.file, before[0]);
+  });
+
+  it("keeps a checkpoint on its own at the end of a turn, at most once in the interval, and prunes only automatic ones", () => {
+    const { env, root } = machine();
+    transcript(env.CLAUDE_CONFIG_DIR, { id: ID_CLI, cwd: root });
+    const stop = () => spawnSync("node", [join(dirname(CLI), "..", "hooks", "on-stop.mjs")], { input: JSON.stringify({ session_id: "s1", cwd: root }), encoding: "utf8", env: { ...env, MOKU_AUTO_CHECKPOINT: "1" } });
+
+    stop();
+    const deadline = Date.now() + 10_000;
+    while (checkpoints(env).filter((file) => file.endsWith(".json")).length === 0 && Date.now() < deadline) Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 100);
+    const written = checkpoints(env).filter((file) => file.endsWith(".json"));
+    assert.equal(written.length, 1, "the Stop hook started a checkpoint in the background");
+    assert.equal(JSON.parse(readFileSync(written[0], "utf8")).auto, true);
+    assert.equal(JSON.parse(readFileSync(written[0], "utf8")).sessions[0].id, ID_CLI);
+
+    writeFileSync(join(root, "more.ts"), "export {};\n");
+    stop();
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1500);
+    assert.equal(checkpoints(env).filter((file) => file.endsWith(".json")).length, 1, "a second turn inside the interval starts none");
+  });
+});

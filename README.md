@@ -136,14 +136,20 @@ copies of the artifacts each session published, with a manifest; a source that i
 Write and Edit calls, else only the link is kept. A session whose worktree was removed is kept with its repository
 and branch while the branch exists, and named as lost when it does not. A second run that finds everything as the
 newest checkpoint has it writes no new file. `--help` or `-h` on any `moku-rails` command prints its usage and runs
-nothing. After the person signs in, the prompt hook offers the restore once, on the first prompt under the new account,
-and reads «восстанови сессии» through typos. `moku-rails resume-checkpoint` maps each old id to the new one
-(`local_<session id>`). `--open` is the person's step, with the app open: it adds removed worktrees again from their
-branches, frees a branch an old worktree holds (a detached HEAD, every file kept), opens the sessions parents first so
-the app nests the side sessions itself, in the permission mode each one ran in, and prints in the same run the titles the app changed, one message for each
-session whose id or whose side sessions' ids changed, and the side sessions or permission modes the app did not keep. `--carry` copies
-uncommitted files to the folder the app opened a session in, overwriting nothing that changed. `--relink` writes the
-missing nesting and modes into the app's records, only with the app closed and after a backup, through one line for Terminal.app.
+nothing. A checkpoint is also kept on its own: the Stop hook starts one in the background at most every 20 minutes, and the
+prompt hook at once when the person speaks of signing in (`MOKU_AUTO_CHECKPOINT=0` turns it off; the newest 12 kept on
+their own stay, those made on request all stay). After the person signs in, the prompt hook offers the restore once, on
+the first prompt under the new account, and reads «восстанови сессии» through typos. The session restores everything
+with its own tools; the person runs nothing. `moku-rails resume-checkpoint --json` takes the newest checkpoint of
+another account than the current one, reads only the current account's records of the app and says for each session
+whether it is open, archived there or missing; `data.steps` lists the calls in order: `unarchive_session`, one
+`run_in_terminal` of `--open` (it needs a terminal, the app's Terminal panel, and refuses elsewhere before touching
+anything), `set_session_title`, `set_session_permission_mode`, `send_message`, `--sent` and `--carry`. `--open` adds
+removed worktrees again from their branches, keeps each branch in its own worktree, opens the sessions parents first
+and counts a session as opened only when the app has written its record. Run again, `--json` checks the result, says
+what is restored and what is not and why, and lists only what is left. The one step that needs the app closed is the
+sidebar nesting of side sessions the app did not keep: on the person's yes, `--relink-in-terminal` opens Terminal.app
+with the line that quits Claude, writes the parents after a backup and opens Claude again.
 No credential is read or written.
 
 | Invariant | Enforced by | What you see |
