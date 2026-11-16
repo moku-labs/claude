@@ -513,9 +513,9 @@ or the live pane, with the state you read beside it.
 server and `.claude/launch.json` with `game-editor` (`references/hello-world.md` → "Claude Code files").
 
 - Both files there and the tools listed: call `moku_status` and go on.
-- `.mcp.json` missing or without `moku-editor`: write it (`bunx moku-editor mcp-config --port 3000`
-  prints it; merge, never overwrite another server), write `launch.json` if missing, and tell the person
-  in one line that the tools appear after they approve the server and restart the session. Until then
+- `.mcp.json` missing or without `moku-editor`: write it (`bunx moku-editor mcp-config` prints it,
+  with no port; merge, never overwrite another server), write `launch.json` if missing, and tell the
+  person in one line that the tools appear after they approve the server and restart the session. Until then
   work by way 2.
 - The file is there and the tools are not: the server waits for the person's approval, or the session
   started before the file existed. Say so once, work by way 2.
@@ -541,8 +541,9 @@ bunx moku-editor --root .          # the game's "editor" script
 - The project index needs TypeScript with its JS API (6.x). On TypeScript 7 the bin logs
   `files:project-off` and a pick has no `file:line`.
 - `moku-editor mcp` is the stdio MCP server for Claude Code. The game's `.mcp.json` registers it
-  (`bunx moku-editor mcp --port 3000`). It uses the running bin or starts one; in a game folder it needs
-  no html. 22 generic `moku_*` tools since 0.10.3, and the door tools stay over a restart of the bin.
+  (`bunx moku-editor mcp`, no port). It uses this checkout's running bin on any port or starts one on a
+  free port; in a game folder it needs no html. 22 generic `moku_*` tools since 0.10.3, and the door
+  tools stay over a restart of the bin.
 - A game with its own HTML page still runs `moku-editor <game-html> --root .` and wires the agent itself;
   a shell game never does.
 - The tools page: six workspaces, ⌘1–⌘6 (Game, Flow, Render, State, Files, Console; Game is the default),

@@ -306,8 +306,9 @@ needs no browser and takes under a second here.
 
 Two files make the editor the working mode from the first session. Both are committed.
 
-`.mcp.json` registers the editor's MCP server. `bunx moku-editor mcp-config --port 3000` prints it,
+`.mcp.json` registers the editor's MCP server. `bunx moku-editor mcp-config` prints it,
 followed by a `claude mcp add` line: write the JSON object only, never redirect the output into the file.
+Pin no port: each checkout, a git worktree too, finds its own editor whatever port it runs on.
 
 ```json
 {
@@ -315,7 +316,7 @@ followed by a `claude mcp add` line: write the JSON object only, never redirect 
     "moku-editor": {
       "type": "stdio",
       "command": "bunx",
-      "args": ["moku-editor", "mcp", "--port", "3000"]
+      "args": ["moku-editor", "mcp"]
     }
   }
 }
