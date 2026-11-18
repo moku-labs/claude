@@ -1,15 +1,14 @@
 /**
- * Worktrees of a resumed session: give a saved session its folder back before the app opens it, free its branch
- * when the app will check it out elsewhere, and carry the files it had not committed to the folder it opened in.
+ * Worktrees of a restored session: give a saved session its folder back before the app opens it.
  *
- * One concern: the git side of a resume. Nothing here deletes a file, a branch or a worktree: a folder that is gone
- * is added again from its branch, a branch held by the session's own old folder is released with a detached HEAD
- * (the files stay), and files are copied only where the target has none or has the committed version.
+ * One concern: the git side of a restore. Nothing here deletes a file, a branch or a worktree: a folder that is gone
+ * is added again from its branch, and a branch held by the session's own old folder is released with a detached HEAD
+ * (the files stay).
  */
 
 import { spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, realpathSync, statSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { existsSync, mkdirSync, realpathSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 /**
  * @typedef {object} Prepared
@@ -119,58 +118,6 @@ function recreate(cwd, repo, branch, detached) {
   const added = git(["-C", repo, "worktree", "add", "--quiet", ...(detached ? ["--detach", cwd, branch] : [cwd, branch])]);
   if (added === undefined) return { state: "blocked", line: `Could not add the worktree ${cwd} from ${branch} again: run \`git -C '${repo}' worktree add '${cwd}' ${branch}\`.` };
   return { state: "recreated", line: `Added the worktree ${cwd} again from ${branch}${detached ? " (detached, the app checks the branch out itself)" : ""}.` };
-}
-
-/**
- * The changed and new files of a folder, as paths relative to it. Deleted files are left out: a deletion is never
- * carried.
- *
- * @param {string} dir
- * @returns {string[]}
- */
-export function changedFiles(dir) {
-  const out = git(["-C", dir, "status", "--porcelain=v1", "--untracked-files=all"]);
-  if (out === undefined) return [];
-
-  return out
-    .split("\n")
-    .filter((line) => line.length > 3 && !line.slice(0, 2).includes("D"))
-    .map((line) => line.slice(3).replace(/^.* -> /, "").replace(/^"(.*)"$/, "$1"));
-}
-
-/**
- * Copy the files a session had not committed from its old folder to the folder the app opened it in. A file is
- * copied when the target has none, or has the committed version of it; a target file that changed is left as it is
- * and named. Nothing is deleted or moved: the old folder keeps its copy.
- *
- * @param {string} from the old folder
- * @param {string} to the folder the session works in now
- * @returns {{ copied: string[], kept: string[] }} the files copied, and the ones left because the target changed
- * @example
- * carryFiles("/work/game/.claude/worktrees/old", "/work/game/.claude/worktrees/new"); // { copied: ["perf/run.json"], kept: [] }
- */
-export function carryFiles(from, to) {
-  const copied = [];
-  const kept = [];
-  if (!existsSync(from) || !existsSync(to) || samePath(from, to)) return { copied, kept };
-
-  const changedThere = new Set(changedFiles(to));
-  for (const file of changedFiles(from)) {
-    const source = join(from, file);
-    const target = join(to, file);
-    if (!existsSync(source) || !statSync(source).isFile()) continue;
-    if (existsSync(target) && readFileSync(target).equals(readFileSync(source))) continue;
-    if (existsSync(target) && changedThere.has(file)) {
-      kept.push(file);
-      continue;
-    }
-
-    mkdirSync(dirname(target), { recursive: true });
-    copyFileSync(source, target);
-    copied.push(file);
-  }
-
-  return { copied, kept };
 }
 
 /**

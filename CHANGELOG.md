@@ -2,6 +2,34 @@
 
 Older entries (0.1 – 0.62.4) live in [`docs/changelog/0.1-0.62.md`](./docs/changelog/0.1-0.62.md).
 
+## 0.98.0 (2026-11-18)
+
+### Changed
+- **Saving and restoring the desktop app's sessions, rewritten.** Four rounds (resume v2, v3, v4) left every restore
+  a manual repair: on 2026-11-11 `--open` opened 0 of 10 and took an old account's records, on 2026-11-15 archived
+  sessions counted as open and worktree sessions opened in the wrong folders, on 2026-11-18 an auto checkpoint held
+  sessions the person did not want, `--open` failed on `--permission-mode`, and six worktree sessions could not run a
+  turn until their leases were moved to the new ids by hand.
+  - **Only on request.** No checkpoint is written on its own: the Stop hook and the sign-in phrases no longer start
+    one, and the unasked restore offer is gone. «сохрани сессии» (typos read) runs `moku-rails checkpoint`.
+  - **Exactly the sidebar.** A checkpoint (version 3) holds the current account's sessions that are not archived, as
+    `list_sessions` sees them, with the parent the sidebar nests each under, title, permission mode, folder,
+    worktree, branch and the session that leases each worktree. `--drop <ids>` leaves sessions out on request.
+  - **A plan in three phases, checked against the app.** `resume-checkpoint --json` compares the checkpoint with the
+    current account's records and `git-worktrees.json` and changes nothing: (1) `unarchive_session` and one
+    `--open` in the Terminal panel, which never passes `--permission-mode`, adds a removed worktree again and counts a
+    session as opened only by its record; (2) one question, then `--offline-in-terminal` (Terminal.app quits the app,
+    `--offline` writes nesting, worktree folders, leases, modes and titles after a backup, archives the sessions not
+    in the checkpoint by their flag so no shared worktree is removed, and opens the app again); (3) titles and the
+    messages about changed ids. It says "Restored" only when every session matches and nothing is extra.
+  - A record is found by its cli id in the current account only, also under another local id (F126 on 2026-11-18).
+    `--offline` refuses while the app runs and without `--account`; the restart refuses for any folder that is not
+    the app's own.
+  - Gone: artifact copies, terminal sessions, `--carry`, `--relink`, `--relink-in-terminal`, `--desktop`/`--cli`,
+    `--since`, `--include-temp`, auto checkpoints and their pruning. Checkpoints of version 2 are not read: save again.
+  - Evals: `sessions-save` and `sessions-restore` (a desktop app of their own in the sandbox's HOME);
+    `rails-checkpoint` no longer reads the person's real app.
+
 ## 0.97.1 (2026-11-16)
 
 ### Fixed

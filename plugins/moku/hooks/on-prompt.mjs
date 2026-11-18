@@ -14,90 +14,56 @@
  * when the last one is in.
  * The standing itself is repeated only when it changed since the session last saw it (here or at session
  * start, compaction included); the routing rule comes with every typed message.
- * Off the rails: silent, except for one hint when the person names moku.
+ * Off the rails: silent, except for one hint when the person names moku, and the line for a request to save or
+ * restore the sessions of the desktop app, which is the only thing that saves them: nothing saves on its own.
  */
 
-import { statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { RESUME_INSTRUCTION, describeAgents, runningAgents } from "../lib/hooks/agents.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { railsMode } from "../lib/hooks/mode.mjs";
 import { isSubagent, isSystemPrompt, promptText } from "../lib/hooks/origin.mjs";
-import { autoCheckpoint } from "../lib/hooks/auto-checkpoint.mjs";
-import { accountOffer } from "../lib/hooks/resume-offer.mjs";
-import { appSessionsOnly, asksToResume } from "../lib/hooks/resume-words.mjs";
+import { appSessionsOnly, asksToResume, asksToSave } from "../lib/hooks/resume-words.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
 import { rememberStatus, statusChanged } from "../lib/hooks/seen.mjs";
-import { DEFAULT_SINCE_HOURS, checkpointToRestore } from "../lib/rails/checkpoint.mjs";
+import { latestCheckpoint, readCheckpoint } from "../lib/rails/checkpoint.mjs";
 import { status } from "../lib/rails/commands.mjs";
 import { loadLedger, markPrompt } from "../lib/rails/ledger.mjs";
 import { LOOP_STATIONS } from "../lib/rails/routes.mjs";
 import { takeSplitOffer } from "../lib/rails/stages.mjs";
 
-/**
- * The person is about to change their own Claude sign-in: an explicit first-person or "my account" phrase, a re-login,
- * a Claude login command, or a request to keep the sessions. Plain "login", "account" or "вход" never match: a login
- * screen, a user account page or a sign-in form is ordinary app work.
- */
-const SIGN_IN = [
-  /\b(sign|log)(ging|ged)?[\s-]?(in|on)\s+(again|anew)\b/i,
-  /\b(sign|log)(ging|ged)?[\s-]?in\s+(with|to|under|as)\s+my\s+(\w+\s+)?account\b/i,
-  /\bI('ll|'m| will| am)?\b[^.?!\n]{0,40}\b(another|other|second|different)\s+(claude\s+)?account\b/i,
-  /\b(switch|change|swap)\w*\s+(to\s+)?my\s+(\w+\s+)?account\b|\b(switch|change|swap)\w*\s+(my\s+)?claude\s+accounts?\b/i,
-  /\bre-?log(in)?\b|\bclaude\s+(auth\s+)?(login|logout)\b|(^|\s)\/(login|logout)\b/i,
-  /\bmoku-rails\s+(resume-)?checkpoint\b|\b(save|keep|checkpoint)\s+(all\s+)?(my|the|all|open)\s+(\w+\s+)?sessions\b/i,
-  /перелогин|разлогин|релогин|(войду|зайду|залогинюсь|перейду|переключусь|переключаюсь|выйду|выхожу|сменю|меняю)[^.?!\n]{0,30}аккаунт/i,
-  /claude[^.?!\n]{0,20}аккаунт|аккаунт\w*\s+claude|(сохрани|сохранить|чекпо[йи]нт)\w*\s+(все\s+|мои\s+|открытые\s+)*сесси/i,
-  // "Save the work" alone is a commit or a pause; it means the checkpoint only beside a sign-in or the sessions
-  /\b(save|keep)\s+(my\s+|the\s+|all\s+)*(work|progress)\b[^.?!\n]{0,60}\b(sessions?|sign(ing)?[\s-]?(in|out)|log(ging)?[\s-]?(in|out)|account)\b/i,
-  /(сохрани|сохранить|запомни)\w*\s+(всю\s+|мою\s+|текущую\s+)*(работу|прогресс)[^.?!\n]{0,60}(сесси|аккаунт|логин|выход|выйд)/i,
-  /(перед|до)\s+(выходом|перелогином|логином|сменой\s+аккаунта)[^.?!\n]{0,40}(сохрани|сохранить)/i,
-];
-
-/**
- * The person wants the saved sessions back: "restore the sessions", "continue the work", "восстанови сессии". It means
- * the checkpoint only while a recent one is on this machine; without one these words are ordinary work.
- */
+/** The person asks for the restore in so many words: "restore the sessions", "восстанови сессии". */
 const RESUME = [
-  /\b(restore|resume|continue|bring\s+back|reopen)\s+(all\s+|my\s+|the\s+|open\s+|saved\s+)*(moku\s+)?(sessions|work|progress)\b/i,
-  /(восстанови|восстановить|продолжи|продолжить|верни|вернуть|подними|поднять|разверни|развернуть|открой)\w*\s+[^.?!\n]{0,30}(сесси|работу|прогресс)/i,
+  /\b(restore|resume|continue|bring\s+back|reopen)\s+(all\s+|my\s+|the\s+|open\s+|saved\s+)*(moku\s+)?sessions\b/i,
+  /(восстанови|восстановить|продолжи|продолжить|верни|вернуть|подними|поднять|разверни|развернуть|открой)\w*\s+[^.?!\n]{0,30}сесси/i,
 ];
 
-/** This plugin's CLI, by absolute path: a line the person runs must not depend on their PATH. */
+/** This plugin's CLI, by absolute path: a line run elsewhere must not depend on PATH. */
 const RAILS_BIN = fileURLToPath(new URL("../bin/moku-rails", import.meta.url));
 
-const RESUME_HINT = (file) => `A checkpoint of the moku sessions is on this machine (${file}). If the person means those sessions (after signing in again, "restore the sessions"), restore them yourself, with your own tools; the person runs nothing. 1) Run \`${RAILS_BIN} resume-checkpoint --json\` with Bash. 2) Make the calls of data.steps in order, with the input each names: unarchive_session, run_in_terminal (the \`--open\` line: it needs the app's Terminal panel, never Bash; read_terminal until it prints "Restore"), set_session_title, set_session_permission_mode, send_message, and the Bash lines (\`--sent\`, \`--carry\`). 3) Run \`--json\` again: it checks the app's records, lists the steps still left and is safe to repeat; stop when data.steps is empty. Only the sidebar nesting is left to the person, because it quits the app: when the output names side sessions that are not nested, ask once, and on a yes run \`${RAILS_BIN} resume-checkpoint --relink-in-terminal\`. Then show the person the "Restore" line, each session of data.notRestored with its reason, the map of old and new ids and the background tasks to start again. If they mean the change in front of them ("continue the work on F152"), ignore this line. Never sign in or out yourself, and never read a token, \`.credentials.json\` or the Keychain.`;
+const SAVE_HINT = `The person asks to save the sessions. Saving happens only on such a request, never on its own. Run \`${RAILS_BIN} checkpoint\` with Bash now: it saves exactly the sessions of the app's sidebar (this account, not archived) with their nesting, titles, folders, worktrees, branches and permission modes. If the person named sessions to leave out, pass \`--drop <local ids, comma-separated>\`. Show the tree it prints and its "Left out" line in a few lines, and tell the person that after the new sign-in they say "restore the sessions" («восстанови сессии») in any session and you restore them with your tools; they run nothing. If the command fails, say plainly that nothing was saved and why. Do not run \`pause\` for this, never sign in or out yourself, and never read a token, \`.credentials.json\` or the Keychain.`;
+
+const RESTORE_HINT = (/** @type {string} */ file, /** @type {string} */ savedAt) =>
+  `The person asks to restore the saved sessions: the checkpoint ${file}, saved ${savedAt}. Do it yourself with your tools; the person runs nothing. 1) Run \`${RAILS_BIN} resume-checkpoint --json\` with Bash. 2) Make the calls of data.steps in order, exactly as given: unarchive_session; run_in_terminal for the \`--open\` line (the app's Terminal panel, never Bash), then read_terminal until a line starts with "Opened"; when a restart is needed, ask the AskUserQuestion of the steps once and, only on a yes, run its \`--offline-in-terminal\` line; set_session_title; send_message, then the \`--sent\` line. 3) Run \`--json\` again after each phase, and stop when data.done is true. Never edit the app's files yourself and never archive a session during a restore: the steps do both safely. Say the sessions are restored only when data.done is true; otherwise name each session of data.sessions that still has problems, with its reason. Never sign in or out, and never read a token, \`.credentials.json\` or the Keychain.`;
 
 /**
- * The newest checkpoint if it is recent enough to resume, else undefined.
- *
- * @returns {string | undefined}
- * @example
- * freshCheckpoint(); // "/Users/ann/.claude/moku-checkpoints/2026-11-05T20-10-00Z.json"
- */
-function freshCheckpoint() {
-  const file = checkpointToRestore();
-  if (!file) return undefined;
-
-  const ageHours = (Date.now() - statSync(file).mtimeMs) / 3_600_000;
-  return ageHours <= DEFAULT_SINCE_HOURS ? file : undefined;
-}
-
-/**
- * The resume hint when the prompt asks for the saved sessions back and a fresh checkpoint exists.
+ * The line for a prompt that asks to save or to restore the sessions, or undefined. A restore is offered only while
+ * a checkpoint is on this machine; without one these words are ordinary work.
  *
  * @param {string} text the person's prompt
  * @returns {string | undefined}
  * @example
- * resumeHint("восстанови сессии"); // "A checkpoint of the moku sessions is on this machine (...)..."
+ * sessionsHint("сохрани сессии"); // "The person asks to save the sessions. …"
  */
-function resumeHint(text) {
-  const asks = asksToResume(text) || (RESUME.some((pattern) => pattern.test(text)) && !appSessionsOnly(text));
-  if (!asks) return undefined;
+function sessionsHint(text) {
+  if (/\bmoku-rails\s+checkpoint\b/.test(text) || asksToSave(text)) return SAVE_HINT;
 
-  const file = freshCheckpoint();
-  return file ? RESUME_HINT(file) : undefined;
+  const restores = /\bmoku-rails\s+resume-checkpoint\b/.test(text) || asksToResume(text) || (RESUME.some((pattern) => pattern.test(text)) && !appSessionsOnly(text));
+  if (!restores) return undefined;
+  const file = latestCheckpoint();
+  const saved = file ? readCheckpoint(file) : undefined;
+  return file && saved ? RESTORE_HINT(file, saved.savedAt) : undefined;
 }
 
 /**
@@ -121,8 +87,6 @@ function batchHint(projectRoot, sessionId, text) {
   return `moku: this report is one of a batch, and ${describeAgents(others)} in this session. Do not act on it yet: reply in one short line ("got <agent>, waiting for ${others.length}") with no tool calls and end the turn. Read and act on all the reports together when the last one is in. Every wake-up re-reads the whole conversation, so one per batch is the price, not one per agent. A report that says FAIL or blocks the others is the exception: act on it now.`;
 }
 
-const CHECKPOINT_HINT = "The person is about to sign in again. A checkpoint is also kept on its own in the background, but run `moku-rails checkpoint`, not `pause`, now, so you can tell them what it holds: it saves every open session of this account on this machine (id, title, parent, folder, where it stopped, background tasks, local copies of the artifacts each published). If a change is open inside a station, also run `moku-rails pause --reason \"signing in again\"` before you answer, so the turn can end. Then, in your last message, tell them to close the sessions, sign in themselves with `claude auth login`, and then say \"restore the sessions\" in any session of the app: you bring them back with your own tools (`moku-rails resume-checkpoint` lists the steps), nothing for them to run. Never sign in or out yourself, and never read a token, `.credentials.json` or the Keychain.";
-
 const { payload } = readHookInput();
 const prompt = promptText(payload);
 const root = rootForSession(payload);
@@ -144,17 +108,13 @@ if (isSystemPrompt(payload)) {
   process.exit(0);
 }
 
-// Off the rails: other projects are never disturbed, except a request for the saved sessions back, or the first
-// prompt under a new account while the saved sessions wait
+// The sessions of the app, saved or restored on request, on the rails or off them
+const sessions = sessionsHint(prompt);
+
+// Off the rails: other projects are never disturbed, except a request to save or restore the sessions
 if (!root) {
-  if (SIGN_IN.some((pattern) => pattern.test(prompt))) {
-    autoCheckpoint({ force: true, cwd: payload.cwd });
-    console.log(CHECKPOINT_HINT);
-    process.exit(0);
-  }
-  const hint = resumeHint(prompt) ?? accountOffer(freshCheckpoint(), RAILS_BIN);
-  if (hint) {
-    console.log(hint);
+  if (sessions) {
+    console.log(sessions);
     process.exit(0);
   }
   const namesMoku = /\bmoku\b/i.test(prompt) && !/^\s*\/moku:session\b/.test(prompt);
@@ -172,11 +132,6 @@ if (tweaking) {
   process.exit(0);
 }
 
-// Signing in again ends the sessions: the checkpoint keeps them, a pause keeps only the change
-const signingIn = SIGN_IN.some((pattern) => pattern.test(prompt));
-if (signingIn) autoCheckpoint({ force: true, cwd: payload.cwd });
-const resuming = signingIn ? undefined : (resumeHint(prompt) ?? accountOffer(freshCheckpoint(), RAILS_BIN));
-
 const report = status({ root, positional: [], flags: {} });
 const changed = statusChanged(root, payload.session_id, report.lines);
 if (changed) rememberStatus(root, payload.session_id, report.lines);
@@ -187,7 +142,6 @@ console.log(
     "Route this request before acting on it. Load the `moku:moku` skill with the Skill tool unless it is already loaded in this conversation, and follow it.",
     "A question needs no routing. Work does: `moku-rails open` for a new change, `moku-rails enter <station>` for the next station, `moku-rails continue` to finish work of the current station, `moku-rails scope \"<what is new>\"` when the person adds something the plan does not cover.",
     "Source writes are refused until one of these ran. Stations run through their skills (brainstorm, design, plan, build, verify, e2e), not by hand.",
-    ...(signingIn ? [CHECKPOINT_HINT] : []),
-    ...(resuming ? [resuming] : []),
+    ...(sessions ? [sessions] : []),
   ].join("\n"),
 );

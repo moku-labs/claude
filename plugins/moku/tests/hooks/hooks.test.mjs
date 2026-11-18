@@ -487,115 +487,57 @@ describe("prompt hook on the rails", () => {
     assert.equal(JSON.parse(readFileSync(join(root, ".planning", "state.json"), "utf8")).turn.routed, false);
   });
 
-  it("names the checkpoint when the person is about to change their own sign-in", () => {
+  it("names the checkpoint only when the person asks to save the sessions", () => {
     const root = project({ initialized: true });
     const prompts = [
       "In a minute I'll sign out and sign in with my work account. Before I do, save where my moku sessions are",
-      "log in again with the other account",
-      "I'm moving to another account in a minute",
-      "switch my claude account and keep the sessions",
+      "save my sessions",
       "run moku-rails checkpoint",
       "перелогинюсь на другой аккаунт, сохрани сессии",
-      "сейчас переключусь на второй аккаунт",
-      "сохрани все открытые сессии перед выходом",
+      "сохрани все открытые сесии",
+      "сохрани сессии",
     ];
 
-    for (const prompt of prompts) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }).out, /moku-rails checkpoint`, not `pause`/, prompt);
+    for (const prompt of prompts) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }).out, /The person asks to save the sessions\. Saving happens only on such a request/, prompt);
+    assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "сохрани сессии" }).out, /moku-rails' checkpoint`|moku-rails checkpoint`/, "off the rails");
   });
 
-  it("stays out of ordinary login and account work in the app", () => {
+  it("saves nothing and says nothing of a checkpoint for a sign-in alone, or for login and account work in the app", () => {
     const root = project({ initialized: true });
     const prompts = [
+      "log in again with the other account",
+      "I'm moving to another account in a minute",
+      "сейчас переключусь на второй аккаунт",
       "Make the login screen match the design",
-      "Add a login form with email and password",
-      "Build a user account page with an avatar",
       "Users should be able to switch to another account from the menu",
-      "Fix: after logout the sign in button stays disabled",
       "add a save checkpoint to the second level",
-      "Сделай экран входа",
-      "Выйди из попапа по крестику",
-      "Форма входа: логин и пароль",
-      "Страница аккаунта пользователя с аватаром",
+      "сохрани работу",
+      "save the session cookie after login",
+      "сохрани сессию пользователя в куки",
       "Кнопка переключения на другой аккаунт в меню",
     ];
 
     for (const prompt of prompts) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }).out, /checkpoint/, prompt);
   });
 
-  it("reads \"save the work\" as the checkpoint only beside the sessions or a sign-in", () => {
-    const root = project({ initialized: true });
-    const env = { MOKU_HOME: join(mkdtempSync(join(tmpdir(), "moku-home-")), "moku") };
-    const saves = [
-      "сохрани работу и сессии, я перелогинюсь",
-      "сохрани работу перед выходом из аккаунта",
-      "перед перелогином сохрани всё",
-      "save my work and the sessions before I log out",
-    ];
-    const plain = ["сохрани работу", "сохрани прогресс в файл сейвов игры", "save the work and commit it"];
-
-    for (const prompt of saves) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails checkpoint`, not `pause`/, prompt);
-    for (const prompt of plain) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /checkpoint/, prompt);
-  });
-
-  it("names resume-checkpoint for \"restore the sessions\" only while a recent checkpoint is on the machine", () => {
+  it("names resume-checkpoint for \"restore the sessions\", through typos, only while a checkpoint is on the machine", () => {
     const root = project({ initialized: true });
     const home = join(mkdtempSync(join(tmpdir(), "moku-home-")), "moku");
     const env = { MOKU_HOME: home };
-    const prompts = ["восстанови работу и сессии", "в новой сессии восстанови сессии", "продолжи сессии после логина", "restore my sessions"];
-
-    for (const prompt of prompts) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /resume-checkpoint/, `no checkpoint: ${prompt}`);
-
-    const dir = join(dirname(home), "moku-checkpoints");
-    mkdirSync(dir, { recursive: true });
-    const file = join(dir, "2026-11-05T20-00-00Z.json");
-    writeFileSync(file, "{}\n");
-
-    for (const prompt of prompts) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails resume-checkpoint/, prompt);
-    assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "восстанови сессии" }, env).out, /moku-rails resume-checkpoint/, "off the rails");
-    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "добавь счётчик серий" }, env).out, /resume-checkpoint/);
-
-    const old = (Date.now() - 49 * 3_600_000) / 1000;
-    utimesSync(file, old, old);
-    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "восстанови сессии" }, env).out, /resume-checkpoint/, "stale checkpoint");
-  });
-
-  it("reads a request for the sessions back through typos, and not a session of the app being built", () => {
-    const root = project({ initialized: true });
-    const home = join(mkdtempSync(join(tmpdir(), "moku-home-")), "moku");
-    const env = { MOKU_HOME: home };
-    const dir = join(dirname(home), "moku-checkpoints");
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, "2026-11-08T10-50-35Z.json"), "{}\n");
     const asks = ["востонови все 4 моку сесии", "восстанови сесси", "верни сессии", "вастанови сесии пожалуйста", "подними все сессии", "restor my sesions", "resume all sessions", "bring my sessions back", "reopen the saved sessions"];
     const work = ["восстанови удалённый файл", "верни кнопку назад", "верно, сессия логина истекает", "restore the session cookie after login", "restore the sessions table from the backup", "верни сессии пользователей в админке", "resume playback of the video", "сколько серий осталось"];
 
-    for (const prompt of asks) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails resume-checkpoint/, prompt);
-    for (const prompt of asks.slice(0, 2)) assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt }, env).out, /resume-checkpoint --json.*data\.steps.*run_in_terminal.*never Bash/, `off the rails: ${prompt}`);
-    for (const prompt of work) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /resume-checkpoint/, prompt);
-  });
+    for (const prompt of asks) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /resume-checkpoint/, `no checkpoint: ${prompt}`);
 
-  it("offers the restore once, on the first prompt under another account while saved sessions wait", () => {
-    const base = mkdtempSync(join(tmpdir(), "moku-account-"));
-    const home = join(base, "moku");
-    const desktop = join(base, "desktop");
-    const oldDir = join(desktop, "old-account", "org");
-    const newDir = join(desktop, "new-account", "org");
-    for (const dir of [oldDir, newDir]) mkdirSync(dir, { recursive: true });
-    writeFileSync(join(newDir, "local_new-1.json"), JSON.stringify({ sessionId: "local_new-1", cliSessionId: "new-1", cwd: base, lastActivityAt: Date.now() }));
-    const dir = join(base, "moku-checkpoints");
+    const dir = join(dirname(home), "moku-checkpoints");
     mkdirSync(dir, { recursive: true });
-    const saved = (/** @type {string} */ desktopDir) => JSON.stringify({ version: 2, savedAt: "2026-11-08T10:50:35.000Z", configDir: base, desktopDir, sessions: [{ id: "saved-1", cwd: base, surface: "desktop", localId: "local_saved-1", title: "Game", parent: null, branch: "", uncommitted: [], unfinished: [], artifacts: [], transcript: "x", lastActivityAt: "" }] });
-    const file = join(dir, "2026-11-08T10-50-35Z.json");
-    const env = { MOKU_HOME: home, MOKU_DESKTOP_SESSIONS: desktop, CLAUDE_CODE_ACCOUNT_UUID: "new-account", CLAUDE_CODE_ORGANIZATION_UUID: "org" };
+    writeFileSync(join(dir, "2026-11-08T10-50-35Z.json"), JSON.stringify({ version: 2, sessions: [] }));
+    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt: "восстанови сессии" }, env).out, /resume-checkpoint/, "a checkpoint of an older version is no checkpoint");
 
-    writeFileSync(file, saved(newDir));
-    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "привет" }, env).out, /signed in under another account/, "same account: no offer");
-
-    writeFileSync(file, saved(oldDir));
-    const first = hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "привет" }, env).out;
-    assert.match(first, /signed in under another account since the checkpoint .*1 not open here yet/);
-    assert.match(first, /resume-checkpoint --json\` and its data\.steps, and the person runs nothing/);
-    assert.doesNotMatch(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "что дальше?" }, env).out, /signed in under another account/, "offered once");
+    writeFileSync(join(dir, "2026-11-18T09-37-19Z.json"), JSON.stringify({ version: 3, savedAt: "2026-11-18T09:37:19.000Z", account: "a/o", self: null, sessions: [], leases: {} }));
+    for (const prompt of asks) assert.match(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /moku-rails' resume-checkpoint --json|moku-rails resume-checkpoint --json/, prompt);
+    assert.match(hook("on-prompt.mjs", { cwd: tmpdir(), prompt: "восстанови сессии" }, env).out, /saved 2026-11-18T09:37:19\.000Z.*run_in_terminal.*never Bash.*only on a yes.*only when data\.done is true/, "off the rails");
+    for (const prompt of work) assert.doesNotMatch(hook("on-prompt.mjs", { cwd: root, prompt }, env).out, /resume-checkpoint/, prompt);
   });
 
   it("closes the free pass: an open change inside build does not admit a new request until it is routed", () => {
