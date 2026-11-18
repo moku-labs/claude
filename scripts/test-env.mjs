@@ -13,8 +13,9 @@ if (!process.env.MOKU_TEST_HOME) {
   process.env.MOKU_TEST_HOME = home;
   process.env.HOME = home;
   process.env.CLAUDE_CONFIG_DIR = join(home, ".claude");
-  // The hooks start checkpoints on their own; a test that wants one turns it back on
-  process.env.MOKU_AUTO_CHECKPOINT = "0";
+  // The desktop app is never read or written: its folder is the throwaway HOME's, and it counts as closed
+  process.env.MOKU_DESKTOP_RUNNING = "0";
+  for (const name of ["CLAUDE_CODE_ACCOUNT_UUID", "CLAUDE_CODE_ORGANIZATION_UUID", "CLAUDE_CODE_SESSION_ID", "MOKU_DESKTOP_SESSIONS", "MOKU_DESKTOP_ACCOUNT"]) delete process.env[name];
   // git still needs a name for the commits tests make, and must not read the person's global config
   process.env.GIT_CONFIG_GLOBAL = join(home, ".gitconfig");
   process.env.GIT_AUTHOR_NAME ??= "moku test";

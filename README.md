@@ -127,29 +127,25 @@ project has none. `moku-rails adopt` puts such a project on the rails: it writes
 from what the repository shows (type, name, moku packages, plugins) and touches no file outside `.planning/`.
 Running it again changes nothing. `init` stays for a project that does not exist yet.
 
-Signing in again (an API key from the Console, a Team account, another sign-in) keeps the work going.
-`moku-rails checkpoint` writes `~/.claude/moku-checkpoints/<time>.json` with every open (not archived) session of the
-current account in the desktop app, at any age, and every terminal session that worked on the rails in the last 48
-hours: its id, the app's local id, title and parent, folder, branch, uncommitted files, the open change with where it
-stopped, and the background tasks that had not reported back. Beside it, `<time>/artifacts/<session>/` holds local
-copies of the artifacts each session published, with a manifest; a source that is gone is rebuilt from the session's
-Write and Edit calls, else only the link is kept. A session whose worktree was removed is kept with its repository
-and branch while the branch exists, and named as lost when it does not. A second run that finds everything as the
-newest checkpoint has it writes no new file. `--help` or `-h` on any `moku-rails` command prints its usage and runs
-nothing. A checkpoint is also kept on its own: the Stop hook starts one in the background at most every 20 minutes, and the
-prompt hook at once when the person speaks of signing in (`MOKU_AUTO_CHECKPOINT=0` turns it off; the newest 12 kept on
-their own stay, those made on request all stay). After the person signs in, the prompt hook offers the restore once, on
-the first prompt under the new account, and reads «восстанови сессии» through typos. The session restores everything
-with its own tools; the person runs nothing. `moku-rails resume-checkpoint --json` takes the newest checkpoint of
-another account than the current one, reads only the current account's records of the app and says for each session
-whether it is open, archived there or missing; `data.steps` lists the calls in order: `unarchive_session`, one
-`run_in_terminal` of `--open` (it needs a terminal, the app's Terminal panel, and refuses elsewhere before touching
-anything), `set_session_title`, `set_session_permission_mode`, `send_message`, `--sent` and `--carry`. `--open` adds
-removed worktrees again from their branches, keeps each branch in its own worktree, opens the sessions parents first
-and counts a session as opened only when the app has written its record. Run again, `--json` checks the result, says
-what is restored and what is not and why, and lists only what is left. The one step that needs the app closed is the
-sidebar nesting of side sessions the app did not keep: on the person's yes, `--relink-in-terminal` opens Terminal.app
-with the line that quits Claude, writes the parents after a backup and opens Claude again.
+Signing in again (an API key from the Console, a Team account, another sign-in) keeps the sessions of the desktop
+app. Nothing saves on its own: the person says "save the sessions" («сохрани сессии»), and `moku-rails checkpoint`
+writes `~/.claude/moku-checkpoints/<time>.json` with exactly the sessions the sidebar shows: the current account's
+sessions that are not archived, each with its parent in the tree, title, folder, worktree, branch, permission mode
+and which session leases each worktree (`--drop <ids>` leaves sessions out on request). After the new sign-in the
+person says "restore the sessions" («восстанови сессии», read through typos), and the session does all of it with
+its own tools. `moku-rails resume-checkpoint --json` compares the newest checkpoint with the current account's
+records and the app's worktree registry and plans three phases, each from what the app has once the one before is
+done: (1) `unarchive_session` for a session the account keeps archived, and one `run_in_terminal` of `--open`, which
+opens each missing session with `claude --desktop --resume` (never with `--permission-mode`, which `--desktop`
+refuses), parents first, adds a removed worktree again from its branch and counts a session as opened only when the
+app has written its record; (2) when the app's files must change (the nesting, the folder of a worktree session, the
+worktree leases, the permission modes, the sessions not in the checkpoint), one question to the person and, on the
+yes, `--offline-in-terminal`: Terminal.app quits Claude, writes those files after a backup beside the checkpoint,
+archives the extra sessions by their flag (so no shared worktree is removed) and opens Claude again; (3) the
+titles, and a message to each session whose id or side sessions' ids changed (`--sent` records them). Run again,
+`--json` checks every session against the app's records and says "Restored" only when the sidebar is as saved and
+nothing is extra; otherwise it names each session that is not and why. `--help` or `-h` on any `moku-rails` command
+prints its usage and runs nothing.
 No credential is read or written.
 
 | Invariant | Enforced by | What you see |

@@ -1,114 +1,66 @@
 /**
- * Checkpoint: keep the progress of every open moku session on this machine, so each one continues after the
- * person signs in again, in any way (an API key, a Team account, another sign-in).
+ * Checkpoint: a snapshot of the sessions the desktop app's sidebar shows, taken only when the person asks for it.
  *
- * One concern: on request, write a checkpoint of the open sessions, and turn it back into the steps that continue
- * each one: the command, the id it gets under the new sign-in, its title, its parent and its artifacts. The sign-in
- * itself is the person's: no token, no Keychain, no credentials file is read or written here.
- *
- * Which sessions are open comes from the desktop app's records of the current account: every Code tab session that
- * is not archived, at any age. Terminal sessions, which the app does not know, count when they worked on the rails
- * lately. What a session did comes from its transcript: the first lines name its cwd and where it runs, its tool
- * calls say which background tasks it started and which artifacts it published. Only the description of an
- * unfinished task and copies of the session's own artifacts are kept; nothing of the conversation is copied.
+ * One concern: write and read the snapshot. It holds exactly the sessions of the current account that are not
+ * archived (what `list_sessions` lists, plus the session that saves), each with the fields of its record that say
+ * where it sits and what it works in: its parent as the sidebar nests it, title, permission mode, folder, worktree and
+ * branch, and which session leases each worktree. Nothing of a conversation is copied, and no credential is read.
+ * Records of other accounts never count: a machine that held four sign-ins has old records of the same sessions in
+ * each (on 2026-11-11 five sessions were taken from such a folder).
  */
 
-import { spawnSync } from "node:child_process";
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, realpathSync, rmSync, statSync, writeFileSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
-import { basename, dirname, join, relative, sep } from "node:path";
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 
-import { mokuHome, rootForSession } from "../hooks/root.mjs";
-import { saveArtifacts } from "./artifacts.mjs";
-import { currentAccountDir, desktopRoot, readRecords, reopenedRecord } from "./desktop.mjs";
-import { branchExists, mainCheckout } from "./worktrees.mjs";
-import { loadLedger } from "./ledger.mjs";
-import { routeFor } from "./routes.mjs";
+import { mokuHome } from "../hooks/root.mjs";
+import { desktopRoot, readAccount, readWorktrees, worktreesFile } from "./desktop.mjs";
 
-/**
- * @typedef {object} SavedChange
- * @property {string} id
- * @property {string} title
- * @property {string} size
- * @property {string | null} station the station it is inside, or null between stations
- * @property {string} next a short line on where it stopped and what comes next
- */
+/** The record fields a restore writes back: where the session sits, what it is called and what it works in. */
+export const SAVED_FIELDS = [
+  "title",
+  "titleSource",
+  "permissionMode",
+  "cwd",
+  "originCwd",
+  "branch",
+  "sourceBranch",
+  "worktreePath",
+  "worktreeName",
+  "gitAnchors",
+  "gitAnchorsLookupOnly",
+  "folderPlace",
+  "spawnedFrom",
+  "startChain",
+  "spawnSeed",
+  "lineageDetached",
+  "lineageDetachedBy",
+];
 
 /**
  * @typedef {object} SavedSession
- * @property {string} id the Claude Code session id, the one `claude --resume` takes
- * @property {string} cwd where the session ran
- * @property {string | null} root the project on the rails it worked on, null for a session off the rails
- * @property {"desktop" | "cli"} surface the Code tab of the desktop app, or a terminal
- * @property {string | null} localId the desktop app's id of the session, `local_…`, which changes with the sign-in
- * @property {string} title the title the app showed
- * @property {string | null} parent the old local id of the session it was started from
- * @property {Record<string, any> | null} spawnedFrom the app's link to that parent, as it was
- * @property {boolean} [detached] whether the person had moved the side session to the top level before the save
- * @property {import("./artifacts.mjs").SavedArtifact[]} artifacts local copies of what it published
- * @property {string} transcript the transcript, relative to the config folder
- * @property {string} lastActivityAt
- * @property {SavedChange | null} change the open change of its lane
+ * @property {string} localId the app's id when it was saved, `local_…`
+ * @property {string} cli the Claude Code session id
+ * @property {string} title
+ * @property {string | null} parent the local id of the saved session it is nested under in the sidebar, or null
+ * @property {string} cwd
+ * @property {string | null} worktree the name of the app's worktree it works in
  * @property {string} branch
- * @property {string | null} [repo] the main checkout of its repository, where a gone worktree is added again
- * @property {boolean} [worktreeByApp] whether the app made the session's worktree; it makes a new one on resume
- * @property {boolean} [folderGone] whether its folder was gone at the save; the resume adds it again from the branch
- * @property {string | null} [permissionMode] the permission mode it ran in, from its transcript, else the app's record
- * @property {string[]} uncommitted the files git reports as changed or new
- * @property {{ kind: "agent" | "bash", description: string }[]} unfinished background tasks that had not reported back
+ * @property {string} mode its permission mode
+ * @property {boolean} transcript whether its transcript is on this machine, the only way it can be opened again
+ * @property {Record<string, any>} record the saved record fields, `SAVED_FIELDS`
  */
 
 /**
  * @typedef {object} Checkpoint
- * @property {1 | 2} version
+ * @property {3} version
  * @property {string} savedAt
- * @property {string} configDir the config folder the transcripts live in
- * @property {string | null} [desktopDir] the desktop app's folder of the account the sessions were saved from
- * @property {SavedSession[]} sessions
- * @property {{ id: string, title: string, reason: string }[]} [skipped] open sessions that could not be kept
- * @property {boolean} [auto] written by the hook on its own, not on request
+ * @property {string} account `<account>/<org>` it was saved from
+ * @property {string | null} self the cli id of the session that saved it
+ * @property {SavedSession[]} sessions parents before the sessions nested under them
+ * @property {Record<string, string>} leases worktree name → local id of the saved session that held it
+ * @property {string} [transcriptsUnread] the transcripts folder, when it could not be read at the save
  */
-
-/**
- * @typedef {object} Reopened
- * @property {SavedSession} session
- * @property {string | null} newId the local id under the new sign-in, `local_<id>`, null for a terminal session
- * @property {boolean} opened whether the app has the session under the current sign-in, in the list and not archived
- * @property {"open" | "archived" | "missing" | "terminal"} state open; kept by the current account but archived, so
- *   `unarchive_session` brings it back; not in the current account at all, so `--open` brings it back; or a terminal
- *   session the app does not list
- * @property {string | null} file the app's record of the reopened session
- * @property {import("./desktop.mjs").DesktopRecord | null} record that record, read
- */
-
-/** How far back a terminal session counts as open, unless `--since` says otherwise. */
-export const DEFAULT_SINCE_HOURS = 48;
-
-/** The cwd and the entrypoint sit in the first lines; the head is never read past this. */
-const HEAD_BYTES = 64 * 1024;
-
-/** A background launch the transcript records: an async agent, or a Bash command sent to the background. */
-const LAUNCHED = /^(Async agent launched|Command running in background)/;
-
-/** Words that mark a command as one that may carry a credential. */
-const SECRET_LIKE = /key|token|secret|passw|auth|credential|bearer/i;
-
-/** The permission mode a transcript line records. */
-const PERMISSION_MODE = /"permissionMode":"([A-Za-z]+)"/;
-
-/** How a background task reports back: a notification naming the tool call that started it. */
-const REPORTED = /<tool-use-id>([^<]+)<\/tool-use-id>/g;
-
-/**
- * The config folder Claude Code reads now: `CLAUDE_CONFIG_DIR`, or `~/.claude`.
- *
- * @returns {string}
- * @example
- * configDir(); // "/Users/ann/.claude"
- */
-export function configDir() {
-  return process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude");
-}
 
 /**
  * The folder the checkpoints live in: `~/.claude/moku-checkpoints`, beside moku's own state.
@@ -120,619 +72,172 @@ export function checkpointsDir() {
 }
 
 /**
- * The open sessions of the config folder, newest first. With the desktop app's folder of the current account, every
- * Code tab session there that is not archived counts, at any age and on the rails or not; Code tab transcripts of
- * other accounts or archived ones are left out. Terminal sessions count when they were active since the cut-off in
- * a directory on the rails, outside a temporary folder unless `includeTemp` asks for them or they ran in `here`.
- * Sessions whose folder or transcript is gone are listed as skipped. With `artifactsDir`, each session's artifacts
- * are copied to `<artifactsDir>/<session id>`.
+ * The folder transcripts live in: `MOKU_TRANSCRIPTS`, or `<config>/projects`.
  *
- * @param {{ config: string, sinceMs: number, now?: number, includeTemp?: boolean, here?: string, desktopDir?: string, artifactsDir?: string }} options
- * @returns {{ sessions: SavedSession[], skipped: { id: string, title: string, reason: string }[] }}
- * @example
- * collectSessions({ config: "/Users/ann/.claude", sinceMs: 24 * 3600e3, desktopDir }).sessions.map((session) => session.id);
- */
-export function collectSessions({ config, sinceMs, now = Date.now(), includeTemp = false, here, desktopDir, artifactsDir }) {
-  const projects = join(config, "projects");
-  if (!existsSync(projects)) return { sessions: [], skipped: [] };
-
-  const byId = new Map(transcripts(projects).map((file) => [basename(file, ".jsonl"), file]));
-  const sessions = [];
-  const skipped = [];
-
-  // The app's own list of the current account: every session not archived
-  for (const record of desktopDir ? readRecords(desktopDir).filter((entry) => !entry.archived) : []) {
-    const transcript = byId.get(record.cliSessionId);
-    const head = transcript ? readHead(transcript) : {};
-    const cwd = head.cwd ?? record.cwd;
-    if (!transcript) skipped.push({ id: record.cliSessionId, title: record.title, reason: `its transcript is not in ${config}` });
-    else if (cwd && existsSync(cwd)) sessions.push(savedSession({ config, transcript, cwd, surface: "desktop", record, artifactsDir }));
-    else {
-      // A removed worktree: the session comes back when its branch is still there to add the folder from
-      const gone = goneFolder(cwd, record);
-      if (gone.reason) skipped.push({ id: record.cliSessionId, title: record.title, reason: gone.reason });
-      else sessions.push(savedSession({ config, transcript, cwd, surface: "desktop", record, artifactsDir }));
-    }
-  }
-
-  // Terminal sessions, which the app does not list: recent ones on the rails
-  const listed = new Set(sessions.map((session) => session.id));
-  for (const [id, transcript] of byId) {
-    if (listed.has(id) || now - statSync(transcript).mtimeMs > sinceMs) continue;
-
-    const head = readHead(transcript);
-    if (!head.cwd || !existsSync(head.cwd)) continue;
-    if (desktopDir && head.entrypoint === "claude-desktop") continue;
-    if (!includeTemp && isTemporary(head.cwd) && !(here && isInside(head.cwd, here))) continue;
-    if (!rootForSession({ cwd: head.cwd, session_id: id })) continue;
-
-    sessions.push(savedSession({ config, transcript, cwd: head.cwd, surface: head.entrypoint === "claude-desktop" ? "desktop" : "cli", artifactsDir }));
-  }
-
-  return { sessions: sessions.sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt)), skipped };
-}
-
-/**
- * Whether a session whose folder is gone can come back: its repository and its branch, from the app's record, must
- * still exist. The reason it cannot, when it cannot.
- *
- * @param {string | undefined} cwd
- * @param {import("./desktop.mjs").DesktopRecord} record
- * @returns {{ reason?: string }}
- */
-function goneFolder(cwd, record) {
-  const repo = record.originCwd;
-  if (!cwd) return { reason: "the app names no folder for it" };
-  if (!repo || !existsSync(repo) || repo === cwd) return { reason: `its folder ${cwd} is gone, and so is its repository` };
-  if (!record.branch) return { reason: `its folder ${cwd} is gone and the app names no branch to add it again from` };
-  if (!branchExists(repo, record.branch)) return { reason: `lost: its folder ${cwd} is gone and its branch ${record.branch} no longer exists in ${repo}` };
-
-  return {};
-}
-
-/**
- * Where a session stands, for the checkpoint: its rails, its tree, its unfinished tasks and copies of its artifacts.
- *
- * @param {{ config: string, transcript: string, cwd: string, surface: "desktop" | "cli", record?: import("./desktop.mjs").DesktopRecord, artifactsDir?: string }} options
- * @returns {SavedSession}
- */
-function savedSession({ config, transcript, cwd, surface, record, artifactsDir }) {
-  const id = basename(transcript, ".jsonl");
-  const folderGone = !existsSync(cwd);
-  const root = folderGone ? null : (rootForSession({ cwd, session_id: id }) ?? null);
-  const { entries, reported, permissionMode } = toolEntries(transcript);
-  const tree = folderGone ? { branch: record?.branch ?? "", uncommitted: [] } : gitState(cwd);
-
-  return {
-    id,
-    cwd,
-    root,
-    surface,
-    localId: record?.localId ?? null,
-    title: record?.title ?? "",
-    parent: typeof record?.spawnedFrom?.sessionId === "string" ? record.spawnedFrom.sessionId : null,
-    spawnedFrom: record?.spawnedFrom ?? null,
-    detached: record?.detached === true,
-    transcript: relative(config, transcript),
-    lastActivityAt: new Date(statSync(transcript).mtimeMs).toISOString(),
-    change: root ? openChange(root) : null,
-    ...tree,
-    repo: (record?.originCwd && existsSync(record.originCwd) ? record.originCwd : undefined) ?? (folderGone ? null : (mainCheckout(cwd) ?? null)),
-    worktreeByApp: Boolean(record?.worktreePath),
-    // The transcript says what the session ran in; the app's record can lag behind it
-    permissionMode: permissionMode ?? record?.permissionMode ?? null,
-    folderGone,
-    unfinished: unfinishedTasks(entries, reported),
-    artifacts: artifactsDir ? saveArtifacts(entries, cwd, join(artifactsDir, id)) : [],
-  };
-}
-
-/**
- * The folder beside a checkpoint file that holds its artifacts and backups: `<checkpoints>/<time>`.
- *
- * @param {string} savedAt
  * @returns {string}
  */
-export function checkpointFolder(savedAt) {
-  return join(checkpointsDir(), stamp(savedAt));
+export function transcriptsDir() {
+  return process.env.MOKU_TRANSCRIPTS || join(process.env.CLAUDE_CONFIG_DIR || join(homedir(), ".claude"), "projects");
 }
 
 /**
- * Where each saved session stands under the current sign-in: the local id the app gives it (`local_<id>`, or its
- * old one when the sessions come back to the account they were saved from), and whether the current account lists
- * it, keeps it archived, or does not have it. Only the current account's records count.
+ * The snapshot of the sidebar of one account: every session not archived, minus the ones named in `drop`.
  *
- * @param {Checkpoint} checkpoint
- * @param {string} [root] the desktop root
- * @param {string | undefined} [current] the current account folder
- * @returns {Reopened[]}
+ * @param {{ key: string, root?: string, registry?: string, self?: string | null, drop?: string[], now?: Date }} options
+ * @returns {Checkpoint}
  */
-export function reopenedSessions(checkpoint, root = desktopRoot(), current = currentAccountDir(root)) {
-  return checkpoint.sessions.map((session) => {
-    if (session.surface !== "desktop") return { session, newId: null, opened: false, state: "terminal", file: null, record: null };
+export function takeSnapshot({ key, root = desktopRoot(), registry = worktreesFile(root), self = null, drop = [], now = new Date() }) {
+  const open = readAccount(key, root).records.filter((record) => !record.archived && !drop.includes(record.localId) && !drop.includes(record.cli));
+  const ids = new Set(open.map((record) => record.localId));
+  // A sandbox may refuse the transcripts folder: then nobody knows, and the session is kept as one that can open
+  const transcripts = transcriptIds();
+  const worktrees = readWorktrees(registry);
 
-    const record = reopenedRecord(root, session.id, checkpoint.desktopDir ?? undefined, current, session.localId) ?? null;
-    const state = !record ? "missing" : record.archived ? "archived" : "open";
-    return { session, newId: record?.localId ?? `local_${session.id}`, opened: state === "open", state, file: record?.file ?? null, record };
+  const sessions = open.map(({ data, localId, cli }) => {
+    const parentId = typeof data.spawnedFrom?.sessionId === "string" ? data.spawnedFrom.sessionId : null;
+    const record = Object.fromEntries(SAVED_FIELDS.filter((field) => data[field] !== undefined).map((field) => [field, data[field]]));
+    return {
+      localId,
+      cli,
+      title: typeof data.title === "string" ? data.title : "",
+      parent: parentId && ids.has(parentId) && data.lineageDetached !== true ? parentId : null,
+      cwd: typeof data.cwd === "string" ? data.cwd : "",
+      worktree: typeof data.worktreeName === "string" && data.worktreeName ? data.worktreeName : null,
+      branch: typeof data.branch === "string" ? data.branch : "",
+      mode: typeof data.permissionMode === "string" ? data.permissionMode : "default",
+      transcript: transcripts ? transcripts.has(cli) : true,
+      record,
+    };
+  });
+
+  const leases = {};
+  for (const name of new Set(sessions.map((session) => session.worktree).filter(Boolean))) {
+    const holder = worktrees[/** @type {string} */ (name)]?.leasedBy;
+    if (typeof holder === "string" && ids.has(holder)) leases[/** @type {string} */ (name)] = holder;
+  }
+
+  return { version: 3, savedAt: now.toISOString(), account: key, self, sessions: treeOrder(sessions), leases, ...(transcripts ? {} : { transcriptsUnread: transcriptsDir() }) };
+}
+
+/**
+ * Sessions with each parent before the sessions under it, siblings by title (by code point, the same on every
+ * machine), so the file reads like the sidebar.
+ *
+ * @template {{ localId: string, parent: string | null, title: string }} T
+ * @param {T[]} sessions
+ * @returns {T[]}
+ */
+export function treeOrder(sessions) {
+  const ids = new Set(sessions.map((session) => session.localId));
+  const children = (/** @type {string | null} */ parent) => sessions.filter((session) => (session.parent && ids.has(session.parent) ? session.parent : null) === parent).sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
+  const ordered = [];
+  const visit = (/** @type {string | null} */ parent, /** @type {number} */ depth) => {
+    for (const session of children(parent)) {
+      if (ordered.includes(session) || depth > 32) continue;
+      ordered.push(session);
+      visit(session.localId, depth + 1);
+    }
+  };
+  visit(null, 0);
+  // A loop of parents has no root: it is listed at the end rather than lost
+  return [...ordered, ...sessions.filter((session) => !ordered.includes(session))];
+}
+
+/**
+ * The sessions as an indented tree, one line each.
+ *
+ * @param {{ localId: string, parent: string | null, title: string }[]} sessions in tree order
+ * @param {(session: any) => string} describe the rest of each line
+ * @returns {string[]}
+ */
+export function treeLines(sessions, describe) {
+  const depth = new Map();
+  return sessions.map((session) => {
+    const level = session.parent && depth.has(session.parent) ? depth.get(session.parent) + 1 : 0;
+    depth.set(session.localId, level);
+    return `${"  ".repeat(level)}- ${describe(session)}`;
   });
 }
 
 /**
- * The checkpoint to restore: the newest one saved from another account than the current one, so a checkpoint the
- * new sign-in writes on its own never hides the one taken before it; the newest of all when every checkpoint is of
- * the current account.
- *
- * @param {string | undefined} [current] the current account folder
- * @returns {string | undefined}
- */
-export function checkpointToRestore(current = currentAccountDir(desktopRoot())) {
-  if (!existsSync(checkpointsDir())) return undefined;
-
-  const files = readdirSync(checkpointsDir()).filter((name) => name.endsWith(".json")).sort().reverse().map((name) => join(checkpointsDir(), name));
-  const other = current ? files.find((file) => { const saved = readCheckpoint(file); return saved?.desktopDir && saved.desktopDir !== current; }) : undefined;
-  return other ?? files[0];
-}
-
-/**
- * Old local id → new local id, for every saved Code tab session.
- *
- * @param {Reopened[]} reopened
- * @returns {Map<string, string>}
- */
-export function idMap(reopened) {
-  return new Map(reopened.filter((entry) => entry.session.localId && entry.newId).map((entry) => [/** @type {string} */ (entry.session.localId), /** @type {string} */ (entry.newId)]));
-}
-
-/**
- * The message each reopened session gets: its new id, the new ids of the sessions it started (to fix in its notes
- * and HANDOFF), and where the copies of its artifacts are. Sessions with nothing of that get none.
- *
- * @param {Reopened[]} reopened
- * @param {Map<string, string[]>} [notes] more lines for a session, by its new id, such as where its files went
- * @returns {{ to: string, title: string, text: string }[]}
- */
-export function resumeMessages(reopened, notes = new Map()) {
-  const map = idMap(reopened);
-  const messages = [];
-
-  for (const { session, newId } of reopened) {
-    if (!newId) continue;
-    // Only an id that changed is news: a session whose id and children's ids stayed gets no message
-    const moved = Boolean(session.localId && session.localId !== newId);
-    const children = reopened.filter((entry) => entry.session.parent && entry.session.parent === session.localId && entry.newId && entry.newId !== entry.session.localId);
-    const extra = notes.get(newId) ?? [];
-    if (!moved && children.length === 0 && extra.length === 0) continue;
-
-    const artifacts = session.artifacts ?? [];
-    const lines = [moved ? `The sessions moved to a new sign-in, and your id changed: ${newId} (was ${session.localId}).` : `The sessions moved to a new sign-in. Your id stays ${newId}.`];
-    if (children.length > 0) {
-      lines.push("The sessions you started whose id changed, old id → new id. Replace the old ids wherever you wrote them (notes, HANDOFF, memory) and message them by the new one:");
-      for (const child of children) lines.push(`- ${child.session.title || child.session.id}: ${child.session.localId} → ${child.newId}`);
-    }
-    if (artifacts.length > 0) {
-      lines.push("Your artifacts, with local copies saved before the sign-in (the links may not open under the new account):");
-      for (const artifact of artifacts) lines.push(`- ${artifact.title || artifact.url}: ${artifact.url} → ${artifactWhere(artifact)}`);
-    }
-    if (session.parent && !map.has(session.parent)) lines.push(`The session that started you (${session.parent}) was not in the checkpoint.`);
-    lines.push(...extra);
-
-    messages.push({ to: newId, title: session.title, text: lines.join("\n") });
-  }
-
-  return messages;
-}
-
-/**
- * The saved sessions in an order where a parent comes before the sessions it started, so the app knows the parent
- * by the time it opens a side session.
- *
- * @param {Reopened[]} reopened
- * @returns {Reopened[]}
- */
-export function parentsFirst(reopened) {
-  const byLocal = new Map(reopened.filter((entry) => entry.session.localId).map((entry) => [entry.session.localId, entry]));
-  const depth = (/** @type {Reopened} */ entry) => {
-    let level = 0;
-    for (let parent = entry.session.parent; parent && byLocal.has(parent) && level < 32; parent = byLocal.get(parent)?.session.parent) level += 1;
-    return level;
-  };
-
-  return reopened.map((entry, index) => ({ entry, index, level: depth(entry) })).sort((a, b) => a.level - b.level || a.index - b.index).map((item) => item.entry);
-}
-
-/**
- * Whether two checkpoints keep the same sessions in the same state. When each session's last activity is the only
- * difference (the session that runs the checkpoint is active), a second file would only be a duplicate.
- *
- * @param {Checkpoint} a
- * @param {Checkpoint} b
- * @returns {boolean}
- */
-export function sameCheckpoint(a, b) {
-  const shape = (/** @type {Checkpoint} */ checkpoint) =>
-    stableJson({
-      desktopDir: checkpoint.desktopDir ?? null,
-      skipped: checkpoint.skipped ?? [],
-      sessions: checkpoint.sessions.map(({ lastActivityAt, artifacts, ...rest }) => ({ ...rest, artifacts: (artifacts ?? []).map((artifact) => ({ url: artifact.url, title: artifact.title, files: artifact.files.map((file) => ({ published: file.published, status: file.status })) })) })),
-    });
-
-  return shape(a) === shape(b);
-}
-
-/**
- * JSON with the keys of every object sorted, so two values compare by content and not by the order keys came in.
- *
- * @param {unknown} value
- * @returns {string}
- */
-function stableJson(value) {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
-  if (value && typeof value === "object") return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(/** @type {Record<string, unknown>} */ (value)[key])}`).join(",")}}`;
-  return JSON.stringify(value) ?? "null";
-}
-
-/**
- * Where an artifact's copies are, for a person: the folder, or that only the link is kept.
- *
- * @param {import("./artifacts.mjs").SavedArtifact} artifact
- * @returns {string}
- */
-export function artifactWhere(artifact) {
-  const kept = artifact.files.filter((file) => file.copy);
-  if (kept.length === 0) return "link only (the source is gone and the session never wrote it whole)";
-
-  const rebuilt = kept.some((file) => file.status !== "copied") ? ", rebuilt from the transcript" : "";
-  const partial = kept.some((file) => file.status === "partial") ? ", an edit did not apply" : "";
-  return `${artifact.dir}${rebuilt}${partial}`;
-}
-
-/**
- * Write a checkpoint as a new file named by its time, so earlier ones stay.
+ * Write a checkpoint as a new file named by its time.
  *
  * @param {Checkpoint} checkpoint
- * @returns {string} the file written
+ * @returns {string}
  */
 export function writeCheckpoint(checkpoint) {
   const file = join(checkpointsDir(), `${stamp(checkpoint.savedAt)}.json`);
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, `${JSON.stringify(checkpoint, null, 2)}\n`);
-
   return file;
 }
 
-/** How many checkpoints the hook wrote on its own are kept; older ones go. Checkpoints made on request all stay. */
-export const AUTO_KEEP = 12;
-
 /**
- * Remove the checkpoints the hook wrote on its own beyond the newest `keep`, each with its folder of artifacts.
- * A checkpoint made on request is never removed, and neither is the one a resume would restore now.
- *
- * @param {number} [keep]
- * @param {string | undefined} [protect] a checkpoint file that stays whatever its age
- * @returns {string[]} the files removed
- */
-export function pruneAuto(keep = AUTO_KEEP, protect) {
-  if (!existsSync(checkpointsDir())) return [];
-
-  const auto = readdirSync(checkpointsDir()).filter((name) => name.endsWith(".json")).sort().reverse().map((name) => join(checkpointsDir(), name)).filter((file) => readCheckpoint(file)?.auto === true);
-  const removed = auto.slice(keep).filter((file) => file !== protect);
-  for (const file of removed) {
-    rmSync(file, { force: true });
-    rmSync(file.replace(/\.json$/, ""), { recursive: true, force: true });
-  }
-  return removed;
-}
-
-/**
- * The newest checkpoint file, or undefined when there is none.
+ * The newest checkpoint of this version, or undefined. Older files of earlier versions are left where they are.
  *
  * @returns {string | undefined}
  */
 export function latestCheckpoint() {
   if (!existsSync(checkpointsDir())) return undefined;
-
-  const newest = readdirSync(checkpointsDir()).filter((name) => name.endsWith(".json")).sort().at(-1);
-  return newest ? join(checkpointsDir(), newest) : undefined;
+  return readdirSync(checkpointsDir())
+    .filter((name) => /^\d{4}-\d\d-\d\dT[\d-]+Z\.json$/.test(name))
+    .sort()
+    .reverse()
+    .map((name) => join(checkpointsDir(), name))
+    .find((file) => readCheckpoint(file) !== undefined);
 }
 
 /**
- * A checkpoint from disk, or undefined when it is missing or cannot be read.
+ * A checkpoint from disk, or undefined when it is not one of this version.
  *
  * @param {string} file
  * @returns {Checkpoint | undefined}
  */
 export function readCheckpoint(file) {
   try {
-    const checkpoint = JSON.parse(readFileSync(file, "utf8"));
-    if (!(checkpoint?.version === 1 || checkpoint?.version === 2) || !Array.isArray(checkpoint.sessions)) return undefined;
-
-    // A version 1 checkpoint knows no titles, parents or artifacts
-    checkpoint.sessions = checkpoint.sessions.map((session) => ({ localId: null, title: "", parent: null, spawnedFrom: null, artifacts: [], ...session }));
-    return checkpoint;
+    const data = JSON.parse(readFileSync(file, "utf8"));
+    return data?.version === 3 && Array.isArray(data.sessions) ? data : undefined;
   } catch {
     return undefined;
   }
 }
 
 /**
- * The command that continues a saved session: in the desktop app for a Code tab session, in a terminal
- * otherwise, unless the person picked one surface for all.
+ * The folder beside a checkpoint for its backups and its record of sent messages.
  *
- * @param {SavedSession} session
- * @param {"desktop" | "cli" | undefined} surface
- * @returns {string}
- * @example
- * resumeCommand({ id: "4f1c…", cwd: "/work/site", surface: "cli" }); // "cd '/work/site' && claude --resume 4f1c…"
- */
-export function resumeCommand(session, surface) {
-  const desktop = (surface ?? session.surface) === "desktop";
-
-  return `cd ${quote(session.cwd)} && claude${desktop ? " --desktop" : ""} --resume ${session.id}`;
-}
-
-/**
- * What changed for a saved session since the checkpoint: a transcript the current config folder cannot see,
- * a directory that left the rails, a station that moved on, a tree that changed.
- *
- * @param {SavedSession} session
- * @param {string} config the config folder Claude Code reads now
- * @returns {string[]} one note per difference, empty when the session is as it was saved
- */
-export function driftNotes(session, config) {
-  const notes = [];
-  if (!existsSync(join(config, session.transcript))) notes.push(`its transcript is not in ${config}; continue it from the config folder it was saved in`);
-
-  // The rails and the tree, read again now
-  const root = rootForSession({ cwd: session.cwd, session_id: session.id });
-  if (!root && session.root) return [...notes, "the directory is no longer on the rails"];
-
-  const change = root ? openChange(root) : null;
-  if (session.change && change?.id !== session.change.id) notes.push(`change ${session.change.id} is no longer open here`);
-  else if (session.change && change && change.station !== session.change.station) notes.push(`the station moved from ${session.change.station ?? "between stations"} to ${change.station ?? "between stations"}`);
-
-  const now = gitState(session.cwd).uncommitted.length;
-  if (now !== session.uncommitted.length) notes.push(`uncommitted files: ${session.uncommitted.length} at save, ${now} now`);
-
-  return notes;
-}
-
-/**
- * One line that describes a saved session for a person.
- *
- * @param {SavedSession} session
+ * @param {string} file
  * @returns {string}
  */
-export function describeSession(session) {
-  const tree = [session.branch, `${session.uncommitted.length} uncommitted`].filter(Boolean).join(", ");
-
-  const title = session.title ? `"${session.title}" ` : "";
-
-  return `${title}${session.id.slice(0, 8)} ${session.surface} · ${session.cwd} · ${tree}`;
+export function checkpointFolder(file) {
+  return file.replace(/\.json$/, "");
 }
 
 /**
- * The top-level transcripts of a projects folder. Subagent transcripts sit one level deeper and are no
- * session of their own.
+ * The cli ids of the transcripts on this machine, `<projects>/<folder>/<id>.jsonl`, or null when the folder cannot
+ * be read.
  *
- * @param {string} projects
- * @returns {string[]}
+ * @returns {Set<string> | null}
  */
-function transcripts(projects) {
-  return readdirSync(projects, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .flatMap((entry) => readdirSync(join(projects, entry.name), { withFileTypes: true })
-      .filter((file) => file.isFile() && file.name.endsWith(".jsonl"))
-      .map((file) => join(projects, entry.name, file.name)));
-}
-
-/**
- * The cwd and the entrypoint from the first lines of a transcript.
- *
- * @param {string} transcript
- * @returns {{ cwd?: string, entrypoint?: string }}
- */
-function readHead(transcript) {
-  const buffer = Buffer.alloc(HEAD_BYTES);
-  let length = 0;
+function transcriptIds() {
+  const root = transcriptsDir();
+  const ids = new Set();
   try {
-    const handle = openSync(transcript, "r");
-    length = readSync(handle, buffer, 0, HEAD_BYTES, 0);
-    closeSync(handle);
-  } catch {
-    return {};
-  }
-
-  // A line cut by the byte limit does not parse and is skipped
-  for (const line of buffer.subarray(0, length).toString("utf8").split("\n")) {
-    const entry = parseLine(line);
-    if (typeof entry?.cwd === "string") return { cwd: entry.cwd, entrypoint: typeof entry.entrypoint === "string" ? entry.entrypoint : undefined };
-  }
-
-  return {};
-}
-
-/**
- * The lines of a transcript that hold a tool call or its result, parsed, in order, and the tool calls whose
- * background task reported back. Lines of the conversation without a tool call are never parsed.
- *
- * @param {string} transcript
- * @returns {{ entries: Record<string, any>[], reported: Set<string>, permissionMode: string | null }} with the last
- *   permission mode the transcript records
- */
-function toolEntries(transcript) {
-  const entries = [];
-  const reported = new Set();
-  let permissionMode = null;
-  let text = "";
-  try {
-    text = readFileSync(transcript, "utf8");
-  } catch {
-    return { entries, reported, permissionMode };
-  }
-
-  for (const line of text.split("\n")) {
-    for (const match of line.matchAll(REPORTED)) reported.add(match[1]);
-    permissionMode = PERMISSION_MODE.exec(line)?.[1] ?? permissionMode;
-    if (!line.includes("tool_use")) continue;
-
-    const entry = parseLine(line);
-    if (entry) entries.push(entry);
-  }
-
-  return { entries, reported, permissionMode };
-}
-
-/**
- * The background tasks a session started that never reported back. They do not survive the session, so the
- * person restarts them after the resume.
- *
- * @param {Record<string, any>[]} entries the transcript's tool lines
- * @param {Set<string>} reported the tool calls whose task reported back
- * @returns {SavedSession["unfinished"]}
- */
-function unfinishedTasks(entries, reported) {
-  /** @type {Map<string, { kind: "agent" | "bash", description: string }>} */
-  const calls = new Map();
-  const launched = new Set();
-
-  for (const entry of entries) {
-    for (const block of contentBlocks(entry)) {
-      if (block.type === "tool_use" && (block.name === "Agent" || block.name === "Task" || block.input?.run_in_background === true)) {
-        calls.set(block.id, { kind: block.name === "Bash" ? "bash" : "agent", description: taskLabel(block) });
-      }
-      if (block.type === "tool_result" && LAUNCHED.test(resultText(block))) launched.add(block.tool_use_id);
+    if (!existsSync(root)) return ids;
+    for (const folder of readdirSync(root, { withFileTypes: true }).filter((entry) => entry.isDirectory())) {
+      for (const name of readdirSync(join(root, folder.name))) if (name.endsWith(".jsonl")) ids.add(name.slice(0, -6));
     }
-  }
-
-  return [...launched].filter((id) => !reported.has(id) && calls.has(id)).map((id) => /** @type {{ kind: "agent" | "bash", description: string }} */ (calls.get(id)));
-}
-
-/**
- * What a background task did, for the person who restarts it: its description, or the start of its command.
- * A command that looks like it carries a credential is never repeated.
- *
- * @param {Record<string, any>} block a tool_use block
- * @returns {string}
- */
-function taskLabel(block) {
-  if (typeof block.input?.description === "string" && block.input.description) return block.input.description;
-
-  const command = String(block.input?.command ?? "").replace(/\s+/g, " ").trim();
-  if (!command || SECRET_LIKE.test(command)) return `a background ${block.name}`;
-  return command.length > 80 ? `${command.slice(0, 77)}...` : command;
-}
-
-/**
- * @param {Record<string, any> | undefined} entry
- * @returns {Record<string, any>[]}
- */
-function contentBlocks(entry) {
-  const content = entry?.message?.content;
-  return Array.isArray(content) ? content : [];
-}
-
-/**
- * @param {Record<string, any>} block
- * @returns {string}
- */
-function resultText(block) {
-  if (typeof block.content === "string") return block.content;
-  return Array.isArray(block.content) ? String(block.content.find((part) => part?.type === "text")?.text ?? "") : "";
-}
-
-/**
- * @param {string} line
- * @returns {Record<string, any> | undefined}
- */
-function parseLine(line) {
-  try {
-    return JSON.parse(line);
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * The open change of the lane the root belongs to, with a short line on where it stopped.
- *
- * @param {string} root
- * @returns {SavedChange | null}
- */
-function openChange(root) {
-  try {
-    const change = loadLedger(root).changes.find((entry) => entry.status === "open");
-    return change ? { id: change.id, title: change.title ?? "", size: change.size, station: change.station ?? null, next: nextStep(change) } : null;
+    return ids;
   } catch {
     return null;
   }
 }
 
 /**
- * Where a change stopped and what comes next, from its route.
- *
- * @param {Record<string, any>} change
- * @returns {string}
- * @example
- * nextStep({ size: "S", station: null, done: ["intake", "build"] }); // "next: verify"
- */
-function nextStep(change) {
-  const pause = change.paused && change.pauseReason ? `, paused: ${change.pauseReason}` : "";
-  if (change.station) return `inside ${change.station}${pause}`;
-
-  const next = routeFor(change.size).find((station) => !change.done.includes(station));
-  return `${next ? `next: ${next}` : "ready to close"}${pause}`;
-}
-
-/**
- * The branch and the changed or new files, from `git status`. Outside git both are empty.
- *
- * @param {string} cwd
- * @returns {{ branch: string, uncommitted: string[] }}
- */
-function gitState(cwd) {
-  const run = spawnSync("git", ["-C", cwd, "status", "--porcelain=v1", "--branch", "--untracked-files=all"], { encoding: "utf8" });
-  if (run.status !== 0) return { branch: "", uncommitted: [] };
-
-  const [header = "", ...files] = run.stdout.split("\n").filter(Boolean);
-  return {
-    branch: header.replace(/^## /, "").split("...")[0].replace(/^No commits yet on /, ""),
-    uncommitted: files.map((line) => line.slice(3)),
-  };
-}
-
-/**
- * Whether a folder sits in the system's temporary space, where eval runs and scratch projects live.
- *
- * @param {string} path
- * @returns {boolean}
- */
-function isTemporary(path) {
-  return [tmpdir(), realpathSync(tmpdir()), "/tmp", "/private/tmp"].some((dir) => isInside(path, dir));
-}
-
-/**
- * @param {string} path
- * @param {string} dir
- * @returns {boolean}
- */
-function isInside(path, dir) {
-  return path === dir || path.startsWith(`${dir}${sep}`);
-}
-
-/**
- * A checkpoint time as a file name: `2026-11-06T05-40-40Z`.
+ * A time as a file name: `2026-11-18T09-37-19Z`.
  *
  * @param {string} savedAt
  * @returns {string}
  */
 function stamp(savedAt) {
   return savedAt.replace(/:/g, "-").replace(/\.\d+Z$/, "Z");
-}
-
-/**
- * @param {string} path
- * @returns {string}
- */
-function quote(path) {
-  return `'${path.replace(/'/g, "'\\''")}'`;
 }

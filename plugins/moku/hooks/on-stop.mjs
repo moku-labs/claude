@@ -14,16 +14,12 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { forgetFinished, runningAgents } from "../lib/hooks/agents.mjs";
-import { autoCheckpoint } from "../lib/hooks/auto-checkpoint.mjs";
 import { readHookInput } from "../lib/hooks/input.mjs";
 import { rootForSession } from "../lib/hooks/root.mjs";
 import { loadLedger } from "../lib/rails/ledger.mjs";
 import { LOOP_STATIONS, WRITING_STATIONS } from "../lib/rails/routes.mjs";
 
 const { payload } = readHookInput();
-
-// Every session, on the rails or not, is kept for the next sign-in: at most once in 20 minutes, in the background
-if (!payload.agent_id) autoCheckpoint({ cwd: typeof payload.cwd === "string" ? payload.cwd : undefined });
 
 const root = rootForSession(payload);
 

@@ -1,16 +1,20 @@
 /**
- * Resume words: whether a prompt asks for the saved sessions back, typed fast and with typos ("востонови все 4 моку
- * сесии", "верни сессии", "restor my sesions").
+ * Session words: whether a prompt asks to save the sessions ("сохрани сессии", "save my sessions") or to have the
+ * saved ones back ("востонови все 4 моку сесии", "верни сессии", "restor my sesions"), typed fast and with typos.
  *
  * One concern: read a prompt as words. The text is lower-cased, `ё` read as `е` and a letter typed twice read once,
- * so "сессии", "сесии" and "сесси" are one word. A request is a restoring verb and the word for the sessions within a
- * few words of each other; a verb stem of six letters or more may be one letter off. A session that is part of the
+ * so "сессии", "сесии" and "сесси" are one word. A request is a saving or restoring verb and the word for the sessions
+ * within a few words of each other; a verb stem of six letters or more may be one letter off. A session that is part of the
  * app being built (a session cookie, the sessions table, сессии пользователей) is not the person's sessions.
  */
 
 /** Restoring verbs: a stem of six letters or more matches one letter off, a short one only as written. */
 const LONG_VERBS = ["востанов", "востанав", "возобнов", "продолж", "разверн", "restor", "resum", "reopen", "recover", "continu"];
 const SHORT_VERBS = new Set(["верни", "верните", "вернуть", "вернешь", "открой", "откройте", "открыть", "подними", "поднимите", "поднять", "back"]);
+
+/** Saving verbs, matched the same way. */
+const SAVE_LONG_VERBS = ["сохран", "запомн", "checkpoint", "чекпоинт", "чекпойнт"];
+const SAVE_SHORT_VERBS = new Set(["save", "keep", "запиши", "сохрани"]);
 
 /** The word for sessions, after the doubled letters are read once: "сеси…" in Russian, "sesions" in English. */
 const RU_SESSIONS = /^(се|си|са)с[иыийяюь]/;
@@ -50,13 +54,37 @@ export function words(text) {
  * asksToResume("восстанови удалённый файл"); // false
  */
 export function asksToResume(text) {
+  return asksAbout(text, isVerb);
+}
+
+/**
+ * Whether a prompt asks to save the sessions.
+ *
+ * @param {string} text the person's prompt
+ * @returns {boolean}
+ * @example
+ * asksToSave("сохрани сесии"); // true
+ * asksToSave("сохрани сессию пользователя в куки"); // false
+ */
+export function asksToSave(text) {
+  return asksAbout(text, (word) => matchesVerb(word, SAVE_SHORT_VERBS, SAVE_LONG_VERBS));
+}
+
+/**
+ * Whether a verb the test accepts stands near the word for the sessions, which are not the app's own.
+ *
+ * @param {string} text
+ * @param {(word: string) => boolean} verb
+ * @returns {boolean}
+ */
+function asksAbout(text, verb) {
   const list = words(text);
 
   for (let index = 0; index < list.length; index += 1) {
     if (!isSessions(list[index]) || APP_WORDS.test(list[index + 1] ?? "")) continue;
 
     const near = list.slice(Math.max(0, index - WINDOW), index).concat(list.slice(index + 1, index + 1 + 2));
-    if (near.some(isVerb)) return true;
+    if (near.some(verb)) return true;
   }
 
   return false;
@@ -93,9 +121,19 @@ function isSessions(word) {
  * @returns {boolean}
  */
 function isVerb(word) {
-  if (SHORT_VERBS.has(word)) return true;
+  return matchesVerb(word, SHORT_VERBS, LONG_VERBS);
+}
 
-  return LONG_VERBS.some((stem) => word.length >= stem.length - 1 && [stem.length - 1, stem.length, stem.length + 1].some((length) => distance(word.slice(0, length), stem) <= 1));
+/**
+ * @param {string} word
+ * @param {Set<string>} short verbs matched only as written
+ * @param {string[]} long verb stems matched one letter off
+ * @returns {boolean}
+ */
+function matchesVerb(word, short, long) {
+  if (short.has(word)) return true;
+
+  return long.some((stem) => word.length >= stem.length - 1 && [stem.length - 1, stem.length, stem.length + 1].some((length) => distance(word.slice(0, length), stem) <= 1));
 }
 
 /**
