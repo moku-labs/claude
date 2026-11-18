@@ -162,7 +162,7 @@ function stepsFor({ file, key, self }, result) {
   if (steps.length > 0) return [...steps, { tool: "Bash", input: { command: `${quote(RAILS_BIN)} resume-checkpoint --json ${where}` }, why: "then check again: the next phase is planned from what the app has" }];
 
   if (result.offline.needed) {
-    steps.push({ tool: "AskUserQuestion", input: { question: `To finish the restore, Claude has to quit and open again (about 10 seconds) and write into its files, after a backup: ${result.offline.why.join("; ")}. Go ahead?` }, why: "the one yes of the restore; ask it once, with this list" });
+    steps.push({ tool: "AskUserQuestion", input: { question: `To finish the restore, Claude has to quit and open again (about 10 seconds) and write into its files, after a backup: ${result.offline.why.join("; ")}. Go ahead?` }, why: "the one yes of the restore; ask it once, with this list; the restart is yours to run, never the person's" });
     steps.push({ tool: "Bash", input: { command: `${quote(RAILS_BIN)} resume-checkpoint --offline-in-terminal ${where}${self ? ` --self ${quote(self)}` : ""}` }, why: "only after the yes: Terminal.app quits Claude, writes the files after a backup and opens Claude again; when the app is back, run --json again" });
     return steps;
   }
